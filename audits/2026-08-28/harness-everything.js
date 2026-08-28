@@ -132,6 +132,18 @@ X.startGame(1); tick(4);
   ok(onDirt.every(w=>w.color===0x8A7A52),'dirt wear stays brown');
   ok(onPaint.every(w=>w.color!==0x8A7A52&&((w.color>>16)&255)<0x60),'sealed wear goes oil-dark'); }
 
+C.section('THE FIELD IS COMBED - tussock lean and clump');
+{ const B=[]; for(let i=0;i<600;i++) B.push(X.grassBlade(-58+i*0.19,-40+((i*7)%80)));
+  ok(B.every(b=>b.lean>=0.08&&b.lean<=0.30),'blade lean stays inside the comb band');
+  const dirs=B.map(b=>b.dir), lo=Math.min.apply(null,dirs), hi=Math.max.apply(null,dirs);
+  ok(hi-lo<1.4,'the whole field leans one way (dir spread '+(hi-lo).toFixed(2)+' rad, not a scatter)');
+  ok(hi-lo>0.2,'the breeze wanders across the flats (dir spread '+(hi-lo).toFixed(2)+' rad)');
+  ok(X.grassBlade(10.1,4.1).cell===X.grassBlade(11.2,4.9).cell,'blades inside one clump share a height cell');
+  ok(X.grassBlade(10.1,4.1).cell!==X.grassBlade(20.6,4.1).cell,'a clump four cells away is a different height');
+  const hs=B.map(b=>b.h);
+  ok(Math.min.apply(null,hs)<0.75&&Math.max.apply(null,hs)>1.35,'heights run from grazed to tall ('+
+     Math.min.apply(null,hs).toFixed(2)+' to '+Math.max.apply(null,hs).toFixed(2)+')'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

@@ -669,6 +669,15 @@ const TW={list:[],
 };
 
 /* ---------- the lawn (v4): instanced wind grass ---------- */
+/* one blade pose. Tussock is wind-combed and clumped, never a lawn of upright spikes: the
+   whole field leans one way, the breeze wanders across it, and height comes in patches.
+   Lives outside buildGrass so the gate can read it with no canvas. */
+function grassBlade(x,z){
+  const dir=2.1+0.55*Math.sin(x*0.055+z*0.041);                       // fall direction, wandering
+  const lean=0.08+0.13*(0.5+0.5*Math.sin(x*0.031-z*0.047))+rnd(0,0.09); // 0.08 to 0.30 rad
+  const cell=Math.abs(Math.sin(Math.floor(x/2.5)*39.34+Math.floor(z/2.5)*11.13)*24634.6)%1;
+  return {yaw:rnd(0,Math.PI),dir,lean,cell,h:rnd(0.6,1.5)*(0.8+cell*0.4),w:rnd(0.8,1.3)};
+}
 function buildGrass(){
   if(HEADLESS)return;
   const N=42000;
@@ -687,6 +696,8 @@ function buildGrass(){
        transformed.y-=0.09*gb2*(0.55+0.45*sin(uTime*1.1+ph));`); };
   const im=new THREE.InstancedMesh(geo,m,N);
   const d=new THREE.Object3D(); const col=new THREE.Color();
+  const qy=new THREE.Quaternion(), qt=new THREE.Quaternion();
+  const ax=new THREE.Vector3(), UPV=new THREE.Vector3(0,1,0);
   const cA=new THREE.Color(0xB8901F).convertSRGBToLinear(),cB=new THREE.Color(0x8A7C2E).convertSRGBToLinear(),cC=new THREE.Color(0xD9B84A).convertSRGBToLinear(); // v9: sRGB->linear at source
   let i=0,guard=0;
   while(i<N&&guard++<N*4){
@@ -695,9 +706,12 @@ function buildGrass(){
     if(x>-19&&x<23&&z>5.5&&z<28.5)continue;                // carpark
     if(Math.abs(x+24)<4.2&&Math.abs(z+9)<3.4)continue;     // hut slab
     if(Math.abs(x-28)<3.4&&Math.abs(z-(-14))<2.4)continue; // pen core
-    const h=rnd(0.6,1.5);
-    d.position.set(x,0,z); d.rotation.y=rnd(0,Math.PI); d.rotation.z=rnd(-0.12,0.12);
-    d.scale.set(rnd(0.8,1.3),h,1); d.updateMatrix();
+    const b=grassBlade(x,z);
+    qy.setFromAxisAngle(UPV,b.yaw);                          // yaw first, then tilt in WORLD space,
+    ax.set(Math.sin(b.dir),0,-Math.cos(b.dir));              // or the comb would spin with the blade
+    qt.setFromAxisAngle(ax,b.lean);
+    d.position.set(x,0,z); d.quaternion.copy(qt).multiply(qy);
+    d.scale.set(b.w,b.h,1); d.updateMatrix();
     im.setMatrixAt(i,d.matrix);
     const t=Math.random(); col.copy(t<0.5?cA:cB).lerp(cC,Math.random()*0.55);
     { const patch=Math.abs(Math.sin(Math.floor(x/7)*12.9898+Math.floor(z/7)*78.233)*43758.5)%1;
@@ -940,11 +954,16 @@ function buildWorld(){
     const tg=new THREE.ConeGeometry(0.34,0.9,5);
     const im=new THREE.InstancedMesh(tg,mat(PAL.tussock),260);
     const m4=new THREE.Matrix4(), q=new THREE.Quaternion(), s=new THREE.Vector3(), p=new THREE.Vector3();
+    const qy=new THREE.Quaternion(), qt=new THREE.Quaternion();
+    const ax=new THREE.Vector3(), UPV=new THREE.Vector3(0,1,0);
     let n=0;
     while(n<260){ const x=rnd(-52,52),z=rnd(-52,52);
       if(Math.abs(z-34)<6.5||(Math.abs(x-2)<21&&Math.abs(z-17)<12)||dist2(x,z,-24,-9)<7||dist2(x,z,15,-13)<5||dist2(x,z,-38,4)<7||dist2(x,z,G.nestPos.x,G.nestPos.z)<5)continue;
-      q.setFromEuler(new THREE.Euler(rnd(-0.15,0.15),rnd(0,6),rnd(-0.15,0.15)));
-      s.setScalar(rnd(0.7,1.5)); p.set(x,0.35,z); m4.compose(p,q,s); im.setMatrixAt(n,m4); n++; }
+      const b=grassBlade(x,z);                                 // the tufts take the same comb as the blades
+      qy.setFromAxisAngle(UPV,b.yaw); ax.set(Math.sin(b.dir),0,-Math.cos(b.dir));
+      qt.setFromAxisAngle(ax,b.lean*0.75); q.copy(qt).multiply(qy);
+      s.set(b.w,b.h*0.95,b.w);                                 // the tuft is one blade writ large
+      p.set(x,0.35,z); m4.compose(p,q,s); im.setMatrixAt(n,m4); n++; }
     im.castShadow=true; G.scene.add(im);
     // snow patches
     for(let i=0;i<10;i++){ const x=rnd(-50,50),z=rnd(-50,-20),r=rnd(1.5,3.6);
@@ -3181,7 +3200,7 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd};
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

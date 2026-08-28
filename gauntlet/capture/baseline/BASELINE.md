@@ -51,3 +51,9 @@ diffed against the cbfd9cca pins (worst 0.9650 at the known-noisy torch beam), s
 frame was pinned green; this keeps baseline equal to last-certified-ship. Visible delta lives
 at 01_carpark_wide: the boulder that sat embedded in the tarmac is gone, and the carpark
 mouth now carries an oil-dark wear patch.
+
+## Re-pin 2026-08-28 overnight (build b51abe08 — tussock comb)
+All 22 re-pinned. The tussock is in nearly every frame and it now leans, so 19 vantages
+flagged against the grunge-v2 pins; the change is intentional and global, not drift.
+Judged improved-or-equal before pinning: 03 kea plate, 05 tussock ground, 08 readability 320,
+10 skifield, 14 player view, 21 night camp. Nothing red was pinned green.
