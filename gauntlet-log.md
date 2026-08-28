@@ -47,3 +47,14 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 19 of 22 flagged (intentional, jud
 - Judged: 03, 05, 08, 10, 14, 21 all improved-or-equal before re-pinning.
 - EYEBALL: 05_tussock_ground.png and 14_player_view.png (the comb), 10_skifield.png (gold
   dominance held after widening the tufts back).
+
+### PIECE: the paddock gate (Tier 2 item 4) — CERTIFIED 0c0693df4fbb60acc32754b7e3b10432
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 22 compared 0 flagged (the toy is local).
+- SURPRISE: the ledger claim of PADDOCK 0 interactables is wrong. Re-probed after startGame:
+  PADDOCK 3 (the sheep pecks). The genuinely empty buckets are ROAD 0 and NEST 0, and both
+  are empty because their content is emergent (traffic, stashing) rather than placed.
+- Toy shipped: a farm gate hung with three wraps of baling twine. CHEW THE BALING TWINE swings
+  the gate open on a tween, drops a carryable length of twine, rattles the sheep. Mission q_twine.
+- New vantage 23_paddock_gate: the paddock had no frame at all, so the emptiest area of the map
+  was invisible to the tripwire.
+- EYEBALL: gauntlet/capture/23_paddock_gate.png (twine wraps at the latch post, kea on them).
