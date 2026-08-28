@@ -144,6 +144,18 @@ C.section('THE FIELD IS COMBED - tussock lean and clump');
   ok(Math.min.apply(null,hs)<0.75&&Math.max.apply(null,hs)>1.35,'heights run from grazed to tall ('+
      Math.min.apply(null,hs).toFixed(2)+' to '+Math.max.apply(null,hs).toFixed(2)+')'); }
 
+C.section('THE PADDOCK GATE - a toy for the emptiest area');
+X.startGame(1); tick(8); park();
+{ const t=G.inter.find(it=>it.kind==='tear'&&/BALING TWINE/.test(it.label||''));
+  ok(!!t,'the baling twine is chewable at the paddock gate');
+  const before=G.penGate?G.penGate.rotation.y:0;
+  const chewed=tearL('BALING TWINE'); tick(120);
+  ok(chewed&&M('q_twine'),'chewing the twine credits q_twine');
+  ok(G.props.some(p=>p.name==='length of twine'),'the chewed twine drops as a carryable');
+  ok(G.penGate&&G.penGate.rotation.y<before-0.9,'the gate swings open ('+
+     (G.penGate?G.penGate.rotation.y.toFixed(2):'no gate')+' rad)');
+  ok(G.sheep.length>0&&G.sheep.every(sh=>sh.panic>0),'the sheep are rattled by it'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

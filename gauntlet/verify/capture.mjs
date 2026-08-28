@@ -96,4 +96,5 @@ await shotR('15_sign',`const k=KEAGAME.G.keas[0];const sg=KEAGAME.G.signG; k.x=s
 await shotR('13_idle_preen',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=false;k.idleT=99;k.idleAct={kind:'preen',t:0.7,dur:3.5,side:1};k._idleEver=true; ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
 await shotR('12_seal_midpeel',`{const t=KEAGAME.G.inter.find(x=>x.strip&&/DOOR SEAL/.test(x.label)); for(let i=0;i<6;i++)t.onDone(t.getPos());
 const k=KEAGAME.G.keas[0], p=t.getPos(); k.x=p.x-0.35; k.y=p.y-0.15; k.z=p.z+0.55; k.grounded=false; k.vy=0; k.ry=2.4;} ${CAM(-6.6,1.9,11.2,-9.7,1.3,8.4)}`);
+await shotR('23_paddock_gate',`const k=KEAGAME.G.keas[0];k.x=-41.4;k.z=6.4;k.y=0;k.grounded=true;k.ry=-1.1; ${CAM(-45.0,1.5,8.6,-41.6,0.7,3.2)}`);
 console.log('CAPTURE COMPLETE');

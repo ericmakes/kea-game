@@ -57,3 +57,8 @@ All 22 re-pinned. The tussock is in nearly every frame and it now leans, so 19 v
 flagged against the grunge-v2 pins; the change is intentional and global, not drift.
 Judged improved-or-equal before pinning: 03 kea plate, 05 tussock ground, 08 readability 320,
 10 skifield, 14 player view, 21 night camp. Nothing red was pinned green.
+
+## New vantage 2026-08-29 (build 0c0693df — paddock gate)
+23_paddock_gate pinned: the paddock had no vantage at all, so the emptiest area of the map
+was invisible to the tripwire. Camera sits outside the gate looking down the pen.
+The other 22 held at 0 flagged, worst 0.9870 — the paddock toy is local, as it should be.

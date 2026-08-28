@@ -1077,6 +1077,9 @@ const PB={
   longSeal(g){ for(let i=0;i<11;i++){ const a=i*0.62, r=0.34-i*0.014;
     const b=rbox(0.3,0.055,0.075,0.026,PAL.rubber,Math.cos(a)*r,0.05+i*0.016,Math.sin(a)*r,g);
     b.rotation.y=-a+1.57; b.rotation.z=Math.sin(i*1.7)*0.1; } }, // a peeled seal coils
+  twine(g){ for(let i=0;i<8;i++){ const a=i*0.85, r=0.105;
+    const b=cyl(0.015,0.015,0.2,0xD8CBA0,Math.cos(a)*r,0.015+i*0.012,Math.sin(a)*r,g,5);
+    b.rotation.z=1.57; b.rotation.y=-a; } },                    // a chewed length of twine coils
   longSticker(g){ for(let i=0;i<5;i++){ const b=box(0.4,0.26,0.03,PAL.paper,-0.8+i*0.4,Math.sin(i*1.4)*0.04,0,g); b.rotation.y=Math.sin(i)*0.3; b.rotation.x=Math.sin(i*1.7)*0.15; } }
 };
 
@@ -1376,6 +1379,24 @@ function buildSheepPen(x,z){
     for(const [lx,lz] of [[-0.25,0.3],[0.25,0.3],[-0.25,-0.35],[0.25,-0.35]]) cyl(0.055,0.06,0.5,0x4A4642,lx,0.25,lz,s,6);
     blob(s,0.8,0.5);
     G.sheep.push({g:s,x:s.position.x,z:s.position.z,home:{x,z},panic:0,calmT:0,ry:rnd(0,6)});
+  }
+  { // the gate, hung shut with baling twine, the way every farm gate in the country is
+    const gx=x-4.2;
+    cyl(0.075,0.085,1.2,PAL.woodD,gx,0.6,z-3,null,7); cyl(0.075,0.085,1.2,PAL.woodD,gx,0.6,z+3,null,7);
+    const gate=new THREE.Group(); gate.position.set(gx,0,z-3); G.scene.add(gate);
+    for(let i=0;i<3;i++) box(0.07,0.07,5.7,PAL.wood,0,0.36+i*0.3,2.85,gate);
+    { const br=box(0.06,1.15,0.06,PAL.wood,0,0.66,2.85,gate); br.rotation.x=1.1; } // the brace
+    const twine=new THREE.Group(); twine.position.set(gx,0.67,z+2.86); G.scene.add(twine);
+    for(let i=0;i<3;i++){ const w=cyl(0.028,0.028,0.44,0xD8CBA0,0,i*0.055-0.055,0,twine,6); w.rotation.x=1.57; }
+    G.penGate=gate;
+    addTear({label:'CHEW THE BALING TWINE',need:1.4,range:1.35,air:true,keepMesh:true,
+      getPos:()=>({x:gx,y:0.7,z:z+2.86}),
+      onDone(p){ award(30,'TWINE: CHEWED. THE GATE IS A SUGGESTION NOW.',p); done('q_twine');
+        AU.rip(); burst(p,0xD8CBA0,7); twine.visible=false;
+        spawnLoose('length of twine',PB.twine,{x:gx-0.5,y:0.5,z:z+2.5},{});
+        TW.add(1.6,u=>{ gate.rotation.y=-u*1.2; });
+        for(const sh of G.sheep) sh.panic=Math.max(sh.panic,3);
+        noise({x:gx,y:0.8,z},7,'misdeed',null); }});
   }
   G.pen={x,z,w:4.5,d:2.6};
   addHint('q_muster',x,0.5,z,7,'these sheep look very herdable — push one all the way to the road');
@@ -2707,6 +2728,7 @@ function defineMissions(mode,opts){
     {id:'q_chimney',area:A.hut,label:'Stand on the chimney like you own the place'},
     {id:'q_median',area:A.road,label:'Get honked at from the centre line, on foot'},
     {id:'q_muster',area:A.pad, label:'Herd a sheep all the way onto the road'},
+    {id:'q_twine', area:A.pad, label:'Chew through the baling twine holding the paddock gate shut'},
     {id:'s_ski',  area:A.ski, label:'Relocate somebody\'s ski beyond the snowline'},
     {id:'s_pole', area:A.ski, label:'Make off with a ski pole'},
     {id:'s_binding',area:A.ski,label:'Chew a binding, thoroughly'},
