@@ -793,18 +793,6 @@ function buildWorld(){
     const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
     m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m);
   }
-  { // grunge-lite (2026-08-28): the country is old — stones and wear, never showroom
-    let gs=11; const gr=()=>{ gs=(gs*16807)%2147483647; return gs/2147483647; };
-    for(let i=0;i<26;i++){ const gx=(gr()-0.5)*88, gz=(gr()-0.5)*88;
-      if(Math.abs(gx)<4&&Math.abs(gz-4)<6)continue; if(Math.hypot(gx,gz-34)<5)continue;
-      const sc=0.10+gr()*0.22;
-      const st=new THREE.Mesh(new THREE.DodecahedronGeometry(sc,0),mat(gr()<0.5?0x8E8B84:0x9B9891));
-      st.position.set(gx,sc*0.42,gz); st.rotation.set(gr()*3,gr()*3,gr()*3);
-      st.scale.y=0.55+gr()*0.35; st.castShadow=!HEADLESS; G.scene.add(st); }
-    for(const [wx,wz,wr] of [[-22.5,-6.5,1.6],[0,7.5,2.4],[16.5,-14,1.8]]){
-      const wm=new THREE.Mesh(new THREE.CircleGeometry(wr,18),mat(0x8A7A52));
-      wm.rotation.x=-Math.PI/2; wm.position.set(wx,0.012,wz); wm.receiveShadow=!HEADLESS; G.scene.add(wm); }
-  }
   // rolling tussock hills: the depth band between the flats and the peaks
   { const cG=new THREE.Color(PAL.ground2).convertSRGBToLinear(), cT=new THREE.Color(PAL.tussock).convertSRGBToLinear();
     for(let i=0;i<9;i++){ const a=i/9*Math.PI*2+rnd(-0.22,0.22), r=rnd(64,84);
@@ -917,6 +905,36 @@ function buildWorld(){
   addPeck({label:'PECK THE UTE',needHits:2,getPos:()=>({x:12,y:1.0,z:7}),range:1.25,
     onDone(p){ award(12,'UTE: PECKED. IT HAD IT COMING.',p); done('q_peck'); AU.pop(); }});
 
+  { // grunge-lite v2 (2026-08-28): the country is old, and the wear reads the surface it is worn into
+    let gs=11; const gr=()=>{ gs=(gs*16807)%2147483647; return gs/2147483647; };
+    G.scene.updateMatrixWorld(true);
+    const _wp=new THREE.Vector3();
+    const paintAt=(x,z)=>{ // the laid surface under this spot, measured from what is already built
+      let best=null;
+      G.scene.traverse(m=>{ const g=m.geometry; if(!g||g.type!=='BoxGeometry')return;
+        const p=g.parameters; if(p.width<4||p.depth<4)return;        // big laid surfaces only, never props
+        m.getWorldPosition(_wp); const top=_wp.y+p.height/2;
+        if(top>0.6||(best&&top<=best.top))return;                    // ground level only
+        if(Math.abs(x-_wp.x)<=p.width/2&&Math.abs(z-_wp.z)<=p.depth/2) best={top,mat:m.material}; });
+      return best; };
+    G.stones=[];
+    for(let i=0;i<60&&G.stones.length<26;i++){ const gx=(gr()-0.5)*88, gz=(gr()-0.5)*88;
+      if(Math.abs(gx)<4&&Math.abs(gz-4)<6)continue; if(Math.hypot(gx,gz-34)<5)continue;
+      const sc=0.10+gr()*0.22, gc=gr()<0.5?0x8E8B84:0x9B9891;
+      const rx=gr()*3, ry=gr()*3, rz=gr()*3, sy=0.55+gr()*0.35;
+      if(paintAt(gx,gz))continue;                                    // the seal is swept: loose stones live on the country
+      const st=new THREE.Mesh(new THREE.DodecahedronGeometry(sc,0),mat(gc));
+      st.position.set(gx,sc*0.42,gz); st.rotation.set(rx,ry,rz);
+      st.scale.y=sy; st.castShadow=!HEADLESS; G.scene.add(st); G.stones.push({x:gx,z:gz}); }
+    G.wear=[]; // desire paths: hut door, carpark mouth, campsite, hut cut, road pull-in, campsite track
+    for(const [wx,wz,wr] of [[-24,-4.6,1.6],[0,7.5,2.4],[16.5,-14,1.8],[-19.5,1.5,1.9],[13,32.5,2.0],[15.5,-1.0,1.7]]){
+      const pa=paintAt(wx,wz);
+      const col=pa?pa.mat.color.clone().convertLinearToSRGB().multiplyScalar(0.72).getHex():0x8A7A52; // oil-dark on seal, brown on dirt
+      const wy=pa?pa.top+0.006:0.012;
+      const wm=new THREE.Mesh(new THREE.CircleGeometry(wr,18),mat(col));
+      wm.rotation.x=-Math.PI/2; wm.position.set(wx,wy,wz); wm.receiveShadow=!HEADLESS; G.scene.add(wm);
+      G.wear.push({x:wx,z:wz,r:wr,y:wy,color:col,paint:!!pa}); }
+  }
   // tussock (instanced)
   if(!HEADLESS){
     const tg=new THREE.ConeGeometry(0.34,0.9,5);

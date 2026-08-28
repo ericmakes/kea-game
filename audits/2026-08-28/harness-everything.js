@@ -108,6 +108,30 @@ X.startGame(1); tick(4); G.night=true; G.nightManual=true; G.nightT=1; X.nightAp
   ok(seen.length>=80&&(mx-mn)>0.08,'fire intensity varies across settled night ('+seen.length+' frames, spread '+(mx-mn).toFixed(3)+')');
   ok(G.fire&&G.fire.flame.visible&&G.fire.inner&&G.fire.inner.visible,'flame and inner tongue visible at night'); }
 
+C.section('GRUNGE READS THE GROUND - wear and stones know their surface');
+X.startGame(1); tick(4);
+{ const W=G.wear||[], ST=G.stones||[], V=new H.THREE.Vector3();
+  G.scene.updateMatrixWorld(true);
+  const laid=(x,z)=>{ let t=null;                       // tallest laid surface under this spot, read from the scene
+    G.scene.traverse(m=>{ const g=m.geometry; if(!g||g.type!=='BoxGeometry')return;
+      const p=g.parameters; if(p.width<4||p.depth<4)return;
+      m.getWorldPosition(V); const top=V.y+p.height/2;
+      if(top>0.6||(t!==null&&top<=t))return;
+      if(Math.abs(x-V.x)<=p.width/2&&Math.abs(z-V.z)<=p.depth/2) t=top; });
+    return t; };
+  ok(W.length===6,'six wear discs laid down ('+W.length+')');
+  ok(ST.length===26,'twenty six stones on the country ('+ST.length+')');
+  const buried=W.filter(w=>{ const t=laid(w.x,w.z); return t!==null&&w.y<=t; });
+  ok(buried.length===0,'no wear disc is buried under the paint it sits on ('+buried.map(w=>w.x+','+w.z).join(' ')+')');
+  const floaty=W.filter(w=>w.y>(laid(w.x,w.z)||0)+0.04);
+  ok(floaty.length===0,'no wear disc floats above its surface ('+floaty.map(w=>w.x+','+w.z).join(' ')+')');
+  const sunk=ST.filter(s=>laid(s.x,s.z)!==null);
+  ok(sunk.length===0,'no stone is sunk into a laid surface ('+sunk.length+')');
+  const onPaint=W.filter(w=>w.paint), onDirt=W.filter(w=>!w.paint);
+  ok(onDirt.length>=3&&onPaint.length>=2,'wear spans dirt and seal ('+onDirt.length+' dirt / '+onPaint.length+' sealed)');
+  ok(onDirt.every(w=>w.color===0x8A7A52),'dirt wear stays brown');
+  ok(onPaint.every(w=>w.color!==0x8A7A52&&((w.color>>16)&255)<0x60),'sealed wear goes oil-dark'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

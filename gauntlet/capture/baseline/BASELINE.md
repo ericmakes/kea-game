@@ -44,3 +44,10 @@ Full re-pin on this build: all 22 vantages, including 10_skifield, 11_trailhead 
 19_roof_follow which had never been pinned. NOTE: pinned on local Chrome 151 / Metal, not
 the container SwiftShader - the old pins read ~0.78 here for reasons of renderer, not
 content. Threshold stays 0.965 - never lowered.
+
+## Re-pin 2026-08-28 overnight (build 8c6bedf2 — grunge v2)
+All 22 re-pinned on the certified grunge-v2 build. Nothing was flagged when this piece was
+diffed against the cbfd9cca pins (worst 0.9650 at the known-noisy torch beam), so no red
+frame was pinned green; this keeps baseline equal to last-certified-ship. Visible delta lives
+at 01_carpark_wide: the boulder that sat embedded in the tarmac is gone, and the carpark
+mouth now carries an oil-dark wear patch.
