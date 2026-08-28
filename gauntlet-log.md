@@ -70,3 +70,29 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 23 compared 0 flagged.
 - Staging took 2 attempts (FLAKES law 3): takeProp grabbed a stale beanie from an earlier
   section. Isolating the target on clean ground first is what worked. Logged for the next run.
 - No frame to eyeball; this one is mechanical. Proof is battery 9.
+
+### PIECE: HUD juice (Tier 2 item 7) — CERTIFIED 35c17a69692ce3a44bec2c30f450922d
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 23 compared 0 flagged.
+- G.hudPulse is set from the points that LAND (after the combo multiplier), caps at 1.5, decays
+  at 2.4/s in updateFX; the chip scales and glows, HEADLESS guarded.
+- Making the pulse a state value rather than a CSS class is the only reason the gate can judge it.
+- MANUAL QA (10s): the pulse is transient, no vantage can catch it reliably and none was added.
+  Land any 45+ crime and watch the CHAOS chip.
+
+### PIECE: satellite-area juice (Tier 2 item 3) — CERTIFIED 36bbe94f86deedcf5d1b11b73b406e91
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 23 compared 0 flagged. New vantage 24_verge_paddle.
+- ROAD roadworks paddle (peck to flip, engine repeat convention, pays once only), SKI goggles
+  (wearable, exercises the piece-4 save path), TRAILHEAD woollen sock.
+- SURPRISE: props ALWAYS fall. Nothing rests on a rail or a rack in this engine, so the sock and
+  the goggles could never hang where I placed them. Labels reworded to match where they land
+  rather than promising a rail (the SANDWICH PROMISE lesson). Named as next pick 2.
+- The gate could not see two of these: the sock was placed INSIDE the rail post and invisible,
+  and once moved it was too small to read. Both caught by eyeballing a throwaway close-up.
+- Staging took 3 attempts: peckL fires needHits+1 taps, so counting flips by hand was wrong.
+  The assertion now derives from the engine flip counter and state flag (FLAKES law 10).
+
+## SESSION END — 2026-08-29
+Stop condition reached: 6 pieces certified. REPORT.md written. Final build 36bbe94f, gate
+CERTIFIED-SHIP, 24 vantages pinned and green. Nothing parked red; Tier 2 item 6 (night
+ambience) still waiting on Eric audio. Highest-value open finding: 08_readability_320 hides
+the kea behind the prompt pill, which caps the whole set by CRITIC law.

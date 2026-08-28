@@ -14,6 +14,23 @@
 - 4. PADDOCK DENSITY: done (0c0693df). Geometry verified sound; the ledger count of 0 was wrong
   (it is 3 sheep pecks). Given a gate hung with baling twine to chew open, mission q_twine.
 
+- 3. SATELLITE JUICE: done (36bbe94f). Roadworks paddle at the verge, ski goggles at the rack,
+  woollen sock under the boot rail. Found: props always fall, so nothing can be placed on a rail.
+- 5. WEARABLES PERSISTENCE: done (e961cf8b). The worn hat is in the save. Found and fixed: a
+  restart took the worn hat, and anything carried, to the grave with the old bird.
+- 7. HUD JUICE: done (35c17a69). The chaos meter kicks for the points that land, not the base.
+
+## Tier 2 — still open
+- 6. Night ambience bed: crickets/wind loop under nightT (hooks exist, needs Eric audio). PARKED.
+
+## Tier 3 — found while working, ranked (2026-08-29)
+1. THE COUCH READ: at 320px the prompt pill covers the kea entirely, the pills collide, and the
+   chapter line is clipped both edges. CRITIC caps the whole set on this frame. Highest value.
+2. PROPS REST WHERE PLACED: no rail, rack or clothesline holds anything - props fall every time.
+   A collider pass on rails and lines. Bit this pass twice.
+3. SEED THE WORLD: setSeed is exported and never called, so every load is a different country;
+   buildGrass also tints blades from Math.random. Capture works around it; the game does not.
+
 ## Tier 2 — named, ranked, awaiting appetite
 1. Context-aware wear colours (brown on dirt, oil-dark on seal); 2-3 more discs on desire paths.
 2. Tussock blade variance (height/lean jitter) — blade instancing site still to be located.
