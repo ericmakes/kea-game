@@ -24,3 +24,23 @@ working, not drift. Re-pin opportunistically.
 ## Full sweep complete 2026-08-28 (build f4886150)
 All 19 vantages reshot and pinned on the textured build. Judged clean at 02 hut, 03 plate,
 12 caravan, 21 night. Tripwire truthful again.
+
+## 2026-08-28 overnight — THE TRIPWIRE WAS NOISE (tooling fix, build cbfd9cca)
+Finding: every vantage reshot at ssim 0.82 against ITSELF. diff.mjs was measuring a scenery
+lottery, not drift, and could never have gone green. Two causes, both harness-side:
+1. The game seeds nothing. setSeed is exported but never called, so buildWorld draws the
+   mountains, hills, trees, gravel, snow and tussock from an unseeded Math.random at page
+   load - a different country every capture. capture.mjs now serves the game with
+   setSeed(20260828) spliced in front of its own boot call.
+2. three draws 12 randoms per mesh for uuids, from the same stream. A global Math.random
+   seed alone is therefore not enough: adding ONE object shifts every later draw and
+   reshuffles the whole world. Seeding the game rng instead makes the world immune to that.
+   The global Math.random seed is kept as well, for the direct Math.random calls in gameplay.
+Also: launch() falls back to the system Chrome (channel chrome). The bundled Chrome for
+Testing ships unsigned and macOS refuses to exec it (spawn error -88), which is why every
+shot in the first overnight sweep came back GAVE UP.
+Result: same build reshoots at ssim 0.976 worst, 0 flagged. The tripwire is real.
+Full re-pin on this build: all 22 vantages, including 10_skifield, 11_trailhead and
+19_roof_follow which had never been pinned. NOTE: pinned on local Chrome 151 / Metal, not
+the container SwiftShader - the old pins read ~0.78 here for reasons of renderer, not
+content. Threshold stays 0.965 - never lowered.

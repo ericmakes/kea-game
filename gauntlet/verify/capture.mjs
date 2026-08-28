@@ -1,16 +1,27 @@
 /* KEA GAUNTLET PHOTOGRAPHER v2 — built on the proven probe skeleton.
    In-container: @sparticuz/chromium + puppeteer-core, local three.js via interception.
    On a real machine with `npm i puppeteer` it falls back automatically. */
-import fs from 'fs'; import path from 'path'; import url from 'url';
+import fs from 'fs'; import path from 'path'; import url from 'url'; import os from 'os';
 const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..');
 const OUT=path.join(ROOT,'gauntlet/capture'); fs.mkdirSync(OUT,{recursive:true});
 const THREE_LOCAL=fs.readFileSync(path.join(ROOT,'node_modules/three/build/three.min.js'));
 const HTML='file://'+path.join(ROOT,'untitled-kea-game.html');
+// SEEDED WORLD (2026-08-28): the game seeds nothing, so every load builds a different country.
+// three draws 12 randoms per mesh from the same stream, so a global Math.random seed alone lets any
+// added object reshuffle the whole world. Seed the game rng at its own boot instead.
+const GAMESRC=(()=>{ const raw=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
+  const anchor='if(!HEADLESS)boot();';
+  if(raw.split(anchor).length!==2) throw new Error('capture: boot anchor missing from the game file');
+  return raw.replace(anchor,'if(!HEADLESS){setSeed(20260828);boot();}'); })();
+const SEEDEDTMP=path.join(os.tmpdir(),'kea-seeded-capture.html'); fs.writeFileSync(SEEDEDTMP,GAMESRC);
+const SEEDEDHTML='file://'+SEEDEDTMP; // a real navigation, so evaluateOnNewDocument still fires
 const ONLY=(process.env.SHOTS||'').split(',').filter(Boolean);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 async function launch(){
-  try{ const p=await import('puppeteer'); return p.default.launch({headless:true,args:['--no-sandbox']}); }
+  try{ const p=await import('puppeteer');
+    try{ return await p.default.launch({headless:true,args:['--no-sandbox']}); }
+    catch(e){ return await p.default.launch({headless:true,channel:'chrome',args:['--no-sandbox']}); } } // bundled chrome is unsigned on some macs
   catch(e){ const chromium=(await import('@sparticuz/chromium')).default;
     const p=await import('puppeteer-core');
     return p.default.launch({executablePath:await chromium.executablePath(),
@@ -24,11 +35,15 @@ async function shot(name,stage,opts){
   const o=opts||{};
   const browser=await launch();
   const page=await browser.newPage();
+  // DETERMINISM (2026-08-28): the world is built from Math.random at page load, before any
+  // evaluate can seed it. Without this the same build reshoots at ssim 0.82 and the tripwire is noise.
+  await page.evaluateOnNewDocument(()=>{ let t=20260828>>>0;
+    Math.random=()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t); r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; });
   await page.setViewport({width:o.w||960,height:o.h||540,deviceScaleFactor:1});
   await page.setRequestInterception(true);
   page.on('request',r=>{ if(/three(\.min)?\.js/.test(r.url()))r.respond({contentType:'application/javascript',body:THREE_LOCAL});
     else if(/fonts\./.test(r.url()))r.respond({contentType:'text/css',body:''}); else r.continue(); });
-  await page.goto(HTML,{waitUntil:'load'}); await sleep(1000);
+  await page.goto(SEEDEDHTML,{waitUntil:'load'}); await sleep(1000);
   await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
   await page.evaluate(QUIET);
   if(o.colossal){ await page.evaluate(`for(let i=0;i<9;i++)KEAGAME.award(300,'x',{x:0,y:1,z:0});`); await sleep(500); }
