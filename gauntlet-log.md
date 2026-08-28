@@ -33,3 +33,17 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 22 compared 0 flagged, worst 0.965
   13,32.5 as buried).
 - EYEBALL: gauntlet/capture/01_carpark_wide.png (boulder gone, oil patch at the carpark mouth)
   and 02_hut_snow.png (hut-door wear moved to the foot of the step; subtle under tussock).
+
+### PIECE: tussock blade variance (Tier 2 item 2) — CERTIFIED b51abe08a70e456e7b537b10a78d0668
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 19 of 22 flagged (intentional, judged, re-pinned).
+- The instancing site the ledger could not find: buildGrass(), 42000 tapered planes.
+- SURPRISE: lean was already there (rotation.z +-0.12) but could never read as a comb.
+  rotation.z is applied inside the blade frame, so with a random yaw every blade leaned a
+  random way. The field could only ever look like upright spikes. The fix is to tilt about a
+  WORLD axis after the yaw.
+- grassBlade(x,z) now owns the pose and is exported, so the gate can judge the field with no
+  canvas. The 260 big tufts share it, at the same 4 random draws per tuft, so downstream
+  scenery (snow, rocks) keeps its positions.
+- Judged: 03, 05, 08, 10, 14, 21 all improved-or-equal before re-pinning.
+- EYEBALL: 05_tussock_ground.png and 14_player_view.png (the comb), 10_skifield.png (gold
+  dominance held after widening the tufts back).
