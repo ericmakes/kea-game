@@ -156,6 +156,27 @@ X.startGame(1); tick(8); park();
      (G.penGate?G.penGate.rotation.y.toFixed(2):'no gate')+' rad)');
   ok(G.sheep.length>0&&G.sheep.every(sh=>sh.panic>0),'the sheep are rattled by it'); }
 
+C.section('THE HAT SURVIVES THE RELOAD - wearables persistence');
+X.startGame(1); tick(8); park();
+{ const k=kq();
+  const bn=G.props.filter(p=>p.name==="tramper's beanie").find(p=>!p.banked&&!p.heldBy&&!p.worn);
+  ok(!!bn,'a beanie is loose in the world');
+  if(bn){ bn.x=12; bn.z=-42; bn.y=0.4; bn.mesh.position.set(bn.x,bn.y,bn.z);   // clean ground, law 3
+    const yy=perchAt(bn.x,bn.z,0.5);
+    for(let i=0;i<3;i++){ k.x=bn.x; k.z=bn.z; k.y=yy; k.vy=0; X.update(1/60); }
+    tap(P1.grab); tick(3); }
+  ok(k.hatProp&&k.hatProp.name==="tramper's beanie",'the beanie goes on the head, not in the beak');
+  const before=G.props.filter(p=>p.name==="tramper's beanie").length;
+  X.SAVE.write&&X.SAVE.write();
+  X.startGame(1); tick(12);                                  // hydration lands on a later tick
+  const k2=kq();
+  ok(k2.hatProp&&k2.hatProp.name==="tramper's beanie",'the worn hat survives the reload');
+  ok(k2.hatProp&&k2.hatProp.mesh.parent===k2.head,'the hat rides the LIVE bird, not the one that took it');
+  const after=G.props.filter(p=>p.name==="tramper's beanie").length;
+  ok(after<=before+1,'the reload does not mint a spare beanie ('+before+' to '+after+')');
+  const ghosts=G.props.filter(p=>p.heldBy&&G.keas.indexOf(p.heldBy)<0);
+  ok(ghosts.length===0,'no prop is held by a bird that no longer exists ('+ghosts.map(p=>p.name).join(' ')+')'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

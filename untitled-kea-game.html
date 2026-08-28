@@ -431,12 +431,16 @@ const AMB={on:false,
       if(Math.abs(c.x-k.x)>14)c._swell=false; }
   }
 };
+/* wearables: what you were wearing is part of who you are (reference 17, lean in) */
+const WEARABLE={"ranger's cap":{build:'rangercap',owner:'rex',mission:'b_cap'},
+                "tramper's beanie":{build:'beanie',owner:'tom',mission:'b_beanie'}};
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
   write(){ if(!this.ok())return; try{ localStorage.setItem(this.key(),JSON.stringify({
     done:G.missions.filter(m=>m.done).map(m=>m.id), chapIdx:G.chapIdx||0,
-    peak:G.chaosPeak||0, t:G.playT||0, band:G.bandIdx||0 })); }catch(e){} },
+    peak:G.chaosPeak||0, t:G.playT||0, band:G.bandIdx||0,
+    hats:G.keas.map(k=>(k.hatProp&&k.hatProp.name)||null) })); }catch(e){} },
   load(){ if(!this.ok())return null; try{ const r=localStorage.getItem(this.key()); return r?JSON.parse(r):null; }catch(e){ return null; } },
   wipe(){ if(!this.ok())return; try{ localStorage.removeItem('keaSaveV1_n'); localStorage.removeItem('keaSaveV1_c'); }catch(e){} }
 };
@@ -451,7 +455,19 @@ function applySave(){ const b=SAVE.load(); if(!b)return renderTodo();
       for(const x of G.missions)if(x.bonus&&x.locked)x.locked=false;
       popup('THE FINALE UNLOCKS','APEX MENACE — four in pursuit, then home to the nest',0,null,true); AU.fanfare&&AU.fanfare(); }
   }
+  rewear(b.hats);
   renderTodo();
+}
+function rewear(hats){ // the cap may not exist yet on a fresh world: it only drops when screeched off
+  if(!hats)return;
+  for(let i=0;i<hats.length;i++){ const nm=hats[i], k=G.keas[i];
+    if(!nm||!k||k.hatProp)continue;
+    let p=G.props.find(pp=>pp.name===nm&&!pp.heldBy&&!pp.banked&&!pp.worn);
+    if(!p){ const w=WEARABLE[nm]; if(!w||!PB[w.build])continue;
+      p=propAt(nm,k.x,0.4,k.z,PB[w.build],{wearable:true,owner:w.owner,mission:w.mission});
+      const src=G.humans.find(h=>h.key===w.owner);
+      if(src&&src.hatG){ p.srcHatG=src.hatG; src._capPopped=true; } }
+    k.wear(p); }
 }
 const P1MAP={fwd:'KeyW',back:'KeyS',left:'KeyA',right:'KeyD',flap:'Space',grab:'KeyE',scream:'KeyQ'};
 const P2MAP={fwd:'ArrowUp',back:'ArrowDown',left:'ArrowLeft',right:'ArrowRight',flap:'Slash',grab:'Period',scream:'Comma'};
@@ -1940,12 +1956,8 @@ class Kea{
         popup('REX IS WATCHING THE RADIO','distract him!',0,this.pos(),true); AU.oi(); rex.aggro(this,0.6); return; } }
     if(prop.sleepGuard){ const gh=G.humans.find(h=>h.key===prop.sleepGuard);
       if(gh&&!gh.asleep){ popup("HE'S AWAKE — the beanie stays on",'wait for the snoring',0,this.pos(),true); return; } }
-    if(prop.wearable){ // hats ride the head, not the beak
-      if(this.hatProp)this.doff();
-      prop.heldBy=this; prop.worn=true; this.hatProp=prop;
-      prop.mesh.visible=true; this.head.add(prop.mesh);
-      prop.mesh.position.set(0,0.13,0.0); prop.mesh.rotation.set(0,0,0); prop.mesh.scale.setScalar(1/0.7);
-      if(prop.srcHatG)prop.srcHatG.visible=false;
+    if(prop.wearable){
+      this.wear(prop);
       AU.chirp(); this.peckAnim=0.2; award(15,'NOW WEARING: '+prop.name.toUpperCase(),this.pos());
       if(prop.mission)done(prop.mission);
       if(prop.missionProg)prog(prop.missionProg);
@@ -1957,6 +1969,12 @@ class Kea{
     { const rm=G.missions.find(m=>m.id==='radio'); if(prop.mission==='radio'&&rm&&!rm.done){ done('radio'); award(50,'RADIO SILENCE',this.pos()); } }
     if(prop.mission==='pie'){ const dv=G.humans.find(h=>h.key==='dave'); if(dv&&dv.onLadder){ done('pielift'); award(20,'PIE, FROM UNDER HIS NOSE',this.pos()); } }
   }
+  wear(prop){ // hats ride the head, not the beak. Quiet: no award, no noise, so the save can call it
+    if(this.hatProp)this.doff();
+    prop.heldBy=this; prop.worn=true; this.hatProp=prop;
+    prop.mesh.visible=true; this.head.add(prop.mesh);
+    prop.mesh.position.set(0,0.13,0.0); prop.mesh.rotation.set(0,0,0); prop.mesh.scale.setScalar(1/0.7);
+    if(prop.srcHatG)prop.srcHatG.visible=false; }
   doff(){ const p=this.hatProp; if(!p)return;
     this.head.remove(p.mesh); G.scene.add(p.mesh); p.mesh.scale.setScalar(1);
     p.worn=false; p.heldBy=null; this.hatProp=null;
@@ -3110,7 +3128,8 @@ function startGame(mode,opts){
   G.colossal=!!(opts&&opts.colossal); G.level=1;
   G.camYaw=0; G.camDist=1;
   G.won=false; G.finaleOn=false; G.apexArmed=false; G.apexNoted=false;
-  for(const k of G.keas){ if(k.g&&k.g.parent)k.g.parent.remove(k.g); if(k.labelEl&&k.labelEl.remove)k.labelEl.remove(); }
+  for(const k of G.keas){ if(k.hatProp)k.doff(); if(k.held)k.drop();   // the bird leaves with nothing: what it carried stays in the world
+    if(k.g&&k.g.parent)k.g.parent.remove(k.g); if(k.labelEl&&k.labelEl.remove)k.labelEl.remove(); }
   G.keas.length=0;
   for(const h of G.humans){ if(h.g&&h.g.parent)h.g.parent.remove(h.g); }
   G.humans.length=0;
