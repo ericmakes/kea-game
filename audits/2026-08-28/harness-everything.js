@@ -177,6 +177,21 @@ X.startGame(1); tick(8); park();
   const ghosts=G.props.filter(p=>p.heldBy&&G.keas.indexOf(p.heldBy)<0);
   ok(ghosts.length===0,'no prop is held by a bird that no longer exists ('+ghosts.map(p=>p.name).join(' ')+')'); }
 
+C.section('THE METER KICKS - HUD juice on a big landing');
+X.startGame(1); tick(4);
+{ const quiet=()=>{ G.combo=0; G.comboArmed=false; G.hudPulse=0; };
+  quiet(); X.award(12,'a small one',null);
+  ok(!(G.hudPulse>0),'a small award leaves the meter alone ('+(G.hudPulse||0).toFixed(2)+')');
+  quiet(); X.award(60,'a big one',null);
+  const peak=G.hudPulse;
+  ok(peak>0.5,'a big award kicks the meter ('+peak.toFixed(2)+')');
+  X.award(60,'another big one',null);
+  ok(G.hudPulse>peak&&G.hudPulse<=1.5,'the kick stacks but stays capped ('+G.hudPulse.toFixed(2)+')');
+  tick(60);
+  ok(G.hudPulse===0,'and it settles back to nothing inside a second ('+G.hudPulse.toFixed(2)+')');
+  quiet(); G.combo=3; G.comboArmed=true; X.award(12,'a small one on a hot streak',null);
+  ok(G.hudPulse>0,'a small award on a hot combo kicks it too - the meter reads what LANDS'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
