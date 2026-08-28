@@ -1,0 +1,7 @@
+{
+  "name": "kea-gauntlet",
+  "private": true,
+  "description": "Self-contained certification gauntlet for the untitled kea game. bash gauntlet/verify/gate.sh certifies; no chat required.",
+  "dependencies": { "three": "0.128.0" },
+  "optionalDependencies": { "puppeteer": "^22.0.0" }
+}
