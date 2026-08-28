@@ -58,3 +58,15 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 22 compared 0 flagged (the toy is 
 - New vantage 23_paddock_gate: the paddock had no frame at all, so the emptiest area of the map
   was invisible to the tripwire.
 - EYEBALL: gauntlet/capture/23_paddock_gate.png (twine wraps at the latch post, kea on them).
+
+### PIECE: wearables persistence (Tier 2 item 5) — CERTIFIED e961cf8bb187529fe1e9a58d6cb1a5f1
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 23 compared 0 flagged.
+- Kea.wear(prop) split out of take() as a quiet verb; SAVE carries a hats array; applySave
+  calls rewear(), minting the ranger cap if the save says you had it and the world has none.
+- SURPRISE 1: a restart took the worn hat to the grave. The hat mesh is a child of the bird
+  head, so clearing G.keas deleted it while prop.heldBy still pointed at the dead bird.
+- SURPRISE 2: the same for anything carried. The new invariant assertion found a GoPro held by
+  a bird that no longer existed, in the CLEAN build. startGame now doffs and drops first.
+- Staging took 2 attempts (FLAKES law 3): takeProp grabbed a stale beanie from an earlier
+  section. Isolating the target on clean ground first is what worked. Logged for the next run.
+- No frame to eyeball; this one is mechanical. Proof is battery 9.
