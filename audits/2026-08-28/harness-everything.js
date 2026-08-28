@@ -192,6 +192,41 @@ X.startGame(1); tick(4);
   quiet(); G.combo=3; G.comboArmed=true; X.award(12,'a small one on a hot streak',null);
   ok(G.hudPulse>0,'a small award on a hot combo kicks it too - the meter reads what LANDS'); }
 
+C.section('THE OUTSKIRTS GET A GAG - road, ski field, trailhead');
+X.startGame(1); tick(8); park();
+{ const homeNear=(nm,hx,hz,r)=>{ const p=G.props.filter(pp=>pp.name===nm).pop();
+    return !!p&&Math.hypot(p.home.x-hx,p.home.z-hz)<r; };
+  ok(homeNear('ski goggles',-41.2,-38.05,2.0),'the goggles lie at the ski rack');
+  ok(homeNear('woollen sock',46.9,-39.0,2.0),'the sock lies under the boot rail');
+  // the paddle, pecked where it stands
+  ok(peckL('ROADWORKS PADDLE'),'the paddle is peckable at the verge');
+  tick(45);
+  ok(M('r_paddle'),'flipping the paddle credits r_paddle');
+  const rests=()=>G.paddle&&Math.abs(G.paddle.rotation.y-(G.paddleFlipped?Math.PI:0))<0.15;
+  ok(rests(),'the paddle rests where its own state says ('+
+     (G.paddle?G.paddle.rotation.y.toFixed(2):'none')+' rad, flipped='+G.paddleFlipped+')');
+  { const before=G.score, flips=G.paddleFlips||0;
+    peckL('ROADWORKS PADDLE'); tick(45);
+    ok((G.paddleFlips||0)>flips,'it keeps flipping, it does not latch shut');
+    ok(rests(),'and it still rests where its state says');
+    ok(G.score===before,'a re-flip pays nothing - the gag is not a chaos tap'); }
+  // the two takeables, isolated on clean ground first (law 3)
+  const grab=(nm,gx,gz)=>{ const k=kq();                       // law 3: isolate, and clear the neighbours
+    const p=G.props.filter(pp=>pp.name===nm).find(pp=>!pp.banked&&!pp.heldBy&&!pp.worn);
+    if(!p)return null;
+    for(const q of G.props){ if(q===p||q.heldBy||q.banked)continue;
+      if(Math.hypot(q.x-gx,q.z-gz)<3.5){ q.x=-49; q.z=-49; q.y=0.2; q.mesh.position.set(-49,0.2,-49); } }
+    p.x=gx; p.z=gz; p.y=0.4; p.mesh.position.set(p.x,p.y,p.z);
+    const yy=perchAt(p.x,p.z,0.5);
+    for(let i=0;i<3;i++){ k.x=p.x; k.z=p.z; k.y=yy; k.vy=0; X.update(1/60); }
+    tap(P1.grab); tick(3); return p; };
+  const gg=grab('ski goggles',-16,-44);
+  ok(gg&&kq().hatProp===gg,'the goggles go on the head, not in the beak');
+  ok(M('s_goggles'),'wearing the goggles credits s_goggles');
+  const so=grab('woollen sock',22,-44);
+  ok(so&&kq().held===so,'the sock is carryable');
+  ok(M('t_sock'),'taking the sock credits t_sock'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

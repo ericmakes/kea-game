@@ -62,3 +62,11 @@ Judged improved-or-equal before pinning: 03 kea plate, 05 tussock ground, 08 rea
 23_paddock_gate pinned: the paddock had no vantage at all, so the emptiest area of the map
 was invisible to the tripwire. Camera sits outside the gate looking down the pen.
 The other 22 held at 0 flagged, worst 0.9870 — the paddock toy is local, as it should be.
+
+## Re-pin 2026-08-29 (build 36bbe94f — satellite gags)
+All 24 re-pinned, including the new 24_verge_paddle. The 23 previous vantages held at 0
+flagged (worst 0.9738) before the re-pin, so nothing red was pinned green.
+NOTE for the next run: the residual drift on grass-heavy frames comes from buildGrass
+colouring blades with Math.random rather than the seeded rnd(). Object-count changes shift
+that stream, so adding props tints the field very slightly. Moving grass colour onto rnd()
+would take the tripwire to near-zero noise. Named as a next pick, not done here.

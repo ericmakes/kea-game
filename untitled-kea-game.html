@@ -433,7 +433,8 @@ const AMB={on:false,
 };
 /* wearables: what you were wearing is part of who you are (reference 17, lean in) */
 const WEARABLE={"ranger's cap":{build:'rangercap',owner:'rex',mission:'b_cap'},
-                "tramper's beanie":{build:'beanie',owner:'tom',mission:'b_beanie'}};
+                "tramper's beanie":{build:'beanie',owner:'tom',mission:'b_beanie'},
+                "ski goggles":{build:'goggles',owner:null,mission:'s_goggles'}};
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
@@ -854,6 +855,7 @@ function buildWorld(){
     const sk2=propAt('ski',bx-0.5,0.95,bz+1.95,PB.ski,{heavy:true}); sk2.mesh.rotation.x=1.35;
     propAt('ski pole',bx+0.1,0.7,bz+1.95,PB.skipole,{mission:'s_pole'});
     propAt('ski pole',bx+0.3,0.7,bz+1.95,PB.skipole,{});
+    propAt('ski goggles',bx-1.2,0.2,bz+2.25,PB.goggles,{wearable:true,mission:'s_goggles'}); // dropped at the rack, as they always are
     addTear({label:'CHEW THE BINDING',need:1.6,range:1.2,air:true,keepMesh:true,getPos:()=>({x:bx-0.7,y:0.95,z:bz+1.95}),
       onDone(p){ award(35,'BINDING: CHEWED',p); done('s_binding'); AU.pop(); burst(p,PAL.dark,8); }});
   }
@@ -876,6 +878,7 @@ function buildWorld(){
     box(1.6,0.06,0.1,PAL.woodD,tx+2.2,0.75,tz+1.0); cyl(0.05,0.05,0.75,PAL.woodD,tx+1.5,0.37,tz+1.0,null,6); cyl(0.05,0.05,0.75,PAL.woodD,tx+2.9,0.37,tz+1.0,null,6);
     propAt('walking pole',tx+1.8,0.55,tz+1.1,PB.walkpole,{missionProg:'t_pole2'});
     propAt('walking pole',tx+2.5,0.55,tz+1.1,PB.walkpole,{missionProg:'t_pole2'});
+    propAt('woollen sock',tx+2.15,0.2,tz+1.45,PB.sock,{mission:'t_sock'});  // it blew off the rail hours ago
   }
   // campsite clothes line: three pegs, all crimes
   { const cx=19,cz=-17;
@@ -915,6 +918,25 @@ function buildWorld(){
     const spots=[[-16,12,0.5],[24,-20,-0.6],[-18,-2.5,1.2],[-28,31.2,0],[23,36.6,Math.PI],[-33,-31,0.8],[37,-33,-0.9]];
     for(let i=spots.length-1;i>0;i--){ const j=Math.floor(kr()*(i+1)); const t=spots[i]; spots[i]=spots[j]; spots[j]=t; }
     for(let i=0;i<4;i++){ const sp=spots[i]; mkKeaSign(sp[0]+(kr()-0.5)*2,sp[1]+(kr()-0.5)*2,sp[2]+(kr()-0.5)*0.4); }
+  }
+  { // the verge: a roadworks paddle, STOP one side and GO the other, nobody minding it
+    const px=7, pz=29.0;
+    cyl(0.035,0.04,1.05,PAL.metal,px,0.52,pz,null,7);
+    const pad=new THREE.Group(); pad.position.set(px,1.12,pz); G.scene.add(pad);
+    const disc=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.035,18),mat(PAL.bad));
+    disc.rotation.x=1.57; pad.add(disc);
+    const back=new THREE.Mesh(new THREE.CircleGeometry(0.275,18),bmat(PAL.green));
+    back.position.z=-0.024; back.rotation.y=Math.PI; pad.add(back);
+    G.paddle=pad; G.paddleFlipped=false;
+    addPeck({label:'FLIP THE ROADWORKS PADDLE',needHits:2,range:1.35,repeat:true,
+      getPos:()=>({x:px,y:1.12,z:pz}),
+      onDone(p){ G.paddleFlipped=!G.paddleFlipped; G.paddleFlips=(G.paddleFlips||0)+1;
+        const to=G.paddleFlipped?1:0, from=G.paddleFlipped?0:1;
+        TW.add(0.5,u=>{ pad.rotation.y=(from+(to-from)*u)*Math.PI; });
+        AU.pop(); burst(p,PAL.bad,5);
+        if(!G.paddleDone){ G.paddleDone=true; award(25,'PADDLE: FLIPPED. NOT YOUR JOB.',p);
+          done('r_paddle'); noise({x:px,y:1.0,z:pz},6,'misdeed',null); }
+      }});                                  // repeat: it flips back and forth, but it only pays once
   }
   buildTrailer(-14,20);
   buildNest(G.nestPos.x,G.nestPos.z);
@@ -1093,6 +1115,11 @@ const PB={
   longSeal(g){ for(let i=0;i<11;i++){ const a=i*0.62, r=0.34-i*0.014;
     const b=rbox(0.3,0.055,0.075,0.026,PAL.rubber,Math.cos(a)*r,0.05+i*0.016,Math.sin(a)*r,g);
     b.rotation.y=-a+1.57; b.rotation.z=Math.sin(i*1.7)*0.1; } }, // a peeled seal coils
+  goggles(g){ rbox(0.3,0.12,0.075,0.03,0x2E3238,0,0,0,g);
+    const l=new THREE.Mesh(new THREE.PlaneGeometry(0.23,0.075),bmat(0xE38B2A)); l.position.set(0,0,0.042); g.add(l);
+    rbox(0.33,0.045,0.03,0.014,0x8A3A2E,0,0.012,-0.05,g); },
+  sock(g){ rbox(0.14,0.36,0.14,0.055,0xE4DCC6,0,0,0,g); rbox(0.25,0.14,0.14,0.055,0xE4DCC6,0.07,-0.15,0,g);
+    box(0.15,0.05,0.15,0xC24A3A,0,0.15,0,g); box(0.15,0.05,0.15,0xC24A3A,0,0.07,0,g); }, // one big woolly tramping sock
   twine(g){ for(let i=0;i<8;i++){ const a=i*0.85, r=0.105;
     const b=cyl(0.015,0.015,0.2,0xD8CBA0,Math.cos(a)*r,0.015+i*0.012,Math.sin(a)*r,g,5);
     b.rotation.z=1.57; b.rotation.y=-a; } },                    // a chewed length of twine coils
@@ -2744,6 +2771,7 @@ function defineMissions(mode,opts){
     {id:'jam',    area:A.road,label:'Bring the morning traffic to a standstill'},
     {id:'bootroad',area:A.road,label:'Leave one boot in the middle of the road'},
     {id:'airmail',area:A.road,label:'Deliver something by air mail (drop it from great height)'},
+    {id:'r_paddle',area:A.road,label:'Flip the roadworks paddle at the verge'},
     {id:'q_peck', area:A.cp,  label:'Give the DOC ute a good hard peck'},
     {id:'q_table',area:A.cp,  label:'Clear the picnic table entirely'},
     {id:'q_pegs', area:A.camp,label:'Steal all three clothes pegs',need:3,n:0},
@@ -2754,11 +2782,13 @@ function defineMissions(mode,opts){
     {id:'s_ski',  area:A.ski, label:'Relocate somebody\'s ski beyond the snowline'},
     {id:'s_pole', area:A.ski, label:'Make off with a ski pole'},
     {id:'s_binding',area:A.ski,label:'Chew a binding, thoroughly'},
+    {id:'s_goggles',area:A.ski,label:'Help yourself to the ski goggles, and wear them'},
     {id:'s_lift', area:A.ski, label:'Perch the spinning tow wheel'},
     {id:'t_pack', area:A.tr,  label:'Unzip the unattended pack'},
     {id:'t_bar',  area:A.tr,  label:'Scoff the muesli bar at your nest'},
     {id:'t_pole2',area:A.tr,  label:'Redistribute both walking poles',need:2,n:0},
     {id:'t_sign', area:A.tr,  label:'Revise the 3 HR RETURN sign'},
+    {id:'t_sock', area:A.tr,  label:'Liberate the woollen sock under the boot rail'},
     {id:'keys',   area:A.pad, label:'Confiscate the ranger\'s ute keys'},
     {id:'sign',   area:A.pad, label:'Retire the DO NOT FEED THE KEA sign'},
     {id:'paddock',area:A.pad, label:'Get a driver out of his car, then lead the chase into the sheep paddock'},
