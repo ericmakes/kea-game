@@ -72,20 +72,30 @@ frames it replaced.
 
 ## Suggested next three picks
 
-1. **TODO 8, `white-object-18`** — smallest thing left, and it is an identification job before it
-   is a fix. Cheap, self-contained, and it clears a visible blemish in a pinned frame.
-2. **TODO 10, `caravan-door-orientation`** — I confirmed this defect twice while eyeballing other
-   pieces: the door pane stands off the side as a dark vertical fin in both 20 and 12. It is
-   judge-required and it is the largest remaining *visible* error in the pinned set. Worth your
-   review time more than anything else on the list.
-3. **A follow-cam preen vantage** — piece 6 is certified against a metric, but the complaint that
-   started it was about the follow camera, and no vantage stages the preen from behind and above.
-   The set cannot currently judge the thing you actually objected to.
+Run order is now fixed by your own note in TODO.md, so these are simply the next three in it:
 
-Held over from last session and still true: `buildGrass` colours blades with `Math.random`
-rather than the seeded `rnd()`, so object-count changes tint the field very slightly. That is the
-entire residual 0.977 tripwire noise. Moving it onto `rnd()` would take the tripwire to near-zero.
+1. **TODO 7, `floating-text-cull`** — investigation first: identify the far-field label in 20
+   before deciding whether it is stray or signage. Smallest remaining, and the answer decides the
+   shape of the fix rather than the other way round.
+2. **TODO 8, `white-object-18`** — identify the white object under the tail at the caravan door,
+   then keep-and-name it or remove it. Self-contained, clears a visible blemish in a pinned frame.
+3. **TODO 9, `facet-normals`** (judge-required) — then **10** (judge-required), then **26** and
+   **27** per your run-order note, then the mode pieces 11-25.
 
-The 16 appended caravan/VS pieces (10-25) are a much larger body of work than one overnight run;
-11-17 are mechanical and gate-friendly, 18-25 depend on the MODE CONSTANTS and want your
-playtest fences respected. Suggest sequencing them after 8 and 10.
+Both of your follow-ups were already on my own next-picks list from this run — 26 is the
+follow-cam preen vantage I flagged as unjudgeable, and 27 is the `buildGrass` `Math.random` tint
+that is the entire residual 0.977 tripwire noise. Doing 27 early is the right call: every
+judgement after it gets quieter.
+
+## One thing you need to know about TODO.md
+
+**Neither of your two `cat >>` appends actually reached the file.** TODO.md was still the 91-line
+version from `905ce70` — pieces 1-9 only. Both blocks existed solely in the session transcript,
+which the next session does not get, and the protocol makes TODO.md the source of truth. I have
+written both in verbatim from your dictation: the MODE CONSTANTS block, pieces 10-25, FENCED FOR
+PLAYTEST, and the SESSION-2 FOLLOW-UPS with 26-27. TODO.md is now 246 lines, 27 pieces, committed.
+
+Worth checking your shell — if those heredocs failed silently once they can do it again, and the
+first one went unnoticed for a whole session. My previous report's line about "the 16 caravan/VS
+pieces you appended mid-run" was written from your message, not from the file; that gap is closed
+now, but I should have verified the file rather than trusting the paste.
