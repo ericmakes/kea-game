@@ -121,3 +121,38 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 21 and 22 r
 - EYEBALL: 21_night_camp.png (the right-edge canopy and the mid-ground tree now sit dark against
   the mountains instead of glowing daylight green) and 22_torch_beam.png (the big left tree).
   Day vantages were reshot as a control and did not move beyond the known 0.977 capture noise.
+
+### PIECE: glass-sky-gradient (TODO item 2) — CERTIFIED 438f6b72dd09f60c3d315dca4bf1472f
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged. Glazing now ramps.
+- DEVIATION FROM THE TODO, on measured evidence. The brief asked for a detailTex kind 'glass'
+  registered in MAPKIND. I measured rbox first and that route cannot work. rbox is an
+  ExtrudeGeometry, so (a) its UVs are in MODEL UNITS - v spans -h/2..h/2 on a cap face, so a
+  0..1 gradient shows only a 0.55-wide SLICE of itself on a window band - and (b) world y
+  correlates 1.00 with V on the cap faces but 1.00 with U on the side walls, which is where the
+  caravan side windows actually face. No single texture is vertical on both. DIRECTION.md line
+  34 already says it: rbox UVs slice canvas textures. With RepeatWrapping the panes would take a
+  hard seam across their mid-height; with ClampToEdge they would read flat, which is the very
+  complaint. Numbers in the scratch measurement: front band v -0.275..1.040, door pane
+  v -0.475..1.030, side face y-to-U 1.00.
+- SHIPPED INSTEAD: vertex colours. glassRamp() clones the pane geometry (roundedBoxGeo caches by
+  dims - poisoning the cache would tint non-glass boxes) and writes a per-vertex colour ramping
+  on the pane OWN bounding-box y, so it is exactly vertical on every face of every pane
+  regardless of dims. GLASSTOP 0.90,0.945,1.00 to GLASSBOT 1.00,1.020,1.01 as a multiplier on
+  the existing glass base: worst channel delta 0.100, inside the 0.12 ceiling the TODO set.
+  Better than the brief in three ways - no canvas, so the proof is a first-class node assertion
+  rather than a stub-executed painter; per-pane correctness; and it costs no texture.
+- pane() replaces nine rbox glazing calls. 18 panes live in the scene (traffic brings its own).
+- SURPRISE, and it would have shipped silently: moving the panes to a new material memo key
+  (mat(c,GLASSX)) ORPHANED the warm night window. boot() had w1=mat(0x9FB8C4) with no extras, so
+  after the patch it held a material nothing in the scene wore, and the caravan window glow at
+  night would have quietly stopped while every existing assertion stayed green. Fixed at the
+  source and the proof now pins it both ways: warmMats[0] is a registered glazing material AND
+  something in the scene actually wears it.
+- REGISTRY NOTE: registers the two MATERIALS, not the meshes. Cars spawn and despawn panes, so a
+  mesh list would pile up references to dead traffic; the proof traverses the live scene instead.
+- EYEBALL: 20_dead_rear.png (rear window band, bluer at the head, near-white at the sill) and
+  12_seal_midpeel.png / 18_rear_close.png. Deliberately gentle - 10% is a 10% look. 07 and 15
+  re-pinned for car glass. Nothing crossed the tripwire threshold; all five were re-pinned as
+  intentional. If Eric wants it to read harder, GLASSTOP is the one knob.
+- SEEN WHILE EYEBALLING 20: the caravan door pane stands out as a dark vertical fin off the
+  side, exactly as new TODO item 10 (caravan-door-orientation) describes. Confirmed, untouched.

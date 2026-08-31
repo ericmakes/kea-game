@@ -655,6 +655,27 @@ function rbox(w,h,d,r,c,x,y,z,parent,opts){
   if(!HEADLESS&&!(opts&&opts.noshadow)){m.castShadow=true;m.receiveShadow=true;}
   (parent||G.scene).add(m); return m;
 }
+const GLASSX={vertexColors:true};                  // one memo key for every pane, warm windows included
+const GLASSTOP=[0.90,0.945,1.00], GLASSBOT=[1.00,1.020,1.01]; // sky at the head, near-white at the sill
+function glassRamp(m){
+  // MEASURED, not assumed: rbox is an ExtrudeGeometry, so its UVs are in MODEL UNITS
+  // (v spans -h/2..h/2 on a cap) and world y lands on V on the cap faces but on U on the
+  // side walls. No single texture can be vertical on both - see DIRECTION.md on rbox UVs.
+  // So the ramp rides VERTEX Y, which every face of every pane agrees on.
+  const g=m.geometry=m.geometry.clone();           // roundedBoxGeo caches by dims; do not poison it
+  const p=g.attributes.position; g.computeBoundingBox();
+  const y0=g.boundingBox.min.y, sp=Math.max(1e-6,g.boundingBox.max.y-y0);
+  const col=new Float32Array(p.count*3);
+  for(let i=0;i<p.count;i++){ const t=(p.getY(i)-y0)/sp;   // 0 at the sill, 1 at the head
+    for(let c=0;c<3;c++)col[i*3+c]=GLASSBOT[c]+(GLASSTOP[c]-GLASSBOT[c])*t; }
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  // register the MATERIALS, not the meshes: cars spawn and despawn panes all match, so a
+  // mesh list would pile up refs to dead traffic. Two materials, and the scene owns the rest.
+  const GM=G.glassMats=G.glassMats||[]; if(GM.indexOf(m.material)<0)GM.push(m.material);
+  return m;
+}
+function pane(w,h,d,r,c,x,y,z,parent){ // glazing: the glass material plus its vertical sky ramp
+  return glassRamp(rbox(w,h,d,r,0,x,y,z,parent,{noshadow:true,mats:mat(c,GLASSX)})); }
 function capsule(r,h,c,x,y,z,parent){
   const g=new THREE.Group(); g.position.set(x||0,y||0,z||0);
   cyl(r,r,Math.max(0.01,h-r*2),c,0,0,0,g,14);
@@ -1471,8 +1492,8 @@ function mkCar(x,z,ry,color,type){
   const shell=rbox(2.0,0.55,4.2,0.16,color,0,0.56,0,bodyG); hull(shell,0.03);
   const cabZ=type==='ute'?-0.7:-0.2;
   const cab=rbox(1.76,0.66,2.1,0.24,color,0,1.06,cabZ,bodyG);
-  rbox(1.68,0.46,1.98,0.16,0,0,1.12,cabZ,bodyG,{noshadow:true,mats:mat(PAL.glass)});
-  rbox(1.5,0.4,0.06,0.1,0,0,0.98,cabZ+1.02,bodyG,{noshadow:true,mats:mat(PAL.glass)}); // windscreen
+  pane(1.68,0.46,1.98,0.16,PAL.glass,0,1.12,cabZ,bodyG);
+  pane(1.5,0.4,0.06,0.1,PAL.glass,0,0.98,cabZ+1.02,bodyG); // windscreen
   if(type==='ute'){ rbox(1.9,0.34,1.7,0.08,color,0,0.66,1.15,bodyG); rbox(1.86,0.06,0.06,0.02,PAL.metal,0,0.9,0.35,bodyG,{noshadow:true}); }
   rbox(2.04,0.16,0.3,0.06,PAL.white,0,0.4,-2.08,bodyG,{noshadow:true}); rbox(2.04,0.16,0.3,0.06,PAL.white,0,0.4,2.08,bodyG,{noshadow:true}); // bumpers
   sph(0.085,PAL.sun,-0.65,0.62,-2.12,bodyG,8); sph(0.085,PAL.sun,0.65,0.62,-2.12,bodyG,8);
@@ -1511,10 +1532,10 @@ function mkCampervan(x,z){
   rbox(2.56,0.12,5.7,0.05,0,0,1.22,0,g,{noshadow:true,mats:mat(0x7BC043)}); // green accent stripe
   rbox(2.565,0.05,5.7,0.02,0,0,1.33,0,g,{noshadow:true,mats:mat(0x2A2E33)}); // charcoal pinline
   for(const wz of [-1.5,-0.3,1.8]){ rbox(0.06,0.7,0.9,0.04,0x3A4046,1.225,1.72,wz,g,{noshadow:true});
-    rbox(0.05,0.56,0.76,0.03,0x9FB8C4,1.25,1.72,wz,g,{noshadow:true}); }
+    pane(0.05,0.56,0.76,0.03,0x9FB8C4,1.25,1.72,wz,g); }
   for(const wz of [-1.3,0.3,1.7]){ rbox(0.06,0.7,0.9,0.04,0x3A4046,-1.225,1.72,wz,g,{noshadow:true});
-    rbox(0.05,0.56,0.76,0.03,0x9FB8C4,-1.25,1.72,wz,g,{noshadow:true}); }
-  rbox(1.7,0.55,0.05,0.04,0x9FB8C4,0,1.75,2.79,g,{noshadow:true}); // front window band
+    pane(0.05,0.56,0.76,0.03,0x9FB8C4,-1.25,1.72,wz,g); }
+  pane(1.7,0.55,0.05,0.04,0x9FB8C4,0,1.75,2.79,g); // front window band
   { // the caravan silhouette: A-frame drawbar, coupling, jockey wheel, gas bottle
     const b1=cyl(0.045,0.045,1.3,PAL.metal,-0.42,0.42,3.32,g,7); b1.rotation.x=1.57; b1.rotation.y=0.32;
     const b2=cyl(0.045,0.045,1.3,PAL.metal,0.42,0.42,3.32,g,7); b2.rotation.x=1.57; b2.rotation.y=-0.32;
@@ -1526,7 +1547,7 @@ function mkCampervan(x,z){
   }
   rbox(1.04,1.56,0.03,0.04,0x2E3338,1.2,1.02,0.6,g,{noshadow:true}); // door frame
   rbox(0.96,1.48,0.04,0.045,0x23272B,1.21,1.02,0.6,g,{noshadow:true}); // the door itself — Crusader black
-  rbox(0.3,0.95,0.045,0.03,0x9FB8C4,1.215,1.22,0.6,g,{noshadow:true}); // tall narrow door pane
+  pane(0.3,0.95,0.045,0.03,0x9FB8C4,1.215,1.22,0.6,g); // tall narrow door pane
   sph(0.05,PAL.metal,1.25,0.98,0.24,g,6); // handle
   rbox(1.6,0.14,2.6,0.05,PAL.white,0,2.48,0.4,g,{noshadow:true}); cyl(0.14,0.18,0.16,PAL.metal,-0.5,2.56,-1.2,g,8); // roof pod + vent
   rbox(0.06,0.05,3.4,0.02,PAL.metal,1.23,2.34,0.2,g,{noshadow:true}); // awning rail
@@ -1542,7 +1563,7 @@ function mkCampervan(x,z){
     rbox(0.04,0.05,5.5,0.02,PAL.white,sdx*1.22,2.36,0,g,{noshadow:true}); // roof gutter trim
   }
   rbox(0.5,0.09,0.34,0.03,PAL.metal,1.32,0.28,0.6,g,{noshadow:true}); // door step
-  rbox(1.7,0.55,0.05,0.04,0x9FB8C4,0,1.62,-2.79,g,{noshadow:true}); // rear window band
+  pane(1.7,0.55,0.05,0.04,0x9FB8C4,0,1.62,-2.79,g); // rear window band
   box(2.3,0.16,0.14,PAL.metal,0,0.62,-2.83,g,{noshadow:true}); // rear bumper
   { const sw=cyl(0.34,0.34,0.12,PAL.rubber,-0.62,1.05,-2.85,g,12); sw.rotation.x=1.57; } // spare wheel
   box(0.42,0.14,0.02,PAL.white,0.55,0.75,-2.84,g,{noshadow:true}); // number plate
@@ -1572,7 +1593,7 @@ function mkDocUte(x,z){
   const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=-0.15; G.scene.add(g); G.uteG=g;
   const shell=rbox(2.0,0.55,4.4,0.16,PAL.ranger,0,0.56,0,g); hull(shell,0.03);
   rbox(1.76,0.68,1.6,0.22,PAL.ranger,0,1.1,-0.9,g);
-  rbox(1.66,0.46,1.5,0.16,0,0,1.16,-0.9,g,{noshadow:true,mats:mat(PAL.glass)});
+  pane(1.66,0.46,1.5,0.16,PAL.glass,0,1.16,-0.9,g);
   rbox(1.9,0.36,2.0,0.06,PAL.dark,0,0.68,1.1,g);
   rbox(1.92,0.05,0.05,0.02,PAL.metal,0,0.92,0.15,g,{noshadow:true}); rbox(1.92,0.05,0.05,0.02,PAL.metal,0,0.92,2.05,g,{noshadow:true}); // tray rails
   rbox(2.02,0.2,0.24,0.08,PAL.metal,0,0.5,-2.2,g,{noshadow:true}); // bullbar
@@ -3251,7 +3272,7 @@ const TOUCH={on:false,_st:{f:0,b:0,l:0,r:0},
   } };
 function boot(){
   initScene(); buildWorld(); registerSheepPecks();
-  { const w1=mat(0x9FB8C4), w2=mat(PAL.sun);
+  { const w1=mat(0x9FB8C4,GLASSX), w2=mat(PAL.sun);
     for(const m of [w1,w2]){ m.emissive=new THREE.Color(0xFFB35C).convertSRGBToLinear(); m.emissiveIntensity=0; }
     G.warmMats=[w1,w2]; }
   if(HEADLESS)return;

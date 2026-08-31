@@ -253,6 +253,39 @@ X.startGame(1); tick(4);
      (leaf?L(leaf.m.color).toFixed(3):'-')+' vs '+dayL.toFixed(3)+')');
   G.nightManual=false; }
 
+C.section('THE GLAZING CATCHES THE SKY');
+X.startGame(1); tick(6);
+{ const gm=G.glassMats||[];
+  ok(gm.length>=2,'the glazing family registered its materials ('+gm.length+')');
+  ok(gm.every(m=>m.vertexColors===true),'and every one of them reads vertex colour');
+  const panes=[]; G.scene.traverse(o=>{ if(o.material&&gm.indexOf(o.material)>=0)panes.push(o); });
+  ok(panes.length>=8,'the live scene is glazed ('+panes.length+' panes found by traversal)');
+  let broken=0, flat=0, spread=0, minBlue=9, sill=0;
+  for(const m of panes){ const g=m.geometry, p=g.attributes.position, c=g.attributes.color;
+    if(!c||c.count!==p.count){ broken++; continue; }
+    let lo=0, hi=0;
+    for(let i=0;i<p.count;i++){ if(p.getY(i)<p.getY(lo))lo=i; if(p.getY(i)>p.getY(hi))hi=i; }
+    const T=[c.getX(hi),c.getY(hi),c.getZ(hi)], B=[c.getX(lo),c.getY(lo),c.getZ(lo)];
+    const sp=Math.max(Math.abs(T[0]-B[0]),Math.abs(T[1]-B[1]),Math.abs(T[2]-B[2]));
+    if(sp<0.02)flat++;
+    spread=Math.max(spread,sp);
+    minBlue=Math.min(minBlue,T[2]-T[0]);                          // the head leans sky
+    sill=Math.max(sill,Math.max(B[0],B[1],B[2])-Math.min(B[0],B[1],B[2])); // the sill sits neutral
+    const span=Math.max(1e-6,p.getY(hi)-p.getY(lo));              // a ramp, not a step
+    for(let i=0;i<p.count;i++){ const t=(p.getY(i)-p.getY(lo))/span;
+      if(Math.abs(c.getX(i)-(B[0]+(T[0]-B[0])*t))>1e-5){ broken++; break; } }
+  }
+  ok(broken===0,'every pane colour tracks that pane own height, linearly ('+broken+' broken)');
+  ok(flat===0,'no pane came out flat ('+flat+' of '+panes.length+')');
+  ok(spread<=0.12,'the ramp stays LOW contrast - worst channel delta '+spread.toFixed(3)+' (0.12 ceiling)');
+  ok(spread>=0.02,'and it is genuinely there - worst channel delta '+spread.toFixed(3));
+  ok(minBlue>=0.05,'the head of every pane leans sky-blue (min blue over red '+minBlue.toFixed(3)+')');
+  ok(sill<=0.04,'and the sill sits near-white (worst sill channel spread '+sill.toFixed(3)+')');
+  // THE TRAP: the panes moved to a new memo key, so the warm night window could orphan silently
+  const wm=G.warmMats&&G.warmMats[0];
+  ok(!!wm&&gm.indexOf(wm)>=0,'the warm night window is still one of the glazing materials');
+  ok(panes.some(m=>m.material===wm),'and something in the scene actually wears it'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
