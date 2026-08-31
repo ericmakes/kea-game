@@ -46,7 +46,7 @@ async function shot(name,stage,opts){
   await page.goto(SEEDEDHTML,{waitUntil:'load'}); await sleep(1000);
   await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
   await page.evaluate(QUIET);
-  if(o.colossal){ await page.evaluate(`for(let i=0;i<9;i++)KEAGAME.award(300,'x',{x:0,y:1,z:0});`); await sleep(500); }
+  if(o.colossal){ await page.evaluate(`for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
   await page.evaluate('{'+stage+'}'); await sleep(o.settle||900);
   await page.screenshot({path:path.join(OUT,name+'.png')});
   await browser.close();
@@ -57,6 +57,10 @@ async function shotR(name,stage,opts){ // SwiftShader is moody: up to 3 takes pe
     catch(e){ console.log('retake',name,a); await sleep(400); } }
   console.log('GAVE UP',name);
 }
+// SUBJECT STAGING (2026-08-31): four showcase vantages had no subject in them. The bird flies
+// out of frame during the settle, so a one-shot stage cannot hold it. PIN re-applies the pose
+// every animation frame for as long as the page lives - the harness-side perch idiom (law 7).
+const PIN=body=>`{ const _pin=()=>{ try{ ${body} }catch(e){} requestAnimationFrame(_pin); }; requestAnimationFrame(_pin); }`;
 const CAM=(x,y,z,lx,ly,lz)=>`KEAGAME.G.camLock={x:${x},y:${y},z:${z},lx:${lx},ly:${ly},lz:${lz}};`;
 const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getElementById('todo'); if(td)td.style.display='none'; KEAGAME.G.cfOpen=false; KEAGAME.G.paused=false;
   KEAGAME.G.humans.forEach(h=>{h.x=46;h.z=46;h.home={x:46,z:46};h.patrol=null;});
@@ -66,14 +70,42 @@ const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getEle
 await shotR('01_carpark_wide',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.4; ${CAM(11,4.2,25,3.5,0.8,15.5)}`);
 await shotR('02_hut_snow',`const k=KEAGAME.G.keas[0];k.x=-24;k.z=-2.5;k.y=0;k.grounded=true;k.ry=Math.PI; ${CAM(-16,4.5,3,-24,2.6,-8)}`);
 await shotR('03_kea_plate',`const k=KEAGAME.G.keas[0];k.preenT=99;k.idleT=0;KEAGAME.G.poseLock=true;k.x=0;k.z=0;k.y=KEAGAME.groundHeightAt(0,0,1);k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0; ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
-await shotR('04_flight_underwing',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=3.2;k.grounded=false;k.vy=1.4;k.flapDrive=1;k.ry=0.4;KEAGAME.press(KEAGAME.P1MAP.flap); ${CAM(0.6,1.6,3.4,0,3.0,0)}`,{settle:600});
+// the bird sat above the HUD band, behind the chaos chip. Pin it mid-air at the top of the
+// upstroke: flapPh PI/2 gives sst=1, which is both max stroke and open=1.0, and open above
+// 0.25 is the only thing that makes the scarlet underwing panel (oPan) visible at all.
+await shotR('04_flight_underwing',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
+  KEAGAME.press(KEAGAME.P1MAP.flap);
+  ${PIN('k.x=0;k.z=0;k.y=3.2;k.vy=0;k.grounded=false;k.ry=0.4;k.flapDrive=1;k.flapPh=0.36;k.stun=0;k.landFlare=0;')}
+  ${CAM(0.6,1.2,1.5,0,3.12,0)}`,{settle:900});
 await shotR('05_tussock_ground',`const k=KEAGAME.G.keas[0];k.x=-8;k.z=-24;k.y=0;k.grounded=true;k.ry=0.6; ${CAM(-8,1.0,-19.5,-14,3.5,-60)}`);
 await shotR('06_skyline',CAM(0,3.2,10,-40,16,-120));
+// QUIET deletes every traffic car, so the jam vantage was an empty road. spawnTraffic is not
+// exported and the game file is out of scope for this piece, so drive the game OWN spawner:
+// zero its timers, tick, and clear the spawn mouth each time so the next car is let in (it
+// refuses to spawn within 7 units of an existing car of the same direction). Then jam them.
 await shotR('07_jam',`const G=KEAGAME.G;
-  const cone=G.props.find(p=>p.cone&&!p.heldBy); if(cone){cone.x=-4;cone.z=32.6;cone.y=0.06;cone.mesh.position.set(cone.x,cone.y,cone.z);}
-  const k=G.keas[0];k.x=-6;k.z=30;k.y=0;k.grounded=true;k.ry=1.2; ${CAM(-22,4.2,26,-6,1.0,33)}`);
+  const SLOT=[[-1.5,32.2,1],[5.6,32.2,1],[12.8,32.2,1],[2.0,35.8,-1],[10.2,35.8,-1]];
+  const held=[];
+  for(let n=0;n<200&&held.length<SLOT.length;n++){
+    G.trafT.a=0; G.trafT.b=0; KEAGAME.update(1/60);
+    for(const c of G.cars){ if(!c.traffic||held.indexOf(c)>=0)continue;
+      const s=SLOT[held.length]; if(!s)break;
+      c.x=s[0]; c.z=s[1]; c.speed=0; c.dir=s[2];
+      c.g.position.set(c.x,c.g.position.y,c.z);
+      c.g.rotation.y=s[2]>0?-Math.PI/2:Math.PI/2;
+      if(c.collider){c.collider.x=c.x;c.collider.z=c.z;}
+      held.push(c); } }
+  G.trafT.a=999; G.trafT.b=999;
+  const cone=G.props.find(p=>p.cone&&!p.heldBy); if(cone){cone.x=1.2;cone.z=34.0;cone.y=0.06;cone.mesh.position.set(cone.x,cone.y,cone.z);}
+  ${PIN('for(const c of G.cars){ if(c.traffic){c.speed=0;c.rootCause="kea";} } const k=G.keas[0];k.x=-4.3;k.z=34.0;k.y=0;k.vy=0;k.grounded=true;k.ry=1.57;k.stun=0;')}
+  ${CAM(-8.6,1.7,34.0,3.0,1.15,34.0)}`);
 await shotR('08_readability_320',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.6; ${CAM(8,3.4,22,2,0.8,14)}`,{w:320,h:180});
-await shotR('09_colossal',`const k=KEAGAME.G.keas[0];k.x=2;k.z=14;k.y=0;k.grounded=true;k.ry=2.4; ${CAM(14,4.5,26,2,2.6,14)}`,{colossal:true});
+// the colossal bird wandered during the settle - colossal stomps and bunts fire on contact and
+// the score pump had already put it in a mood. Pin it, and bring the camera in so LV10 reads
+// as colossal AGAINST the cars instead of as a speck.
+await shotR('09_colossal',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=1.2;k.z=20.0;k.y=0;k.vy=0;k.grounded=true;k.ry=1.0;k.stun=0;')}
+  ${CAM(5.8,2.9,25.2,1.2,1.3,19.6)}`,{colossal:true});
 await shotR('10_skifield',`const k=KEAGAME.G.keas[0];k.x=-37;k.z=-36;k.y=0;k.grounded=true;k.ry=3.9; ${CAM(-28,5,-27,-40,1.6,-40)}`);
 await shotR('11_trailhead',`const k=KEAGAME.G.keas[0];k.x=42;k.z=-37;k.y=0;k.grounded=true;k.ry=0.8; ${CAM(33,4.5,-30,44,1.8,-40)}`);
 await shotR('21_night_camp',`KEAGAME.G.night=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
@@ -88,7 +120,11 @@ await shotR('22_torch_beam',`KEAGAME.G.night=true;KEAGAME.G.nightT=1;KEAGAME.nig
 await shotR('20_dead_rear',`const k=KEAGAME.G.keas[0];k.x=-9.55;k.z=10.15;k.y=0;k.grounded=true;k.ry=Math.atan2((-11)-(-9.55),8-10.15);KEAGAME.G.poseLock=true; const c=KEAGAME.G.cams&&KEAGAME.G.cams[0]; if(c){c.position.set(k.x-Math.sin(k.ry)*1.7, 1.1, k.z-Math.cos(k.ry)*1.7);}`);
 await shotR('19_roof_follow',`const k=KEAGAME.G.keas[0];k.x=-24;k.z=-7.4;k.y=5.2;k.vy=0;k.grounded=true;k.ry=2.6;KEAGAME.G.poseLock=true; const c=KEAGAME.G.cams&&KEAGAME.G.cams[0]; if(c){c.position.set(k.x-Math.sin(2.6)*4.2, k.y+2.0, k.z-Math.cos(2.6)*4.2);}`);
 await shotR('18_rear_close',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;k.x=-9.2;k.z=10.6;k.y=0;k.grounded=true;k.ry=5.8;k.stun=0;k.idleT=0;k.idleAct=null; ${CAM(-8.6,1.5,12.4,-9.6,0.5,9.4)}`);
-await shotR('17_flight',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;k.x=0;k.z=0;k.y=3;k.grounded=false;k.flapDrive=true;k.vy=0.5;k.ry=2.2;k.stun=0; ${CAM(2.6,3.4,2.3,0,2.9,0)}`);
+// same escape as 04. flapPh 1.1 sits just past the top of the stroke so the wings read
+// mid-beat rather than pinned at a limit.
+await shotR('17_flight',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
+  ${PIN('k.x=0;k.z=0;k.y=3.0;k.vy=0;k.grounded=false;k.flapDrive=1;k.flapPh=1.1;k.ry=2.2;k.stun=0;k.landFlare=0;')}
+  ${CAM(2.35,3.15,2.1,0,3.0,0)}`);
 await shotR('16_trish',`const t=KEAGAME.G.humans.find(h=>h.key==='trish'); t.x=15;t.z=-10.5;t.state='idle';t.g.position.set(15,0,-10.5);
 const k=KEAGAME.G.keas[0];k.x=11;k.z=-7;k.y=0;k.grounded=true;k.ry=2.2;KEAGAME.G.poseLock=true; ${CAM(13.2,1.75,-8.2,15,1.15,-10.6)}`);
 await shotR('14_player_view',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=true; ${CAM(-4.38,2.3,3.18,0,0.9,0)}`);

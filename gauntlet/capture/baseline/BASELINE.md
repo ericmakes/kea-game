@@ -70,3 +70,13 @@ NOTE for the next run: the residual drift on grass-heavy frames comes from build
 colouring blades with Math.random rather than the seeded rnd(). Object-count changes shift
 that stream, so adding props tints the field very slightly. Moving grass colour onto rnd()
 would take the tripwire to near-zero noise. Named as a next pick, not done here.
+
+## Subject staging 2026-08-31 (build 0758d092 — GAME FILE UNCHANGED)
+04, 07, 09, 17 re-pinned on an intentional reframe. The game did not change; capture.mjs did.
+These four vantages had been shipping WITHOUT their subject: the bird flew out of frame during
+the settle in 04/09/17, and QUIET deletes every traffic car, so the jam vantage was an empty
+road. A one-shot stage cannot hold a bird that is still being simulated, so capture.mjs now has
+PIN(), which re-applies the pose every animation frame - the harness-side perch idiom.
+NEW TOOL: subjects.mjs, a presence tripwire beside diff.mjs. diff.mjs could never have caught
+this, because a birdless frame is perfectly stable and SSIM only asks whether a frame CHANGED.
+Verified adversarially: subjects.mjs fails all 6 checks on the four frames these pins replaced.
