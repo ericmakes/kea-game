@@ -156,3 +156,34 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged. Glazing now
   intentional. If Eric wants it to read harder, GLASSTOP is the one knob.
 - SEEN WHILE EYEBALLING 20: the caravan door pane stands out as a dark vertical fin off the
   side, exactly as new TODO item 10 (caravan-door-orientation) describes. Confirmed, untouched.
+
+### PIECE: score-popup-fanout (TODO item 3) — CERTIFIED 0758d092ed473f72e18665ee78cf7940
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 07/09/12 re-pinned.
+- popStack() runs BEFORE the HEADLESS bail and returns {i,dx,scale,delay}. Same lesson as HUD
+  juice: computing the fan as STATE rather than as a CSS class is the only reason the gate can
+  judge it. The DOM path then spends that state - a wrapper div owns translateX and scale so the
+  existing rise keyframes keep their own transform, and animationDelay plus fillMode both gives
+  the stagger.
+- DISTINCT BY CONSTRUCTION, not by luck. The obvious build is a hash per popup and a hope that no
+  two collide; that gate would go red on a hash collision one night for no reason. Instead the
+  68px band is cut into five slots, one per stack depth, and the hash only jitters WITHIN a slot
+  (+-40% of slot width). Two different depths can never land on the same x. Structural floor on
+  the closest pair is 2.72px, the assertion floor is 2px, so it cannot flake. Measured 6.48px.
+- Slots fill in the order 2,0,4,1,3 - centre, far left, far right, mid left, mid right - so a
+  burst opens outward instead of walking a diagonal staircase.
+- The hash is Math.sin-based (the idiom already in buildGrass), NOT rnd(). Deliberate: rnd()
+  draws from the seeded world stream, and capture.mjs warns in its own header that anything
+  drawing from that stream at runtime reshuffles later spawns and turns the tripwire back into
+  noise. A popup must not be able to move a car.
+- The stack index derives from POPLIFE, the feed own 1.7s life, rather than a new invented window
+  (law 10). The proof also pins the release: after a burst ages out, the next lone popup is i=0
+  and full scale, so it is never shrunk as if it were buried.
+- EYEBALL: 09_colossal.png against the old baseline is the whole argument. Before: five
+  pixel-identical lines in a rigid left-aligned column, overlapping the CHAOS chip. After: five
+  offsets, five scales, five fade starts, and clear of the chip.
+- OPEN FINDING, NOT MINE, worth a piece: in 09_colossal the colossal feed lines render as
+  "x +1500 x5" - a bare leading x where a crime name should be. Present in the PINNED BASELINE,
+  so it predates this work. Ruled out: it is not any of the 40 enumerated award() labels, and a
+  40s headless colossal run only ever produced named labels (A DRIVER GETS OUT, DRIVER THROWS A
+  CHIP, GROWTH SPURT - LEVEL 2). Cause not confirmed, so not guessed at. Needs a browser feed to
+  catch it. Suggest it as a small piece: find the caller that popups a bare x at 300 base.

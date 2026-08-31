@@ -286,6 +286,33 @@ X.startGame(1); tick(6);
   ok(!!wm&&gm.indexOf(wm)>=0,'the warm night window is still one of the glazing materials');
   ok(panes.some(m=>m.material===wm),'and something in the scene actually wears it'); }
 
+C.section('THE POPUPS FAN OUT - five in one tick, five places');
+X.startGame(1); tick(4);
+{ G.popFan=[];                                        // law 1: the feed state survives startGame
+  for(let n=0;n<5;n++)X.award(10+n,'crime '+n,null);   // one tick, no update between them
+  const F=G.popFan||[];
+  ok(F.length===5,'five awards spawned five stack entries ('+F.length+')');
+  const dx=F.map(f=>f.dx), sc=F.map(f=>f.scale), dl=F.map(f=>f.delay);
+  let clash=0, closest=99;
+  for(let a=0;a<dx.length;a++)for(let b=a+1;b<dx.length;b++){
+    const gap=Math.abs(dx[a]-dx[b]); if(gap<1e-6)clash++; if(gap<closest)closest=gap; }
+  ok(clash===0,'no two popups share an x offset ('+clash+' clashes, closest pair '+closest.toFixed(2)+'px)');
+  ok(closest>2,'and they are far enough apart to read as a fan, not a wobble ('+closest.toFixed(2)+'px)');
+  ok(dx.every(v=>Math.abs(v)<=34.001),'every offset stays inside the 34px band (worst '+
+     Math.max.apply(null,dx.map(Math.abs)).toFixed(2)+')');
+  ok(new Set(dx.map(v=>v.toFixed(3))).size===5,'all five offsets are distinct to the pixel');
+  let mono=true; for(let i=1;i<sc.length;i++)if(!(sc[i]<sc[i-1]))mono=false;
+  ok(mono,'scale falls off monotonically down the stack ('+sc.map(v=>v.toFixed(2)).join(' ')+')');
+  ok(sc[4]>0.4,'but the deepest line is still legible ('+sc[4].toFixed(2)+')');
+  let stag=true; for(let i=1;i<dl.length;i++)if(!(dl[i]>dl[i-1]))stag=false;
+  ok(stag,'the fade start staggers monotonically ('+dl.map(v=>v.toFixed(2)).join(' ')+')');
+  ok(F.every((f,i)=>f.i===i),'each entry knows its own depth in the stack');
+  // and the stack CLEARS once the feed has emptied, or every later burst piles up behind it
+  tick(Math.ceil(1.7*60)+6); X.award(11,'a lone crime later',null);
+  ok((G.popFan||[]).length===1,'a burst that has aged off screen leaves the next one at the top ('+
+     (G.popFan||[]).length+' live)');
+  ok(G.popFan[0].i===0,'so a lone popup is never scaled down as if it were buried'); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

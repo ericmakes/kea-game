@@ -2941,14 +2941,35 @@ function award(base,label,pos){
     if(G._fxSpy)G._fxSpy.push({why:'hudpulse',pts}); }
 }
 let FEEDN=0;
+const POPFAN=34, POPLIFE=1.7, POPSLOT=[2,0,4,1,3]; // px of scatter, seconds on screen, fill order
+function popStack(){
+  // the popups STILL ON SCREEN are the stack - that is exactly the set of identical lines
+  // being complained about, so the index derives from the feed own lifetime, not a new constant.
+  const F=G.popFan=G.popFan||[], now=G.time||0;
+  while(F.length&&now-F[0].at>POPLIFE)F.shift();
+  const i=Math.min(F.length,POPSLOT.length-1);
+  const band=(POPFAN*2)/POPSLOT.length, seq=G.popSeq=(G.popSeq||0)+1;
+  const h=Math.abs(Math.sin(seq*12.9898+i*78.233)*43758.5453)%1; // seeded by hash, never an rnd()
+  const f={ i, at:now,                                           // draw - the world stream stays put
+    dx:-POPFAN+band*(POPSLOT[i]+0.5)+(h-0.5)*band*0.8,           // one band per slot, so pairwise
+    scale:1-0.11*i,                                              // distinct BY CONSTRUCTION
+    delay:0.06*i };
+  F.push(f); return f;
+}
 function popup(label,pts,val,pos,small,big){
+  const f=popStack();                              // state first, so the gate can judge the fan
   if(HEADLESS){ G.lastPopup=label; return; }
   const d=document.createElement('div'); d.className='pf'+(big?' big':'');
   d.innerHTML=(label||'')+(pts?' <span class="pts">'+pts+'</span>':'');
   if(small)d.style.fontSize='16px',d.style.opacity=.92;
-  const feed=document.getElementById('feed'); feed.appendChild(d);
+  d.style.animationDelay=f.delay.toFixed(3)+'s'; d.style.animationFillMode='both';
+  const w=document.createElement('div');           // the wrapper owns the fan so the rise
+  w.style.transform='translateX('+f.dx.toFixed(1)+'px) scale('+f.scale.toFixed(3)+')'; // keyframes
+  w.style.transformOrigin='left center';           // keep their own transform
+  w.appendChild(d);
+  const feed=document.getElementById('feed'); feed.appendChild(w);
   while(feed.children.length>5)feed.removeChild(feed.firstChild);
-  setTimeout(()=>d.remove(),1700);
+  setTimeout(()=>w.remove(),POPLIFE*1000+f.delay*1000);
 }
 /* prompts + tug bars (cached to avoid DOM churn) */
 const PROMPTS=['',''],TUGS=[-1,-1],HOLDS=['',''];
