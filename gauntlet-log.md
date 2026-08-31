@@ -187,3 +187,46 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 07/09/12 re
   40s headless colossal run only ever produced named labels (A DRIVER GETS OUT, DRIVER THROWS A
   CHIP, GROWTH SPURT - LEVEL 2). Cause not confirmed, so not guessed at. Needs a browser feed to
   catch it. Suggest it as a small piece: find the caller that popups a bare x at 300 base.
+
+### PIECE: capture-staging-subjects (TODO item 4) — CERTIFIED 0758d092ed473f72e18665ee78cf7940
+Verdict: green. Gate CERTIFIED-SHIP. GAME FILE MD5 UNCHANGED - identical to piece 3, as the TODO
+required. Only capture.mjs changed, plus one new tool. Tripwire 24 compared 0 flagged after
+re-pinning 04/07/09/17; subjects 6 checked 0 missing.
+- ROOT CAUSE, and it was one cause for three of the four: the bird is STILL BEING SIMULATED
+  during the settle. 04/09/17 staged a pose once and then slept 600-900ms while gravity, flap
+  drive and colossal contact chaos carried the bird out of frame. A one-shot stage cannot hold a
+  live bird. capture.mjs now has PIN(body), which re-applies the pose every animation frame for
+  as long as the page lives - the harness-side reading of FLAKES law 7, and law 4 besides (pin
+  the state INSIDE the loop, every frame).
+- 07 was a different cause: QUIET deletes every traffic car, so the jam vantage could only ever
+  be an empty road. spawnTraffic is not exported and the game file was out of scope, so the fix
+  drives the game OWN spawner - zero its timers, tick, and move each new car out of the spawn
+  mouth so the next is let in (it refuses to spawn within 7 units of a same-direction car).
+  Five cars, jammed, cone in the lane, bird standing on the centre line facing them down.
+- 04 took two tries on taste. flapPh PI/2 is max stroke, which raises the wings to 68 degrees of
+  dihedral and EDGES the scarlet panel away from a low camera. flapPh 0.36 gives stroke 0.615
+  rad, wings spread rather than raised, open still 0.87 - and open above 0.25 is the only thing
+  that makes oPan visible at all. The vantage is called underwing; now it has one.
+- 09: the colossal bird at LV10 measures 1.61 units tall against a 1.2-unit car, so colossal only
+  READS next to a car. Staged clear of the parked row at z 20.0, three-quarter to the lens.
+- RESOLVES the open finding logged under piece 3. The bare "x" in the colossal feed was not a
+  game bug at all - capture.mjs pumps the colossal score with award(300,'x') and its own
+  placeholder label was being photographed. Now award(300,'CAR: BUNTED'). Nine identical lines of
+  a real crime name is a much better showcase frame, and the game file never needed touching.
+- NEW TOOL: gauntlet/verify/subjects.mjs, a PRESENCE tripwire, run beside diff.mjs. diff.mjs
+  could never have caught this class of bug: a birdless frame is perfectly stable, and SSIM only
+  asks whether a frame CHANGED. Four vantages shipped subjectless for weeks at 0 flagged.
+- THE TRAP INSIDE THE PROOF, worth its own law: a plain hue-band olive counter measures the
+  LANDSCAPE, not the bird. Measured on the birdless baselines, a loose h45-95 window scored 3939
+  olive pixels in the 07 box and only 1529 in the correctly staged frame - the tussock is gold
+  and the grass is green and both sat inside the window, so the test read GREEN for the empty
+  road and RED for the jam. The shipped classifier is derived from the palette instead: hue 52-80
+  excludes gold at 41 and grass at 89, and saturation under 0.62 excludes tussock and ground,
+  which sit above 0.65. Every floor is a measured number and the file records what the birdless
+  frame scored, so the margin is auditable in both directions.
+- VERIFIED ADVERSARIALLY, which is the only reason I trust it: copied the tool into a scratch tree
+  fed the four OLD frames and it failed all 6 checks and exited 1. A presence test that has never
+  been shown to fail is not a test.
+- EYEBALL: all four. 04_flight_underwing.png (two scarlet bands under spread wings),
+  07_jam.png (queue, cone, bird on the centre line, and the game own hint reading "stand your
+  ground and see what the traffic does"), 09_colossal.png, 17_flight.png.
