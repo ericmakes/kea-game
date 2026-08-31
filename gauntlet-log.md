@@ -96,3 +96,28 @@ Stop condition reached: 6 pieces certified. REPORT.md written. Final build 36bbe
 CERTIFIED-SHIP, 24 vantages pinned and green. Nothing parked red; Tier 2 item 6 (night
 ambience) still waiting on Eric audio. Highest-value open finding: 08_readability_320 hides
 the kea behind the prompt pill, which caps the whole set by CRITIC law.
+
+## SESSION 2 — 2026-08-31 (overnight, TODO diet)
+
+### PIECE: night-tint-trees (TODO item 1) — CERTIFIED 1472f58a0ec1fdb92c7b2a7a893f9634
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 21 and 22 re-pinned.
+- nightTint(m) is the whole mechanism: a material hands over its day colour once, the registry
+  computes its night colour as day x 0.30 with a +0.02 hue nudge and -0.30 saturation, and
+  nightApply lerps day to night on nightT alongside the sky, the fog and the warm windows.
+- WHY multiplyScalar and not a hand-picked night hex: scaling all three channels scales HSL
+  lightness by exactly the same factor and leaves hue and saturation alone, so the 0.45 contract
+  the TODO asked for holds BY CONSTRUCTION for every material, present and future. offsetHSL
+  then buys the cool cast without touching lightness. The proof reads 0.301 with no tuning.
+- Six materials registered: bark (trunk plus branch, one shared material), the under-canopy
+  beech mass, the three canopy greens, and the far beech skirts at r 88-100.
+- SURPRISE: the bark material is shared with the walking-pole knob, a 5cm sphere on Trish pole
+  (mat() memoises on colour plus extras, and cyl() passes no extras). Left shared on purpose -
+  a wooden knob going dark at night is correct, and splitting the key would cost a draw call.
+- Staging took 2 attempts (FLAKES law 1, the oldest one in the book). The first proof read its
+  day colour off the live material and found 0.039 - the finale section earlier in the battery
+  had tripped the wanted>=3 auto-night driver, and night PERSISTED into my section. The fix is
+  to own the day first (night=false, nightManual=true, tick to settled) exactly as law 5 says
+  to own the night, and to read the day value from the registry rather than the live material.
+- EYEBALL: 21_night_camp.png (the right-edge canopy and the mid-ground tree now sit dark against
+  the mountains instead of glowing daylight green) and 22_torch_beam.png (the big left tree).
+  Day vantages were reshot as a control and did not move beyond the known 0.977 capture noise.

@@ -738,20 +738,27 @@ function buildGrass(){
   im.count=i; im.instanceMatrix.needsUpdate=true; if(im.instanceColor)im.instanceColor.needsUpdate=true;
   im.receiveShadow=true; G.scene.add(im);
 }
+function nightTint(m){ // foliage and bark go dark by construction: L_night is 0.30 x L_day
+  if(!m)return m; G.nightMats=G.nightMats||[];
+  if(!G.nightMats.some(e=>e.m===m)){
+    const day=m.color.clone(), night=day.clone().multiplyScalar(0.30);
+    night.offsetHSL(0.02,-0.30,0);                 // a cool cast, lightness untouched
+    G.nightMats.push({m,day,night}); }
+  return m; }
 function mkTree(x,z,s){
   const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
-  const trunk=cyl(0.22*s,0.34*s,2.6*s,0x6E5334,0,1.3*s,0,g,9);
+  const trunk=cyl(0.22*s,0.34*s,2.6*s,0x6E5334,0,1.3*s,0,g,9); nightTint(trunk.material);
   cyl(0.1*s,0.16*s,1.2*s,0x6E5334,0.5*s,2.2*s,0.2*s,g,7).rotation.z=-0.5;
   const leafs=[0x3E6B34,0x4E7F3E,0x5E9448];
   { // under-canopy: the dark mass that gives the tree weight
-    const uc=new THREE.Mesh(new THREE.SphereGeometry(1.9*s,12,9),mat(PAL.beech,{roughness:0.98}));
+    const uc=new THREE.Mesh(new THREE.SphereGeometry(1.9*s,12,9),nightTint(mat(PAL.beech,{roughness:0.98})));
     uc.scale.y=0.55; uc.position.y=3.0*s; g.add(uc); }
   for(let i=0;i<8;i++){
     const cg=new THREE.SphereGeometry(rnd(0.9,1.5)*s,12,9);
     const pp=cg.attributes.position;
     for(let v=0;v<pp.count;v++){ const j=0.3*s; pp.setXYZ(v,pp.getX(v)+rnd(-j,j),pp.getY(v)+rnd(-j,j)*0.6,pp.getZ(v)+rnd(-j,j)); }
     cg.computeVertexNormals();
-    const cm=new THREE.Mesh(cg,mat(leafs[i%3],{roughness:0.95}));
+    const cm=new THREE.Mesh(cg,nightTint(mat(leafs[i%3],{roughness:0.95})));
     cm.scale.y=rnd(0.55,0.75);
     cm.position.set(rnd(-1.1,1.1)*s,(3.0+rnd(0.2,1.7))*s,rnd(-1.1,1.1)*s);
     cm.castShadow=!HEADLESS; g.add(cm);
@@ -890,7 +897,7 @@ function buildWorld(){
   }
   // dark beech skirts where the slopes meet the flats
   for(let i=0;i<12;i++){ const a=i/12*Math.PI*2+rnd(-0.15,0.15), r=rnd(88,100);
-    const b=new THREE.Mesh(new THREE.ConeGeometry(rnd(14,24),rnd(5,9),6),mat(PAL.beech));
+    const b=new THREE.Mesh(new THREE.ConeGeometry(rnd(14,24),rnd(5,9),6),nightTint(mat(PAL.beech)));
     b.position.set(Math.cos(a)*r,1.4,Math.sin(a)*r); b.scale.y=0.7; b.rotation.y=rnd(0,3); G.scene.add(b);
   }
 
@@ -3099,6 +3106,7 @@ function nightApply(t){
   if(G.haze)G.haze.material.opacity=L(0.45,0.14);
   if(G.moon)G.moon.visible=t>0.45;
   if(G.warmMats)for(const m of G.warmMats)m.emissiveIntensity=t*(m===G.warmMats[0]?0.95:0.6);
+  if(G.nightMats)for(const e of G.nightMats)e.m.color.copy(e.day).lerp(e.night,t);
   if(G.fire){ G.fire.flame.visible=t>0.2; if(G.fire.inner)G.fire.inner.visible=t>0.2; }
 }
 function update(dt){

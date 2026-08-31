@@ -227,6 +227,32 @@ X.startGame(1); tick(8); park();
   ok(so&&kq().held===so,'the sock is carryable');
   ok(M('t_sock'),'taking the sock credits t_sock'); }
 
+C.section('THE CANOPY TAKES THE NIGHT');
+X.startGame(1); tick(4);
+{ const T=H.THREE, lin=h=>new T.Color(h).convertSRGBToLinear();
+  const L=c=>{ const o={}; c.getHSL(o); return o.l; };
+  const reg=G.nightMats||[];
+  ok(reg.length>=5,'the trees hand their materials to the night driver ('+reg.length+')');
+  const near=(a,b)=>Math.abs(a.r-b.r)<1e-4&&Math.abs(a.g-b.g)<1e-4&&Math.abs(a.b-b.b)<1e-4;
+  const leaf=reg.find(e=>near(e.day,lin(0x4E7F3E)));
+  ok(!!leaf,'the mid canopy green is one of them');
+  // law 1 + law 5: the finale left night ON and it persisted, so own the day first
+  G.night=false; G.nightManual=true;
+  let s0=0; while(G.nightT>0.001&&s0<900){ X.update(1/60); s0++; }
+  const dayL=leaf?L(leaf.day):0;
+  ok(leaf&&Math.abs(L(leaf.m.color)-dayL)<0.01,'by day the canopy wears its day colour');
+  G.night=true;
+  let st=0; while(G.nightT<0.999&&st<900){ X.update(1/60); st++; }
+  ok(G.nightT>0.999,'night settles in ('+G.nightT.toFixed(4)+' after '+st+' frames)');
+  const ratio=leaf?L(leaf.m.color)/dayL:9;
+  ok(ratio<=0.45,'the canopy goes dark with the sky - lightness ratio '+ratio.toFixed(3)+' (0.45 floor)');
+  const worst=reg.reduce((w,e)=>Math.max(w,L(e.m.color)/Math.max(1e-6,L(e.day))),0);
+  ok(worst<=0.45,'every foliage and bark material goes with it (worst '+worst.toFixed(3)+')');
+  G.night=false; let s2=0; while(G.nightT>0.001&&s2<900){ X.update(1/60); s2++; }
+  ok(leaf&&Math.abs(L(leaf.m.color)-dayL)<0.01,'and the morning gives the green back ('+
+     (leaf?L(leaf.m.color).toFixed(3):'-')+' vs '+dayL.toFixed(3)+')');
+  G.nightManual=false; }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
