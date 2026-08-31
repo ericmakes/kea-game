@@ -356,6 +356,51 @@ X.startGame(1); tick(6); park();
   ok(G.hudLines[0]===0&&G.tabDocked===true,'no prompt at all still docks at 320 - width alone is enough');
   X.setPrompt(0,''); global.innerWidth=VW0; X.update(1/60); }
 
+C.section('THE PREEN KEEPS ITS HEAD ON');
+X.startGame(1); tick(6); park();
+{ const T=H.THREE, v=new T.Vector3(), bb=new T.Box3();
+  const k=kq(); G.poseLock=false;
+  const pin=()=>{ k.x=0; k.z=0; k.vy=0; k.grounded=true; k.stun=0; k.landFlare=0; };
+  const read=()=>{ k.g.updateMatrixWorld(true);
+    k.head.getWorldPosition(v); const hy=v.y;
+    k.beakTip.getWorldPosition(v); const by=v.y;
+    let wt=-99; for(const w of k.wings){ bb.setFromObject(w); if(bb.max.y>wt)wt=bb.max.y; }
+    return {hy,by,wt}; };
+
+  // the REFERENCE the contract is calibrated on: what the bird does standing still. The head pivot
+  // is never above the wing-bbox top in this rig - the folded wing tops are simply higher than the
+  // head - so an absolute "head above the wing line" test would be unsatisfiable. eps is the
+  // engine own tolerance and the test reads it rather than restating a number (law 10).
+  for(let i=0;i<80;i++){ pin(); k.idleAct=null; k.idleT=0; X.update(1/60); }
+  const rest=read(), restGap=rest.hy-rest.wt;
+  ok(restGap<0,'standing still the head pivot already sits under the wing line ('+restGap.toFixed(3)+')');
+  ok(restGap>-X.PREEN.eps,'and the resting deficit is inside eps, which is what eps was set from');
+
+  // the whole cycle, both sides, every 0.05s
+  let worstH=99, worstB=99, atT=0, atS=0, dips=0, n=0;
+  for(const side of [1,-1]) for(let t=0;t<=3.5;t+=0.05){
+    for(let i=0;i<3;i++){ pin(); k.idleT=99; k._idleEver=true;
+      k.idleAct={kind:'preen',t,dur:3.5,side}; X.update(1/60); }
+    const r=read(); n++;
+    if(r.hy-r.wt<worstH){ worstH=r.hy-r.wt; atT=t; atS=side; }
+    if(r.by-r.wt<worstB)worstB=r.by-r.wt;
+    if(r.by<r.hy)dips++;                      // the beak still goes DOWN, or it is not a preen
+  }
+  ok(n>=140,'the whole cycle got sampled, both sides ('+n+' frames)');
+  ok(worstH>=-X.PREEN.eps,'the head pivot never drops more than eps under the wing line (worst '+
+     worstH.toFixed(4)+' at t='+atT.toFixed(2)+' side '+atS+', eps '+X.PREEN.eps+')');
+  ok(worstH>=restGap-0.005,'in fact the preen carries the head no lower than standing still does ('+
+     worstH.toFixed(4)+' vs '+restGap.toFixed(4)+')');
+  // and it is still a preen: the beak dips toward the shoulder every frame, and the neck reaches out
+  ok(dips===n,'the beak stays below the head pivot throughout - it is a preen, not a scan ('+dips+'/'+n+')');
+  ok(worstB>=-0.31,'but the beak is no longer buried (worst '+worstB.toFixed(3)+', was -0.379)');
+  ok(worstB<restGap,'and it does reach further down than a resting bird ever does ('+worstB.toFixed(3)+')');
+  { for(let i=0;i<40;i++){ pin(); k.idleT=99; k._idleEver=true;
+      k.idleAct={kind:'preen',t:1.2,dur:3.5,side:1}; X.update(1/60); }
+    ok(Math.abs(k.neck.rotation.y)>1.0,'the neck reaches out to the shoulder ('+
+       k.neck.rotation.y.toFixed(2)+' rad, target '+X.PREEN.yaw+')'); }
+  k.idleAct=null; }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

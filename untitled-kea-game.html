@@ -2175,9 +2175,11 @@ class Kea{
       if(this.onRoof&&this.slideV>0.5){ B.rotation.x=0.35; this.legs.forEach(l=>l.rotation.x=1.2); } // luge posture
       if(this.eatT>0){ H.rotation.x=-0.5+Math.abs(Math.sin(G.time*14))*0.9; } // head-toss gulp
       if(this.idleAct){ const a=this.idleAct,u=a.t/a.dur,sd=a.side;
-        if(a.kind==='preen'){ N.rotation.y=lerp(N.rotation.y,sd*0.9,dt*10); N.rotation.x=0.42;
-          H.rotation.x=0.5+Math.abs(Math.sin(a.t*16))*0.25; this.jaw.rotation.x=Math.abs(Math.sin(a.t*18))*0.3;
-          const w=this.wings[sd<0?0:1]; if(w){ w.rotation.z=w.userData.side*-0.82; w.rotation.x=0.06; } }
+        if(a.kind==='preen'){ // the head reaches OUT to the shoulder now, not DOWN under the wing
+          N.rotation.y=lerp(N.rotation.y,sd*PREEN.yaw,dt*10); N.rotation.x=PREEN.neckX;
+          H.rotation.x=PREEN.headX+Math.abs(Math.sin(a.t*16))*PREEN.headAmp;
+          this.jaw.rotation.x=Math.abs(Math.sin(a.t*18))*0.3;
+          const w=this.wings[sd<0?0:1]; if(w){ w.rotation.z=w.userData.side*-PREEN.wingZ; w.rotation.x=0.06; } }
         else if(a.kind==='scan'){ N.rotation.y=Math.sin(a.t*2.2)*0.8; H.rotation.z=sd*0.35*Math.sin(a.t*3.1+1); H.rotation.x=-0.15; }
         else if(a.kind==='stretch'){ const w=this.wings[sd<0?0:1]; if(w){ w.rotation.z=lerp(w.rotation.z,w.userData.side*0.55,dt*8); w.rotation.x=-0.25; }
           this.tailF.forEach((f,i)=>f.rotation.y=(i-2)*0.26); this.tail.rotation.x=0.25; }
@@ -2986,6 +2988,10 @@ function hintScan(k){
   }
   G.hintNow[k.idx]=null;
 }
+/* PREEN, constrained (2026-08-31). yaw carries the reach, neckX is what decides whether the head
+   pivot clears the wing line, and headX only swings the beak ABOUT that pivot, so it costs the
+   contract nothing and pays for the whole read of the animation. */
+const PREEN={yaw:1.18, neckX:-0.06, headX:0.44, headAmp:0.20, wingZ:1.02, eps:0.055};
 function setPrompt(i,s){ PROMPTS[i]=s; }
 /* HUD REFLOW. The TAB pill is centred on the bottom edge and the prompt plate is anchored to the
    same edge at max-width 44vw, so at narrow widths the plate reaches the pill and the pill lands
@@ -3356,7 +3362,7 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd};
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

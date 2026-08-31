@@ -257,3 +257,38 @@ subjects 6 checked 0 missing.
   when it is the only way to make a UI contract hermetic.
 - EYEBALL: 08_readability_320.png - the pill now sits bottom-right at 11px and RIP WIPER is fully
   readable for the first time. Also 07_jam.png for the wrap branch at full width.
+
+### PIECE: preen-head-visibility (TODO item 6) — CERTIFIED 347b4b936d00cd12f634f77177ce2f17
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 13 re-pinned, subjects clean.
+- MEASURED FIRST, and the measurement changed the piece. The TODO asked for head y at or above the
+  wing-top line. Taken literally that is UNSATISFIABLE in this rig: the head pivot is never above
+  the wing-bbox top in ANY pose, because the folded wing tops are simply higher than the head.
+  Standing still the head sits 0.048 under it; in the poseLock photographic pose, 0.033 under.
+  The pose the whole set is judged on is already "below the line".
+- So eps is not a fudge, it is the contract. The old preen drove the head pivot to 0.085 under the
+  wing line - nearly double the resting deficit - and the beak tip to 0.379 under against 0.094 at
+  rest. eps 0.055 sits just above the resting deficit, so the assertion says something真 worth
+  saying: THE PREEN MAY NOT CARRY THE HEAD LOWER THAN THE BIRD CARRIES IT STANDING STILL.
+- The fix is not "less preen". neckX went from +0.42 (neck slumped down) to -0.06 (neck arched
+  very slightly UP), and the reach moved into the yaw, 0.9 to 1.18 rad. The head now goes OUT to
+  the shoulder instead of DOWN under the wing. headX barely moved (0.52 to 0.44) and deliberately
+  so: H.rotation.x turns the head ABOUT its own pivot, so it costs the contract NOTHING and pays
+  for the entire read of the animation. That is the whole trick of this piece.
+- Also folded the preening wing from -0.82 to -1.02. The wing at -0.82 was raised right beside the
+  head, and no amount of head-height fixes an occluder. This is probably what actually stopped the
+  headless read; the y contract alone would not have.
+- Result: worst head deficit over the full cycle both sides is 0.0459, which is BETTER than the
+  0.0481 the bird manages standing still. Worst beak 0.297, from 0.379.
+- The proof range-asserts every 0.05s across both sides, 142 samples, and it also pins that the
+  animation is still a PREEN and not a scan: the beak must stay below the head pivot on every
+  single sampled frame, and reach deeper than a resting bird ever does. A visibility fix that
+  quietly turned preening into head-turning would pass a y-only test and fail this one.
+- VERIFIED ADVERSARIALLY: temporarily restored the old constants and the battery went red on 4
+  assertions (head -0.0983, beak -0.410), then restored and green again. eps was NOT chosen to
+  make the new numbers pass; it was derived from the resting pose before the new pose existed.
+- PREEN joins the exports so the test reads the engine tolerance instead of restating it (law 10).
+- EYEBALL: 13_idle_preen.png. The head is a distinct lobe out to the right with the dark beak
+  clear of the body mass, where it used to be tucked low and merged into the wing. Honest caveat:
+  at this camera the gain is modest, and the complaint named the FOLLOW cam, which vantage 13 is
+  not. If Eric wants the follow-cam read judged, that wants a new vantage staging the preen from
+  behind and above - named as a next pick.
