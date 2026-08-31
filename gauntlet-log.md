@@ -267,7 +267,7 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 13 re-pinne
   The pose the whole set is judged on is already "below the line".
 - So eps is not a fudge, it is the contract. The old preen drove the head pivot to 0.085 under the
   wing line - nearly double the resting deficit - and the beak tip to 0.379 under against 0.094 at
-  rest. eps 0.055 sits just above the resting deficit, so the assertion says something真 worth
+  rest. eps 0.055 sits just above the resting deficit, so the assertion says something worth
   saying: THE PREEN MAY NOT CARRY THE HEAD LOWER THAN THE BIRD CARRIES IT STANDING STILL.
 - The fix is not "less preen". neckX went from +0.42 (neck slumped down) to -0.06 (neck arched
   very slightly UP), and the reach moved into the yaw, 0.9 to 1.18 rad. The head now goes OUT to
@@ -292,3 +292,16 @@ Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 13 re-pinne
   at this camera the gain is modest, and the complaint named the FOLLOW cam, which vantage 13 is
   not. If Eric wants the follow-cam read judged, that wants a new vantage staging the preen from
   behind and above - named as a next pick.
+
+## SESSION END — 2026-08-31
+Stop condition reached: 6 pieces certified (TODO items 1-6, in order). REPORT.md written.
+Final build 347b4b936d00cd12f634f77177ce2f17, gate CERTIFIED-SHIP, 24 vantages pinned at 0
+flagged, subjects.mjs 6 checked 0 missing. Nothing parked, nothing red, no piece needed a third
+staging attempt (two needed a second: night-tint-trees and hud-tab-reflow, both FLAKES law 1).
+Open TODO: items 7, 8, 9, plus the 16 caravan/VS pieces appended mid-run (10-25).
+NEW LAW EARNED THIS RUN, for the ledger: a presence test is not the same tool as a drift test,
+and a colour-band classifier must be proven against the frame that LACKS the subject before it is
+trusted - measured on the birdless baselines, a naive olive window scored the tussock higher than
+the bird and would have passed the empty road.
+SECOND LAW: measure the rig before believing a brief. Two of six pieces (glass, preen) asked for
+something the geometry cannot do, and both were only caught by measuring first.
