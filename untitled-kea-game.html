@@ -58,6 +58,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0c1420;font-family:
 .mi.finale{margin-top:14px;padding-top:12px;border-top:2px dashed #b9ad86;font-weight:600}
 .mi.locked{opacity:.4;filter:blur(.4px)}
 #todohint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(24,28,20,.7);padding:4px 12px;border-radius:10px;font-size:14px;z-index:10}
+#todohint.docked{left:auto;right:10px;transform:none;bottom:8px;font-size:11px;padding:3px 8px;opacity:.8}
 /* ---------- title / win ---------- */
 .screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:linear-gradient(180deg,var(--alp) 0%,var(--dawn) 78%,#e8b46f 100%);pointer-events:auto;text-align:center;padding:20px;overflow:hidden}
 .screen h1{font-size:clamp(38px,7vw,74px);font-weight:700;color:#2c3318;letter-spacing:1px;line-height:.95;text-shadow:0 3px 0 rgba(255,255,255,.5)}
@@ -2986,6 +2987,29 @@ function hintScan(k){
   G.hintNow[k.idx]=null;
 }
 function setPrompt(i,s){ PROMPTS[i]=s; }
+/* HUD REFLOW. The TAB pill is centred on the bottom edge and the prompt plate is anchored to the
+   same edge at max-width 44vw, so at narrow widths the plate reaches the pill and the pill lands
+   on top of the plate second line. Fixing that by MEASURING the DOM would put the whole thing
+   beyond the gate, which is node-only - so the wrap is PREDICTED from the plate own CSS
+   constants and the DOM is left with nothing to decide. Validated against two real captures:
+   19 chars at 320px wraps to 2 (vantage 08) and 46 chars at 960px wraps to 2 (the jam hint in
+   vantage 07), both of which is what the frames show. */
+const PLATE={font:21, padX:14, chW:0.52, maxVW:0.44, narrow:480};
+function plateLines(html,vw){
+  const txt=String(html==null?'':html).replace(/<[^>]*>/g,'').trim(); // the plate wraps TEXT, not markup
+  if(!txt)return 0;
+  const usable=Math.max(40, vw*PLATE.maxVW - PLATE.padX*2);
+  const perLine=Math.max(6, Math.floor(usable/(PLATE.font*PLATE.chW)));
+  return Math.max(1, Math.ceil(txt.length/perLine));
+}
+function hudReflow(vw){
+  const w=vw||(typeof innerWidth==='number'&&innerWidth>0?innerWidth:1280);
+  G.hudVW=w;
+  G.hudLines=[plateLines(PROMPTS[0],w), plateLines(PROMPTS[1],w)];
+  G.hudNarrow=w<PLATE.narrow;
+  G.tabDocked=!!(G.hudNarrow||G.hudLines[0]>1||G.hudLines[1]>1);
+  return G.tabDocked;
+}
 function setTug(i,v){ TUGS[i]=v; }
 function keyName(code){ return ({Space:'SPACE',Slash:'/',Period:'.',Comma:',',KeyE:'E',KeyQ:'Q'})[code]||code.replace('Key',''); }
 let uiCache=['','',-2,-2,'',''];
@@ -3000,6 +3024,10 @@ function updateUI(){
     const k=G.keas[i]; const h=k&&k.held?('◈ '+k.held.name):'';
     if(uiCache[4+i]!==h){ uiCache[4+i]=h; const hEl=document.getElementById('hold'+(i+1)); hEl.textContent=h; hEl.style.display=h?'block':'none'; }
   }
+  { const th=document.getElementById('todohint');
+    if(th){ const want=G.tabHintOn?'block':'none';
+      if(th.style.display!==want)th.style.display=want;
+      th.classList.toggle('docked',!!G.tabDocked); } }
   const cEl=document.getElementById('combo');
   if(G.combo>=2&&G.comboT>0){ cEl.style.display='block'; cEl.textContent='×'+G.combo+' SPREE'; } else cEl.style.display='none';
 }
@@ -3206,6 +3234,7 @@ function update(dt){
     if(lvl!==G.wanted){G.wanted=lvl;updWanted();}
     checkMisc(); checkFinale(); checkCaseFiles();
   } else if(!G.running){ updateFX(dt); updateSheep(dt); }
+  hudReflow();
   PRESSED=[];
 }
 
@@ -3246,7 +3275,7 @@ function startGame(mode,opts){
       addHint('cage',up.x,up.y,up.z,6,'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out'); } }
   if(!HEADLESS){
     document.getElementById('title').style.display='none';
-    document.getElementById('todohint').style.display='block';
+    G.tabHintOn=true;
     document.getElementById('mutebtn').style.display='block';
     if(mode===2){ document.getElementById('phud2').style.display='flex'; document.getElementById('splitline').style.display='block'; }
     setCamAspect();
@@ -3327,7 +3356,7 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd};
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

@@ -313,6 +313,49 @@ X.startGame(1); tick(4);
      (G.popFan||[]).length+' live)');
   ok(G.popFan[0].i===0,'so a lone popup is never scaled down as if it were buried'); }
 
+C.section('THE TAB PILL GETS OUT OF THE WAY');
+X.startGame(1); tick(6); park();
+{ const L=X.plateLines, VW0=1280;
+  // the predictor, checked against what the CAPTURES actually show rather than against itself
+  ok(L('<b>E</b> HOLD to RIP WIPER',320)===2,'a 19-char prompt wraps at 320px - that is vantage 08');
+  ok(L('<b>E</b> HOLD to RIP WIPER',960)===1,'and the same prompt fits one line at 960px');
+  ok(L('',960)===0,'an empty plate has no lines');
+  ok(L(null,320)===0,'and neither has a missing one');
+  ok(L('<b>E</b> GO',960)===L('E GO',960),'markup is not counted - the plate wraps text');
+  ok(L('x'.repeat(240),960)>=5,'a runaway prompt wraps a long way ('+L('x'.repeat(240),960)+' lines)');
+  let mono=true; for(let w=300;w<=1600;w+=100)
+    if(L('x'.repeat(60),w)>L('x'.repeat(60),w-100))mono=false;
+  ok(mono,'and the wrap never gets WORSE as the viewport gets wider');
+
+  // branch one: a narrow viewport docks the pill on its own
+  global.innerWidth=320; X.update(1/60);
+  ok(G.hudNarrow===true,'320px reads as narrow ('+G.hudVW+'px)');
+  ok(G.tabDocked===true,'so the pill docks out of the plate way');
+  global.innerWidth=VW0; X.update(1/60);
+  ok(G.hudNarrow===false&&G.tabDocked===false,'a wide quiet HUD leaves it centred where it belongs');
+
+  // branch two: a REAL wrapping prompt docks it at a width that is not narrow at all. The road
+  // hint is 48 characters, which fits one line at 1280 and takes two at the 960 the captures use.
+  // the world DOES put a real wrapping prompt on that plate - the road hint is 48 chars, which
+  // takes two lines at the 960 the captures use. But which prompt wins at a given spot depends on
+  // what earlier sections left lying there (law 1 and law 3), and a first attempt failed here
+  // because a shorter interactable prompt beat the hint. So the world check stays a world check,
+  // and the CONTRACT is driven straight through setPrompt plus hudReflow, with no tick to spoil it.
+  const k=kq(); const y=Math.max(0.25,X.groundHeightAt(0,34,3)+0.02);
+  for(let i=0;i<8;i++){ k.x=0; k.z=34; k.y=y; k.vy=0; k.grounded=true; X.update(1/60); }
+  ok(G.hintNow&&G.hintNow[0]==='jam','the bird standing in the road picks up the jam hint');
+
+  const HINT='<span style="opacity:.78">the road hint, at the width the captures use</span>';
+  X.setPrompt(0,HINT); X.hudReflow(960);
+  ok(G.hudLines[0]>1,'a plate that wraps at 960px reports its wrap ('+G.hudLines[0]+' lines)');
+  ok(G.hudNarrow===false,'960px is not narrow');
+  ok(G.tabDocked===true,'and the pill docks anyway - the WRAP is its own trigger');
+  X.setPrompt(0,HINT); X.hudReflow(1600);
+  ok(G.hudLines[0]===1&&G.tabDocked===false,'give the same plate room and the pill goes back to the middle');
+  X.setPrompt(0,''); X.hudReflow(320);
+  ok(G.hudLines[0]===0&&G.tabDocked===true,'no prompt at all still docks at 320 - width alone is enough');
+  X.setPrompt(0,''); global.innerWidth=VW0; X.update(1/60); }
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

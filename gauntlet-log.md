@@ -230,3 +230,30 @@ re-pinning 04/07/09/17; subjects 6 checked 0 missing.
 - EYEBALL: all four. 04_flight_underwing.png (two scarlet bands under spread wings),
   07_jam.png (queue, cone, bird on the centre line, and the game own hint reading "stand your
   ground and see what the traffic does"), 09_colossal.png, 17_flight.png.
+
+### PIECE: hud-tab-reflow (TODO item 5) — CERTIFIED 6b7a4d36a52eb5ecfb38cfe51c09c5d6
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged, 07 and 08 re-pinned,
+subjects 6 checked 0 missing.
+- The collision is pure geometry: the TAB pill is centred on the bottom edge, and the prompt
+  plate is anchored to that SAME edge at max-width 44vw, so at 320px the plate reaches the pill.
+  Geometry is exactly what a node-only gate cannot see, so the wrap is PREDICTED from the plate
+  own CSS constants (font 21, padding 14, 44vw, 0.52 average char width) and the DOM is left with
+  nothing to decide - it reads G.tabDocked and toggles a class.
+- WHY I TRUST THE PREDICTOR: it was validated against two real captures BEFORE the proof was
+  written, not fitted to the test. 19 chars at 320px predicts 2 lines and vantage 08 shows 2
+  lines. 48 chars at 960px predicts 2 lines and the jam hint in vantage 07 shows 2 lines. Same
+  19 chars at 960px predicts 1 and shows 1. Three independent points, no tuning.
+- Both trigger branches ship and both are proven: width alone docks the pill at 320 with an empty
+  plate, and a wrap docks it at 960 where nothing is narrow at all. 07 is the visible proof of the
+  second branch - its two-line road hint used to sit right beside the centred pill.
+- Staging took 2 attempts (FLAKES law 1 AND law 3, together). The first proof stood the bird in
+  the road and asserted the hint wrapped the plate. It read 1 line, not 2: hintScan only fills a
+  prompt that is EMPTY, and by that point in the battery an earlier section had left something at
+  that spot whose shorter interactable prompt won. Standalone it passed; in the battery it did
+  not. Fixed by splitting the two claims - the world check stays a world check (the bird does pick
+  up the jam hint) and the CONTRACT is driven straight through setPrompt plus hudReflow with no
+  tick in between, so nothing can overwrite the plate under the assertion.
+- setPrompt joins plateLines and hudReflow in the exports. A UI setter is a fair thing to export
+  when it is the only way to make a UI contract hermetic.
+- EYEBALL: 08_readability_320.png - the pill now sits bottom-right at 11px and RIP WIPER is fully
+  readable for the first time. Also 07_jam.png for the wrap branch at full width.
