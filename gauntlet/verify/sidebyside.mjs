@@ -36,7 +36,13 @@ const only = process.argv[2] || '';
 const b64 = p => `data:image/${p.endsWith('.png') ? 'png' : 'jpeg'};base64,` +
   fs.readFileSync(p).toString('base64');
 fs.mkdirSync(OUT, { recursive: true });
-const browser = await puppeteer.launch({ headless: true });
+// LAUNCH (2026-09-01): mirrors capture.mjs. The bundled chrome is unsigned on some macs and
+// spawn fails with errno -88 (EBADARCH), so fall back to the installed channel exactly as the
+// photographer does. Without this the tool cannot run on the studio machine at all.
+const browser = await (async () => {
+  try { return await puppeteer.launch({ headless: true, args: ['--no-sandbox'] }); }
+  catch (e) { return await puppeteer.launch({ headless: true, channel: 'chrome', args: ['--no-sandbox'] }); }
+})();
 const page = await browser.newPage();
 await page.setViewport({ width: 1960, height: 760 });
 let n = 0;
