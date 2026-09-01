@@ -26,15 +26,13 @@ Institutional memory: every class of headless nondeterminism met so far, and the
    exports, tolerant try/catch keeping landed frames.
 10. ASSERTIONS DERIVE FROM ENGINE CONVENTION. When a constant is deliberately changed (scale law,
     seal path length), the test reads the convention (path.length-1), never re-hardcodes.
-11. THE MISSION MATRIX HAS A RARE INTERMITTENT. Seen once (2026-09-01, the first and cold node
-    invocation of the session): the everything battery reported "12 driven, 1 failed", then went
-    green across 11 consecutive reruns — 8 standalone and 3 full gate-shaped serial passes. Not
-    reproduced. The failing mission id was LOST, because gate.sh keeps only tail -1 per battery
-    and the FAILED line scrolls past it. Idiom: the assertion message now names the ids, so the
-    next occurrence identifies itself. Do not chase this one blind — capture the name, then stage
-    that single mission. Review-tier under law 8. Counts confirmed by sabotage: one dead driver
-    yields exactly "12 driven, 1 failed", so all 13 were attempted and precisely one did not
-    complete.
+11+13 (SUPERSEDED 2026-09-02). The unreproducible red battery was never the cold node. The batteries
+    ran unseeded, so each run built a different country and threw props to different places; the
+    drivers that grab one named prop out of a pile failed at a few percent. rig.js now seeds both
+    the game rng and Math.random at capture.mjs's seed 20260828, and every battery is byte-identical
+    run to run. A red battery now MEANS something. If one ever fails to reproduce again, suspect a
+    new unseeded draw, not the machine - and check harness-audit-pass2, the one battery whose
+    transcript once varied for a reason I could not attribute.
 12. A PHOTOGRAPH IS A STAGING CONTRACT, AND DRIFT AGAINST THE BASELINE IS NOT THE SAME QUESTION AS
     VARIANCE AGAINST YOURSELF. diff.mjs asks whether a frame changed since it was pinned; it
     cannot ask whether the frame is reproducible at all, so a vantage whose staging drifts with
@@ -48,20 +46,3 @@ Institutional memory: every class of headless nondeterminism met so far, and the
       - the follow cam lerped away from a directly-assigned camera position (only camLock holds),
       - the camp fire is four sines on G.time plus a Math.random spit, so freeze G.time and hold
         _fireSpit above zero to take the deterministic branch and never roll the random at all.
-13. THE COLD-NODE INTERMITTENT HAS A SECOND SIGHTING, AND A LIKELY TRIGGER. Law 11 recorded one
-    unreproduced failure in the everything battery on the first and cold node invocation of a
-    session. Session 4 saw a sibling: fastgate reported FASTGATE:COLOSSAL-FAIL once, on the first
-    node invocation immediately after THREE consecutive puppeteer capture passes, against a game
-    file byte-identical to one that had already printed CERTIFIED-SHIP that session. Rerun
-    standalone it printed COLOSSAL: ALL PASS, then fastgate went green three times in a row, then
-    the full nine-battery gate went green. Zero chrome processes were left behind, so it is not an
-    orphaned browser holding the machine.
-    So the common factor in both sightings is not the battery and not the code - it is a COLD or
-    CONTENDED node process, and in this case one starting while the machine was still settling from
-    sustained puppeteer load. Idiom: a single red battery immediately after a capture pass is not
-    evidence about the code. Rerun it standalone BEFORE touching anything, and only believe it if
-    it repeats. What you must NOT do is start editing the game file to chase it, because the file
-    that "failed" here was one already certified minutes earlier and any edit would have been
-    chasing a ghost into a build that was fine.
-    And the corollary that keeps the hard law intact: green-after-rerun is not licence to commit on
-    a shrug. The gate was re-run in full and printed CERTIFIED-SHIP before the commit landed.

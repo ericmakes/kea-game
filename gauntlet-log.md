@@ -1405,3 +1405,31 @@ e19fcd5a9ae90f754e36f26a64ef5509, gate CERTIFIED-SHIP, working tree clean.
 - AND THE HABIT CHANGE THAT CAME OUT OF IT: re-read TODO.md and OVERNIGHT.md before STARTING each
   piece, not once at session start. Both changed under me mid-session tonight, in the same commit, and
   I only noticed the half of it that the harness told me about.
+
+## SESSION 7 — 2026-09-02, overnight
+Lock: no SESSION.lock at start; created one naming this session and its purpose before any write.
+Run order taken from TODO 49 and 50, which say so explicitly.
+
+### PIECE 49 — ratify-flakes-11-13 — CERTIFIED e19fcd5a9ae90f754e36f26a64ef5509
+Verdict: green first pass, no staging attempts (documentation piece, no test to stage).
+- WHAT LANDED: FLAKES.md laws 11 and 13 are deleted and replaced by one block at the law 11 slot,
+  headed "11+13 (SUPERSEDED 2026-09-02)". Law 12 keeps its number and its position, so nothing
+  renumbers and no cross-reference in the log or the harness goes stale.
+- VERBATIM MEANS VERBATIM, so I did not retype it. The script pulls the blockquote out of REPORT.md
+  section 2 by matching its first line, asserts the extracted prose starts and ends with the expected
+  words, and only then writes it. Two changes of MARKUP, no words: the blockquote markers go, and the
+  one pair of backticks (around harness-audit-pass2) is stripped because FLAKES.md contains zero
+  backticks anywhere else and names diff.mjs, stability.mjs and gate.sh bare. Called out in the commit
+  message so Eric can see exactly what was normalised.
+- PROOF IS A DIFF, THREE WAYS. Header plus laws 1-10 diffed byte-clean against HEAD; law 12 diffed
+  byte-clean against HEAD; and the four load-bearing phrases of the disproven theory (COLD OR,
+  CONTENDED, SECOND SIGHTING, RARE INTERMITTENT) return zero hits in the file. That is the brief - new
+  wording present, disproven claims gone, no other line changed - checked as three assertions rather
+  than eyeballed.
+- WHAT THE LAW NOW SAYS, and it is worth reading as a working instruction rather than history: a red
+  battery MEANS something now. The old wording told the next agent to rerun and shrug. The new one
+  tells them to suspect a new unseeded draw. Those are opposite instructions, which is why leaving the
+  retired laws in place would have been worse than the usual stale-doc cost.
+- NO CAPTURE, NO GAME EDIT: game file untouched, md5 identical to the session 6 tip. fastgate PASS,
+  gate CERTIFIED-SHIP with all nine batteries green.
+- EYEBALL: gauntlet/verify/FLAKES.md, lines 29-35. Nothing visual.
