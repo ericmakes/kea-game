@@ -584,3 +584,25 @@ boot() an idempotent guard or a teardown that empties the registries first, whic
 with the whole gate behind it; (c) move the snow section to the top, before anything else runs.
 (c) is free and (b) is the real answer.
 PROOF once built: assert G.props.length after the last section equals the count after the first boot.
+
+### 49. ratify-flakes-11-13  (RUN ORDER: take this FIRST tonight)
+Session 6 proved laws 11 and 13 misattributed the intermittent - it was
+never cold node, it was unseeded battery worlds (3/40 on the old build,
+0/40 seeded). Eric ratifies: apply the proposed wording from REPORT.md
+section 2 to FLAKES.md VERBATIM, as its own commit, quoting exact
+before/after lines in the commit message and log.
+PROOF: new wording present, disproven claims gone, no other line changed.
+
+### 50. revert-travel-beat  (RUN ORDER: second tonight, after 49)
+Eric's verdict: piece 34 is REVERTED. The tour (piece 38) absorbs travel
+wholesale, and under the maps design travel happens BETWEEN MAPS - the
+within-map page-turn beat has no future. Revert commit 1c096b4 cleanly:
+resolve any overlap with later pieces (45/46/13/14/17), preserving THEIR
+behaviour exactly; remove the travelcard DOM/CSS and beat machinery;
+retire the beat_hold capture and its staging; strike TODO 47 and 48 as
+moot (they judge the reverted feature); annotate piece 38 that it builds
+travel fresh, keyed to biomes - its binding-evidence paragraph remains
+binding.
+PROOF: no travelcard/beat code remains; all nine batteries green; gate
+CERTIFIED-SHIP; star and home-position proofs still pass untouched; diff
+flags nothing new.
