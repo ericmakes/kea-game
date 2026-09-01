@@ -39,3 +39,10 @@ State is resumable: next session starts by reading gauntlet-log.md.
 ## REPORT.md format
 Shipped (name — md5 — one line), Parked (name — why), Frames to eyeball
 (paths), Suggested next three picks.
+
+## SHIFT DISCIPLINE (added 2026-09-01 after the idle stall)
+- Never end your turn while unshipped pieces remain and no stop condition is
+  met. If waiting on a background job, poll it yourself on a timer; there is
+  no foreman to hand control to.
+- The full stability sweep blocks game-file edits: run it LAST in a session,
+  never mid-ration.
