@@ -35,3 +35,16 @@ Institutional memory: every class of headless nondeterminism met so far, and the
     that single mission. Review-tier under law 8. Counts confirmed by sabotage: one dead driver
     yields exactly "12 driven, 1 failed", so all 13 were attempted and precisely one did not
     complete.
+12. A PHOTOGRAPH IS A STAGING CONTRACT, AND DRIFT AGAINST THE BASELINE IS NOT THE SAME QUESTION AS
+    VARIANCE AGAINST YOURSELF. diff.mjs asks whether a frame changed since it was pinned; it
+    cannot ask whether the frame is reproducible at all, so a vantage whose staging drifts with
+    machine load reads as permanent drift no matter how often it is re-pinned - which is how
+    22_torch_beam sat in BASELINE.md as "known-noisy" for four builds without a cause. Idiom: any
+    vantage that leaves something LIVE during the settle must pin it every frame, and
+    stability.mjs (takes compared against each other, baseline out of the picture) is the
+    instrument that proves it. Three live things caught this way, all of them already covered by
+    an earlier law nobody applied to the camera rig:
+      - night eased back toward the day driver because nightManual was never set (law 5),
+      - the follow cam lerped away from a directly-assigned camera position (only camLock holds),
+      - the camp fire is four sines on G.time plus a Math.random spit, so freeze G.time and hold
+        _fireSpit above zero to take the deterministic branch and never roll the random at all.

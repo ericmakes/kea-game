@@ -63,7 +63,16 @@ async function shotR(name,stage,opts){ // SwiftShader is moody: up to 3 takes pe
 const PIN=body=>`{ const _pin=()=>{ try{ ${body} }catch(e){} requestAnimationFrame(_pin); }; requestAnimationFrame(_pin); }`;
 const CAM=(x,y,z,lx,ly,lz)=>`KEAGAME.G.camLock={x:${x},y:${y},z:${z},lx:${lx},ly:${ly},lz:${lz}};`;
 const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getElementById('todo'); if(td)td.style.display='none'; KEAGAME.G.cfOpen=false; KEAGAME.G.paused=false;
-  KEAGAME.G.humans.forEach(h=>{h.x=46;h.z=46;h.home={x:46,z:46};h.patrol=null;});
+  // LAW 4, and QUIET was breaking it: parking a human ONCE does not hold, because the ambient AI
+  // walks them straight back. Measured on vantage 02 - dave sits at (46,46) at stage time and is
+  // at (-19.2,-4.2), in frame beside the hut, 900ms later. Whether he arrived before the shutter
+  // depended on the machine, which is the whole 0.9899 of that vantage. Re-park every frame,
+  // state included. A vantage that WANTS a human on set clears _park before staging them.
+  KEAGAME.G.humans.forEach(h=>{h._park=true;});
+  { const _pk=()=>{ try{ KEAGAME.G.humans.forEach(h=>{ if(!h._park)return;
+        h.x=46; h.z=46; h.home={x:46,z:46}; h.patrol=null; h.state='idle'; h.t=0;
+        if(h.g)h.g.position.set(46,0,46); }); }catch(e){}
+      requestAnimationFrame(_pk); }; requestAnimationFrame(_pk); }
   KEAGAME.G.trafT.a=999;KEAGAME.G.trafT.b=999;
   for(let i=KEAGAME.G.cars.length-1;i>=0;i--){const c=KEAGAME.G.cars[i];if(c.traffic){KEAGAME.G.scene.remove(c.g);const ci=KEAGAME.G.colliders.indexOf(c.collider);if(ci>=0)KEAGAME.G.colliders.splice(ci,1);for(let q=KEAGAME.G.inter.length-1;q>=0;q--)if(KEAGAME.G.inter[q].car===c)KEAGAME.G.inter.splice(q,1);KEAGAME.G.cars.splice(i,1);}}`;
 
@@ -108,25 +117,40 @@ await shotR('09_colossal',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${CAM(5.8,2.9,25.2,1.2,1.3,19.6)}`,{colossal:true});
 await shotR('10_skifield',`const k=KEAGAME.G.keas[0];k.x=-37;k.z=-36;k.y=0;k.grounded=true;k.ry=3.9; ${CAM(-28,5,-27,-40,1.6,-40)}`);
 await shotR('11_trailhead',`const k=KEAGAME.G.keas[0];k.x=42;k.z=-37;k.y=0;k.grounded=true;k.ry=0.8; ${CAM(33,4.5,-30,44,1.8,-40)}`);
-await shotR('21_night_camp',`KEAGAME.G.night=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
-  const k=KEAGAME.G.keas[0];k.x=34.7;k.z=-5.3;k.y=0;k.grounded=true;k.ry=2.7;KEAGAME.G.poseLock=true;
+await shotR('21_night_camp',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
+  const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=34.7;k.z=-5.3;k.y=0;k.vy=0;k.grounded=true;k.ry=2.7;k.stun=0;KEAGAME.G.time=12.0;KEAGAME.G._fireSpit=5;')}
   ${CAM(38.2,1.7,-3.2,34.6,0.7,-6.4)}`);
-await shotR('22_torch_beam',`KEAGAME.G.night=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
-  const G=KEAGAME.G,k=G.keas[0];k.x=0;k.z=14;k.y=0;k.grounded=true;k.ry=3.1;G.poseLock=true;
-  const rex=G.humans.find(h=>h.key==='rex'); if(rex){rex.x=0;rex.z=8;rex.ry=0;rex.state='idle';rex.patrol=null;
-    if(rex.torch){rex.torch.g.rotation.y=0;rex.torch.spot.intensity=2.6;rex.torch.lens.visible=true;}}
+await shotR('22_torch_beam',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
+  const G=KEAGAME.G,k=G.keas[0];G.poseLock=true;
+  const rex=G.humans.find(h=>h.key==='rex'); if(rex)rex._park=false;
   for(let i=0;i<3;i++)KEAGAME.update(1/60);
+  ${PIN("k.x=0;k.z=14;k.y=0;k.vy=0;k.grounded=true;k.ry=3.1;k.stun=0;"+
+        "if(rex){rex.x=0;rex.z=8;rex.ry=0;rex.state='chase';rex.t=0;rex.patrol=null;rex.g.position.set(0,0,8);"+
+        "if(rex.torch){rex.torch.g.rotation.y=0;rex.torch.spot.intensity=2.6;rex.torch.lens.visible=true;}}")}
   ${CAM(5.5,1.7,10.5,0,0.9,11)}`);
 await shotR('20_dead_rear',`const k=KEAGAME.G.keas[0];k.x=-9.55;k.z=10.15;k.y=0;k.grounded=true;k.ry=Math.atan2((-11)-(-9.55),8-10.15);KEAGAME.G.poseLock=true; const c=KEAGAME.G.cams&&KEAGAME.G.cams[0]; if(c){c.position.set(k.x-Math.sin(k.ry)*1.7, 1.1, k.z-Math.cos(k.ry)*1.7);}`);
-await shotR('19_roof_follow',`const k=KEAGAME.G.keas[0];k.x=-24;k.z=-7.4;k.y=5.2;k.vy=0;k.grounded=true;k.ry=2.6;KEAGAME.G.poseLock=true; const c=KEAGAME.G.cams&&KEAGAME.G.cams[0]; if(c){c.position.set(k.x-Math.sin(2.6)*4.2, k.y+2.0, k.z-Math.cos(2.6)*4.2);}`);
+// 19 used to set cams[0].position directly, so the follow cam spent the whole settle lerping
+// away from it and the frame landed wherever the machine frame count left it (0.985 against
+// itself). camLock holds the SAME geometry the direct set was reaching for - eye at
+// bird - forward*4.2 + 2.0 up, target at bird + forward*1.6, head height - and PIN holds the
+// bird, which was parked on the roof with nothing stopping gravity or the roof logic moving it.
+await shotR('19_roof_follow',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=-24;k.z=-7.4;k.y=5.2;k.vy=0;k.grounded=true;k.ry=2.6;k.stun=0;')}
+  ${CAM(-24-Math.sin(2.6)*4.2, 7.2, -7.4-Math.cos(2.6)*4.2, -24+Math.sin(2.6)*1.6, 5.92, -7.4+Math.cos(2.6)*1.6)}`);
 await shotR('18_rear_close',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;k.x=-9.2;k.z=10.6;k.y=0;k.grounded=true;k.ry=5.8;k.stun=0;k.idleT=0;k.idleAct=null; ${CAM(-8.6,1.5,12.4,-9.6,0.5,9.4)}`);
 // same escape as 04. flapPh 1.1 sits just past the top of the stroke so the wings read
 // mid-beat rather than pinned at a limit.
 await shotR('17_flight',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
   ${PIN('k.x=0;k.z=0;k.y=3.0;k.vy=0;k.grounded=false;k.flapDrive=1;k.flapPh=1.1;k.ry=2.2;k.stun=0;k.landFlare=0;')}
   ${CAM(2.35,3.15,2.1,0,3.0,0)}`);
-await shotR('16_trish',`const t=KEAGAME.G.humans.find(h=>h.key==='trish'); t.x=15;t.z=-10.5;t.state='idle';t.g.position.set(15,0,-10.5);
-const k=KEAGAME.G.keas[0];k.x=11;k.z=-7;k.y=0;k.grounded=true;k.ry=2.2;KEAGAME.G.poseLock=true; ${CAM(13.2,1.75,-8.2,15,1.15,-10.6)}`);
+// a human opted OUT of the park is a human the ambient AI owns again, so law 4 applies to her
+// directly: pin position AND state every frame, not once.
+await shotR('16_trish',`const t=KEAGAME.G.humans.find(h=>h.key==='trish'); t._park=false;
+const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN("t.x=15;t.z=-10.5;t.ry=0;t.state='idle';t.t=0;t.patrol=null;t.g.position.set(15,0,-10.5);"+
+        "k.x=11;k.z=-7;k.y=0;k.vy=0;k.grounded=true;k.ry=2.2;k.stun=0;")}
+  ${CAM(13.2,1.75,-8.2,15,1.15,-10.6)}`);
 await shotR('14_player_view',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=true; ${CAM(-4.38,2.3,3.18,0,0.9,0)}`);
 await shotR('15_sign',`const k=KEAGAME.G.keas[0];const sg=KEAGAME.G.signG; k.x=sg.position.x-0.6;k.z=sg.position.z+2.2;k.y=0;k.grounded=true;k.ry=2.9;KEAGAME.G.poseLock=true; ${CAM('sg.position.x','2.0','sg.position.z+3.4','sg.position.x','1.8','sg.position.z')}`);
 await shotR('13_idle_preen',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=false;k.idleT=99;k.idleAct={kind:'preen',t:0.7,dur:3.5,side:1};k._idleEver=true; ${CAM(1.35,0.95,1.15,0,0.55,0)}`);

@@ -430,3 +430,63 @@ an identical game file.
   entire settle and lands wherever the frame count leaves it. Its bird is also parked at y=5.2 on
   the roof with no per-frame PIN, so it is free to be moved by gravity and the roof logic (law 7
   and the piece-4 lesson: a one-shot stage cannot hold a live bird).
+
+### PIECE: vantage-staging-vs-the-flake-laws (TODO item 29) — CERTIFIED 01675b29bbc79301633b8e383bc72dde
+Verdict: green. GAME FILE MD5 UNCHANGED - capture.mjs only, plus one new tool. Gate
+CERTIFIED-SHIP, tripwire 24 compared 0 flagged after re-pinning 19/21/22, subjects 6/6.
+- WHY THIS WAS WORTH A PIECE: two frames flagged in piece 8 against a BYTE-IDENTICAL game file,
+  and the answer was not drift at all - those vantages had never reshot the same twice. diff.mjs
+  structurally cannot notice that. It asks whether a frame changed since it was pinned, so a
+  vantage whose staging wanders with machine load reads as permanent drift no matter how often it
+  is re-pinned. That is exactly how 22_torch_beam sat in BASELINE.md as "known-noisy" across four
+  builds without anyone finding a cause.
+- NEW TOOL: gauntlet/verify/stability.mjs. It reshoots a vantage N times and compares the takes
+  AGAINST EACH OTHER, baseline out of the picture. BASELINE.md shows this measurement was done
+  once by hand back in August (0.976 worst) and never automated; now it is an instrument.
+- THE THRESHOLD IS CALIBRATED, NOT INVENTED. Measured before touching anything: 03_kea_plate, a
+  properly camLocked and poseLocked vantage, reshoots at 0.9976, while the three suspects sat at
+  0.9850 / 0.9860 / 0.9852. 0.995 separates them cleanly with room on both sides.
+- FIVE VANTAGES FIXED, and every single cause was a law already in the ledger that nobody had
+  applied to the camera rig:
+    19_roof_follow  0.9850 -> 0.9988  one of only TWO vantages that set cams[0].position directly
+                                      instead of using camLock, so the follow cam spent the whole
+                                      settle lerping away from the staged pose.
+    22_torch_beam   0.9852 -> 0.9970  LAW 5 outright: night and nightT set, nightManual never set,
+                                      so the frame eased back toward the day driver all settle.
+    21_night_camp   0.9860 -> 0.9986  same law-5 omission, AND the camp fire is four sines on
+                                      G.time plus a Math.random spit. Freeze G.time and hold
+                                      _fireSpit above zero: that takes the deterministic branch
+                                      and the random is never rolled at all.
+    02_hut_snow     0.9899 -> 0.9988  QUIET IS NOT QUIET - see below, this is the big one.
+    16_trish        0.9911 -> 0.9983  a human opted OUT of the park is a human the AI owns again.
+- THE FINDING THAT MATTERS MOST: QUIET parks all four humans at (46,46) ONCE, and the ambient AI
+  walks them straight back. That is FLAKES law 4 word for word - pin state INSIDE the loop, every
+  frame - and the harness was breaking its own law. MEASURED on vantage 02: dave is at (46,46) at
+  stage time and at (-19.19,-4.16), in frame beside the hut, 900ms later. Whether he arrived
+  before the shutter was down to the machine.
+  THE PROOF THAT IT HAD BEEN HAPPENING FOR MONTHS: the OLD baselines for 19 AND 21 both have a
+  stray hi-viz human standing in frame. Those were pinned, judged and shipped with an escaped
+  walker in the shot. Nobody saw it because SSIM cannot tell you a frame is wrong, only that it
+  changed - the same blind spot subjects.mjs was built for in piece 4.
+  QUIET now re-parks every frame, state included, and a vantage that WANTS a human on set clears
+  h._park before staging them.
+- 22 TOOK THREE STAGING ATTEMPTS and the first two are worth recording because both were
+  deterministic and both were WRONG. Attempt 1 (nightManual) got it to 0.9968. Attempt 2 gave rex
+  a park opt-out, which regressed it to 0.9847 - the per-frame park loop changed the frame budget,
+  and 22 was still frame-count sensitive through rex and his torch. Attempt 3 pinned rex per frame
+  and hit 0.9992 - but KILLED THE BEAM, which is the entire subject of the vantage. Forcing
+  state='idle' stops the torch reading, because the torch only lights up when the ranger has you.
+  A vantage can be perfectly reproducible and still be the wrong photograph.
+  The fix was to read the engine instead of inventing a pose (law 10): state='chase' is the game
+  own "ranger has you in the light" state, and it pins the torch sweep to 0 while raising beam
+  opacity to 0.13 and the spot to 3.0. Brighter AND deterministic, and it is precisely what the
+  vantage own SPOTTED IN THE BEAM popup was already claiming. 0.9970, beam landing on the bird.
+- NEW LAW: FLAKES law 12. A photograph is a staging contract, and drift against the baseline is
+  not the same question as variance against yourself.
+- PARTIAL SWEEP NOTE: a full 24-vantage stability sweep was started and killed at 8 vantages
+  because it runs over an hour and blocks every game-file edit. The salvaged takes are real data
+  and are recorded: 01,03,04,05,06,07,08 all reshoot at 0.998 or better, so the set is otherwise
+  healthy; 02 was the one bad apple among them and is now fixed. 09-15,17,18,20,23,24 are still
+  UNMEASURED for stability - named as a next pick, and the tool now exists to do it.
+- EYEBALL: 19_roof_follow.png (stray human gone, true follow-cam framing, bird on the chimney),
+  21_night_camp.png (stray human gone), 22_torch_beam.png (beam on the bird, alert mark up).

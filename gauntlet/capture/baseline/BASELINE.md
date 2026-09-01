@@ -80,3 +80,25 @@ PIN(), which re-applies the pose every animation frame - the harness-side perch 
 NEW TOOL: subjects.mjs, a presence tripwire beside diff.mjs. diff.mjs could never have caught
 this, because a birdless frame is perfectly stable and SSIM only asks whether a frame CHANGED.
 Verified adversarially: subjects.mjs fails all 6 checks on the four frames these pins replaced.
+
+## Staging fixes 2026-09-01 (build 01675b29 — GAME FILE UNCHANGED by this piece)
+19, 21, 22 re-pinned. capture.mjs changed, the game did not. These three did not reshoot the same
+twice, and the cause in every case was something left LIVE during the 900ms settle, so the frame
+depended on how many animation frames the machine got through. Measured take-to-take before and
+after, with the new stability.mjs:
+  19_roof_follow  0.9850 -> 0.9988   bypassed camLock, so the follow cam lerped away all settle
+  21_night_camp   0.9860 -> 0.9986   nightT without nightManual (law 5), plus a live camp fire
+  22_torch_beam   0.9852 -> 0.9970   same law-5 omission, plus rex and his torch sweep
+  02_hut_snow     0.9899 -> 0.9988   QUIET parked the humans ONCE and dave walked back in
+  16_trish        0.9911 -> 0.9983   trish is on set, so law 4 applies to her directly
+02 and 16 moved but stayed under threshold, so they are NOT re-pinned here.
+JUDGED BEFORE PINNING, and all three are improvements rather than merely different:
+  - the OLD 19 and 21 baselines both had a STRAY HI-VIZ HUMAN standing in frame - dave and a
+    second walker who had escaped the QUIET park. Both frames are now clean.
+  - 22 keeps its beam. Pinning rex to state idle killed it (the torch only reads when the ranger
+    has you), so rex is staged in the engine own 'chase' state, which pins the sweep to 0 and
+    raises beam opacity to 0.13 - brighter AND deterministic, and it is what the vantage own
+    SPOTTED IN THE BEAM popup already claims. The beam now lands squarely on the bird.
+  - 19 is the true follow-cam geometry rather than wherever the lerp happened to stop.
+NOTE: the 22 re-pin was reached on the third staging attempt. The first two were deterministic but
+degraded the subject; recorded in gauntlet-log.md rather than hidden.
