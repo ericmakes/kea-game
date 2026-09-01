@@ -593,6 +593,149 @@ C.section('CURVED HULLS ARE SMOOTH WITHOUT MOVING A VERTEX');
      'seam triangles, which rasterize to nothing ('+nonUnit+')');
 }
 
+C.section('THE CARAVAN DOOR IS ON ITS WALL, NOT FINNING OFF THE SIDE OF IT');
+// Vantages 12, 18 and 20 all showed one defect three ways: the caravan door was built with the HUT
+// door build - a slab thin in Z - but the caravan door wall faces X. So the door face pointed
+// fore-aft and the slab stuck out of the side of the van as a black fin: edge-on in 12 and 18, and
+// square-on from dead astern in 20, which a flush door never is.
+// The reorientation is a dim-preserving axis swap, and this section pins BOTH halves of it: the
+// slabs are now thinnest toward the wall with their faces spanning the wall plane, and they land on
+// the wall skin as MEASURED rather than as nominal. That second half is load bearing. rbox is an
+// ExtrudeGeometry and three expands the shape by bevelSize (r*0.92) on the two SHAPE axes while
+// leaving the EXTRUDE axis exact, so the 2.4-wide shell does not end at x 1.2, it ends at 1.476.
+// Every other detail on this wall - side windows at 1.225, awning rail at 1.23, gutter trim at
+// 1.22 - is sealed inside the van by that margin, which is why the wall photographs as blank white
+// in 12. A door placed on the nominal plane would have joined them, so the offsets were restaggered
+// off the measured skin instead, and the tripwire below is what stops that being re-broken quietly.
+{
+  const d=G.vanDoor;
+  ok(!!d&&d.axis==='x','the door is registered with its wall axis, so the gate can read it off G');
+
+  const ext=m=>{ const gg=m.geometry; gg.computeBoundingBox(); const b=gg.boundingBox;
+    return {sx:b.max.x-b.min.x, sy:b.max.y-b.min.y, sz:b.max.z-b.min.z,
+      x0:m.position.x+b.min.x, x1:m.position.x+b.max.x,
+      y0:m.position.y+b.min.y, y1:m.position.y+b.max.y,
+      z0:m.position.z+b.min.z, z1:m.position.z+b.max.z}; };
+  const E={frame:ext(d.frame),door:ext(d.door),pane:ext(d.pane),step:ext(d.step),grip:ext(d.grip)};
+
+  // 1. THE ASSERTION THAT FLIPS. Before the piece the smallest extent of all three slabs was Z
+  //    (0.03, 0.04, 0.045) and X spanned the door WIDTH. Now X is the thin axis on all three.
+  for(const k of ['frame','door','pane']){ const e=E[k];
+    ok(e.sx<e.sy&&e.sx<e.sz,'the '+k+' is thinnest toward the wall - x '+e.sx.toFixed(4)+
+       ' against y '+e.sy.toFixed(4)+' and z '+e.sz.toFixed(4));
+    ok(e.sx<0.09,'and thin in absolute terms, not merely relatively ('+k+' x '+e.sx.toFixed(4)+')'); }
+
+  // 2. THE FACE SPANS THE WALL PLANE, at the dims it always had. Z is the extrude axis so it comes
+  //    out exact; Y is a shape axis so it carries the bevel expansion. Both are checked against the
+  //    ORIGINAL numbers, which is what makes this an axis swap and not a resize.
+  const DIM={frame:[1.56,1.04],door:[1.48,0.96],pane:[0.95,0.30]};
+  for(const k of ['frame','door','pane']){ const e=E[k], [ny,nz]=DIM[k];
+    ok(Math.abs(e.sz-nz)<1e-6,'the '+k+' spans its full '+nz+' along the wall in z ('+e.sz.toFixed(4)+')');
+    ok(e.sy>=ny-1e-6&&e.sy<=ny+0.05,'and its full '+ny+' up the wall in y ('+e.sy.toFixed(4)+
+       ', bevel expansion included)'); }
+  ok(E.door.sz*E.door.sy>1.4,'so the door presents a real door-sized face to the world, not an edge ('+
+     (E.door.sz*E.door.sy).toFixed(3)+' square units)');
+
+  // 3. WHERE THE WALL ACTUALLY IS. A scanline, because the shell side wall has NO vertices between
+  //    its corner arcs - the straight run from y 0.6 to 2.1 is two vertices and a quad, so sampling
+  //    positions finds nothing at the door height. So cut every triangle of every non-door body of
+  //    the van by the plane y=Y, then cut that segment at z=0.6, and take the biggest x. That is
+  //    the outer skin at the door centre line, measured off the geometry that ships.
+  const st=G.inter.find(t=>t.strip&&/DOOR SEAL/.test(t.label)).strip;
+  const skip=new Set([d.frame,d.door,d.pane,d.step,d.grip].concat(st.segs.map(sg=>sg.m)));
+  const bodies=[];
+  for(const o of d.group.children){ if(!o.isMesh||skip.has(o))continue;
+    const p=o.geometry.attributes.position; if(!p||!p.count)continue;
+    const ix=o.geometry.index, N=ix?ix.count:p.count, tri=[];
+    const V=i=>[p.getX(i)+o.position.x,p.getY(i)+o.position.y,p.getZ(i)+o.position.z];
+    for(let i=0;i<N;i+=3){ const a=ix?ix.getX(i):i, b=ix?ix.getX(i+1):i+1, c=ix?ix.getX(i+2):i+2;
+      tri.push([V(a),V(b),V(c)]); }
+    bodies.push(tri); }
+  ok(bodies.length>=40,'the van skin came back as a real body list ('+bodies.length+' meshes)');
+  const skinAt=(Y,Z)=>{ let best=-Infinity;
+    for(const tri of bodies) for(const t of tri){ const pts=[];
+      for(let e=0;e<3;e++){ const a=t[e], c=t[(e+1)%3];
+        if((a[1]-Y)*(c[1]-Y)>0||a[1]===c[1])continue;
+        const u=(Y-a[1])/(c[1]-a[1]);
+        pts.push([a[0]+u*(c[0]-a[0]), a[2]+u*(c[2]-a[2])]); }
+      if(pts.length<2)continue;
+      const p1=pts[0], p2=pts[1];
+      if((p1[1]-Z)*(p2[1]-Z)>0)continue;
+      const v=p1[1]===p2[1]?0:(Z-p1[1])/(p2[1]-p1[1]);
+      const x=p1[0]+v*(p2[0]-p1[0]);
+      if(x>best)best=x; }
+    return best; };
+  let SKIN=-Infinity, worstProud=99, worstY=0, n=0;
+  for(let Y=E.door.y0;Y<=E.door.y1+1e-9;Y+=0.05){ const sk=skinAt(Y,0.6); n++;
+    if(sk>SKIN)SKIN=sk;
+    if(E.frame.x1-sk<worstProud){ worstProud=E.frame.x1-sk; worstY=Y; } }
+  ok(n>=28,'the whole door height got scanned ('+n+' slices)');
+  ok(SKIN>1.4,'and the skin is where the bevel says it is, not where the nominal dim says ('+
+     SKIN.toFixed(4)+', nominal half width 1.2)');
+
+  // 4. FLUSH MEANS BOTH THINGS AT ONCE: the face stands OUT of the skin at every height, and the
+  //    back of the frame is BEHIND the skin, so it is bedded into the wall with no gap to see under.
+  ok(worstProud>0,'the door face stands proud of the van skin at every height - worst margin '+
+     worstProud.toFixed(4)+' at y '+worstY.toFixed(2));
+  ok(E.frame.x0<SKIN,'and the back of the frame is bedded inside the skin, so it is flush and not '+
+     'a slab floating off the wall ('+E.frame.x0.toFixed(4)+' against '+SKIN.toFixed(4)+')');
+
+  // 5. THE LAYERS STACK OUTWARD ALONG THE WALL NORMAL. This is what "restagger the offsets onto the
+  //    wall axis" has to mean: strictly increasing faces, nothing coplanar, handle outermost.
+  const stack=[['frame',E.frame.x1],['door',E.door.x1],['glass',E.pane.x1],['handle',E.grip.x1]];
+  let mono=true; for(let i=1;i<stack.length;i++) if(!(stack[i][1]>stack[i-1][1]+0.005))mono=false;
+  ok(mono,'the layers stack strictly outward along the wall normal - '+
+     stack.map(q=>q[0]+' '+q[1].toFixed(3)).join(', '));
+
+  // 6. AND THE STEP IS A STEP: it butts the wall, projects off it, and is wider ALONG the wall than
+  //    it is deep off it. Turned the wrong way it was a narrow tongue pointing fore-aft.
+  ok(E.step.x0<SKIN&&E.step.x1>SKIN+0.2,'the step butts the wall and projects off it ('+
+     E.step.x0.toFixed(3)+' to '+E.step.x1.toFixed(3)+', skin '+SKIN.toFixed(3)+')');
+  ok(E.step.sz>E.step.sx,'and it is wider along the wall than deep off it (z '+E.step.sz.toFixed(3)+
+     ' against x '+E.step.sx.toFixed(3)+')');
+  ok(E.step.z0<E.door.z1&&E.step.z1>E.door.z0,'and it sits under the doorway it serves');
+
+  // 7. THE SEAL. Same twelve steps, same path shape, now wrapped on the reoriented frame - and the
+  //    bead is outboard of the skin, which it was NOT before: at x 1.245 the attached beading was
+  //    inside the van and only the freed segments were ever visible.
+  const sealT=G.inter.find(t=>t.strip&&/DOOR SEAL/.test(t.label));
+  ok(!!sealT,'the seal is still a strip tear on the reoriented door');
+  ok(st.N===12&&st.N===st.path.length-1,'and still a TWELVE step path, read as path.length-1 (N '+
+     st.N+', points '+st.path.length+')');
+  ok(st.f===0,'nothing peeled it before this section (f '+st.f+')');
+  const xs=Array.from(new Set(st.path.map(p=>+p.x.toFixed(6))));
+  ok(xs.length===1,'the whole bead shares one wall-normal x, so it lies IN the wall plane ('+
+     xs.join(',')+')');
+  ok(xs[0]>SKIN,'and that x is outboard of the skin, so the attached bead is on the door and not '+
+     'sealed inside the van ('+xs[0].toFixed(3)+' against '+SKIN.toFixed(3)+')');
+  let stray=0; for(const p of st.path)
+    if(p.y<E.frame.y0||p.y>E.frame.y1||p.z<E.frame.z0||p.z>E.frame.z1)stray++;
+  ok(stray===0,'and every bead point sits inside the frame footprint in the wall plane ('+stray+' strays)');
+  const axes=st.segs.map(sg=>sg.axis).join('');
+  ok(axes==='yyyyyzzzyyyy','the bead runs up an edge, across the head and down the far edge, all of '+
+     'it in the wall plane ('+axes+')');
+
+  // 8. AND IT STILL COMES OFF, twelve bits, through real held input, with the frontier reachable at
+  //    every one of them. Moving the bead 0.255 further out from the van could have broken this
+  //    silently, so it is driven rather than argued: perch idiom at each frontier (FLAKES law 7).
+  X.startGame(1); tick(8); park();
+  const k=kq(), p0=sealT.getPos(); let stuck=false, bits=0;
+  while(st.f<st.N&&!stuck){ const want=st.f+1, q=sealT.getPos();
+    const yy=Math.max(0.25,q.y,X.groundHeightAt(q.x,q.z,3)+0.02);
+    for(let i=0;i<3;i++){ k.x=q.x; k.z=q.z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); }
+    hold(P1.grab); let sp=0;
+    while(st.f<want&&sp<60*10){ k.x=q.x; k.z=q.z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); sp++; }
+    un(P1.grab); tick(2);
+    if(st.f<want)stuck=true; else bits++; }
+  ok(!stuck&&bits===12,'all twelve bits come off, each reachable from a perch at its own frontier ('+
+     st.f+'/'+st.N+')');
+  ok(M('seal'),'the seal mission credits on the last bit');
+  ok(!!G.props.find(pp=>pp.name==='door seal'),'and the WHOLE seal drops as one intact prop');
+  const p1=sealT.getPos(), travel=Math.hypot(p1.x-p0.x,p1.y-p0.y,p1.z-p0.z);
+  ok(travel>0.8,'the frontier travelled the frame rather than sitting still ('+travel.toFixed(2)+')');
+  ok(st.segs.every(sg=>!sg.m||sg.m.visible===false),'and the attached segments are all cleared');
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

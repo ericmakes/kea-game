@@ -1608,10 +1608,20 @@ function mkCampervan(x,z){
     rbox(1.1,0.52,0.55,0.06,0x1E2226,0,0.58,3.12,g); // drawbar toolbox
     rbox(1.12,0.05,0.57,0.02,0x33383E,0,0.82,3.12,g,{noshadow:true}); // toolbox lid line
   }
-  rbox(1.04,1.56,0.03,0.04,0x2E3338,1.2,1.02,0.6,g,{noshadow:true}); // door frame
-  rbox(0.96,1.48,0.04,0.045,0x23272B,1.21,1.02,0.6,g,{noshadow:true}); // the door itself — Crusader black
-  pane(0.3,0.95,0.045,0.03,0x9FB8C4,1.215,1.22,0.6,g); // tall narrow door pane
-  sph(0.05,PAL.metal,1.25,0.98,0.24,g,6); // handle
+  // The door-side wall is the +X face of the shell, so the wall PLANE is Y-Z and the wall NORMAL is
+  // X: every slab is thin in X and spans Y and Z, the way the window band above states it too.
+  // Dims are the old dims unchanged - 1.04x1.56 frame, 0.96x1.48 door, 0.3x0.95 pane - only the
+  // axis they sit on moved, so the seal still walks a 12-step path around them.
+  // WHERE THE WALL ACTUALLY IS, MEASURED, because the nominal 1.2 half-width is not it: rbox is an
+  // ExtrudeGeometry and three expands the shape by bevelSize (r*0.92) on the two shape axes while
+  // leaving the extrude axis exact. So the 2.4-wide shell really reaches x 1.476 across the door
+  // band, and the 2.56-wide skirt reaches 1.464 over y 0.366..1.334. The outer skin at this door is
+  // therefore x ~1.47, not 1.2, and the layering has to start from there or the door is inside the
+  // van. Faces land at 1.495 frame, 1.516 door, 1.535 glass - each 0.02 proud of the one behind.
+  const dFrame=rbox(0.03,1.56,1.04,0.04,0x2E3338,1.467,1.02,0.6,g,{noshadow:true}); // door frame
+  const dDoor=rbox(0.04,1.48,0.96,0.045,0x23272B,1.478,1.02,0.6,g,{noshadow:true}); // the door itself — Crusader black
+  const dPane=pane(0.045,0.95,0.3,0.03,0x9FB8C4,1.493,1.22,0.6,g); // tall narrow door pane
+  const dGrip=sph(0.05,PAL.metal,1.52,0.98,0.24,g,6); // handle — proud of the glass face, on the door
   rbox(1.6,0.14,2.6,0.05,PAL.white,0,2.48,0.4,g,{noshadow:true}); cyl(0.14,0.18,0.16,PAL.metal,-0.5,2.56,-1.2,g,8); // roof pod + vent
   rbox(0.06,0.05,3.4,0.02,PAL.metal,1.23,2.34,0.2,g,{noshadow:true}); // awning rail
   for(const sdx of [-1,1]){ // tandem axles: two wheels under one long fender (Crusader)
@@ -1625,7 +1635,7 @@ function mkCampervan(x,z){
     sph(0.045,0xE8A13A,sdx*1.2,1.05,2.7,g,6); sph(0.045,0xC0392B,sdx*1.2,1.05,-2.7,g,6); // clearance + tail lights
     rbox(0.04,0.05,5.5,0.02,PAL.white,sdx*1.22,2.36,0,g,{noshadow:true}); // roof gutter trim
   }
-  rbox(0.5,0.09,0.34,0.03,PAL.metal,1.32,0.28,0.6,g,{noshadow:true}); // door step
+  const dStep=rbox(0.34,0.09,0.5,0.03,PAL.metal,1.61,0.28,0.6,g,{noshadow:true}); // door step
   pane(1.7,0.55,0.05,0.04,0x9FB8C4,0,1.62,-2.79,g); // rear window band
   box(2.3,0.16,0.14,PAL.metal,0,0.62,-2.83,g,{noshadow:true}); // rear bumper
   { const sw=cyl(0.34,0.34,0.12,PAL.rubber,-0.62,1.05,-2.85,g,12); sw.rotation.x=1.57; } // spare wheel
@@ -1634,11 +1644,21 @@ function mkCampervan(x,z){
   addBoxCollider(x,z,2.8,5.8,2.5,true,0.2);
   addBoxCollider(x+Math.sin(0.2)*3.4,z+Math.cos(0.2)*3.4,0.9,1.5,0.6,true,0.2); // drawbar
   G.vanTop={x,z,top:2.5,w:1.2,d:2.7};
+  // Registered the way G.wear and G.stones are: a data record with the meshes on it, so the gate
+  // can read the door orientation off the scene instead of a reader projecting it out of dims.
+  G.vanDoor={axis:'x',wallAt:1.47,cz:0.6,cy:1.02,frame:dFrame,door:dDoor,pane:dPane,step:dStep,grip:dGrip,group:g};
   // door rubber seal — worked off bit by bit with the beak, comes away intact
-  { const pth=[]; // rubber beading around the door frame: up the front edge, across the top, down the latch edge
-    for(let i=0;i<=5;i++)pth.push({x:1.245,y:0.30+i*0.292,z:0.055});
-    for(let i=1;i<=3;i++)pth.push({x:1.245,y:1.76,z:0.055+i*0.363});
-    for(let i=1;i<=4;i++)pth.push({x:1.245,y:1.76-i*0.365,z:1.145});
+  { const pth=[]; // beading around the REORIENTED frame edges: up the handle edge, across the head, down the hinge edge
+    // The path was ALREADY drawn in the wall plane (one x, varying y and z) - it was the slabs that
+    // were turned the wrong way, and the bead was left hanging in space beside them. Now it hugs
+    // the door it seals: the door edge sits at z 0.12 and z 1.08, y 0.2625..1.7775, so the bead
+    // runs that seam at z 0.12 / 1.08 and y 0.27..1.77. It rides out to x 1.50 with the frame,
+    // which puts it BETWEEN the frame face (1.495) and the door face (1.516) - a seam bead - and
+    // 0.255 further from the van than before, so the tear reach (range 1.7) only gets easier.
+    // Segment counts 5 + 3 + 4 are held deliberately: N = path.length-1 = 12 steps (FLAKES law 10).
+    for(let i=0;i<=5;i++)pth.push({x:1.50,y:0.27+i*0.30,z:0.12});
+    for(let i=1;i<=3;i++)pth.push({x:1.50,y:1.77,z:0.12+i*0.32});
+    for(let i=1;i<=4;i++)pth.push({x:1.50,y:1.77-i*0.375,z:1.08});
     addStrip({group:g,path:pth,thick:{x:0.05,y:0.055,z:0.055},color:0x1A1D20,
       label:'WORK THE DOOR SEAL',need:0.55,range:1.7,owner:'trish',mission:'seal',
       propName:'door seal',propBuilder:PB.longSeal,points:45,doneText:'THE WHOLE SEAL. INTACT.',noiseAmt:9});

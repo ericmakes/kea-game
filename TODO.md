@@ -293,6 +293,32 @@ and compares gradient smoothness rather than whole-frame SSIM.
 PROOF: whatever ships must flag the piece-9 before/after pair, which is a ready-made test case -
 the baseline currently holds the banded shading and the working capture holds the smooth one.
 
+## FOUND IN SESSION 4 (appended 2026-09-01 by the overnight run)
+
+### 32. rbox-bevel-swallows-wall-detail
+Found by piece 10, which nearly shipped a door sealed inside the caravan. rbox is an
+ExtrudeGeometry and three expands the shape by bevelSize (r*0.92) on the two SHAPE axes while
+leaving the EXTRUDE axis EXACT. So rbox(w,h,d,r) really measures (w + 1.84r) x (h + 1.84r) x d.
+MEASURED on the campervan shell, rbox(2.4,2.1,5.6,0.3): actual extents 2.952 x 2.652 x 5.600, so
+the flank is at x 1.476 and not the nominal 1.2. Everything mounted on that flank at nominal
+offsets is therefore INSIDE the van: side window frames at 1.225 (faces 1.282), their panes at
+1.25 (1.297), awning rail at 1.23, roof gutter trim at 1.22, green accent stripe at 1.326,
+charcoal pinline at 1.301 - against a skin of 1.464 (skirt) to 1.476 (shell). VISIBLE in vantage
+12: the caravan flank is blank white, and the green stripe and black skirt appear only as short
+bands on the FRONT face, where they poke past the z cap because they are 5.7 long against a 5.6
+shell. Piece 10 fixed only the door assembly (frame, door, pane, handle, step, seal bead).
+WHY IT IS NOT A ONE-LINER: the fix is a reposition of every flank detail onto the measured skin,
+per body, and the same arithmetic applies to any other rbox-shelled body with detail mounted on a
+SHAPE axis - the ute and the hut want auditing before anyone believes this is caravan-only. That
+is a sweep with a look to judge on every frame it touches, not a swap.
+DO NOT "fix" it by shrinking r or by subtracting the bevel inside roundedBoxGeo: r is what gives
+the toon bodies their radius, and the extents are load bearing for colliders, blob shadows and
+G.vanTop, all of which were authored against the shapes as they actually render.
+PROOF once built: the piece-10 scanline is the ready-made instrument - cut every triangle of the
+body by the plane y=Y, cut that segment at the detail z, take the biggest x - so assert every
+registered flank detail has its outer face proud of the skin at its own height.
+RE-PIN: 12, 18, 20 and any caravan or ute vantage. Leave flagged for Eric.
+
 ## FENCED FOR PLAYTEST (never overnight)
 Par values, timer defaults, DECAY/BOTCH feel, catch balance, results-screen
 look, mode-select copy. The machinery above gets built; the couch tunes it.

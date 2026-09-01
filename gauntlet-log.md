@@ -652,3 +652,72 @@ LESSON FOR THE NEXT RUN, on my own process: I started this sweep in the middle o
 it blocked every game-file edit for 25 minutes before I killed it. Its take files were still on
 disk and I recovered real data from them - that is how 02_hut_snow was caught, which I had not
 suspected. Run the full sweep LAST, and salvage rather than rerun.
+
+## SESSION 4 — 2026-09-01 (evening)
+
+### PIECE: caravan-door-orientation (TODO item 10) — CERTIFIED 006ae2061309cf5d9e96324bb8f1eef9
+- THE BRIEF WAS RIGHT ABOUT THE DEFECT AND HALF RIGHT ABOUT THE FIX. The door was built with the
+  hut door build - a slab thin in Z - on a wall whose normal is X, so the face pointed fore-aft and
+  the slab stood out of the side of the van as a black fin. Confirmed in the baseline of 12: the
+  door-side wall is blank white and the only thing on it is a black tab sticking straight out with
+  the peeled seal snaking off it. Axis swap done, all dims kept: frame 1.04x1.56, door 0.96x1.48,
+  pane 0.3x0.95, thin axis now X, faces spanning the Y-Z wall plane.
+- THE PART THE BRIEF DID NOT KNOW, AND IT CHANGED THE PIECE. "Restagger the layering offsets onto
+  the wall axis" only means something if you know where the wall is, and the nominal half width is
+  NOT where the wall is. rbox is an ExtrudeGeometry and three expands the shape by bevelSize
+  (r*0.92) on the two SHAPE axes while leaving the EXTRUDE axis exact. Measured on the shell,
+  rbox(2.4,2.1,5.6,0.3): actual extents 2.952 x 2.652 x 5.600. So the 2.4-wide shell reaches
+  x 1.476, not 1.2. A door laid on the nominal plane with faces at 1.215/1.235/1.255 would have
+  been entirely INSIDE the van - I wrote exactly that patch first, fastgated it green, and only
+  caught it because the wall surface did not smell right and I went and measured it.
+- SO THE OFFSETS COME OFF THE MEASURED SKIN: frame 1.467, door 1.478, glass 1.493, handle 1.52,
+  step 1.61, bead 1.50. Faces land at 1.495 / 1.516 / 1.535 / 1.570 against a skin of 1.476 - each
+  layer 0.02 proud of the one behind it, frame back face bedded 0.037 INSIDE the skin so there is
+  no gap to see under. Worst proud margin over the whole door height is +0.0189 at y 0.61.
+- THE HANDLE AND THE STEP CAME WITH IT, and I am saying so because the brief named only frame, door
+  and pane. A door whose handle is sealed inside the wall is not a door, and the handle was already
+  buried before this piece (sph at x 1.25 against a skin of 1.476 - invisible in every frame ever
+  shot). The step was buried too: it reached 1.517, clearing the skin by 0.04. Both now sit on the
+  door. The step also swapped axes - it was 0.5 deep off the wall and 0.34 wide along it, a tongue
+  pointing fore-aft; it is now 0.34 deep and 0.5 wide, which is what a step is.
+- THE BEAD DID NOT NEED REORIENTING, only relocating. It was ALREADY drawn in the wall plane - one
+  constant x, varying y and z - which is the tell that the path was written for a flush door and the
+  slabs were the thing that went wrong. It was at x 1.245, i.e. sealed inside the van; only the
+  freed segments were ever visible, which is why 12_seal_midpeel reads as a strip of rubber hanging
+  off a featureless wall. Rebuilt on the reoriented frame edges (z 0.12 / 1.08, y 0.27..1.77, all
+  at x 1.50, between the frame face and the door face where a seam bead belongs) and moved 0.255
+  further out from the van, so the tear reach only got easier.
+- TWELVE STEPS HELD BY CONSTRUCTION AND BY ASSERTION. Segment counts 5 + 3 + 4 kept deliberately;
+  N is read as path.length-1 (FLAKES law 10), the segment axis string is asserted as yyyyyzzzyyyy,
+  and the mission is DRIVEN to 12/12 through real held input with the perch idiom at each frontier
+  rather than argued about. harness-systems already drove the seal and stayed green through the
+  move, which is independent confirmation.
+- REGISTERED G.vanDoor {axis,wallAt,cz,cy,frame,door,pane,step,grip,group} the way G.wear and
+  G.stones are registered, because none of the above was assertable before: the door slabs were
+  anonymous children of the van group and nothing in the file could name them.
+- THE INSTRUMENT THAT MADE THE PROUDNESS CLAIM REAL, worth recording because the obvious version
+  does not work. I first tried to find the wall surface by sampling vertex positions in the door
+  band and got NOTHING back: the shell side wall between its corner arcs is two vertices and a
+  quad, so at the door height (y 0.26..1.79, z 0.1..1.1) there is not a single vertex to sample.
+  ExtrudeGeometry only emits vertices at its z layers, measured here as -2.800 -2.760 -2.650 -2.500
+  and mirrored. So the test cuts every triangle of every non-door body of the van by the plane y=Y,
+  then cuts that segment at z=0.6, and takes the biggest x - a scanline through the mesh, topology
+  free, 55 bodies, 31 slices up the door. That returns 1.4760 flat from y 0.6 up and tapers to
+  1.3906 at y 0.30, which matches the shape profile exactly.
+- VERIFIED ADVERSARIALLY, BOTH FAILURE MODES. Putting the slabs back on the fin axis goes red on 15
+  assertions. Keeping the correct axis but laying the door on the nominal 1.2 plane - the patch I
+  nearly shipped - goes red on exactly one, and it is the right one: "the door face stands proud of
+  the van skin at every height - worst margin -0.2481 at y 0.61". That single assertion is the
+  difference between a door that is oriented correctly and a door you can see.
+- A DEFECT I FOUND, MEASURED, AND DID NOT FIX because it is not this piece: the ENTIRE door-side
+  wall detailing is swallowed by the same bevel margin. Side window frames at x 1.225 (faces 1.282),
+  panes at 1.25 (1.297), awning rail at 1.23, roof gutter trim at 1.22, green accent stripe at
+  1.326, charcoal pinline at 1.301 - every one of them inside a skin of 1.464..1.476. That is why
+  the caravan flank photographs as blank white in 12 and why the green stripe and black skirt only
+  appear as short bands on the FRONT face, where they poke past the z cap because they are 5.7 long
+  against a 5.6 shell. Filed as TODO 32. It is the same class of bug as this piece and probably
+  affects other rbox-shelled bodies, but it is a wave of art-adjacent repositioning, not a swap.
+- NOTHING RE-PINNED, as the brief required. 12, 18 and 20 reshot and left flagged in the working
+  tree for Eric. EYEBALL: the door should now read as a flush black door with glass, a handle and a
+  step on the caravan flank, instead of a tab sticking out of it. 20 is the decisive one - dead
+  astern is where a fin is unmistakable.
