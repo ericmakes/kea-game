@@ -248,6 +248,24 @@ computed in BOTH paths with the meshes still built only when !HEADLESS, then ass
 footprint contains a raised ground sample. That is what makes it node-assertable at all.
 RE-PIN: 10, and any grass vantage the moved patches touch. Leave flagged for Eric.
 
+### 29. vantage-staging-vs-the-flake-laws  (harness-side only — game file untouched)
+Found in session 3 when two frames flagged against a byte-identical game file. Both are staging
+bugs the FLAKES ledger already warns about, and both drift with machine load, which is why they
+passed at 0 flagged last session and fail now.
+  - 22_torch_beam sets G.night, G.nightT=1 and nightApply(1) but NOT G.nightManual. Law 5 says
+    nightT eases toward the auto-driver every frame, so night+nightManual is the only stable
+    staging. It currently eases back toward day for the whole 900ms settle. 21_night_camp has the
+    same omission (0.9791, worst of the passing frames).
+  - 19_roof_follow is one of only two vantages that set the camera directly instead of through
+    camLock, so the follow cam lerps away from the staged pose for the entire settle. Its bird
+    also sits at y=5.2 on the roof with no per-frame PIN, so gravity and the roof logic can move
+    it (law 7, and the piece-4 lesson that a one-shot stage cannot hold a live bird).
+FIX: add nightManual to both night vantages; give 19 a camLock (or PIN the bird and the camera).
+PROOF: reshoot each flagged vantage three times and assert the spread collapses — that is the
+actual contract, since the defect is variance, not a wrong-looking frame.
+RE-PIN: 19, 21, 22 after the staging is stable. Expect a one-time move; leave flagged for Eric.
+NOTE: measured spread before the fix — 19 sits 0.956-0.961, 22 sits 0.944-0.950 across runs.
+
 ## FENCED FOR PLAYTEST (never overnight)
 Par values, timer defaults, DECAY/BOTCH feel, catch balance, results-screen
 look, mode-select copy. The machinery above gets built; the couch tunes it.

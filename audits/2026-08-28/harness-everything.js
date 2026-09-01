@@ -401,6 +401,55 @@ X.startGame(1); tick(6); park();
        k.neck.rotation.y.toFixed(2)+' rad, target '+X.PREEN.yaw+')'); }
   k.idleAct=null; }
 
+C.section('THE WHITE THING BEHIND THE BIRD IS CARPARK GRIT');
+// Vantage 18 showed a pale rounded lump on the tarmac behind the bird at the caravan door and
+// nothing in the game could say what it was. It is one of the 26 carpark grit pebbles: a
+// scene-level 5-segment sphere, radius 0.05 to 0.12, y-squashed, laid over the carpark slab.
+// Not seal debris, not the nest egg, not an orphan - so the verdict is KEEP, and this section
+// pins that verdict so the next reader does not have to re-investigate it by projection.
+{ const T=H.THREE, wp=new T.Vector3();
+  const g=G.gravel;
+  ok(Array.isArray(g)&&g.length===26,'the grit is a NAMED population, not anonymous scenery (n='+
+     (g?g.length:'missing')+')');
+
+  // the carpark slab is box(40,0.14,22,tarmac) centred (2,17): x -18..22, z 6..28
+  const SLAB={x0:-18,x1:22,z0:6,z1:28};
+  let outside=0; for(const p2 of g)
+    if(p2.x<SLAB.x0||p2.x>SLAB.x1||p2.z<SLAB.z0||p2.z>SLAB.z1)outside++;
+  ok(outside===0,'every pebble lies on the carpark slab, which is why one can turn up at the '+
+     'caravan door ('+outside+' strays)');
+
+  // the caravan door is inside the scatter reach, so a pale pebble there is grit BY CONSTRUCTION.
+  // the door is where vantage 18 puts the bird; the scatter spans x 2+-19, z 17+-10.
+  const DOOR={x:-9.0,z:10.2};
+  ok(DOOR.x>=2-19&&DOOR.x<=2+19&&DOOR.z>=17-10&&DOOR.z<=17+10,
+     'and the caravan door sits inside the scatter reach, so a pebble there needs no other name');
+
+  // the registry is not fiction: every entry has a real mesh standing on it
+  const level=[]; for(const o of G.scene.children){
+    if(!o.isMesh||!o.geometry||o.geometry.type!=='SphereGeometry')continue;
+    o.getWorldPosition(wp);
+    if(wp.x<SLAB.x0||wp.x>SLAB.x1||wp.z<SLAB.z0||wp.z>SLAB.z1)continue;
+    level.push({x:wp.x,z:wp.z,r:o.geometry.parameters.radius}); }
+  let matched=0; for(const p2 of g)
+    if(level.some(m=>Math.abs(m.x-p2.x)<1e-3&&Math.abs(m.z-p2.z)<1e-3&&Math.abs(m.r-p2.r)<1e-4))matched++;
+  ok(matched===g.length,'every named pebble has its mesh ('+matched+'/'+g.length+')');
+
+  // THE ANTI-ORPHAN TRIPWIRE, which is the half of this piece with a future. If anyone drops an
+  // unparented sphere on the carpark from here on, this count stops agreeing and the gate says so.
+  ok(level.length===g.length,'and NOTHING else unparented is loose on the carpark slab - '+
+     level.length+' spheres there, all 26 of them named grit');
+
+  // TEXTURE: the scatter alternates two greys, and only one of them was registered for the
+  // speckle detail map, so half the pebbles rendered flat and smooth while their siblings were
+  // stone. Read the registry rather than restating it (law 10).
+  const tints=[...new Set(g.map(p2=>p2.color))];
+  ok(tints.length===2,'the scatter uses two greys ('+tints.map(c=>'0x'+c.toString(16).toUpperCase()).join(' ')+')');
+  let mapped=0; for(const c of tints) if(X.MAPKIND[c]==='speckle')mapped++;
+  ok(mapped===2,'and BOTH are registered speckle now, so no pebble renders as flat smooth putty ('+
+     mapped+'/2)');
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

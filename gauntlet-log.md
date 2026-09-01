@@ -357,3 +357,76 @@ because the thing the piece was written to fix does not exist.
   see TODO item 28. Two of the ten snow patches are buried in the ski-field shed. That is a
   different frame (vantage 10, not 20) and a different cause, so it is NOT folded into this
   piece.
+
+### PIECE: white-object-18 (TODO item 8) — CERTIFIED 01675b29bbc79301633b8e383bc72dde
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 2 flagged (BOTH pre-existing and proven
+not mine, see below), subjects 6 checked 0 missing. Nothing re-pinned.
+- IT IS CARPARK GRIT, and it is intentional. The pale rounded lump behind the bird at the caravan
+  door is one of the 26 gravel-scatter pebbles built at line 937: a scene-level 5-segment sphere,
+  radius 0.05 to 0.12, squashed to half height, laid over the carpark slab. Not seal-step debris,
+  not the nest egg, not an orphan. So the verdict is KEEP, which is the fork the TODO asked for.
+- HOW IT WAS IDENTIFIED, because squinting at a 33-pixel blob proves nothing: staged vantage 18
+  under the capture harness and projected every mesh in the scene through that camera, then
+  filtered to the blob screen box. One hit - SphereGeometry, geometry bbox 0.17x0.20x0.18,
+  material #525961, at world (-8.96, 0.16, 10.01), 2.76 units from the lens, screen (553,368).
+  Every one of those numbers matches the line-937 scatter: y exactly 0.16, radius in band, five
+  segments (hence the pentagon facets), and #525961 is 0x9AA0A6 stored linear.
+- WHICH TINT MATTERS, and it is the whole reason the thing reads wrong. The scatter alternates two
+  greys: PAL.gravel on even indices and 0x9AA0A6 on odd ones. PAL.gravel is registered in MAPKIND
+  for the speckle detail map. 0x9AA0A6 WAS NOT. So thirteen of the twenty-six pebbles rendered as
+  flat untextured putty while their thirteen siblings rendered as stone, and the flat ones are
+  the ones that read as a dropped white object. One line fixes it: _mk(0x9AA0A6,'speckle'). That
+  is the "texture it" half of the TODO instruction, and it was a real inconsistency, not a
+  cosmetic preference. The same colour is the hut step stone, which also wanted speckle.
+- THE "NAME IT" HALF: the scatter was not recorded to G at all - unlike G.stones and G.wear
+  twenty-five lines below it, which both push their placements to a registry. That is exactly why
+  this piece needed a browser projection to answer a one-line question. It now pushes to G.gravel
+  in the same house style, so the population is nameable and, more to the point, assertable.
+- STREAM-NEUTRAL, PROVED, not assumed. Recording to G.gravel meant hoisting the three rnd() calls
+  out of the sph() argument list into locals, and argument order IS the rnd order, so getting it
+  wrong would have reshuffled the entire captured world. Verified by fingerprint: seeded both the
+  HEAD build and the patched build with setSeed(20260828), booted, and hashed every mesh world
+  position. 1039 meshes and md5 6d9233cf3ce11c1e1e0cb1f8d78cac63 on BOTH. Identical world.
+- A TRAP I WALKED INTO FIRST, worth recording: my first stream check compared gravel positions
+  before and after and they were completely different, which looked like a disaster. They differ
+  because THE WORLD IS UNSEEDED BY DEFAULT - RNGF falls back to Math.random unless setSeed is
+  called, and only capture.mjs seeds it. Two consecutive runs of the SAME build give a different
+  carpark. So the headless batteries build a different world every run, and no assertion may ever
+  hardcode a built-in coordinate. That also means the browser gravel is nowhere near where the
+  headless gravel is, which is why the proof pins the CLASS and not the coordinate.
+- THE PROOF pins the decision both ways, as the TODO asked. G.gravel is a named population of 26;
+  every pebble is inside the carpark slab footprint, which is what makes a pebble at the caravan
+  door legitimate BY CONSTRUCTION; the caravan door is inside the scatter reach; every named
+  pebble has a real mesh; both tints are read out of MAPKIND rather than restated (law 10); and
+  the one with a future - NOTHING else unparented is loose on the carpark slab.
+- VERIFIED ADVERSARIALLY, twice. Un-registering 0x9AA0A6 goes red on "BOTH are registered speckle
+  (1/2)". Dropping a stray white sphere at the exact vantage-18 anchor goes red on "27 spheres
+  there, all 26 of them named grit" - the tripwire catches precisely the bug class this piece was
+  opened for.
+- MAPKIND joins the exports. It is a registry, and reading it beats restating it (law 10).
+- THE TWO FLAGGED VANTAGES ARE NOT MINE, and I proved it rather than asserting it. 19_roof_follow
+  and 22_torch_beam flagged at 0.9606 and 0.9494. Control: restored the HEAD game file, reshot
+  those two, and they flag AT THE SAME BASELINE slightly WORSE - 0.9576 and 0.9438. Repeated
+  twice more: 19 sits 0.956-0.961, 22 sits 0.944-0.950. Consistent, so it is not shot flake, and
+  the game file is byte-identical to the one that pinned them at 0 flagged last session. Root
+  cause diagnosed, see the finding below. Nothing re-pinned: my own change is sub-threshold on
+  all 24, and re-pinning a frame I did not move would have laundered someone elses drift.
+- EYEBALL: 18_rear_close.png. The pebble is STILL THERE and is meant to be - it is grit. It is
+  now speckled rather than flat putty. If you want it gone from that spot the knob is the scatter
+  count or an exclusion around the caravan door, and that is a taste call I did not make.
+
+### FINDING: two vantages are mis-staged against the flake laws (not fixed in piece 8)
+Filed as TODO item 29. Both flagged frames trace to staging that the FLAKES ledger already warns
+about, and both drift with machine load, which is why they passed last session and fail now on
+an identical game file.
+- 22_torch_beam VIOLATES LAW 5 OUTRIGHT. It sets G.night=true and G.nightT=1 and calls
+  nightApply(1), but it never sets G.nightManual. Law 5 is explicit: nightT eases toward the
+  auto-driver verdict every frame, so tests set night AND nightManual, never nightT alone. Over
+  the 900ms settle the frame eases back toward day by however many animation frames the machine
+  managed. 21_night_camp has the same omission and sits at 0.9791, the worst of the passing
+  frames - same cause, smaller because there is no torch beam to expose it.
+- 19_roof_follow is one of only TWO vantages in the whole set that set the camera directly
+  instead of through camLock, so the follow cam lerps away from the staged position for the
+  entire settle and lands wherever the frame count leaves it. Its bird is also parked at y=5.2 on
+  the roof with no per-frame PIN, so it is free to be moved by gravity and the roof logic (law 7
+  and the piece-4 lesson: a one-shot stage cannot hold a live bird).
