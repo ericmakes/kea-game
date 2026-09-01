@@ -266,6 +266,18 @@ actual contract, since the defect is variance, not a wrong-looking frame.
 RE-PIN: 19, 21, 22 after the staging is stable. Expect a one-time move; leave flagged for Eric.
 NOTE: measured spread before the fix — 19 sits 0.956-0.961, 22 sits 0.944-0.950 across runs.
 
+### 30. pin-G-time-set-wide  (harness-side only — game file untouched)
+Found in session 3 while stabilising vantage 25. The grass shader sways on uTime, so EVERY
+grass-filled frame varies with how many animation frames the settle got through. Measured: 25
+sat at 0.9949 take-to-take until G.time was pinned, then 0.9998. The same effect is the residual
+~0.002-0.003 on every grass vantage (05 at 0.9969, 03 at 0.9972, 14 at 0.9978).
+FIX: pin G.time in QUIET so all time-based animation freezes for every vantage at once, the way
+21 and 25 already do locally. Expect the whole set to land near 0.999 take-to-take.
+RE-PIN: all of them, ONCE — the sway phase freezes at whatever G.time is chosen, so every frame
+moves slightly. Judge before pinning; leave flagged for Eric.
+WHY IT WAS NOT DONE IN SESSION 3: it is a one-line change with a 25-frame re-pin behind it, and
+that sweep deserves its own piece rather than riding along inside another one.
+
 ## FENCED FOR PLAYTEST (never overnight)
 Par values, timer defaults, DECAY/BOTCH feel, catch balance, results-screen
 look, mode-select copy. The machinery above gets built; the couch tunes it.

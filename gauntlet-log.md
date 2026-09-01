@@ -540,3 +540,43 @@ re-pin sweep, subjects 6 checked 0 missing, stability clean.
   contract hermetic (the piece-5 precedent).
 - EYEBALL: 05_tussock_ground.png, 14_player_view.png, 03_kea_plate.png for the new tint, and
   07_jam.png for the staged blue queue. Note the old 14 pin had a stray human in it too.
+
+### PIECE: followcam-preen-vantage (TODO item 26) — CERTIFIED 1667e39746f7b0367c39f22273eaa18b
+Verdict: green. GAME FILE MD5 UNCHANGED - capture.mjs and subjects.mjs only. Gate CERTIFIED-SHIP,
+tripwire 25 compared 0 flagged, subjects 7 checked 0 missing, stability 0.9998.
+- THE POINT OF THE PIECE: piece 6 was certified against a metric, and I flagged at the time that
+  the metric was not the complaint. The complaint named the FOLLOW camera; 13 is a 1.35-unit
+  portrait and 14 is follow distance with no preen, so nothing in the set could see it.
+- THE CAMERA IS THE ENGINE OWN, not an invented distance: back 5.2*(0.62+0.42*S) and height
+  2.15*(0.62+0.45*S) read straight out of updateCams, aimed at the head height the engine uses
+  (k.y+0.72*S). Written as those expressions in capture.mjs so it stays honest if the rig changes.
+- AND IT STAGES THE WORST FRAME, which is the only frame worth judging. Measured headless across
+  both sides at 0.05s steps: the head sits deepest at t=1.60 on side -1, 0.0459 under the wing
+  line against an eps of 0.055 - the exact number piece 6 logged, independently rederived.
+- A REAL FINDING ABOUT THE FOLLOW CAM, and it is why the vantage is at camDist 0.6: at the DEFAULT
+  camDist the bird is about 40 PIXELS TALL and there is no head read available at all, to a human
+  or a classifier. The game lets the player pull in to 0.6 (clamp 0.6..1.6), so the vantage stands
+  at the closest distance the engine itself permits - a real player camera, not a flattering one.
+  Eric should know that the original complaint may partly be "the bird is small", not "the head is
+  buried".
+- THE VERDICT ON THE COMPLAINT: THE FIX HOLDS. At the worst frame of the cycle, from behind and
+  above, the head is a distinct lobe with the pale cere and the dark beak clear of the body mass.
+- THE CALIBRATION IS A MATCHED PAIR, which is the only honest way to do it: I reshot this same
+  vantage with the PRE-piece-6 preen constants (yaw 0.9, neckX 0.42, headX 0.52, wingZ 0.82) and
+  the head is buried under the wing with no beak visible. So `absent` is a MEASURED frame of the
+  bug, not a guess and not an unrelated old capture.
+    beak in the head box    33 with the fix    0 without it
+  Floor set at 12. And the cere was tried FIRST and rejected on measurement at x1.2 - a sliver of
+  cere shows even when the head is completely buried, so it cannot tell the two apart. The beak
+  can, because a buried head does not have one.
+- VERIFIED ADVERSARIALLY BY ACCIDENT, which is the best kind: I added the check before reshooting,
+  so it ran against the old-constants frame still on disk and reported exactly 0 against floor 12.
+  The check demonstrably fails on the bug it was written for.
+- STABILITY CAUGHT MY OWN VANTAGE. First pin attempt reshot at 0.9949, under the 0.995 the tool I
+  wrote three pieces ago demands. Cause: the grass shader sways on uTime, so any grass-filled frame
+  varies with the settle frame count - the same class as the camp fire in 21. Pinned G.time and it
+  went to 0.9998. I did not pin an unstable frame and I did not widen my own threshold to let it
+  through. The general fix is filed as TODO 30, since that residual is on every grass frame
+  (05 0.9969, 03 0.9972, 14 0.9978) and its re-pin sweep deserves its own piece.
+- EYEBALL: 25_preen_follow.png, and it wants magnifying - the bird is ~70px at this camera. The
+  head lobe, cere and beak are on the right side of the body mass.

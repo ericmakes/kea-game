@@ -129,3 +129,24 @@ ORIGINAL calibrated floor of 3000 and absent of 14 - piece 4 calibration untouch
 Measured first: on the new build carblue separated cars from a carless reference by only x7.5
 (441 vs 59) and no colour-agnostic classifier did better than x2.1, because a body colour drawn
 from Math.random cannot be pinned by a hue window at all. Staging beat calibrating.
+
+## New vantage 2026-09-01 (build 1667e397 — GAME FILE UNCHANGED)
+25_preen_follow pinned. Piece 6 fixed the preen head read and was certified against a metric, but
+the original complaint named the FOLLOW camera and no vantage stood there: 13 is a 1.35-unit
+portrait and 14 is follow distance with no preen. The set could not see the actual complaint.
+Camera is the engine own follow geometry rather than an invented distance - back
+5.2*(0.62+0.42*S), height 2.15*(0.62+0.45*S) from updateCams, aimed at the engine own head height
+k.y+0.72*S - at camDist 0.6, which is the closest the game itself allows (clamp 0.6..1.6, default
+1). NOTE FOR ERIC: at the DEFAULT camDist the bird is about 40px tall and NO head read is possible
+at all, by eye or by classifier. That is worth knowing on its own.
+It stages the WORST frame of the cycle, measured headless over both sides at 0.05s steps: t=1.60
+side -1, where the head sits 0.0459 under the wing line against PREEN.eps 0.055. Judging the easy
+frame would have proved nothing.
+VERDICT ON THE ACTUAL COMPLAINT: the fix HOLDS. At the worst frame the head is a distinct lobe
+with the pale cere and the dark beak clear of the body mass. Reshot with the PRE-piece-6 constants
+for comparison, the head is buried and the beak does not show at all.
+subjects.mjs gains a beak check calibrated on exactly that pair - 33 with the fix, 0 without, so
+absent:0 is a measured frame rather than a guess. The cere was tried first and rejected at x1.2: a
+sliver of it shows even when the head is fully buried.
+G.time is pinned in this vantage. The grass shader sways on uTime, so it reshot at 0.9949 until
+time was frozen, then 0.9998 - filed as TODO 30, because the same residual is on every grass frame.

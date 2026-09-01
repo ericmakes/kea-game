@@ -169,4 +169,22 @@ await shotR('12_seal_midpeel',`{const t=KEAGAME.G.inter.find(x=>x.strip&&/DOOR S
 const k=KEAGAME.G.keas[0], p=t.getPos(); k.x=p.x-0.35; k.y=p.y-0.15; k.z=p.z+0.55; k.grounded=false; k.vy=0; k.ry=2.4;} ${CAM(-6.6,1.9,11.2,-9.7,1.3,8.4)}`);
 await shotR('23_paddock_gate',`const k=KEAGAME.G.keas[0];k.x=-41.4;k.z=6.4;k.y=0;k.grounded=true;k.ry=-1.1; ${CAM(-45.0,1.5,8.6,-41.6,0.7,3.2)}`);
 await shotR('24_verge_paddle',`const k=KEAGAME.G.keas[0];k.x=6.2;k.z=28.4;k.y=0;k.grounded=true;k.ry=0.5; ${CAM(3.6,1.7,26.2,7.4,1.05,29.4)}`);
+// 25 (2026-09-01): piece 6 fixed the preen head read and was certified against a metric, but the
+// original complaint named the FOLLOW camera and NO vantage stood there - 13 is a 1.35-unit
+// portrait and 14 is follow distance with no preen. This is that gap, so the set can judge the
+// actual complaint from now on.
+// The camera is the engine own follow geometry at size 1 rather than an invented distance:
+// back = 5.2*(0.62+0.42*S), height = 2.15*(0.62+0.45*S) from updateCams, aimed at the head height
+// the engine itself uses (k.y+0.72*S). And it stages the WORST frame of the cycle, measured
+// headless across both sides at 0.05s steps: t=1.60 on side -1, where the head sits 0.0459 under
+// the wing line against PREEN.eps of 0.055. Judging the easy frame would prove nothing.
+// camDist: the game lets the player pull the follow cam in to 0.6 and out to 1.6 (clamp at line
+// 3215), default 1. At the DEFAULT the bird is about 40px tall and no head read is possible by eye
+// or by classifier - worth knowing, and reported. So this stands at 0.6, the closest the engine
+// itself allows, which is a real player camera and not an invented one.
+const F_RY=2.2, F_DIST=0.6, F_BACK=5.2*(0.62+0.42)*F_DIST, F_H=2.15*(0.62+0.45);
+await shotR('25_preen_follow',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
+  ${PIN("k.x=0;k.z=0;k.y=0;k.vy=0;k.grounded=true;k.ry="+F_RY+";k.stun=0;k.landFlare=0;"+
+        "k.idleT=99;k._idleEver=true;k.idleAct={kind:'preen',t:1.60,dur:3.5,side:-1};KEAGAME.G.time=12.0;")}
+  ${CAM(-Math.sin(F_RY)*F_BACK, F_H, -Math.cos(F_RY)*F_BACK, 0, 0.72, 0)}`);
 console.log('CAPTURE COMPLETE');
