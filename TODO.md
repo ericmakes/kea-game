@@ -278,6 +278,21 @@ moves slightly. Judge before pinning; leave flagged for Eric.
 WHY IT WAS NOT DONE IN SESSION 3: it is a one-line change with a 25-frame re-pin behind it, and
 that sweep deserves its own piece rather than riding along inside another one.
 
+### 31. a-tripwire-that-can-see-shading  (harness-side only)
+Found in session 3 by piece 9. The facet-normal smoothing changed the shading of EVERY curved hull
+in the game and diff.mjs flagged nothing: worst 0.9865 (18_rear_close), then 0.9900 (12), against
+a 0.965 threshold. Measured numerically the change is large - max channel delta 108 on vantage 12,
+17396 pixels shifted by more than 6 levels - and at a crop of the caravan roofline corner the
+before/after is night and day.
+So SSIM at 0.965 cannot police a shading change. This is the THIRD blind spot in the same family:
+a birdless frame is perfectly stable (piece 4), an unstable frame reads as permanent drift (piece
+29), and now a global re-shade reads as no change at all.
+OPTIONS: a second tighter threshold band that WARNS rather than fails (say 0.995) so global
+subtle changes surface; or a dedicated shading check that samples a few known curved-hull crops
+and compares gradient smoothness rather than whole-frame SSIM.
+PROOF: whatever ships must flag the piece-9 before/after pair, which is a ready-made test case -
+the baseline currently holds the banded shading and the working capture holds the smooth one.
+
 ## FENCED FOR PLAYTEST (never overnight)
 Par values, timer defaults, DECAY/BOTCH feel, catch balance, results-screen
 look, mode-select copy. The machinery above gets built; the couch tunes it.

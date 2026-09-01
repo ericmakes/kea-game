@@ -491,6 +491,108 @@ C.section('THE GRASS TINT IS SEEDED, NOT A LOTTERY');
   // once the blades were seeded. It now paints from a fixed seed, like detailTex already did.
 }
 
+C.section('CURVED HULLS ARE SMOOTH WITHOUT MOVING A VERTEX');
+// rbox is an ExtrudeGeometry and ExtrudeGeometry is NON-INDEXED, so each triangle owns its three
+// vertices and its own flat normal - that is the banding on the ute bonnet and the caravan roof.
+// The briefed fix (computeVertexNormals) cannot help for exactly that reason, and this section
+// proves that claim rather than asserting it: three own recompute on a non-indexed geometry
+// reproduces the flat facets, which is what makes it a perfect stand-in for the BEFORE state.
+{ const T=H.THREE;
+  ok(X.SMOOTHSTAT.geos>0,'the smoothing pass ran at build ('+X.SMOOTHSTAT.geos+' geometries, '+
+     X.SMOOTHSTAT.verts+' vertices)');
+
+  const g=X.roundedBoxGeo(1.3,0.7,2.1,0.12);        // a fresh size, through the real build path
+  const flat=g.clone(); flat.computeVertexNormals(); // == the pre-smoothing flat facets
+  const pos=g.attributes.position, sm=g.attributes.normal, fl=flat.attributes.normal;
+
+  ok(!g.index,'the geometry is non-indexed, which is why computeVertexNormals cannot smooth it');
+  ok(pos.count===flat.attributes.position.count&&pos.count%3===0,
+     'vertex and triangle counts are untouched ('+pos.count+' verts, '+(pos.count/3)+' tris)');
+
+  // NOT ONE VERTEX MOVED - the silhouette constraint, checked rather than promised
+  let moved=0;
+  for(let i=0;i<pos.count;i++){ const q=flat.attributes.position;
+    if(pos.getX(i)!==q.getX(i)||pos.getY(i)!==q.getY(i)||pos.getZ(i)!==q.getZ(i))moved++; }
+  ok(moved===0,'and not one position moved, so the silhouette is bit-identical ('+moved+' moved)');
+
+  // and the pass is not a no-op
+  let changed=0;
+  for(let i=0;i<sm.count;i++)
+    if(Math.abs(sm.getX(i)-fl.getX(i))>1e-4||Math.abs(sm.getY(i)-fl.getY(i))>1e-4||
+       Math.abs(sm.getZ(i)-fl.getZ(i))>1e-4)changed++;
+  ok(changed>0,'the normals genuinely changed, so computeVertexNormals is NOT equivalent ('+
+     changed+' of '+sm.count+' rewritten)');
+
+  // THE CONTRACT: group vertices by shared position. Where the FLAT normals all sat inside the
+  // engine own threshold, the smoothed ones must now agree. Where any pair exceeded it, that is a
+  // real edge and it must still be crisp. Read the threshold from the engine (law 10).
+  const lim=X.SMOOTH_DEG;
+  const by=new Map();
+  for(let i=0;i<pos.count;i++){
+    const k=pos.getX(i).toFixed(4)+'_'+pos.getY(i).toFixed(4)+'_'+pos.getZ(i).toFixed(4);
+    let a2=by.get(k); if(!a2){ a2=[]; by.set(k,a2); } a2.push(i); }
+  const maxAng=(att,idx)=>{ let m=0;
+    for(let a2=0;a2<idx.length;a2++)for(let b=a2+1;b<idx.length;b++){
+      const u=new T.Vector3(att.getX(idx[a2]),att.getY(idx[a2]),att.getZ(idx[a2]));
+      const v=new T.Vector3(att.getX(idx[b]),att.getY(idx[b]),att.getZ(idx[b]));
+      if(u.lengthSq()<1e-9||v.lengthSq()<1e-9)continue;      // the zero-area seam triangles
+      const ang=u.angleTo(v)*180/Math.PI; if(ang>m)m=ang; }
+    return m; };
+  const minPair=(att,idx)=>{ let m=999;
+    for(let a2=0;a2<idx.length;a2++)for(let b=a2+1;b<idx.length;b++){
+      const u=new T.Vector3(att.getX(idx[a2]),att.getY(idx[a2]),att.getZ(idx[a2]));
+      const v=new T.Vector3(att.getX(idx[b]),att.getY(idx[b]),att.getZ(idx[b]));
+      if(u.lengthSq()<1e-9||v.lengthSq()<1e-9)continue;
+      const ang=u.angleTo(v)*180/Math.PI; if(ang<m)m=ang; }
+    return m; };
+  let welded=0, leaked=0, keptEdge=0, blunted=0, arc=0;
+  for(const idx of by.values()){
+    if(idx.length<2)continue;
+    const before=maxAng(fl,idx), after=maxAng(sm,idx), near=minPair(fl,idx);
+    if(before<=lim){ if(after<=0.5)welded++; else leaked++; }
+    else if(near>lim){ if(after>lim*0.5)keptEdge++; else blunted++; }   // no two normals close: a real edge
+    else arc++;                                    // a chain of small steps round an arc - smooths
+  }
+  ok(welded>0&&leaked===0,'every facet join inside '+lim+'deg was welded smooth ('+welded+
+     ' welded, '+leaked+' left banded)');
+  ok(keptEdge+blunted===0,'a ROUNDED box has no hard edges to keep - every edge is an arc ('+
+     keptEdge+'/'+blunted+')');
+  ok(arc>0,'so the chain groups smooth as the arcs they are ('+arc+' of them, closest pair under '+
+     lim+'deg but spanning more)');
+
+  // EDGE PRESERVATION needs a shape that HAS an edge. Two quads on a hinge, non-indexed like
+  // ExtrudeGeometry, with the dihedral as the knob.
+  const hinge=deg=>{ const t2=deg*Math.PI/180, sy=Math.sin(t2), cz=Math.cos(t2);
+    const q=[[0,0,0],[1,0,0],[1,0,1],[0,0,1]];                       // flat quad, normal +Y
+    const r2=[[0,0,1],[1,0,1],[1,sy,1+cz],[0,sy,1+cz]];              // hinged off the shared edge
+    const tri=(A,B,C)=>[...A,...B,...C];
+    const arr=[...tri(q[0],q[1],q[2]),...tri(q[0],q[2],q[3]),
+               ...tri(r2[0],r2[1],r2[2]),...tri(r2[0],r2[2],r2[3])];
+    const gg=new T.BufferGeometry();
+    gg.setAttribute('position',new T.Float32BufferAttribute(arr,3));
+    gg.computeVertexNormals();                                       // flat facets, as extrude gives
+    return gg; };
+  const gapAt=gg=>{ const pp=gg.attributes.position, nn=gg.attributes.normal, m=new Map();
+    for(let i=0;i<pp.count;i++){ const k=pp.getX(i).toFixed(4)+'_'+pp.getY(i).toFixed(4)+'_'+pp.getZ(i).toFixed(4);
+      let a3=m.get(k); if(!a3){ a3=[]; m.set(k,a3); } a3.push(i); }
+    let worst=0; for(const idx of m.values()) if(idx.length>1){ const v2=maxAng(nn,idx); if(v2>worst)worst=v2; }
+    return worst; };
+
+  const soft=hinge(20), hard=hinge(90);
+  ok(gapAt(soft)>19&&gapAt(hard)>89,'the fixture starts banded at both angles ('+
+     gapAt(soft).toFixed(1)+'deg and '+gapAt(hard).toFixed(1)+'deg)');
+  X.smoothFacetNormals(soft); X.smoothFacetNormals(hard);
+  ok(gapAt(soft)<0.5,'a 20deg join - inside the threshold - welds smooth ('+gapAt(soft).toFixed(2)+'deg)');
+  ok(gapAt(hard)>89,'a 90deg edge stays exactly as crisp as it was ('+gapAt(hard).toFixed(1)+'deg)');
+
+  // normals stay unit length, except the two zero-area seam triangles three itself emits
+  let nonUnit=0;
+  for(let i=0;i<sm.count;i++){ const L=Math.hypot(sm.getX(i),sm.getY(i),sm.getZ(i));
+    if(Math.abs(L-1)>1e-3)nonUnit++; }
+  ok(nonUnit===6,'normals stay unit length bar the 6 that three emits zeroed on two ZERO-AREA '+
+     'seam triangles, which rasterize to nothing ('+nonUnit+')');
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

@@ -638,6 +638,51 @@ function sph(r,c,x,y,z,parent,seg){
   (parent||G.scene).add(m); return m;
 }
 const RBG={}; // rounded-box geometry cache
+// FACET NORMALS (2026-09-01): rbox is an ExtrudeGeometry with bevelSegments 3 and curveSegments 5,
+// and ExtrudeGeometry is NON-INDEXED - every triangle carries its own three vertices and its own
+// flat normal. That is the shading banding on the ute bonnet and the caravan roofline. Note the
+// briefed fix, computeVertexNormals, is a NO-OP here for exactly that reason: with no shared
+// vertices there is nothing to average, so it recomputes the same flat facets.
+// What works is averaging normals across vertices that share a POSITION, and only across those
+// whose normals already lie within SMOOTH_DEG of each other - so the bevel and arc facet joins
+// smooth out while the genuine box edges stay crisp. Vertex and triangle counts are untouched and
+// not one position moves, so the silhouette is bit-identical.
+// The threshold is measured, not invented: on the car body shell (2.0 x 0.55 x 4.2, r 0.16) the
+// per-position normal-angle histogram is 15deg:166, 30deg:168, then NOTHING until 45deg:7, with a
+// handful at 90 and 150-180. 37 sits in that valley.
+const SMOOTH_DEG=37;
+const SMOOTHSTAT={geos:0,verts:0};
+function smoothFacetNormals(g){
+  const pos=g.attributes.position, nor=g.attributes.normal;
+  if(!pos||!nor||g.index)return g;                       // indexed geometry already shares normals
+  const byPos=new Map();
+  for(let i=0;i<pos.count;i++){
+    const k=pos.getX(i).toFixed(4)+'_'+pos.getY(i).toFixed(4)+'_'+pos.getZ(i).toFixed(4);
+    let a=byPos.get(k); if(!a){ a=[]; byPos.set(k,a); } a.push(i);
+  }
+  // NOTE, measured: ExtrudeGeometry emits 6 exactly-zero normals per rounded box, and they belong
+  // to exactly TWO ZERO-AREA triangles (verified against a bare three ExtrudeGeometry, so it is
+  // upstream). Zero-area triangles rasterize to nothing, so there is no black facet to fix and no
+  // repair here. The averaging below leaves those normals alone because a zero normal fails its own
+  // in-threshold test, which is the behaviour we want.
+  const lim=Math.cos(SMOOTH_DEG*Math.PI/180);
+  const out=new Float32Array(nor.count*3);
+  for(const idx of byPos.values()) for(const i of idx){
+    const nx=nor.getX(i), ny=nor.getY(i), nz=nor.getZ(i);
+    let ax=0,ay=0,az=0;
+    for(const j of idx){
+      const mx=nor.getX(j), my=nor.getY(j), mz=nor.getZ(j);
+      if(nx*mx+ny*my+nz*mz<lim)continue;                 // a real edge - do not blend across it
+      ax+=mx; ay+=my; az+=mz;
+    }
+    const L=Math.hypot(ax,ay,az);
+    if(L>1e-6){ out[i*3]=ax/L; out[i*3+1]=ay/L; out[i*3+2]=az/L; }
+    else { out[i*3]=nx; out[i*3+1]=ny; out[i*3+2]=nz; }
+  }
+  nor.copyArray(out); nor.needsUpdate=true;
+  SMOOTHSTAT.geos++; SMOOTHSTAT.verts+=pos.count;
+  return g;
+}
 function roundedBoxGeo(w,h,d,r){
   const k=[w,h,d,r].join('_'); if(RBG[k])return RBG[k];
   r=Math.min(r,w/2-0.001,h/2-0.001);
@@ -648,7 +693,7 @@ function roundedBoxGeo(w,h,d,r){
   sh.lineTo(-hw,h/2); sh.absarc(-hw,hh,r,Math.PI/2,Math.PI,false);
   sh.lineTo(-w/2,-hh); sh.absarc(-hw,-hh,r,Math.PI,Math.PI*1.5,false);
   const g=new THREE.ExtrudeGeometry(sh,{depth:d-r*2,bevelEnabled:true,bevelThickness:r,bevelSize:r*0.92,bevelSegments:3,curveSegments:5});
-  g.translate(0,0,-(d-r*2)/2); RBG[k]=g; return g;
+  g.translate(0,0,-(d-r*2)/2); smoothFacetNormals(g); RBG[k]=g; return g;
 }
 function rbox(w,h,d,r,c,x,y,z,parent,opts){
   const m=new THREE.Mesh(roundedBoxGeo(w,h,d,r),(opts&&opts.mats)||mat(c,opts&&opts.extra));
@@ -3379,7 +3424,7 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset};
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

@@ -580,3 +580,58 @@ tripwire 25 compared 0 flagged, subjects 7 checked 0 missing, stability 0.9998.
   (05 0.9969, 03 0.9972, 14 0.9978) and its re-pin sweep deserves its own piece.
 - EYEBALL: 25_preen_follow.png, and it wants magnifying - the bird is ~70px at this camera. The
   head lobe, cere and beak are on the right side of the body mass.
+
+### PIECE: facet-normals (TODO item 9) — CERTIFIED d5c59486c55a24fb251bf0615605fde5
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 25 compared 0 FLAGGED (which is itself the finding -
+see below), subjects 7 checked 0 missing. NOTHING RE-PINNED, per the brief.
+- THE BRIEF NAMED THE WRONG GEOMETRY AND THE WRONG FIX, and measuring caught both. It asked to
+  recompute vertex normals on "lofted/lathed hulls". The banded surfaces are neither: the ute
+  bonnet and the caravan roofline are rbox, which is roundedBoxGeo, which is an ExtrudeGeometry
+  with bevelSegments 3 and curveSegments 5. And loft() already calls computeVertexNormals.
+- AND computeVertexNormals CANNOT FIX IT, which is the crux. ExtrudeGeometry is NON-INDEXED:
+  measured on the car body shell, 2142 vertices for 714 triangles but only 358 distinct positions.
+  Every triangle owns its three vertices, so there is nothing for computeVertexNormals to average
+  and it just recomputes the same flat facets. The briefed fix is a no-op, and the battery now
+  proves that rather than asserting it - three own recompute is used as the BEFORE state.
+- hull() is also a red herring: it returns immediately because STYLE.outlines is false. Retired.
+- WHAT SHIPPED: average normals across vertices that SHARE A POSITION, and only across those whose
+  normals already lie within SMOOTH_DEG of each other. Bevel and arc facet joins weld smooth;
+  anything that is a genuine edge is left alone. Vertex count, triangle count and every single
+  position are untouched, which is the silhouette constraint the brief set - and the test checks it
+  rather than promising it (0 positions moved).
+- THE THRESHOLD IS MEASURED, NOT INVENTED. The per-position normal-angle histogram on the car
+  shell is 15deg:166, 30deg:168, then NOTHING until 45deg:7, plus a few at 90 and 150-180. 37
+  sits in that valley. The data chose it.
+- A WRONG ASSERTION I WROTE AND THEN MEASURED MY WAY OUT OF, worth recording because the fix was
+  the test and not the code: my first edge-preservation check used the per-position MAX angle, and
+  it failed on 2 groups. Measuring them showed max 47.8deg and 40.3deg but CLOSEST PAIR 0.0deg -
+  chains of near-identical normals stepping round an arc. That is a smooth curve and it SHOULD
+  smooth. A real edge is a group where no two normals are close, so there is nothing legitimate to
+  blend. Re-stated on that basis, and it then turned out a ROUNDED box has no hard edges at all -
+  every edge is an arc - so edge preservation needed a fixture that actually has one. Two quads on
+  a hinge, non-indexed: 20deg welds to 0.00deg, 90deg stays at 90deg.
+- A DEFECT I FOUND, MEASURED, AND DELIBERATELY DID NOT FIX: ExtrudeGeometry emits 6 exactly-ZERO
+  normals per rounded box (confirmed against a bare three ExtrudeGeometry, so it is upstream). I
+  wrote a face-normal repair for them, then measured which triangles they belong to: exactly TWO,
+  both with area 0.000e+0. Zero-area triangles rasterize to nothing, so there is no black facet and
+  the repair could never fire. I removed it and left the measurement as a comment. Shipping code
+  that provably cannot act is worse than not shipping it.
+- VERIFIED ADVERSARIALLY, both directions. Disabling the pass goes red on four assertions (333
+  joins left banded). Raising SMOOTH_DEG to 120 goes red on the hinge: the 90deg edge collapses to
+  0.0deg. So the threshold is load-bearing, not decoration.
+- THE FINDING THAT MATTERS FOR THE TRIPWIRE: this piece changed the shading of every curved hull in
+  the game and the tripwire did not flag ONE vantage. Worst was 18_rear_close at 0.9865, then 12 at
+  0.9900 - both comfortably inside the 0.965 threshold. Yet measured numerically the change is
+  real: max channel delta 108 on vantage 12, 17396 pixels shifted by more than 6 levels, and at a
+  crop of the caravan roofline corner the before/after is night and day - blocky polygonal facet
+  bands become a continuous curve. SSIM AT 0.965 CANNOT POLICE A SHADING CHANGE. That is a third
+  blind spot in the same family as the two already found (a birdless frame is stable; an unstable
+  frame reads as drift). It wants its own instrument or a tighter threshold - filed as TODO 31.
+- NOTHING RE-PINNED, exactly as the brief required, so the baseline still carries the BANDED
+  shading. NOTE FOR THE NEXT SESSION: the resulting ~0.986-0.99 on caravan and vehicle vantages is
+  NOT drift, it is this piece awaiting Eric judgement. Re-pin when he approves the look.
+- THE TASTE CALL, stated plainly: the curves are now genuinely smooth, which is a big improvement
+  on the banding but does soften the faceted toon character on the caravan shell. That is Eric
+  call, which is why the brief marked this judge-required and why I pinned nothing.
+- EYEBALL: crop the caravan front-top rounded corner in 12_seal_midpeel.png and compare against
+  gauntlet/capture/baseline/12_seal_midpeel.png. Also 18_rear_close and 01/09 for the ute bonnet.
