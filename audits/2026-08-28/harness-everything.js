@@ -65,7 +65,7 @@ console.log('  DRIVEN: '+driven.join(','));
 if(failed.length)console.log('  FAILED: '+failed.join(','));
 reviewed.push('roofhonk','seal(sys)','snow(sys)','jam(flow)','spikes','slide','q_peck','q_table(p2)','bootroad(p2)','airmail(p2)','b_five(p2)','b_beanie(sys)','s_ski','s_lift','t_pole2','t_sign','sign','paddock','grumble3','b_dress','b_body');
 console.log('  REVIEW-COVERED-OR-COMPLEX: '+reviewed.join(','));
-ok(failed.length===0,'every driven classic mission completes ('+driven.length+' driven, '+failed.length+' failed)');
+ok(failed.length===0,'every driven classic mission completes ('+driven.length+' driven, '+failed.length+' failed'+(failed.length?': '+failed.join(','):'')+')');
 
 C.section('THE FINALE — full pursuit, then the nest');
 X.startGame(1); tick(6); park();

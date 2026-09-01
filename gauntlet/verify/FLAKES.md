@@ -26,3 +26,12 @@ Institutional memory: every class of headless nondeterminism met so far, and the
    exports, tolerant try/catch keeping landed frames.
 10. ASSERTIONS DERIVE FROM ENGINE CONVENTION. When a constant is deliberately changed (scale law,
     seal path length), the test reads the convention (path.length-1), never re-hardcodes.
+11. THE MISSION MATRIX HAS A RARE INTERMITTENT. Seen once (2026-09-01, the first and cold node
+    invocation of the session): the everything battery reported "12 driven, 1 failed", then went
+    green across 11 consecutive reruns — 8 standalone and 3 full gate-shaped serial passes. Not
+    reproduced. The failing mission id was LOST, because gate.sh keeps only tail -1 per battery
+    and the FAILED line scrolls past it. Idiom: the assertion message now names the ids, so the
+    next occurrence identifies itself. Do not chase this one blind — capture the name, then stage
+    that single mission. Review-tier under law 8. Counts confirmed by sabotage: one dead driver
+    yields exactly "12 driven, 1 failed", so all 13 were attempted and precisely one did not
+    complete.
