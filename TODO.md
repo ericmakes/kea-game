@@ -401,7 +401,7 @@ reshuffle — eyeball, then re-pin the sweep. Permanent near-zero noise after.
   shed footprint - snow banking against the hut walls is welcome. Judge
   at 10 (and 11 if flagged); leave flagged.
 
-### 34. chapter-travel-beat
+### 34. chapter-travel-beat  — DONE session 6 (49335b92f810540fbe5e52cfb816929a)
 Eric's stated intent: each mission page should FEEL like a different
 environment. The world already delivers this structurally (eight areas,
 one seamless map - the reference games' own pattern); what is missing is
@@ -491,3 +491,38 @@ PROOF: mission batteries; star grants both sides; TAB shows the page.
 ### 41-44. RESERVED: campground, village, river, station
 One biome briefed at a time, only after its predecessor ships and its
 graduation is judged. Never improvised from the intent paragraph alone.
+
+## FOUND IN SESSION 6 (appended 2026-09-02 by the overnight run)
+
+### 36. THE BATTERIES ARE UNSEEDED, WHICH IS THE LAW-11 INTERMITTENT
+Laws 11 and 13 blamed a cold or contended node process for two unreproduced red batteries. Session 6
+measured the rate against BUILD instead of shrugging: harness-systems.js fails 3 times in 40 runs on
+the OLD build ccd4782 and 1 in 40 on the new one, and the failing assertion MOVES between runs
+(b_five, then b_beanie). Pre-existing, roughly 2-8 percent per battery per run, and not the code.
+CAUSE: RNGF=Math.random by default and NOT ONE battery calls setSeed, so every battery builds a
+different country and throws every dropped prop differently - spawnLoose gives each prop
+vy=rnd(1.4,2.4), vx=rnd(-1.2,1.2), vz=rnd(-1.2,1.2). Every failure seen so far is a mission whose
+driver must grab ONE named prop out of a randomly thrown pile: 'can' out of a bin that spits a shiny
+can plus six rubbish into the same half metre, b_five counting five shinies into a nest, b_beanie
+taking a hat off a sleeping head. capture.mjs already solved exactly this problem for frames, by
+seeding the game rng at its own boot - the batteries never got the same treatment.
+NOT PROVEN, AND SAY SO: 16 seeded reruns of the isolated 'can' driver all passed (the can lands 0.63u
+from the pinned bird every time), so the failure needs the full battery's accumulated prop scatter,
+not just the bin. Consistent with the theory, not a demonstration of it.
+WHY IT IS NOT A ONE-LINER: setSeed before boot changes WORLD GENERATION, so every existing assertion
+in all nine batteries is potentially re-based - positions, counts, which prop is nearest what. The
+piece is: seed each battery at a named constant, run the full gate, and fix or re-base whatever moves,
+one battery at a time. The prize is large - the gate becomes reproducible, a red means something, and
+laws 11 and 13 can be retired rather than worked around.
+PROOF once built: the same 40-run measurement, and it must read 0/40. Keep the instrument.
+
+### 37. gate.sh PASSES A BATTERY THAT CRASHES
+Found in session 6 by adversarial sabotage C on piece 34: an unguarded read in a battery threw a
+TypeError, and the battery printed no findings line at all. gate.sh does
+`node $h | grep -v THREE.Material | tail -1` then `grep -q "✗\|FINDINGS"` - a stack trace matches
+neither, so a battery that dies on its first assertion is indistinguishable from one that passed.
+The batteries already set process.exitCode, and the pipe throws it away.
+FIX: assert POSITIVELY rather than negatively - every battery must print its own "ALL PASS" line, and
+the count of ALL PASS lines must equal the count of batteries. That also catches a battery file that
+is missing, renamed or silently skipped, which the current grep cannot see either.
+PROOF: the ready-made test case is any battery with a deliberate throw in it - the gate must go red.

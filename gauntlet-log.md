@@ -1048,3 +1048,101 @@ exactly as found - not reverted, not committed, not touched.
   mission is still down when the beat starts, so "skippable with any input" will eat itself on the
   first frame unless the skip only arms after roughly a quarter second. That threshold is feel, so
   it belongs in the named constants and in the FENCED FOR PLAYTEST list, not chosen in the dark.
+
+## SESSION 6 — 2026-09-02 (overnight)
+Opened with the gate green at ccd4782590590e3b39d0e9356af2134a. Mid-session OVERNIGHT.md grew a
+SESSION LOCK rule; SESSION.lock did not exist, so it was created the moment the rule appeared, with
+a note saying so. At that point the only writes made were my own two uncommitted files.
+
+### PIECE: chapter-travel-beat (TODO item 34) — CERTIFIED 49335b92f810540fbe5e52cfb816929a
+Eric's brief: each page should FEEL like a different environment, so on a page turn fly from the
+bird to the new area, show a title card, come back, skippable with any input, no teleports.
+- BUILT ON SESSION 5's INVESTIGATION, which was the expensive part and was right. The three things
+  it warned about all bit exactly where it said they would: there is no derivable area centroid, so
+  the anchors are named; G.cams is empty under node, so nothing about the camera is assertable and
+  the beat had to be pure state; and the skip needed an arm delay because the page turn is CAUSED by
+  the keypress that is still in PRESSED on the beat's first frame.
+- WHERE AN AREA IS: TRAVELANCHOR, eight named spots measured off the build sites in buildWorld. The
+  assertion is the part that keeps it honest, and it does NOT restate the table - it gathers
+  landmarks from sources that know nothing about it (the CASEFILES crime sites, which carry a
+  mission id and therefore an area; G.hints, likewise; the hut roof, ski shed and DOC sign
+  colliders; G.pen, G.nestPos, G.vanTop) and asserts every chapter owns at least one landmark and
+  its anchor sits within 8u of the nearest. Measured: five anchors land dead on a landmark, THE ROAD
+  is 3.00u off the jam crime site and THE CAMPSITE 3.16u off the passport one. Plus: every chapter
+  has an anchor, every anchor is a chapter (the orphan check catches a typo the pairing cannot), and
+  no two chapters share a destination (closest pair 12.0u).
+- THE BEAT BLENDS THE CAMERA TARGET, NOT THE CAMERA. updateCams already lerps toward a target at
+  1-0.0018^dt; the beat mixes the beat aim into that target by a weight and lets the existing rig do
+  the flying, so there is no second smoothing law in the file and no discontinuity anywhere. The
+  weight is a smoothstep out, a flat 1 across the hold, a smoothstep home - asserted as a curve
+  (nought at both ends, monotone on each ramp, worst step under 0.01 at 1ms sampling) rather than by
+  sampling three points and hoping.
+- APPLIED BEFORE THE G.camLock LINE, per the handover, so the gauntlet photographer stays
+  authoritative and no vantage can become nondeterministic. The lookAt was hoisted into lx/ly/lz to
+  blend it; with no beat running the expressions are character-for-character the old ones.
+- travelAim IS PURE AND NODE-CALLABLE even though the transform is not, which bought an assertion I
+  did not expect to get: the beat camera clears the ground under every anchor. The ski field is the
+  one that needed it - its anchor IS the shed, and groundHeightAt there returns 2.0, so the aim
+  looks at the shed roof rather than through it.
+- THE SKIP IS TWO CONTRACTS, NOT ONE. A fresh press skips. A key already held when the beat opened
+  does NOT, because a player mid-waddle has not asked to skip anything - so the beat snapshots the
+  held set at the open and watches only for what is new. The arm delay (0.25s) then covers the
+  finishing keypress, which is still in PRESSED for the rest of that frame. All three cases staged.
+- SEVEN TURNS, NOT ONE. The battery drives every page turn in the book through the real done list
+  and asserts each opens a beat aimed at the page it turned to. FLAKES law 1 caught me here and cost
+  the first red: done() writes the save, startGame hydrates it straight back, so a run staged after
+  the book had been cleared came up already cleared and the turn under test could not fire. Every
+  stage now goes through freshBook(), which restarts, ticks, THEN empties the book.
+- VERIFIED ADVERSARIALLY, FOUR WAYS, each red on exactly its own assertions: arm:0 fails the two
+  skip-window assertions; pointing the TOGETHER anchor at the origin fails exactly one, naming the
+  campervan roof at 13.60u; dropping the held-set snapshot fails only "a key held from before the
+  turn is not new input"; removing travelStart from the page turn fails seventeen.
+- AND SABOTAGE C FOUND A DEFECT IN MY OWN BATTERY, which is the point of doing it: an unguarded
+  G.travelLast.ended threw a TypeError instead of reporting a finding. Guarded, re-run, 17 findings.
+  That miss is filed as TODO 37, because a battery that THROWS currently passes the gate.
+- NO CAPTURE PASS, and the reason is mechanical rather than a judgement: capture.mjs never completes
+  a mission and never touches chapIdx - grep it - so G.travel is null in all 25 frames, #travelcard
+  is display:none by default, and the beat branch in updateCams is gated on G.travel.w>0. Nothing
+  reshot, nothing re-pinned, baseline untouched.
+- INSTEAD THE PIECE WAS PHOTOGRAPHED DIRECTLY, which is better evidence than a drift check on frames
+  that cannot contain it. A one-off puppeteer probe under the capture seed turned a page for real in
+  the browser and shot the beat at three points: out (t 0.42, w 0.445), hold (t 1.40, w 1, card up
+  reading THE CAMPSITE), back (t 3.00, w 0.156), then travel null with ended='expiry'. Zero console
+  errors, which is the only browser-side check the CSS and the new div could get - fastgate reads
+  the script block and nothing else. Frames: gauntlet/capture/beat_out.png, beat_hold.png,
+  beat_back.png, beat_after.png (gitignored, left on disk).
+- TWO THINGS TO JUDGE, both feel, both fenced: the hold camera at high 13 / standoff 9 reads more
+  map-view than flyover from directly above the campsite, and the existing 'PAGE TURNED / NOW: THE
+  CAMPSITE' popup is now saying the same thing as the card, one line above it. I did NOT remove the
+  popup - it is certified behaviour from an earlier piece and other batteries may read it - but the
+  duplication is visible in beat_hold.png and it is Eric's call.
+- EYEBALL: gauntlet/capture/beat_hold.png first. The card should read THE CAMPSITE over a view of
+  the picnic spread from the south and above; beat_out.png should look like a bird's-eye departure
+  from the carpark, not a cut.
+
+### THE LAW 11 INTERMITTENT HAS A NAME, AND IT IS NOT THE COLD NODE
+Laws 11 and 13 recorded two unreproduced red batteries and settled on "a COLD or CONTENDED node
+process" as the common factor. That explanation is wrong, or at least unnecessary, and this session
+has the measurement to say so. Both sightings this session named themselves:
+    EVERYTHING   "12 driven, 1 failed: can"                      (law 11's rename finally paid off)
+    SYSTEMS      "b_five fires at stash 5", then on a later run "beanie stolen off the sleeping head"
+Both went green on immediate standalone rerun, exactly as before. So instead of shrugging, I measured
+the rate against BUILD, which is the question that matters:
+    OLD build ccd4782590590e3b39d0e9356af2134a   3 failures / 40 runs of harness-systems.js
+    NEW build 49335b92f810540fbe5e52cfb816929a   1 failure  / 40 runs
+The flake is PRE-EXISTING, it is roughly 2-8 percent per battery per run, and the failing assertion
+MOVES between runs. That last fact is what rules out the code.
+THE CAUSE IS IN PLAIN SIGHT: RNGF=Math.random by default and NOT ONE battery calls setSeed. Every
+battery therefore builds a different country and throws every dropped prop differently: spawnLoose
+gives each prop vy=rnd(1.4,2.4), vx=rnd(-1.2,1.2), vz=rnd(-1.2,1.2). The three failures seen so far
+are all missions whose driver has to grab ONE named prop out of a pile that was thrown at random -
+'can' comes out of a bin that spits a shiny can plus six rubbish props into the same half metre,
+b_five counts five shinies into a nest, b_beanie takes a hat off a sleeping head.
+WHAT I DID NOT PROVE: I could not reproduce the 'can' failure in isolation - 16 seeded reruns of the
+isolated driver all passed, with the can always landing 0.63u from the pinned bird. So it needs the
+full battery's accumulated prop scatter, not just the bin. That is consistent with the theory and is
+not a demonstration of it, and the honest disposition is a named piece with a real verification cost
+rather than a one-line seed added on a hunch. Filed as TODO 36.
+CONSEQUENCE FOR THE PROTOCOL TONIGHT: the gate needs re-running until green, and "green after rerun"
+still is not licence to commit on a shrug (law 13's corollary). Piece 34 was committed after the
+full nine-battery gate printed CERTIFIED-SHIP three consecutive times at the same md5.
