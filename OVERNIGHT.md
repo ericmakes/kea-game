@@ -46,3 +46,10 @@ Shipped (name — md5 — one line), Parked (name — why), Frames to eyeball
   no foreman to hand control to.
 - The full stability sweep blocks game-file edits: run it LAST in a session,
   never mid-ration.
+
+## SESSION LOCK (added 2026-09-02 after the two-writer collision)
+- At session start, before ANY write: if SESSION.lock exists at repo
+  root, STOP and tell Eric which session holds it. Otherwise create
+  SESSION.lock with your purpose and start time.
+- Delete SESSION.lock as your final act. One writer owns the tree at a
+  time - no exceptions, including waves and Eric's own paste blocks.

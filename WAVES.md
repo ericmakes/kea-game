@@ -60,3 +60,8 @@ EXIT TEST: someone who knows the bird says "that's a kea" unprompted.
 1 Light & Air -> 2 Ground & Grammar -> 4 Buildings & Props -> 5 Mountains
 & Sky -> 6 Cohesion. Briefs are appended here one wave ahead, never
 sooner.
+
+## SESSION LOCK
+Same law as OVERNIGHT.md: check for SESSION.lock before any write,
+create it for your session, delete on exit. If it exists and is not
+yours, STOP and tell Eric.

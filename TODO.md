@@ -430,3 +430,64 @@ PROOF once built: stage chaos just under and just over the threshold with wanted
 G.night flips on exactly one side of it - currently that test cannot be made to pass at all.
 RE-PIN: none from the code change itself, but night arriving earlier may change what a playtest
 sees. Leave the decision to Eric.
+
+## THE SOUTH ISLAND TOUR (commissioned 2026-09-01, Eric)
+DESIGN INTENT, binding on all tour pieces: the game becomes separate maps
+- one diorama per biome, each with its OWN mission list, star page, and
+look. Level select is a DOC-brochure paper map; stars earned anywhere
+unlock later maps (thresholds tunable, playtest). Lineup: CARPARK
+(current world, level one) -> SKI FIELD -> CAMPGROUND -> VILLAGE ->
+RIVER -> STATION, plus THE NEST as home pin and trophy room where stashed
+loot physically displays. GRADUATION RULE: when a biome ships, the
+matching Carpark corner (ski/camp/paddock) and its missions MIGRATE
+there - one graduation per shipped biome, vantages re-judged by Eric.
+VS integration: arena = the loaded map; RANDOM picks any unlocked map,
+TOUR runs them in order. Piece 34 (chapter-travel-beat) is SUPERSEDED by
+piece 38 - do not build 34 separately.
+
+### 36. tour-chassis  (invisible surgery - first tour piece)
+World build becomes a biome registry, current world = biome "carpark",
+boot-selectable; batteries and capture rig gain a biome parameter
+defaulting to carpark. No content changes.
+PROOF - the whole point: zero observable change. Nine batteries green
+without touched assertions; all 25 vantages match pinned baselines; gate
+CERTIFIED-SHIP.
+
+### 37. tour-save-and-map
+Save schema v3: per-biome progress with v2 migration retro-granting all
+current progress to carpark. DOC-brochure level-select map: stamp badges,
+star counts, locked pins, unlock thresholds in one tunable table.
+PROOF: headless save round-trip + migration; unlock state machine;
+boot-into-biome and back. Map look: leave flagged.
+
+### 38. tour-travel  (absorbs 34; inherits the Sep 1 investigation)
+Leaving via the map: flyover out; arriving: flyover in + level title
+card; skippable; camera/control state restored exactly. BINDING EVIDENCE
+from the read-only investigation in gauntlet-log (Sep 1): area centroids
+canNOT come from hints or mission props (3-4 chapters have none; paddock
+resolves 40 units off) - build a per-biome anchor table instead; G.cams
+is empty under node so assert the state machine only; the blend must sit
+before the camLock line or the photographer loses determinism; skip
+needs an arm delay because page turns are input-caused.
+PROOF: state machine headless incl. skip + restore. Feel: flagged.
+
+### 39. skifield-biome
+First new map: a club ski field diorama - rope tow line, day lodge with
+deck, ski racks, groomed band, drifts banked against structures (snow
+touches buildings, never buries - the unbury verdict as law).
+GRADUATION: Carpark's ski corner + missions migrate here; Carpark
+vantage 10 re-staged or retired, Eric judges. All new skifield vantages
+are first-pins: shoot, leave ALL flagged.
+PROOF: boot-skifield battery in house style; presence checks per new
+vantage; migrated missions complete headless in the new map.
+
+### 40. skifield-missions
+8-12 missions incl. the graduates. Signatures: tray-slide down the
+groomed band (new chaos verb), rope-tow ride, goggle heist, deck lunch
+raids (VS consumable sources), buried-lunchbox digs. Star page wired;
+coop badges where a mission wants two birds.
+PROOF: mission batteries; star grants both sides; TAB shows the page.
+
+### 41-44. RESERVED: campground, village, river, station
+One biome briefed at a time, only after its predecessor ships and its
+graduation is judged. Never improvised from the intent paragraph alone.
