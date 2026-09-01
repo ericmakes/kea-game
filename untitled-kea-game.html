@@ -465,9 +465,9 @@ function syncClearedStars(){ let n=0;
   for(const a of (G.chapters||[])) if(pageCleared(a)&&!starRec(a).cleared){ starRec(a).cleared=true; n++; }
   return n; }
 function pageSnap(area){ if(!area)return null; if(!G.pageChaos)G.pageChaos={};
-  return G.pageChaos[area]||(G.pageChaos[area]={open:0,close:null,earned:0,paid:0}); }
+  return G.pageChaos[area]||(G.pageChaos[area]={open:0,close:null,earned:0,paid:0,caged:0}); }
 function pageOpen(area){ const p=pageSnap(area); if(!p)return null;
-  p.open=G.score||0; p.close=null; p.earned=0; p.paid=0; return p; }
+  p.open=G.score||0; p.close=null; p.earned=0; p.paid=0; p.caged=0; return p; }
 function pageClose(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return null;
   p.close=G.score||0; p.earned=Math.max(0,p.close-p.open); return p; }
 function pageEarned(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return 0;
@@ -493,7 +493,8 @@ function starsInit(b){
   // page still in progress must restart its style clock rather than measure against a stale open.
   if(pg)for(const a in pg){ const p=pg[a]||{};
     if(p.close==null)continue;
-    G.pageChaos[a]={open:+p.open||0,close:+p.close||0,earned:+p.earned||0,paid:+p.paid||0}; }
+    G.pageChaos[a]={open:+p.open||0,close:+p.close||0,earned:+p.earned||0,paid:+p.paid||0,
+                    caged:+p.caged||0}; }
   const retro=syncClearedStars();
   pageOpen(curPage());
   return {stars:!!st,pages:!!pg,retro,v:(b&&b.v)||1}; }
@@ -548,8 +549,27 @@ function styleJudge(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)r
   if(win&&!had){ starRec(area).style=true;
     popup('\u2605 STYLE','THAT WAS SHOWING OFF  '+earned+' / '+par,0,null,true); AU.ding(); }
   return {area,earned,par,paid:p.paid||0,granted:!!starRec(area).style,fresh:win&&!had}; }
+/* ---------- THE CLEAN GETAWAY STAR (TODO 14, 2026-09-02) ----------
+   Third of the three page stars: did you do the whole page without once being put in the cage. The
+   counter only ever goes UP, so escaping does not clean the record - the star is for not being caught,
+   not for getting out. Either bird counts in co-op, which needs no special case at all: cageKea is the
+   ONE place in the file that puts a bird behind bars, it is called per bird, and the page does not ask
+   which one. That single entry point is also what makes the cage spy TODO 14 asks for usable as an
+   independent witness in the battery rather than a second implementation of the same rule.
+   THERE IS NO RETRO-GRANT, and that is deliberate. Piece 12 could retro-grant CLEARED because CLEARED
+   is a function of the done list, which every save has. Nothing in a v1 or early-v2 blob records
+   whether anybody was caged, so a returning player CANNOT be handed this star honestly - and handing
+   it out on the grounds that the record is silent would give every legacy page a free third star. */
+function pageCaged(area){ const p=area&&pageSnap(area); if(!p)return 0;
+  p.caged=(p.caged||0)+1; return p.caged; }
+function cleanJudge(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return null;
+  const had=!!starRec(area).clean, win=(p.caged||0)===0;
+  if(win&&!had){ starRec(area).clean=true;
+    popup('\u2605 CLEAN GETAWAY','NEVER ONCE IN THE CAGE',0,null,true); AU.ding(); }
+  return {area,caged:p.caged||0,granted:!!starRec(area).clean,fresh:win&&!had}; }
+function pageJudge(area){ return {area,style:styleJudge(area),clean:cleanJudge(area)}; }
 function styleDrain(){ const q=G._styleQ; if(!q||!q.length)return [];
-  G._styleQ=[]; const out=[]; for(const a of q){ const r=styleJudge(a); if(r)out.push(r); } return out; }
+  G._styleQ=[]; const out=[]; for(const a of q){ const r=pageJudge(a); if(r)out.push(r); } return out; }
 
 /* ---------- THE CHAPTER TRAVEL BEAT (TODO 34, 2026-09-02) ----------
    A page turn should FEEL like arriving somewhere else. On a turn the camera leaves the bird, flies
@@ -2745,6 +2765,7 @@ class Human{
     popup('BEHIND BARS','mash '+keyName(k.map.grab)+' — or a mate pecks the latch',0,{x:k.x,y:k.y+1.4,z:k.z},true);
     AU.clang(); RUMBLE(k.idx,420,0.9);
     this.state='return'; this.chaseKea=null; this.exMark.visible=false;
+    pageCaged(curPage());   // the clean-getaway star: this page is no longer clean, TODO 14
     if(G._cageSpy)G._cageSpy.push({idx:k.idx});
   }
   aggro(kea,delay){ VOX.play('chase',this);
@@ -3701,7 +3722,8 @@ if(typeof globalThis!=='undefined'){
     STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
            rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
            snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit,
-           PARRATIO,par:pagePar,purse:purseClaim,judge:styleJudge,drain:styleDrain,queue:styleQueue},
+           PARRATIO,par:pagePar,purse:purseClaim,judge:styleJudge,drain:styleDrain,queue:styleQueue,
+           caged:pageCaged,judgeClean:cleanJudge,judgePage:pageJudge},
     TRAVEL:{ANCHOR:TRAVELANCHOR,BEAT:TRAVELBEAT,SPAN:TRAVELSPAN,phase:travelPhase,weight:travelWeight,
             start:travelStart,end:travelEnd,update:travelUpdate,fresh:travelFresh,aim:travelAim},
     grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};

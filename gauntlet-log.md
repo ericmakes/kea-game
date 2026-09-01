@@ -1298,3 +1298,40 @@ it. Granted when the chaos earned while the page was open reaches par.
   the second pip on that page header should fill when the page turns, with a STYLE popup naming the
   numbers. Clear a page with nothing but the missions and it should stay hollow. PARRATIO is the one
   number to argue about and it is fenced.
+
+### PIECE: clean-getaway-star (TODO item 14) — CERTIFIED c8ced0cf4a7afb6a3a2faa5f000a476a
+The third pip, and the page-star set is complete: cleared, style, clean.
+- THE RULE IS NOT-CAUGHT, NOT GOT-OUT. The page keeps a caging COUNT that only ever goes up, so
+  escaping the cage does not clean the record. The most useful assertion in the section is the one
+  that pins that distinction: cage the bird, free it, tick six frames, THEN turn the page - and the
+  star is still refused. The sabotage that judges on whether the bird is caged right now instead of on
+  the page record fails exactly that pair.
+- EITHER BIRD COUNTS IN CO-OP AND IT NEEDED NO SPECIAL CASE, which is worth saying because I went
+  looking for one. cageKea is the ONE place in the file that puts a bird behind bars, it is called per
+  bird, and the page never asks which. Asserted with the SECOND bird in mode 2, so kea two can lose
+  kea one the star - which is what co-op is for.
+- THE CAGE SPY TODO 14 NAMES IS USED AS A WITNESS, NOT AS THE IMPLEMENTATION. G._cageSpy was already
+  there from an earlier piece and is written by cageKea beside the page mark rather than by it, so
+  asserting spy count === page count checks two independent records against each other. If the mark
+  were ever moved somewhere cleverer, that assertion is what would notice.
+- NO RETRO-GRANT, WHICH IS THE OPPOSITE CALL TO PIECE 12, DELIBERATELY. CLEARED is a function of the
+  done list, so every save of any vintage can be asked and piece 12 could hand it back. Nothing in a
+  v1 or early-v2 blob records whether anybody was caged, so granting on a silent record would give
+  every legacy page a free third star. One assertion drives a legacy blob with no caged field at all
+  and checks BOTH halves in one go: CLEARED retro-granted, CLEAN refused.
+- AND IT RIDES IN THE SAVE, because a fresh snapshot starts at zero cagings, so without it a reload
+  would hand the star to a page that had been dirty all along. Asserted on the wire and after an init.
+- I HAD TO RE-BASE TWO OF PIECE 12's ASSERTIONS, and I want that on the record rather than buried in a
+  diff. Piece 12 cleared a page through done() with nobody caged and asserted the pips read exactly
+  one filled, first position. Under this piece that page legitimately holds TWO, so the pips are now
+  cleared-hollow-clean. That is a re-base and not a weakening, and the difference is that everything
+  the original was protecting is still asserted - the count, the glyphs, and the POSITION of each pip -
+  with the MIDDLE pip still hollow, since only mission pay landed and style wants half again as much.
+  The comment above the assertion says so, dated, so a future reader does not have to reconstruct it.
+  If piece 12 had asserted "exactly one star ever" as a policy I would have parked instead; it did not,
+  and its own header comment already named pieces 13 and 14 as the grantors of the other two.
+- NO CAPTURE: same mechanical reason as pieces 34 and 13 - capture.mjs completes no mission and never
+  touches chapIdx, so no page can turn in a frame and no star popup can appear in one.
+- EYEBALL (controller, not frames): clear a page having been caged once, and the third pip stays hollow
+  even if you mashed your way out. Clear a page without ever being caught and it fills, with a CLEAN
+  GETAWAY popup. The full set on a good page reads three filled pips in the TAB header.

@@ -839,7 +839,13 @@ C.section('THE STAR LEDGER — three stars a page, schema v2, and no cleared pag
     for(const m of rows)X.done(m.id);
     tick(6);
     ok(S.rec(P1A).cleared===true,'CLEARED lands on the page whose every row is done');
-    ok(S.count(P1A)===1&&S.pips(P1A)==='★☆☆','one filled pip, and it is the first one ('+S.pips(P1A)+')');
+    /* RE-BASED 2026-09-02 by piece 14, and it is a re-base and not a weakening: this page is cleared
+       through done() with nobody ever caged, so under the clean-getaway star it now legitimately
+       holds TWO. Everything the original assertion protected is still asserted - the count, the
+       glyphs and the POSITION of each pip - and the middle one is still hollow, because only
+       mission pay landed on this page and style wants half again as much. Piece 13 will fill it
+       only when the page earns beyond its own missions. */
+    ok(S.count(P1A)===2&&S.pips(P1A)==='★☆★','cleared and clean, style still hollow ('+S.pips(P1A)+')');
     ok(S.cur()!==P1A,'the page turned ('+P1A+' -> '+S.cur()+')');
     { const snap=G.pageChaos[P1A];
       ok(snap.close!==null,'the page it left is CLOSED');
@@ -850,7 +856,7 @@ C.section('THE STAR LEDGER — three stars a page, schema v2, and no cleared pag
       ok(!!snap&&snap.close===null&&snap.open===(G.score||0),
          'the page it landed on opened fresh at the current meter ('+(snap?snap.open:'none')+')');
       ok(S.earned(S.cur())===0,'so the new page has earned nothing yet ('+S.earned(S.cur())+')'); }
-    ok(S.header(0).state==='cleared'&&S.header(0).text.indexOf('★☆☆')>0,
+    ok(S.header(0).state==='cleared'&&S.header(0).text.indexOf('★☆★')>0,
        'and the cleared page header shows the star it won ('+S.header(0).text+')');
 
     // 4. THE WIRE FORMAT. v2, with a stars map and a pages map, under the SAME storage key - the
@@ -1280,6 +1286,94 @@ C.section('THE STYLE STAR — par is what the page paid you, times a named ratio
     const cur=S.cur();
     ok((snap(cur).paid||0)===0,'while the page still open restarts its own clock ['+cur+'] ('+
        (snap(cur).paid||0)+')'); }
+}
+
+C.section('THE CLEAN GETAWAY STAR — the cage is remembered, escaping does not clear it');
+{ const S=X.STARS;
+  let CH=G.chapters.slice();
+  function freshBook(mode){ X.startGame(mode||1); tick(8); park();
+    CH=G.chapters.slice();
+    for(const m of G.missions){ m.done=false; if(m.need!==undefined)m.n=0; }
+    G.chapIdx=0; G.stars={}; G.pageChaos={}; G._cageSpy=[]; S.open(CH[0]); tick(2); }
+  /* turn the page the honest way: finish the last row through done(), with a payout so the page has
+     books to close, and let the end-of-frame drain judge it */
+  function turnPage(){ const rows=S.rows(CH[G.chapIdx]);
+    for(let q=0;q<rows.length-1;q++)rows[q].done=true;
+    X.award(100,'BATTERY PAY',null);
+    X.done(rows[rows.length-1].id); tick(2); }
+  const rex=()=>G.humans.find(h=>h.key==='rex');
+  const snap=a=>G.pageChaos[a]||{};
+
+  // 1. A CLEAN PAGE GRANTS IT, and the three stars are independent: this page is cleared and clean
+  //    and NOT stylish, because nothing but mission pay landed on it.
+  freshBook(); turnPage();
+  ok((snap(CH[0]).caged||0)===0,'the page recorded no cagings ('+(snap(CH[0]).caged||0)+')');
+  ok(S.rec(CH[0]).clean===true,'so the clean-getaway star is GRANTED');
+  ok(S.rec(CH[0]).cleared===true&&S.rec(CH[0]).style===false,
+     'and the three stars are independent (cleared yes, style no, clean yes)');
+  ok((snap(CH[1]).caged||0)===0,'the next page opens clean too ('+(snap(CH[1]).caged||0)+')');
+
+  // 2. ONE CAGING VOIDS THE PAGE, AND ESCAPING DOES NOT CLEAR IT. The star is for not being caught,
+  //    not for getting out, so the counter only ever goes up. The cage spy is the independent witness
+  //    that a caging actually happened - it is written by cageKea beside the page mark, not by it.
+  freshBook();
+  rex().cageKea(G.keas[0]);
+  ok(G._cageSpy.length===1,'the cage spy saw the caging ('+G._cageSpy.length+')');
+  ok(snap(CH[0]).caged===1,'and the page was marked ('+snap(CH[0]).caged+')');
+  G.keas[0].caged=0; tick(6);                       // out of the cage, long before the page turns
+  ok((G.keas[0].caged||0)===0,'the bird is out of the cage again');
+  turnPage();
+  ok(snap(CH[0]).caged===1,'the page still remembers it ('+snap(CH[0]).caged+')');
+  ok(S.rec(CH[0]).clean===false,'so the clean-getaway star is DENIED');
+  ok(S.rec(CH[0]).cleared===true,'while CLEARED still lands - being caught does not undo the work');
+  ok((snap(CH[1]).caged||0)===0,'and the NEXT page is not punished for it ('+(snap(CH[1]).caged||0)+')');
+
+  // 3. THE COUNT IS A COUNT, not a flag, and two cagings with an escape between them read as two.
+  freshBook();
+  rex().cageKea(G.keas[0]); G.keas[0].caged=0; tick(3);
+  rex().cageKea(G.keas[0]); G.keas[0].caged=0; tick(3);
+  ok(snap(CH[0]).caged===2,'two cagings, two marks ('+snap(CH[0]).caged+')');
+  ok(G._cageSpy.length===2,'and the spy agrees ('+G._cageSpy.length+')');
+
+  // 4. EITHER BIRD COUNTS IN CO-OP, and it needs no special case: cageKea is the ONE place in the file
+  //    that puts a bird behind bars, it is called per bird, and the page never asks which.
+  freshBook(2);
+  ok(G.keas.length===2,'two birds on the couch ('+G.keas.length+')');
+  rex().cageKea(G.keas[1]); tick(2);
+  ok(snap(CH[0]).caged===1,'the SECOND bird getting caged marks the page ('+snap(CH[0]).caged+')');
+  turnPage();
+  ok(S.rec(CH[0]).clean===false,'so kea two can lose kea one the star, which is co-op');
+
+  // 5. IT RIDES IN THE SAVE. Without this a reload would hand the star to a page that had been dirty,
+  //    since a fresh snapshot starts at zero cagings.
+  freshBook();
+  rex().cageKea(G.keas[0]); tick(2); turnPage();
+  { const caged=snap(CH[0]).caged;
+    ok(caged===1,'a closed page with a caging on the record ('+caged+')');
+    X.SAVE.write();
+    const blob=X.SAVE.load();
+    ok(!!blob&&!!blob.pages&&blob.pages[CH[0]]&&blob.pages[CH[0]].caged===caged,
+       'the caging is on the wire ('+(blob&&blob.pages&&blob.pages[CH[0]]?blob.pages[CH[0]].caged:'absent')+')');
+    G.stars={}; G.pageChaos={}; S.init(blob);
+    ok(snap(CH[0]).caged===caged,'and it comes back off a reload ('+snap(CH[0]).caged+')');
+    ok(S.judgeClean(CH[0]).granted===false,'so a re-judge after the reload still refuses the star'); }
+
+  // 6. NO RETRO-GRANT, WHICH IS THE OPPOSITE CALL TO PIECE 12 AND FOR A GOOD REASON. CLEARED is a
+  //    function of the done list, so every save can be asked. Nothing in a v1 or early-v2 blob records
+  //    whether anybody was caged, so granting on a silent record would hand every legacy page a free
+  //    third star. The same blob is asserted BOTH ways in one go: cleared retro-granted, clean not.
+  { freshBook();
+    const rows=S.rows(CH[0]);
+    const legacy={v:2, done:rows.map(m=>m.id), chapIdx:0, stars:{},
+                  pages:{}};
+    legacy.pages[CH[0]]={open:0,close:300,earned:300,paid:100};   // no caged field at all, as v1 had none
+    for(const m of rows)m.done=true;
+    G.stars={}; G.pageChaos={};
+    const rep=S.init(legacy);
+    ok(rep.retro>=1,'a legacy blob still retro-grants CLEARED ('+rep.retro+')');
+    ok(S.rec(CH[0]).cleared===true,'so nobody loses a cleared page to the upgrade');
+    ok(S.rec(CH[0]).clean===false,'but the clean star is NOT invented from a silent record');
+    ok((snap(CH[0]).caged||0)===0,'the missing field reads as zero cagings, which is why judging is what gates it'); }
 }
 
 C.section('PERF FLOOR');

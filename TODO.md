@@ -138,7 +138,7 @@ points (placeholder — tuning is playtest, note it in the log).
 PROOF: simulate awards across a page turn; assert grant and deny on both
 sides of par.
 
-### 14. clean-getaway-star
+### 14. clean-getaway-star  — DONE session 6 (c8ced0cf4a7afb6a3a2faa5f000a476a)
 Zero cagings while the page was open (either bird counts in co-op). Cage
 spy pattern.
 PROOF: clean page grants; a caging mid-page voids.
