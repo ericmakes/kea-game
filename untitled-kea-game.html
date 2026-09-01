@@ -1699,8 +1699,8 @@ function mkDocUte(x,z){
     G.cage={g:cg,latch};
     addPeck({label:'PECK THE LATCH',needHits:4,repeat:true,mesh:cg,range:1.5,owner:null,
       getPos:()=>{ const v=new THREE.Vector3(0.44,0.34,0); cg.localToWorld(v); return {x:v.x,y:v.y,z:v.z}; },
-      locked:()=>!G.keas.some(k=>(k.caged||0)>0),
-      onDone(p){ const k=G.keas.find(k=>(k.caged||0)>0); if(k){ k.freeCage&&k.freeCage(); award(40,'JAILBREAK',p); } this.done=false; this.hits=0; }});
+      locked:()=>!jailFull(),
+      onDone(p){ const k=jailedKea(); if(k){ k.freeCage&&k.freeCage(); award(40,'JAILBREAK',p); } this.done=false; this.hits=0; }});
   }
   // keys on the bonnet, radio on the tray — Rex's prized possessions
   propAt('ute keys',x-0.3,1.0,z-2.0,PB.keys,{shiny:true,owner:'rex',mission:'keys'});
@@ -2334,18 +2334,26 @@ class Kea{
     const p={x:this.x,y:this.y+0.3,z:this.z};
     burst(p,0xFFD34D,10); popup('JAILBROKEN','',0,p,true); AU.rip&&AU.rip();
   }
-  shooed(byHuman){
+  shooed(byHuman,noVacancy){
     if(this.stun>0)return;
     this.stun=1.0; G.stats.shooed++;
     AU.oi(); burst(this.pos(),0x6B7A3A,10);
+    if(G._shooSpy)G._shooSpy.push({idx:this.idx,noVacancy:!!noVacancy});
     // knockback + lose the goods
     const dx=this.x-byHuman.x, dz=this.z-byHuman.z, d=Math.max(0.3,Math.sqrt(dx*dx+dz*dz));
     this.x+=dx/d*1.6; this.z+=dz/d*1.6; this.vy=3.5; this.grounded=false;
-    if(this.held){ const p=this.held; this.drop(); p.vy=2; popup('SHOOED! DROPPED THE '+p.name.toUpperCase(),'',0,this.pos(),true); }
+    const dropped=this.held?this.held.name.toUpperCase():null;
+    if(this.held){ const p=this.held; this.drop(); p.vy=2; }
+    if(noVacancy) popup('NO VACANCY',dropped?('the cell is taken - dropped the '+dropped):'the cell is taken - shooed instead',0,this.pos(),true);
+    else if(dropped) popup('SHOOED! DROPPED THE '+dropped,'',0,this.pos(),true);
     else popup(pick(['SHOOED!','"OI!! GIT!!"','BONKED']),'',0,this.pos(),true);
   }
 }
 let idxTint=false;
+/* JAIL: one cell, one bird, globally. Occupancy is a property of the WORLD, not of a bird,
+   so every reader asks the same question here instead of testing its own kea. */
+function jailedKea(){ return G.keas.find(k=>(k.caged||0)>0)||null; }
+function jailFull(){ return !!jailedKea(); }
 function onVanRoof(k){ const v=G.vanTop; return v&&Math.abs(k.x-v.x)<v.w+0.4&&Math.abs(k.z-v.z)<v.d+0.4&&k.y>v.top-0.6; }
 
 /* ---------- fx ---------- */
@@ -2618,8 +2626,9 @@ class Human{
         if(this.giveUpT>1.3||d>26){ this.state='grumble'; this.t=0; popup('"'+pick(['BLOODY KEA','GET DOWN HERE','I KNOW WHERE YOU NEST','THAT\'S DOC PROPERTY'])+'"','',0,{x:this.x,y:2.2,z:this.z},true); this.chaseKea=null; break; }
         go(k.x,k.z,1.05);
         if(d<1.15&&k.y<2.0&&(k.size||1)<1.6){
-          if(this.key==='rex'&&G.wanted>=3&&!(k.caged>0)){ this.cageKea(k); }
-          else { this.state='shoo'; this.t=0; k.shooed(this); VOX.play('shoo',this); } }
+          const warrant=this.key==='rex'&&G.wanted>=3;
+          if(warrant&&!jailFull()){ this.cageKea(k); }
+          else { this.state='shoo'; this.t=0; k.shooed(this,warrant); VOX.play('shoo',this); } }
         break;}
       case 'shoo':
         if(this.t>0.8){ this.state='return'; }
@@ -3444,7 +3453,7 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,jailFull,jailedKea,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

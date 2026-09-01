@@ -816,3 +816,46 @@ second sighting of the family FLAKES law 11 opened - filed as FLAKES law 13 with
 time recorded (first node invocation while the machine was still settling from sustained puppeteer
 load) and the idiom stated: rerun standalone before touching anything, and never start editing the
 game file to chase a battery that just failed after a capture pass.
+
+## SESSION 5 — 2026-09-01 (overnight)
+Arrived green: gate printed CERTIFIED-SHIP at 006ae2061309cf5d9e96324bb8f1eef9 before any edit,
+first node invocation of the session, so no repeat of the FLAKES law 13 cold-node sighting.
+
+### PIECE: one-cell-jail (TODO item 11) — CERTIFIED 0f162964ea696f71a3a9ddcc7e3e93f2
+- THE DEFECT WAS A SCOPE ERROR, not a missing feature. The cage gate read `!(k.caged>0)` - it asked
+  whether THIS bird was already inside, never whether the cell was. So at WANTED 3 rex could serve
+  two warrants and put BOTH keas in the one DOC transport crate, which is a bunk room, not a jail.
+- OCCUPANCY IS NOW A PROPERTY OF THE WORLD, asked in one place: `jailedKea()` returns the tenant or
+  null, `jailFull()` is its truthiness. The latch already had the correct global form inline
+  (`!G.keas.some(k=>(k.caged||0)>0)` at `locked`, and the matching `find` in `onDone`) - so the
+  predicate was ALREADY right in one reader and wrong in the other, which is exactly the shape of
+  bug a shared predicate prevents. Both readers now call the helpers; the latch behaviour is
+  byte-for-byte what it was.
+- A FULL CELL DEGRADES TO A SHOO RATHER THAN A NO-OP, which matters because the alternative reading
+  of the brief - just fail the cage - leaves rex standing on a bird doing nothing. The warrant is
+  now hoisted (`const warrant=this.key==='rex'&&G.wanted>=3`) and passed into `shooed(byHuman,
+  noVacancy)`, so a shoo that happened BECAUSE the cell was taken says NO VACANCY and names the
+  reason, while an ordinary shoo keeps its original three-way pick verbatim.
+- pick() IS STILL ONLY ROLLED ON THE PATH THAT ALWAYS ROLLED IT. Deliberate: the no-vacancy line is
+  fixed prose, so no new Math.random draw enters the stream on any existing path and no seeded
+  world can shift under it.
+- THE HANDLE ON IT: G._shooSpy, mirroring the G._cageSpy idiom already in cageKea, because a shoo
+  was previously unobservable - it sets stun and fires a popup and leaves nothing to assert on. The
+  spy carries idx and the noVacancy flag, so the test can say WHY the shoo happened, not just that
+  a bird got knocked back.
+- DRIVEN THROUGH THE REAL COLLISION, not by calling cageKea. The branch under test is inside
+  case 'chase', so the test forces rex into chase with chaseKea set and parks him 0.3 behind the
+  bird for up to 40 frames, breaking on caged-or-shoo. Reused the pass2 staging (kea on clean
+  ground at 0,31.5, y pinned 0.25 every frame - law 7) rather than inventing a new one.
+- AND IT IS OCCUPANCY, NOT A LOCKOUT: the third siege frees the tenant and cages the SECOND bird
+  successfully, which is what distinguishes "the cell is full" from "this bird is immune". Without
+  that assertion a patch that simply banned second cagings forever would pass.
+- VERIFIED ADVERSARIALLY. Putting `!(k.caged>0)` back goes red on exactly five assertions and the
+  numbers in the messages tell the story on their own: "the second bird CANNOT be caged while the
+  cell is taken (caged 8.00)" and "the cage spy saw no second caging (2 total)". Restored, gate
+  green, md5 confirmed.
+- NO CAPTURE. No vantage stages a caging and no geometry moved - the DOC crate, latch and ute are
+  untouched - so the frame set cannot see this piece. Nothing reshot, nothing re-pinned.
+- EYEBALL (controller, not frames): at WANTED 3 with two birds, get one caged, then walk the second
+  into rex. Expect a feather burst and NO VACANCY / "the cell is taken - shooed instead", and the
+  first bird still in the crate.

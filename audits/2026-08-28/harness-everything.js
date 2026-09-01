@@ -736,6 +736,65 @@ C.section('THE CARAVAN DOOR IS ON ITS WALL, NOT FINNING OFF THE SIDE OF IT');
   ok(st.segs.every(sg=>!sg.m||sg.m.visible===false),'and the attached segments are all cleared');
 }
 
+C.section('ONE CELL, ONE BIRD — jail occupancy is global, and a full cell shoos');
+// The cage gate used to be per-bird — !(k.caged>0) — so rex could put BOTH keas in the one DOC
+// crate at the same time and the transport read as a bunk room. Occupancy is now a property of the
+// WORLD, asked through jailFull(), and a warrant served on a full cell degrades to a shoo that
+// says so. Driven through the real chase collision rather than by calling cageKea, because the
+// branch under test lives inside case 'chase'.
+{
+  X.startGame(2); tick(8); park();
+  const a=G.keas[0], b=G.keas[1];
+  const rex=G.humans.find(h=>h.key==='rex');
+  ok(!!rex&&G.keas.length===2,'two keas and a ranger on the board ('+G.keas.length+' keas)');
+  a.caged=0; b.caged=0; a.stun=0; b.stun=0;
+  if(a.held){a.held.heldBy=null;a.held=null;} if(b.held){b.held.heldBy=null;b.held=null;}
+  a.x=0; a.z=31.5; b.x=4; b.z=31.5;
+  ok(!X.jailFull()&&X.jailedKea()===null,'the cell starts empty');
+  G.wanted=3; G.wantedT=3.4;
+  // rex parked on the bird, chase state forced, kea held on clean ground at reachable height:
+  // d is 0.3 every frame so the collision test fires on the first update it can.
+  const siege=k=>{ rex.stun=0; rex.launched=null; rex.asleep=false; rex.distracted=0;
+    rex.state='chase'; rex.chaseKea=k; rex.giveUpT=0; rex.t=0;
+    for(let i=0;i<40;i++){ k.y=0.25; k.vy=0; k.grounded=true; rex.x=k.x; rex.z=k.z-0.3;
+      X.update(1/60);
+      if((k.caged||0)>0||rex.state==='shoo')break; }
+    return rex.state; };
+  G._cageSpy=[]; G._shooSpy=[];
+  siege(a);
+  ok((a.caged||0)>0,'rex cages the first bird through the chase collision ('+(a.caged||0).toFixed(1)+'s)');
+  ok(X.jailFull()&&X.jailedKea()===a,'and the world now reports the cell occupied by that bird');
+  ok(G._cageSpy.length===1&&G._cageSpy[0].idx===a.idx,
+     'the cage spy saw exactly one caging, of kea '+a.idx+' ('+JSON.stringify(G._cageSpy)+')');
+
+  // THE ASSERTION THE PIECE EXISTS FOR: same warrant, same collision, second bird.
+  const cagedBefore=G._cageSpy.length;
+  siege(b);
+  ok((b.caged||0)===0,'the second bird CANNOT be caged while the cell is taken (caged '+(b.caged||0).toFixed(2)+')');
+  ok(G._cageSpy.length===cagedBefore,'the cage spy saw no second caging ('+G._cageSpy.length+' total)');
+  ok(G._shooSpy.length===1&&G._shooSpy[0].idx===b.idx&&G._shooSpy[0].noVacancy===true,
+     'it was shooed instead, and the shoo carries the no-vacancy reason ('+JSON.stringify(G._shooSpy)+')');
+  ok(b.stun>0,'the shoo landed on the bird — stunned, feathers out ('+b.stun.toFixed(2)+')');
+  ok((a.caged||0)>0,'and the sitting tenant was not evicted to make room ('+a.caged.toFixed(1)+'s)');
+  ok(G.keas.filter(k=>(k.caged||0)>0).length===1,'exactly one bird is behind bars, which is the whole law');
+
+  // AND IT IS OCCUPANCY, NOT A LOCKOUT: free the cell and the same bird cages on the next siege.
+  a.caged=0; tick(4); b.stun=0; b.caged=0;
+  ok(!X.jailFull(),'the cell reads empty again once the tenant leaves');
+  G._cageSpy=[];
+  siege(b);
+  ok((b.caged||0)>0,'the second bird cages fine into an empty cell ('+(b.caged||0).toFixed(1)+'s)');
+  ok(G._cageSpy.length===1&&G._cageSpy[0].idx===b.idx,'so the gate was the cell, not the bird ('+JSON.stringify(G._cageSpy)+')');
+
+  // the latch reads the same predicate it always did — locked when nobody is in there.
+  const lt=G.inter.find(it=>it.kind==='peck'&&it.label==='PECK THE LATCH');
+  ok(!!lt,'the latch is still a peck target');
+  ok(lt.locked()===false,'unlocked while a bird is inside');
+  b.caged=0; tick(2);
+  ok(lt.locked()===true,'and locked again with the cell empty');
+  G._cageSpy=null; G._shooSpy=null;
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
