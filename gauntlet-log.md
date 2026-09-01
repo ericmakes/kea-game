@@ -1009,3 +1009,42 @@ the walls is welcome, judge at 10 and 11, leave flagged. Built to that.
 - EYEBALL: 10_skifield. The shed should be standing on the ground with snow banked NEAR it, not
   sitting in the middle of a white dinner plate. One patch moved 4.8 north of it, one moved 3.2
   east. 11 is blind to the change - its residual is the known cross-run churn, not this piece.
+
+### HANDOVER — session 5 stopped mid-investigation on TODO 34 (another session needs the tree)
+Stopped on request, not on a stop condition. THREE pieces certified and committed this shift
+(one-cell-jail, star-ledger, snow-patch-grounding); the tip is CERTIFIED-SHIP at
+ccd4782590590e3b39d0e9356af2134a and nothing of mine is pending in the working tree. The one
+modified file, gauntlet/verify/sidebyside.mjs, is ERIC'S in-flight Phase 0 edit and has been left
+exactly as found - not reverted, not committed, not touched.
+- PIECE 34 (chapter-travel-beat) WAS IN INVESTIGATION ONLY. No edit was made to any file, so there
+  was nothing to revert. It restarts next shift from scratch, but NOT from zero: the read-only
+  measurements below are the expensive part and are worth keeping.
+- THE OPEN DESIGN QUESTION IS WHERE AN AREA IS. The brief says "flyover from the bird to the new
+  area's centroid", and the file has no such thing as an area centroid. Two candidate sources were
+  measured and BOTH are too sparse to derive one:
+    G.hints (9 hints total) covers only 4 of the 8 chapters - carpark 1, hut 2, road 3, paddock 2 -
+      and CAMPSITE, SKI FIELD, TRAILHEAD and TOGETHER have none at all. Hints are contextual nudges,
+      not area anchors.
+    Props and interactables reached through mission.area do better but still miss three chapters -
+      campsite 0, road 0, together 0 - and where they do land they land on ONE cluster rather than
+      an area: THE HUT resolves to (-24.0,-5.6) which is the spike beam, and THE PADDOCK & NEST
+      resolves to (6.8,14.8) from two props that are nowhere near the nest at (-4,-33).
+  So a derived centroid is not available, and the honest shape is a NAMED ANCHOR TABLE keyed by the
+  area string - which is also what WAVES.md and ARTBIBLE want of any recipe ("named constants +
+  assertions"). The assertion that keeps such a table from drifting is the useful part: every
+  chapter has an anchor, every anchor is on the map, and every anchor is within a stated radius of
+  at least one thing that actually belongs to that area. Landmarks already on G to hang it off:
+  G.nestPos (-4,-33), G.ladder (-20.8,-6), the ski shed collider (-40,-40).
+- TWO OTHER THINGS THE NEXT SHIFT SHOULD KNOW BEFORE WRITING A LINE OF IT.
+  updateCams runs over G.cams, which is EMPTY under node (G.cams is built after the HEADLESS return
+  in boot), so nothing about the camera transform is assertable headless. The beat must therefore be
+  pure state that updateCams merely reads - which is what Eric's proof spec already asks for
+  ("page turn sets the travel-beat state with the correct area target, timer expiry restores camera
+  state, any input skips"). Assert the state machine, never a camera position.
+  And the blend must be applied BEFORE the G.camLock line at the end of updateCams, not after:
+  camLock is the gauntlet photographer hook and it has to stay authoritative or every vantage in the
+  capture set becomes nondeterministic.
+  The skip also needs an arm delay. The page turn is CAUSED by input, and the key that finished the
+  mission is still down when the beat starts, so "skippable with any input" will eat itself on the
+  first frame unless the skip only arms after roughly a quarter second. That threshold is feel, so
+  it belongs in the named constants and in the FENCED FOR PLAYTEST list, not chosen in the dark.
