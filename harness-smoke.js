@@ -25,6 +25,15 @@ const X=globalThis.__X, G=X.G;
 ok(!!G,'state root G exposed');
 
 /* ---- boot to world ---- */
+/* SEEDED (2026-09-02, TODO 45): this battery does not use the shared rig, which seeds itself, so it
+   seeds here. Same constant, and it is capture.mjs's seed - see the note in rig.js. Math.random goes
+   too, not just RNGF: pick(), the human wander coin flip and three's own per-mesh draws never touch
+   rnd(). Late is fine for THIS battery only because it seeds before boot() and the module-scope
+   RNGF=Math.random binding is re-pointed by setSeed anyway. */
+X.setSeed(20260828);
+{ let t=20260828>>>0;
+  Math.random=()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t);
+    r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; }
 X.boot(); X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe(); // pristine: battery 9 owns save persistence // headless: scene+world only
 ok(G.scene&&G.scene.children.length>40,'world populated, children='+(G.scene?G.scene.children.length:0));
 ok(G.inter.length>25,'interactables registered n='+G.inter.length);

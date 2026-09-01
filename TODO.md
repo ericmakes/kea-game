@@ -504,7 +504,7 @@ NUMBERING: Eric's South Island Tour commission (36-44) landed mid-session and to
 just used. He keeps 36-44 including the 41-44 reservations; my two findings are 45 and 46. Same
 handling as the session-5 collision on 34.
 
-### 45. THE BATTERIES ARE UNSEEDED, WHICH IS THE LAW-11 INTERMITTENT
+### 45. THE BATTERIES ARE UNSEEDED, WHICH IS THE LAW-11 INTERMITTENT  — DONE session 6 (harness-side, game md5 unchanged; 0/40 both offenders, zero assertions touched)
 Laws 11 and 13 blamed a cold or contended node process for two unreproduced red batteries. Session 6
 measured the rate against BUILD instead of shrugging: harness-systems.js fails 3 times in 40 runs on
 the OLD build ccd4782 and 1 in 40 on the new one, and the failing assertion MOVES between runs

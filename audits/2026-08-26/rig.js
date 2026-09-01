@@ -6,15 +6,42 @@ const fs=require('fs');
 const path=require('path'); const ROOT=path.resolve(__dirname,'..','..');
 const THREE=require(path.join(ROOT,'node_modules','three'));
 function load(){
+  const GAUNTLETSEED=20260828;   // capture.mjs's seed; see the note below
   global.localStorage={_m:new Map(),getItem(k){return this._m.has(k)?this._m.get(k):null;},setItem(k,v){this._m.set(k,String(v));},removeItem(k){this._m.delete(k);},clear(){this._m.clear();}}; // fresh store per instance
   global.THREE=THREE; global.window=undefined; const noop=()=>{};
   global.addEventListener=noop; global.performance={now:()=>Date.now()};
   global.requestAnimationFrame=noop; global.innerWidth=1280; global.innerHeight=720; global.devicePixelRatio=1;
+  /* AND Math.random ITSELF, because setSeed alone is not enough (measured 2026-09-02). Several
+     draws in the game do not go through rnd() at all - pick(), the human wander coin flip at
+     state=Math.random()<0.4, addStrip sway, the fire spit - and three draws its own randoms per
+     mesh. With only RNGF seeded, harness-audit-pass2 still printed two different transcripts across
+     eight runs: the bin-lid peck registered 3 hits on one and 0 on the other. capture.mjs has
+     overridden Math.random for the browser since 2026-08-28 for exactly this reason; the batteries
+     never got the same treatment. Same generator, same seed, set BEFORE the script is evaluated so
+     that RNGF=Math.random binds the seeded one. */
+  { let t=GAUNTLETSEED>>>0;
+    global.Math.random=()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t);
+      r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; }
   const html=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
   const logic=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(b=>b.includes('KEA-LOGIC-START'));
   (new Function('THREE',logic+'\n;globalThis.__X=KEAGAME;'))(THREE);
   const X=globalThis.__X;
-  const H={X,G:X.G,THREE,
+  /* SEEDED BATTERIES (2026-09-02, TODO 45). RNGF defaults to Math.random and no battery ever seeded
+     it, so every battery built a different country and threw every dropped prop differently -
+     spawnLoose gives each prop vy=rnd(1.4,2.4), vx and vz rnd(-1.2,1.2). That is the law-11
+     intermittent: measured at 3 failures in 40 runs of harness-systems.js, with the failing
+     assertion MOVING between runs (b_five, then b_beanie), and every failure a mission whose driver
+     must grab ONE named prop out of a randomly thrown pile.
+     THE SEED IS capture.mjs's OWN SEED, deliberately, so there is ONE gauntlet seed rather than two.
+     It does NOT follow that node and the browser build the identical country: the browser also runs
+     the !HEADLESS branches - tussock, snow, the grass field - and those consume draws node never
+     makes, so the streams diverge partway through the build. The claim is one seed and two
+     reproducible worlds, not one world. Seeded HERE rather than in each battery so that no battery
+     can forget; harness-smoke.js does not use this rig and seeds itself the same way.
+     ONE SEED, NEVER SHOPPED. If a battery goes red under it, that is a fragility to investigate, not
+     a number to change: a seed picked to dodge a failing assertion is that assertion weakened. */
+  X.setSeed(GAUNTLETSEED);
+  const H={X,G:X.G,THREE,SEED:GAUNTLETSEED,
     tick:(n,dt)=>{for(let i=0;i<(n||1);i++)X.update(dt||1/60);},
     hold:c=>X.press(c), un:c=>X.release(c),
     tap:c=>{X.press(c);X.update(1/60);X.release(c);},

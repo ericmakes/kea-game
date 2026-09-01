@@ -1203,3 +1203,45 @@ found it. Two classes of dead battery used to certify, and a third case that was
   full nine-battery gate prints CERTIFIED-SHIP with nine visible verdicts for the first time.
 - EYEBALL: nothing visual. Read the first line of the next gate transcript - it should say
   "ALL PASS — 99 interactables, final chaos 580" where it used to say a node warning.
+
+### PIECE: seeded-batteries (TODO item 45) — harness-side, game md5 unchanged
+The law-11 intermittent, closed. Two edit sites, no game change, and NOT ONE ASSERTION TOUCHED -
+which was the outcome I was least sure of going in.
+- WHAT WAS WRONG. RNGF defaults to Math.random and no battery had ever called setSeed, so every
+  battery built a different country and threw every dropped prop differently. capture.mjs solved
+  exactly this for the frames on 2026-08-28 and the batteries never got the same treatment.
+- THE SEED IS 20260828, capture.mjs's own, so there is ONE gauntlet seed rather than two. And a
+  correction to my own first draft of the comment, which claimed the batteries and the photographs
+  now stand in the same country: they do NOT. The browser also runs the !HEADLESS branches - tussock,
+  snow, the grass field - and those consume draws node never makes, so the streams diverge partway
+  through the build. One seed, two reproducible worlds, not one world.
+- ONE SEED, NEVER SHOPPED, and this is the line that mattered most. A seed chosen because it dodges a
+  failing assertion is that assertion weakened, which the hard laws forbid. So the rule was: pick the
+  seed with the best provenance, run all nine, and treat any red as a fragility to investigate rather
+  than a number to change. All nine went green on the first attempt at the canonical seed. Nothing was
+  re-based, nothing was re-hardcoded, and no assertion was relaxed.
+- setSeed ALONE WAS NOT ENOUGH, measured rather than assumed. Several draws never go through rnd() at
+  all - pick(), the human wander coin flip at state=Math.random()<0.4, addStrip sway, the fire spit -
+  and three draws its own randoms per mesh. So the rig now overrides global Math.random with the same
+  generator, set BEFORE the script is evaluated so the module-scope RNGF=Math.random binding picks up
+  the seeded one. harness-smoke.js does not use the rig and seeds itself the same way.
+- THE MEASUREMENT, which is the proof TODO 45 asked for:
+      harness-systems.js     3 failures / 40 runs BEFORE   ->   0 / 40 AFTER
+      harness-everything.js  the 'can' sighting            ->   0 / 40 AFTER
+  And the stronger statement, because it makes flaking impossible rather than unlikely: all NINE
+  batteries now produce BYTE-IDENTICAL output across 8 consecutive runs, timing figures normalised.
+  Eight of nine were already identical with setSeed alone; the ninth needed the Math.random override.
+- ONE THING I COULD NOT ATTRIBUTE, and it is recorded rather than tidied away. Under setSeed-only,
+  harness-audit-pass2 printed two different bin transcripts across eight runs (the bin-lid peck at 3
+  hits or 0 - a debug print, never an assertion, so the verdict was ALL PASS either way). After the
+  override it went to 1 of 8. But when I removed the override again to confirm the attribution, it
+  stayed at 1 of 8, so the split did not reproduce and I cannot honestly say which mechanism fixed it.
+  BOTH ARE KEPT. Current shipping configuration measured over 24 runs: 1 distinct transcript, 0
+  failures. Watch that battery if a mystery ever comes back; the sample that produced the split was
+  four runs of one variant and two of the other, so it was not rare when it was there.
+- CONSEQUENCE FOR FLAKES.MD LAWS 11 AND 13: they can be retired, and the log entry above this one
+  explains why the cold-node theory was unnecessary. I have NOT edited FLAKES.md myself - it is
+  described in OVERNIGHT.md as law, and rewriting two laws out of it on the strength of one session
+  is Eric's call, not mine. Proposed replacement wording is in REPORT.md.
+- NO GAME CHANGE: md5 stays 49335b92f810540fbe5e52cfb816929a, gate CERTIFIED-SHIP three times, no
+  capture, no re-pin. EYEBALL: nothing visual.
