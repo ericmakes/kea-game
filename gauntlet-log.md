@@ -1168,3 +1168,38 @@ that biome ships. Two consequences for this session, and one lesson.
   for the rest of the shift. With a second writer live in the tree that is not safe. From here I
   re-read TODO.md and OVERNIGHT.md before STARTING each piece, not just at session start, and the
   SESSION.lock rule Eric added in the same commit exists precisely because this keeps happening.
+
+### PIECE: gate-asserts-positively (TODO item 46) — harness-side, game md5 unchanged
+Found by my own adversarial sabotage on piece 34, and it turned out to be bigger than the thing that
+found it. Two classes of dead battery used to certify, and a third case that was live in the tree.
+- THE ORIGINAL DEFECT. gate.sh kept `tail -1` per battery and went red only on a NEGATIVE match
+  (grep for the tick or FINDINGS). A battery that THROWS prints a stack trace, which matches neither,
+  so a battery dying on its first assertion was indistinguishable from one that passed all of them.
+  The batteries already set process.exitCode, and the pipe threw it away.
+- AND THE ONE I DID NOT EXPECT: harness-smoke.js, battery ONE of nine, has been a no-op in this gate
+  for its whole life. It ends with a node ExperimentalWarning about localStorage - emitted two lines
+  AFTER its verdict, because process warnings land asynchronously - so tail -1 kept
+  "(Use `node --trace-warnings ...`)" and threw the verdict away. On failure it prints FINDINGS and
+  exits 1; neither reached the check. Every gate transcript in this log shows the evidence in plain
+  sight: the first line of the nine is a node warning, not a verdict. fastgate caught smoke failures
+  by exit code all along, which is why this never bit - but the GATE is the ship criterion, and for
+  nine sessions it has been an eight-battery gate.
+- THE FIX IS TO ASSERT POSITIVELY. Every battery must print its own ALL PASS line AND exit zero, and
+  the number of verdicts must equal the number of batteries. Warning noise is filtered before the
+  verdict line is taken, so smoke's verdict now survives. The negative grep stays, because a battery
+  that prints findings AND exits zero would otherwise slip through the count.
+- PROOF, WHICH TODO 46 SPECIFIED AND WHICH THE GATE CANNOT GET FROM A NODE BATTERY: a new contract
+  test, gauntlet/verify/gate-selftest.sh. It copies the real gate.sh, substitutes the battery list
+  for stubs, and drives seven cases - two clean batteries certify; a throw, a silent battery, a liar
+  that prints ALL PASS then exits 1, a missing battery file, and a findings report are each red; and
+  a verdict buried under node warnings still counts. The production list stays hardcoded in gate.sh:
+  the substitution happens in the COPY, so the shipped gate has no environment override anybody can
+  narrow it with by accident.
+- IT DISCRIMINATES, WHICH IS THE ONLY THING THAT MAKES IT WORTH HAVING. Run against the old gate
+  restored from HEAD it reports exactly four findings - the throw, the silent battery, the liar and
+  the missing file - and passes the two cases the old gate could genuinely see. Run against the new
+  one, ALL PASS. The old gate certified a battery list with a file that does not exist in it.
+- NO GAME CHANGE, so no re-pin and no capture: md5 stays 49335b92f810540fbe5e52cfb816929a and the
+  full nine-battery gate prints CERTIFIED-SHIP with nine visible verdicts for the first time.
+- EYEBALL: nothing visual. Read the first line of the next gate transcript - it should say
+  "ALL PASS — 99 interactables, final chaos 580" where it used to say a node warning.

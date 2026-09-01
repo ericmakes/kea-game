@@ -526,7 +526,7 @@ one battery at a time. The prize is large - the gate becomes reproducible, a red
 laws 11 and 13 can be retired rather than worked around.
 PROOF once built: the same 40-run measurement, and it must read 0/40. Keep the instrument.
 
-### 46. gate.sh PASSES A BATTERY THAT CRASHES
+### 46. gate.sh PASSES A BATTERY THAT CRASHES  — DONE session 6 (harness-side, game md5 unchanged)
 Found in session 6 by adversarial sabotage C on piece 34: an unguarded read in a battery threw a
 TypeError, and the battery printed no findings line at all. gate.sh does
 `node $h | grep -v THREE.Material | tail -1` then `grep -q "✗\|FINDINGS"` - a stack trace matches
