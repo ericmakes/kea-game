@@ -546,7 +546,7 @@ const G={
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
-  stars:{}, pageChaos:{},
+  stars:{}, pageChaos:{}, snow:[],
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -913,6 +913,47 @@ function buildTrees(){
 }
 
 /* ---------- world ---------- */
+/* SNOW LANDS ON THE COUNTRY, NOT ON THE SHED ROOF.
+   TODO 28, Eric's verdict 2026-09-01: unbury, slide clear of the shed footprint, snow banking
+   against the walls is welcome. Two of the ten patches were measured sitting on the ski-field shed
+   (-40.94,-40.41 r 2.57 and -39.25,-39.79 r 1.69 against a 1.7 x 1.3 collider topped at 2.00), so
+   the shed stood in a white saucer with the disc exiting through its walls as a straight chord.
+   THE SPOT IS RESOLVED, NOT REJECTED. A rejection (a continue) would change the mesh count and the
+   draw count; every later rnd() draw in the browser is downstream of this loop - the fourteen far
+   rocks first, then prop rotations and human scan timers - so a resolver that consumes nothing and
+   builds the same number of discs is the only kind that cannot move the rest of the world. The
+   candidate is tried first, then a FIXED ladder of offsets in growing rings; the first clear spot
+   wins, so a patch that was never buried does not move at all.
+   The test is the HARD disc against the footprint. The soft halo is 1.35x and may still lap a wall,
+   which is precisely the banking the verdict asks for: it sits at y 0.042, far under any roof, so
+   the only part of it anyone sees is the part outside the wall. */
+const SNOWFIELD={x0:-50,x1:50,z0:-50,z1:-20};          // the envelope the patches are drawn from
+const SNOWSTEPS=[1.6,3.2,4.8,6.4,8.0];
+/* ONLY A BUILDING BLOCKS A DISC. A slender thing - a tree trunk, a sign post - reads correctly
+   with snow banked round its foot; it is a BROAD footprint that turns the disc into a saucer with
+   the building standing in it. Threshold set off the measured footprints in the snow band:
+   trunks are 0.35 to 0.44 half-extent and the sign is 0.15 deep, while the shed the verdict names
+   is 1.3 and the nest is 2.3. Mirrors the paintAt convention next door - big surfaces, never props. */
+const SNOWBULK=0.6;
+const SNOWSLIDE=(()=>{ const t=[[0,0]];
+  for(const step of SNOWSTEPS)for(let i=0;i<8;i++){ const a=i*Math.PI/4;
+    t.push([+(Math.cos(a)*step).toFixed(4),+(Math.sin(a)*step).toFixed(4)]); }
+  return t; })();
+function snowBlocked(x,z,r){ // the raised structure this disc would sit on, or null
+  if(x<SNOWFIELD.x0||x>SNOWFIELD.x1||z<SNOWFIELD.z0||z>SNOWFIELD.z1)return {offmap:true};
+  for(const c of G.colliders){
+    if(c.kind==='box'&&!(c.top>0.2))continue;           // laid ground is not a structure
+    if(Math.min(c.w,c.d)<SNOWBULK)continue;            // a post or a trunk is banked against, not slid off
+    let lx=x-c.x, lz=z-c.z;
+    if(c.ry){ const sn=Math.sin(c.ry),cs=Math.cos(c.ry); const tx=lx*cs-lz*sn, tz=lx*sn+lz*cs; lx=tx; lz=tz; }
+    const dx=Math.max(0,Math.abs(lx)-c.w), dz=Math.max(0,Math.abs(lz)-c.d);
+    if(dx*dx+dz*dz<r*r)return c;                       // closest point on the footprint is inside the disc
+  }
+  return null; }
+function snowSpot(x,z,r){
+  for(const [dx,dz] of SNOWSLIDE){ const nx=x+dx, nz=z+dz;
+    if(!snowBlocked(nx,nz,r))return {x:nx,z:nz,r,slid:Math.hypot(dx,dz)}; }
+  return {x,z,r,slid:0,stuck:true}; }                  // nowhere to go: leave it where it was, and say so
 function buildWorld(){
   // terrain
   const gg=new THREE.PlaneGeometry(240,240,48,48);
@@ -1155,12 +1196,15 @@ function buildWorld(){
       s.set(b.w,b.h*0.95,b.w);                                 // the tuft is one blade writ large
       p.set(x,0.35,z); m4.compose(p,q,s); im.setMatrixAt(n,m4); n++; }
     im.castShadow=true; G.scene.add(im);
-    // snow patches
-    for(let i=0;i<10;i++){ const x=rnd(-50,50),z=rnd(-50,-20),r=rnd(1.5,3.6);
+    // snow patches — the only ground decal that used to ignore what was already built there
+    for(let i=0;i<10;i++){ const x=rnd(SNOWFIELD.x0,SNOWFIELD.x1),z=rnd(SNOWFIELD.z0,SNOWFIELD.z1),r=rnd(1.5,3.6);
+      const q=snowSpot(x,z,r);
       const sp=new THREE.Mesh(new THREE.CircleGeometry(r,20),mat(PAL.snow)); sp.rotation.x=-Math.PI/2;
-      sp.position.set(x,0.05,z); sp.receiveShadow=true; G.scene.add(sp);
+      sp.position.set(q.x,0.05,q.z); sp.receiveShadow=true; G.scene.add(sp);
       const so=new THREE.Mesh(new THREE.CircleGeometry(r*1.35,20),new THREE.MeshStandardMaterial({color:0xFFFFFF,transparent:true,opacity:0.42,roughness:0.96}));
-      so.rotation.x=-Math.PI/2; so.position.set(x,0.042,z); G.scene.add(so); }
+      so.rotation.x=-Math.PI/2; so.position.set(q.x,0.042,q.z); G.scene.add(so);
+      // registered the way G.wear and G.stones are, so what actually landed is inspectable
+      G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x,z},slid:q.slid,stuck:!!q.stuck,disc:sp,halo:so}); }
     for(let i=0;i<14;i++){ const a=rnd(0,6.3),r=rnd(42,54);
       const rk=sph(rnd(0.5,1.6),i%2?PAL.rock:PAL.rockD,Math.cos(a)*r,0.2,Math.sin(a)*r,null,6); rk.scale.y=0.6; }
   }
@@ -3518,7 +3562,7 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,jailFull,jailedKea,
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
     STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
            rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
            snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit},

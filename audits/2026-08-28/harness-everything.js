@@ -896,6 +896,82 @@ C.section('THE STAR LEDGER — three stars a page, schema v2, and no cleared pag
   } finally { globalThis.localStorage=realLS; }
 }
 
+const SNOWZ0=-53, SNOWZ1=-17;
+C.section('SNOW LIES ON THE COUNTRY — the shed no longer stands in a white saucer');
+// TODO 28, verdict from Eric 2026-09-01: unbury, slide clear of the shed footprint, banking against
+// the walls is welcome. The snow patches were the only ground decal in the file that never asked
+// what was already built under them - the wear paths call paintAt and the stones dodge the seal,
+// but snow was laid at a hardcoded y=0.05 wherever the draw landed, and two of the ten landed on
+// the ski-field shed. THE RESOLVER IS THE ASSERTABLE PART, and deliberately so: the patch loop is
+// inside the browser-only branch and cannot be reproduced headless (the tussock loop above it draws
+// from the same seeded stream and never runs headless), so what is tested here is the total
+// behaviour of snowSpot over the WHOLE envelope, which is stronger than testing the ten discs one
+// seed happened to produce.
+{
+  X.boot();
+  // 1. THE WORLD THE MEASUREMENT WAS TAKEN AGAINST. Assert it, so this section cannot pass quietly
+  //    against a map where the shed has moved (FLAKES law 10 — read the convention, do not restate it).
+  const shed=G.colliders.find(c=>Math.abs(c.x+40)<0.01&&Math.abs(c.z+40)<0.01);
+  ok(!!shed,'the ski-field shed collider is where the session-3 measurement found it');
+  ok(shed&&shed.top===2&&Math.min(shed.w,shed.d)>=X.SNOWBULK,
+     'and it is a broad structure topped above the ground ('+(shed?shed.w+' x '+shed.d+' top '+shed.top:'none')+')');
+
+  // 2. THE LADDER STARTS WHERE IT IS. Rung zero is the identity, which is what makes a patch that
+  //    was never buried stay exactly where the draw put it — no movement, no mesh, no rnd() draw.
+  ok(X.SNOWSLIDE[0][0]===0&&X.SNOWSLIDE[0][1]===0,'the first rung of the ladder is the candidate itself');
+  ok(X.SNOWSLIDE.length===41,'and the ladder is a fixed table, not a search ('+X.SNOWSLIDE.length+' rungs)');
+  { const q=X.snowSpot(10,-35,2.0);
+    ok(q.x===10&&q.z===-35&&q.slid===0,'a clear candidate is returned untouched ('+q.x+','+q.z+')'); }
+
+  // 3. THE TWO PATCHES THE LEDGER MEASURED, by their recorded numbers. Both were buried; both move.
+  for(const [x,z,r,label] of [[-40.94,-40.41,2.57,'the big one, 45 of 80 samples on the roof'],
+                              [-39.25,-39.79,1.69,'the small one, 62 of 80']]){
+    ok(!!X.snowBlocked(x,z,r),'as found it is buried in the shed — '+label);
+    const q=X.snowSpot(x,z,r);
+    ok(!X.snowBlocked(q.x,q.z,q.r),'and it resolves onto clear country ('+x+','+z+' -> '+
+       q.x.toFixed(2)+','+q.z.toFixed(2)+', slid '+q.slid.toFixed(2)+')');
+    ok(q.r===r,'at its own radius, unshrunk ('+q.r+')');
+    ok(q.slid>0&&q.slid<=8.0,'by a slide off the fixed ladder, not an arbitrary jump ('+q.slid.toFixed(2)+')'); }
+
+  // 4. A TRUNK IS BANKED AGAINST, NOT SLID OFF. Snow round the foot of a tree is right; it is a
+  //    BROAD footprint that turns a disc into a saucer. Set off the measured band: trunks 0.35-0.44.
+  { const trunks=G.colliders.filter(c=>c.kind==='box'&&c.top>0.2&&Math.min(c.w,c.d)<X.SNOWBULK
+                                       &&c.z>=SNOWZ0&&c.z<=SNOWZ1);
+    ok(trunks.length>=3,'the snow band has slender uprights in it ('+trunks.length+')');
+    let held=0; for(const c of trunks){ const q=X.snowSpot(c.x,c.z,2.0); if(q.slid===0)held++; }
+    ok(held===trunks.length,'and a disc centred on every one of them stays put ('+held+'/'+trunks.length+')'); }
+
+  // 5. TOTALITY — the assertion that makes the browser-only loop safe. Every candidate the generator
+  //    could possibly draw resolves to a spot no building is under. Proven over the envelope rather
+  //    than over one seed, so no future reseed can reintroduce the defect.
+  { const F=X.SNOWFIELD; let n=0,stuck=0,slid=0,bad=0,worst=0;
+    const t0=Date.now();
+    for(let x=F.x0;x<=F.x1;x+=1)for(let z=F.z0;z<=F.z1;z+=1)for(const r of [1.5,2.5,3.6]){
+      n++; const q=X.snowSpot(x,z,r);
+      if(q.stuck){stuck++;continue;}
+      if(q.slid>0)slid++; if(q.slid>worst)worst=q.slid;
+      if(X.snowBlocked(q.x,q.z,q.r))bad++; }
+    ok(n>8000,'the sweep covers the whole envelope at three radii ('+n+' candidates in '+(Date.now()-t0)+'ms)');
+    ok(bad===0,'NOT ONE resolved spot has a building under it ('+bad+' of '+n+')');
+    ok(stuck===0,'and none is stuck with nowhere to go ('+stuck+')');
+    ok(slid>0&&slid<n*0.2,'only the minority near a structure moves at all ('+slid+', '+
+       (100*slid/n).toFixed(1)+'% of the envelope)');
+    ok(worst<=8.0,'and the worst slide is inside the ladder ('+worst.toFixed(2)+')'); }
+
+  // 6. THE ENVELOPE IS ONE CONSTANT, read by the generator and by the resolver, so they cannot drift
+  //    apart — the bug that put a disc off the edge of the map would be exactly that drift.
+  ok(X.SNOWFIELD.x0===-50&&X.SNOWFIELD.x1===50&&X.SNOWFIELD.z0===-50&&X.SNOWFIELD.z1===-20,
+     'the snow field envelope is named, not repeated ('+JSON.stringify(X.SNOWFIELD)+')');
+  ok(!!X.snowBlocked(0,0,2).offmap,'a spot outside the envelope is refused as off-map');
+
+  // 7. THE REGISTER EXISTS IN BOTH PATHS, and is honestly empty headless. Said out loud because the
+  //    obvious "fix" — moving the generator out of the browser branch so G.snow fills here too —
+  //    would fill it with positions the browser does not have, since the tussock loop above it draws
+  //    from the same stream and only runs in the browser. An empty register beats a lying one.
+  ok(Array.isArray(G.snow),'G.snow is a register like G.wear and G.stones');
+  ok(G.snow.length===0,'and it is empty under node, because the discs are browser-only meshes ('+G.snow.length+')');
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

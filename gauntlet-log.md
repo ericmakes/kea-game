@@ -933,3 +933,79 @@ handling matters more than the clash:
   taste call - and Wave 3 (THE BIRD) is explicitly his. The blocked list in TODO.md already fenced
   the bird face; nothing in Phase 0 changes what the night shift may touch. What it DOES change is
   scope: TODO 28 now has a verdict, so it is buildable tonight.
+
+### PIECE: snow-patch-grounding (TODO item 28) — CERTIFIED ccd4782590590e3b39d0e9356af2134a
+Eric's verdict landed mid-session: UNBURY, slide clear of the shed footprint, snow banking against
+the walls is welcome, judge at 10 and 11, leave flagged. Built to that.
+- WHAT WAS WRONG. Snow was the only ground decal in the file that never asked what was already
+  built under it. The wear paths call paintAt and lay themselves on the surface they find; the
+  stones call paintAt to stay off the seal; snow was laid at a hardcoded y=0.05 wherever the draw
+  landed. Two of the ten landed on the ski-field shed, so the shed stood in a white saucer with the
+  disc exiting through its walls as a hard straight chord.
+- THE ONE CONSTRAINT THAT SHAPED EVERY DECISION: the seeded stream. Every later rnd() draw in the
+  browser is downstream of that loop - the fourteen far rocks first, then prop rotations and human
+  scan timers - so a fix that consumes a different number of draws, or builds a different number of
+  meshes, repins the world for reasons that have nothing to do with snow. So the spot is RESOLVED,
+  never rejected: same three draws per patch in the same order, same ten discs and ten halos, and a
+  candidate that was never buried is returned untouched by rung zero of the ladder.
+- THE LADDER. SNOWSLIDE is a fixed table - the identity, then eight compass offsets at each of
+  1.6/3.2/4.8/6.4/8.0 - forty-one rungs, first clear one wins, so a patch moves the least distance
+  that frees it. Deterministic, no rnd() of its own.
+- THE BLOCKER TEST IS ANALYTIC, NOT SAMPLED, which is the piece-10 lesson applied again. Instead of
+  peppering the footprint with groundHeightAt samples and hoping the density catches a thin wall,
+  snowBlocked computes the closest point on each collider rectangle (rotation-aware) and compares
+  its distance to the radius. Exact, 26 colliders, no sampling artefacts. Tangent is allowed and
+  overlap is not, which is precisely "banking against the wall is welcome".
+- I NEARLY OVER-FIXED IT, and the measurement caught me. The first version blocked on any raised
+  collider and slid 4.9 percent... no: 9 percent of the envelope, because the snow band also holds
+  THREE TREE TRUNKS and a sign post. Snow round the foot of a trunk is right - it is a BROAD
+  footprint that turns a disc into a saucer with a building in it. So SNOWBULK=0.6 half-extent,
+  set off the measured footprints in that band: trunks are 0.35 to 0.44 and the sign is 0.15 deep,
+  while the shed is 1.3 and the nest is 2.3. Mirrors the paintAt convention twenty-five lines above
+  it - big surfaces, never props. After the threshold, 4.9 percent of the envelope slides.
+- THE PROOF IS A TOTALITY PROOF, and that is the interesting part. The patch loop is inside the
+  browser-only branch and CANNOT be reproduced headless: the tussock loop above it draws from the
+  same seeded stream and never runs under node, so the headless stream has already diverged by the
+  time snow is drawn. Moving the loop out to "compute in both paths" - which is what TODO 28 asked
+  for - would fill G.snow under node with positions the browser does not have, and a test asserting
+  those is worse than no test. So instead the RESOLVER is exported and swept over the entire
+  envelope: 9,393 candidates at three radii, and the assertions are that not one resolved spot has a
+  building under it, none is stuck, the slide is bounded by the ladder, and only a minority moves.
+  That holds for every draw the generator could ever make, which is strictly stronger than checking
+  the ten discs one seed produced. G.snow is still registered in the browser and declared on G, and
+  the battery asserts it is HONESTLY EMPTY under node with the reason written next to it.
+- VERIFIED ADVERSARIALLY. Collapsing the ladder to the identity rung goes red on six, including
+  "and none is stuck with nowhere to go (432)". Dropping SNOWBULK goes red on exactly one - "a disc
+  centred on every one of them stays put (0/8)" - which is the over-fix I nearly shipped.
+- THE BROWSER WAS MEASURED, NOT ASSUMED. A one-off puppeteer probe under the capture seed dumped
+  G.snow: patches 5 and 8 are the two the ledger measured, at (-40.94,-40.413) r 2.566 and
+  (-39.251,-39.787) r 1.688 - matching the session-3 figures to three decimals - and they slid 4.80
+  and 3.20 to (-40.94,-35.613) and (-36.051,-39.787). The other EIGHT did not move at all. Blocked
+  before 2, blocked after 0.
+- ATTRIBUTION, BECAUSE ONE CAPTURE PASS CANNOT TELL YOU WHOSE CHANGE IT IS. Shot all 25 on the new
+  build, checked out the pre-snow build (d6e8da18), shot all 25 again, and built the three-way table
+  old-vs-baseline / new-vs-baseline / old-vs-new. Only ONE frame separates from its own noise:
+      10_skifield   old-vs-base 2170px   new-vs-base 17703px   old-vs-new 16740px max 164
+  Provably unchanged, at under 100px old-vs-new: 02 (25), 08 (2), 09 (3), 14 (12), 15 (0), 16 (15),
+  18 (19), 23 (63), 07 (768). And THREE I CANNOT SEPARATE from their own churn with one take each:
+  01 (3011), 05 (6514), 06 (3302) - all three sit inside the band their own build reproduces at.
+- AND A CORRECTION I HAVE TO MAKE TO MY OWN EVIDENCE, in the spirit of the session-4 note on 01. A
+  focused ten-frame pass earlier in this session measured 06_skyline at 0 pixels old-build against
+  baseline, and I wrote it down as a clean instrument. The full pass measured the same comparison at
+  5215 pixels. Same build, same baseline, minutes apart. So 06 is not a stable frame; the zero was a
+  lucky roll, and a single take against a baseline is not evidence of stability in either direction.
+  That is TODO 33 biting exactly where it said it would.
+- THE GEOMETRY, which is noise-free and therefore the only clean answer for the three I could not
+  separate. Projecting both discs at both spots through each static vantage camera: 11_trailhead,
+  14_player_view and 24_verge_paddle are BLIND to them (the corner is behind the camera), and 01,
+  02, 05, 06, 08, 10, 18 and 23 can all see that corner - 01 remarkably so, because the carpark-wide
+  camera looks straight down a line through (-41,-41) at 83 units. So 01, 05 and 06 are frames where
+  the change is geometrically possible and photographically indistinguishable from their own noise.
+  Separating them needs multiple takes per build, which is the instrument TODO 33 asks for and not
+  this piece.
+- NOTHING RE-PINNED, per the verdict. diff.mjs flags zero of 25 (worst 0.9763 against 0.965). All 25
+  working captures are fresh against ccd4782590590e3b39d0e9356af2134a and left in the tree - they
+  are gitignored as of Eric's Phase 0 commit, so the baseline is untouched on disk and in git.
+- EYEBALL: 10_skifield. The shed should be standing on the ground with snow banked NEAR it, not
+  sitting in the middle of a white dinner plate. One patch moved 4.8 north of it, one moved 3.2
+  east. 11 is blind to the change - its residual is the known cross-run churn, not this piece.
