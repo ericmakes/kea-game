@@ -756,3 +756,63 @@ because the sweep pinned MORE than it looked like it was pinning, and two frames
   column cannot be trusted to scope the G.time re-pin sweep.
 - 01 and 09 reshot against 006ae2061309cf5d9e96324bb8f1eef9 and pinned. Baseline is now internally
   consistent with HEAD on all 25.
+
+### FULL SWEEP: THREE MORE FRAMES WERE STALE, AND THE SWEEP FOUND A NEW CLASS OF INSTABILITY
+Ran the full 25-frame capture (85s, not the 25 minutes the session-3 note implies - that figure was
+stability.mjs with multiple takes per frame, not one capture pass) to close the gap left by the
+blanket re-pin. The answer: 08_readability_320, 15_sign and 22_torch_beam were also stale, now
+reshot against 006ae2061309cf5d9e96324bb8f1eef9 and pinned. But the route to that answer matters
+more than the answer, because TWO instruments failed first.
+- WHOLE-FRAME SSIM: useless here, as expected. Nothing flagged.
+- CHANGED-PIXEL COUNT vs BASELINE: useless on its own. 20_dead_rear, pinned against this exact
+  build an hour earlier, showed 6212 changed pixels. So a big count proves nothing about staleness.
+- TAKE-VS-TAKE AS A NOISE CONTROL: this is the one that looked right and was WRONG, and it is the
+  lesson of this entry. Two takes shot back to back read 9px on 01 and 0px on 08, 13 and 19 - but
+  01 measured 755px take-to-take earlier the same session, minutes apart. Take-to-take variance is
+  LOAD DEPENDENT: under a steady machine two takes land on the same settle frame count and the
+  grass sway, HUD and traffic all agree. So a back-to-back control UNDERSTATES the real variance
+  and manufactures false staleness. It named 10 frames, including 13_idle_preen (a 1.35-unit
+  close-up of the bird) and 23_paddock_gate, where the caravan cannot possibly be.
+- WHAT ACTUALLY ANSWERED IT WAS GEOMETRY, NOT PHOTOGRAPHY. Project the measured door bbox through
+  each vantage camera and ask whether it lands in the frustum: pure arithmetic, no capture, so no
+  staging noise can contaminate it. Occlusion ignored, which only makes the verdict conservative.
+  At the real fov of 60 the door can appear in EIGHT frames - 01, 08, 09, 12, 15, 18, 20, 22 - and
+  provably cannot appear in the other seventeen (02,03,04,05,06,07,10,11,13,14,16,17,19,21,23,24,25).
+  Five were already current, so exactly three needed pinning. The projection also predicted WHERE:
+  the door lands in 60px cell 9,3 on 22 and cell 3,4 on 15, and those are precisely the cells the
+  pixel diff had flagged (910px and 463px against near-zero local noise). Two independent
+  instruments agreeing on the same cells is what makes this a verdict rather than a guess.
+- CONFIRMED AGAINST THE ACTUAL OLD BUILD rather than inferred. Checked out d5c59486 into the working
+  file, reshot the three, restored 006ae2 and verified the md5. Isolated:
+      08  oldbuild vs pinned baseline 1477px max 29   |  oldbuild vs current 162px max 187
+      15  oldbuild vs pinned baseline    1px max 15   |  oldbuild vs current 608px max 191
+      22  oldbuild vs pinned baseline 2645px max 102  |  oldbuild vs current 4264px max 220
+  15 is the clean case: its baseline reproduces the old build to ONE pixel, and the entire 608px
+  delta is the door. That is what an honest stale-baseline verdict looks like.
+- AND THE NEW FINDING, from the left-hand column above. 08 and 22 do NOT reproduce their own
+  baselines from the very build those baselines were shot on - 1477px at max 29, and 2645px at max
+  102 - while reading 0px take-to-take within a single session. That is a THIRD instability class,
+  distinct from both entries already on the books: not take-to-take (TODO 30, uTime sway) and not
+  drift-versus-baseline (FLAKES law 12), but SESSION-TO-SESSION. A frame can be perfectly
+  reproducible inside one capture run and unreproducible across runs, so stability.mjs comparing
+  takes within a run cannot see it. Both amplitudes are low (29 and 102) which is why SSIM never
+  noticed. Filed as TODO 33.
+- WHAT I DID NOT PIN, deliberately. 07_jam, 13_idle_preen, 19_roof_follow and 23_paddock_gate all
+  show large clusters against their baselines (8919, 4182, 3349, 1184 px) and the door is provably
+  outside all four frusta. That is session-to-session staging variance, so pinning would swap one
+  arbitrary roll for another and teach the baseline nothing. Left alone, and they are the evidence
+  base for TODO 33.
+
+### THE GATE WENT RED ONCE DURING THE RE-PIN, AND IT WAS A GHOST
+Worth recording because the correct response was to do nothing to the code. After the third
+consecutive puppeteer capture pass, fastgate printed FASTGATE:COLOSSAL-FAIL - against a game file
+byte-identical to the one that had printed CERTIFIED-SHIP earlier in the session, with only TODO.md,
+gauntlet-log.md and three baseline PNGs pending. The commit did not land, because the && chain broke
+on the red, which is the shell doing exactly what the hard law wants.
+Run standalone, COLOSSAL: ALL PASS. Then fastgate three times: PASS, PASS, PASS. Zero stray chrome
+processes, so not an orphaned browser. Then the full nine-battery gate: CERTIFIED-SHIP at
+006ae2061309cf5d9e96324bb8f1eef9. So it was a cold or load-contended node process, and it is the
+second sighting of the family FLAKES law 11 opened - filed as FLAKES law 13 with the trigger this
+time recorded (first node invocation while the machine was still settling from sustained puppeteer
+load) and the idiom stated: rerun standalone before touching anything, and never start editing the
+game file to chase a battery that just failed after a capture pass.

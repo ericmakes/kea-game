@@ -48,3 +48,20 @@ Institutional memory: every class of headless nondeterminism met so far, and the
       - the follow cam lerped away from a directly-assigned camera position (only camLock holds),
       - the camp fire is four sines on G.time plus a Math.random spit, so freeze G.time and hold
         _fireSpit above zero to take the deterministic branch and never roll the random at all.
+13. THE COLD-NODE INTERMITTENT HAS A SECOND SIGHTING, AND A LIKELY TRIGGER. Law 11 recorded one
+    unreproduced failure in the everything battery on the first and cold node invocation of a
+    session. Session 4 saw a sibling: fastgate reported FASTGATE:COLOSSAL-FAIL once, on the first
+    node invocation immediately after THREE consecutive puppeteer capture passes, against a game
+    file byte-identical to one that had already printed CERTIFIED-SHIP that session. Rerun
+    standalone it printed COLOSSAL: ALL PASS, then fastgate went green three times in a row, then
+    the full nine-battery gate went green. Zero chrome processes were left behind, so it is not an
+    orphaned browser holding the machine.
+    So the common factor in both sightings is not the battery and not the code - it is a COLD or
+    CONTENDED node process, and in this case one starting while the machine was still settling from
+    sustained puppeteer load. Idiom: a single red battery immediately after a capture pass is not
+    evidence about the code. Rerun it standalone BEFORE touching anything, and only believe it if
+    it repeats. What you must NOT do is start editing the game file to chase it, because the file
+    that "failed" here was one already certified minutes earlier and any edit would have been
+    chasing a ghost into a build that was fine.
+    And the corollary that keeps the hard law intact: green-after-rerun is not licence to commit on
+    a shrug. The gate was re-run in full and printed CERTIFIED-SHIP before the commit landed.

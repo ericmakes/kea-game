@@ -337,6 +337,37 @@ body by the plane y=Y, cut that segment at the detail z, take the biggest x - so
 registered flank detail has its outer face proud of the skin at its own height.
 RE-PIN: 12, 18, 20 and any caravan or ute vantage. Leave flagged for Eric.
 
+### 33. session-to-session frame instability  (harness-side only — game file untouched)
+Found in session 4 by the piece-10 full sweep, and it is a THIRD instability class, not a restatement
+of items 29/30. Measured by checking out the pre-door build d5c59486, reshooting, and comparing those
+frames against the baselines that were themselves shot from d5c59486 in session 3 - so same build,
+same staging code, different capture run:
+    08_readability_320   1477 px differ by >8 grey levels, max delta only 29
+    22_torch_beam        2645 px, max delta 102
+    15_sign                 1 px  (reproduces perfectly - so this is NOT universal)
+Both offenders read ZERO px take-to-take inside a single capture run. That is the whole point: the
+frame is perfectly reproducible against itself in one session and unreproducible across sessions.
+WHY THE EXISTING INSTRUMENTS CANNOT SEE IT: stability.mjs compares takes WITHIN a run (FLAKES law 12
+is explicitly "takes compared against each other"), so it reports these frames as clean - and it did,
+08 at 0.9983 and 22 at 0.9970 after the law-5 fix. diff.mjs compares against the baseline and cannot
+tell this apart from real drift. And the amplitudes are low (29 and 102) spread over a wide area,
+which is the exact blind spot recorded in item 31 and in the session-4 correction to item 30, so SSIM
+rounds it away. A changed-pixel count with a per-cell map is what caught it.
+SUSPECTED CAUSE, NOT YET PROVEN - do not fix on this basis without measuring: the frames that fail
+this test are the ones whose content depends on accumulated simulation state rather than on a pose
+that gets PINned every frame. 07_jam (8919 px vs baseline, door provably out of frame), 13_idle_preen
+(4182), 19_roof_follow (3349) and 23_paddock_gate (1184) show the same signature. Traffic positions,
+idle-animation phase and ambient-human paths all advance during boot and settle, and how far they get
+depends on machine load - the same mechanism as law 5 and law 12, one level up.
+PROOF once built: the contract is a CROSS-RUN one, so it needs a separate instrument from
+stability.mjs - shoot the set, quit the browser entirely, shoot it again in a fresh process, and
+assert the changed-pixel count per frame is near zero. Cheap to write and it turns a whole class of
+"mystery residual" into a named number.
+RE-PIN: whatever the fix moves, ONCE, judged. Leave flagged for Eric.
+NOTE: 08 and 22 were pinned in session 4 against 006ae2 anyway, because the caravan door is genuinely
+in frame in both and they were stale on that ground. Their session-to-session churn is unfixed and
+will still be there.
+
 ## FENCED FOR PLAYTEST (never overnight)
 Par values, timer defaults, DECAY/BOTCH feel, catch balance, results-screen
 look, mode-select copy. The machinery above gets built; the couch tunes it.
