@@ -879,7 +879,7 @@ first node invocation of the session, so no repeat of the FLAKES law 13 cold-nod
   because the night driver reads it, and G.chaos is never assigned anywhere in the file - one read,
   zero writes - so `G.wanted>=3||G.chaos>=260` can only ever fire on the WANTED half and night can
   never arrive on chaos alone. The HUD renders 'CHAOS '+G.score, so G.score is the meter and that is
-  what the ledger snapshots. Filed as TODO 34 with both honest fixes; NOT fixed here, because
+  what the ledger snapshots. Filed as TODO 35 with both honest fixes; NOT fixed here, because
   switching that clause on changes when night falls, which is a feel change on the night vantages.
 - CLEARED IS DERIVABLE, AND THAT IS THE WHOLE RETRO-GRANT. One function, syncClearedStars(), grants
   the star for any page whose every non-finale non-bonus non-hidden row is done. It is idempotent,
@@ -915,3 +915,21 @@ first node invocation of the session, so no repeat of the FLAKES law 13 cold-nod
 - EYEBALL (controller, not frames): TAB open. Every page header should carry three pips, hollow to
   start. Clear a page and its header should read "✓ THE CARPARK — PAGE CLEARED  ★☆☆". Wipe with
   Backspace at the title and every pip should go hollow again.
+
+### COLLISION: Eric is live in the repo, and he took the number I was using
+Mid-session, between piece 11 and piece 12, commit 49586e7 landed from Eric - Phase 0: sidebyside
+tool, ARTBIBLE.md, WAVES.md with the Wave 3 brief, a VERDICT on TODO 28, and a new TODO item he
+numbered 34. I had just filed my G.chaos finding as 34 in the same file. Recorded because the
+handling matters more than the clash:
+- MY ITEM IS NOW 35, in TODO.md, in gauntlet-log.md and in the comment inside the game file that
+  cites it. Eric keeps 34. The renumber touched one comment line in untitled-kea-game.html, so the
+  md5 moved from cb5ae4fc49ea795e65aab68cd4dca0a5 to d6e8da1858e62f48730bcedd8d5d5db3 and the gate
+  was re-run in full rather than assumed - CERTIFIED-SHIP at the new md5. A comment is still a byte.
+- I HAVE STOPPED USING `git add -A`. Eric had uncommitted edits to gauntlet/verify/sidebyside.mjs in
+  the working tree at the moment I committed piece 12; a blanket add would have swept his in-flight
+  tool into a piece commit. It did not, by luck of timing, and luck is not a protocol. Every commit
+  from here names its paths.
+- WAVES.md IS NOT MY SHIFT. It is the supervised daytime ritual - variant strips, Eric judging every
+  taste call - and Wave 3 (THE BIRD) is explicitly his. The blocked list in TODO.md already fenced
+  the bird face; nothing in Phase 0 changes what the night shift may touch. What it DOES change is
+  scope: TODO 28 now has a verdict, so it is buildable tonight.

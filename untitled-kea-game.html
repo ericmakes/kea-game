@@ -444,7 +444,7 @@ const WEARABLE={"ranger's cap":{build:'rangercap',owner:'rex',mission:'b_cap'},
    silently move somebody stars. The per-page chaos snapshot is what makes 'earned while the page
    was open' answerable at all: the run total cannot tell you which page paid for it.
    NOTE the meter is G.score. G.chaos is read once at the night auto-driver and never assigned
-   anywhere in the file, so it is undefined - filed as TODO 34, deliberately not fixed here. */
+   anywhere in the file, so it is undefined - filed as TODO 35, deliberately not fixed here. */
 const STARKINDS=['cleared','style','clean'];
 function starRec(area){ if(!G.stars)G.stars={};
   let r=G.stars[area]; if(!r){ r={cleared:false,style:false,clean:false}; G.stars[area]=r; } return r; }

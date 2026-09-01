@@ -414,7 +414,7 @@ area target, timer expiry restores camera state, any input skips. Battery
 in house style.
 RE-PIN: none expected. Feel and timing: leave flagged for Eric.
 
-### 34. G.chaos is read but never assigned  (found in session 5 by piece 12)
+### 35. G.chaos is read but never assigned  (found in session 5 by piece 12)
 The night auto-driver at the `if(!G.nightManual&&!G.night&&G.running&&!G.won&&(G.wanted>=3||G.chaos>=260))`
 test reads G.chaos. Nothing in the file ever assigns G.chaos - grep it: one read, zero writes. The
 chaos meter is G.score (the HUD literally renders 'CHAOS '+G.score). So `G.chaos>=260` evaluates
