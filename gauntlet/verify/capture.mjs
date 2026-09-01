@@ -105,6 +105,17 @@ await shotR('07_jam',`const G=KEAGAME.G;
       if(c.collider){c.collider.x=c.x;c.collider.z=c.z;}
       held.push(c); } }
   G.trafT.a=999; G.trafT.b=999;
+  // STAGE THE BODY COLOUR. spawnTraffic picks it with pick(), which draws Math.random, so the
+  // queue changed from blue to white the moment an unrelated piece shifted that stream - and it
+  // took subjects.mjs going red to notice. The photographer stages its subject (piece 4), so the
+  // colour is staged too: fresh material per car, applied ONLY to the meshes that shared this car
+  // body material inside its own bodyG, which leaves bumpers, glass and lamps alone. mat() stores
+  // linear, so convert to match.
+  for(const c of held){ const bg=c.bodyG; if(!bg||!bg.children.length)continue;
+    const src=bg.children[0].material; if(!src)continue;
+    const body=new THREE.MeshStandardMaterial({color:new THREE.Color(0x3E6484).convertSRGBToLinear(),
+      roughness:src.roughness, metalness:src.metalness, envMapIntensity:src.envMapIntensity});
+    bg.traverse(o=>{ if(o.isMesh&&o.material===src)o.material=body; }); }
   const cone=G.props.find(p=>p.cone&&!p.heldBy); if(cone){cone.x=1.2;cone.z=34.0;cone.y=0.06;cone.mesh.position.set(cone.x,cone.y,cone.z);}
   ${PIN('for(const c of G.cars){ if(c.traffic){c.speed=0;c.rootCause="kea";} } const k=G.keas[0];k.x=-4.3;k.z=34.0;k.y=0;k.vy=0;k.grounded=true;k.ry=1.57;k.stun=0;')}
   ${CAM(-8.6,1.7,34.0,3.0,1.15,34.0)}`);

@@ -450,6 +450,47 @@ C.section('THE WHITE THING BEHIND THE BIRD IS CARPARK GRIT');
      mapped+'/2)');
 }
 
+C.section('THE GRASS TINT IS SEEDED, NOT A LOTTERY');
+// buildGrass is `if(HEADLESS)return`, so node can never see the field itself. What node CAN do is
+// hold the tint seam to its contract, and then check the field still goes through it. The old code
+// drew two Math.random per blade, so ANY change to the object count retinted the whole country -
+// which was the entire residual tripwire noise. It could not move onto rnd() either: 42000 blades
+// at two draws each would have injected 84000 draws into the middle of buildWorld.
+{ const T=H.THREE;
+  const seq=(inst,n)=>{ const c=new T.Color();
+    const cA=new T.Color(0xB8901F), cB=new T.Color(0x8A7C2E), cC=new T.Color(0xD9B84A);
+    inst.grassTintReset(); const out=[];
+    for(let i=0;i<n;i++){ inst.grassTint(c,cA,cB,cC); out.push(c.getHexString()); }
+    return out.join(','); };
+
+  const a=seq(X,200);
+  ok(a===seq(X,200),'the same build replays an identical tint sequence after a reset');
+  const distinct=new Set(a.split(',')).size;
+  ok(distinct>20,'and the sequence genuinely varies, so this is a real comparison ('+distinct+' distinct tints)');
+
+  // THE CLAIM, stated as strongly as it can be: neither the world seed nor Math.random can move
+  // the tint. Second FRESH instance, a different seed, and Math.random poisoned to a constant.
+  const realRandom=Math.random;
+  let poisoned=0; Math.random=()=>{ poisoned++; return 0.123456789; };
+  let b, seen;
+  try{ const H2=load(); H2.X.setSeed(987654321);
+       poisoned=0;                       // count the SEAM only - load() itself makes three uuids
+       b=seq(H2.X,200); seen=poisoned; }
+  finally{ Math.random=realRandom; }
+  ok(b===a,'a different world seed AND a poisoned Math.random give the SAME tint sequence');
+  ok(seen===0,'in fact the tint seam never calls Math.random at all ('+seen+' calls)');
+
+  // and the field really does go through that seam. buildGrass is browser-only, so this is a
+  // structural check on the source rather than a behavioural one - stated plainly, not disguised.
+  const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','untitled-kea-game.html'),'utf8');
+  const body=src.slice(src.indexOf('function buildGrass()'), src.indexOf('function buildTrees'));
+  ok(body.indexOf('grassTint(col')>0,'buildGrass tints its blades through that seam');
+  ok(body.indexOf('Math.random')<0,'and buildGrass no longer touches Math.random anywhere');
+  // that second claim covers the DETAIL MAP as well as the blades: the grass speckle painter was
+  // another ~10k Math.random draws, so object-count changes still reshuffled the multiply-map even
+  // once the blades were seeded. It now paints from a fixed seed, like detailTex already did.
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

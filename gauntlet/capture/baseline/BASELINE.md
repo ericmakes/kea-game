@@ -102,3 +102,30 @@ JUDGED BEFORE PINNING, and all three are improvements rather than merely differe
   - 19 is the true follow-cam geometry rather than wherever the lerp happened to stop.
 NOTE: the 22 re-pin was reached on the third staging attempt. The first two were deterministic but
 degraded the subject; recorded in gauntlet-log.md rather than hidden.
+
+## Full re-pin 2026-09-01 (build 1667e397 — seeded grass tint)
+All 24 re-pinned. The blade tint moved off Math.random onto a fixed-seed generator, so the tint
+pattern reshuffled ONCE, globally and intentionally, exactly as TODO 27 predicted. 14 of 24
+flagged against the previous pins before this sweep (worst 0.8719 at 14_player_view) - grass fills
+most of every frame, so a tint reshuffle is expensive in SSIM and cheap in meaning.
+JUDGED BEFORE PINNING: 14_player_view, 03_kea_plate, 05_tussock_ground eyeballed against their old
+pins. Same three source colours, same 50/50 split, same lerp range - only the sequence differs, so
+the field is statistically the same country. The bird is untouched (03 is a close-up and the bird
+pixels are identical; its 0.9158 is entirely surrounding grass).
+BONUS, and it argues for the QUIET fix in the same session: the OLD 14_player_view pin ALSO had a
+stray escaped human standing right of centre, like 19 and 21 did. Gone now.
+WHAT THIS BUYS, measured as an A/B rather than asserted: inject one extra off-camera mesh (which
+consumes a three uuid, so it moves Math.random but not rnd) and reshoot 05_tussock_ground.
+  before this piece                    0.9735   <- the whole residual tripwire noise
+  blades seeded                        0.9968
+  blades + grass detail map seeded     0.9983   <- at the renderer take-to-take floor (~0.998)
+07_jam ALSO CHANGED HANDS. spawnTraffic picks the body colour with pick(), which draws
+Math.random, so removing ~94k draws from buildGrass turned the queue from blue to white and
+subjects.mjs went red (carblue 9930 -> 441). The frame was a perfectly good jam; its subject had
+simply changed identity. Rather than re-fit the classifier to an accident, capture.mjs now STAGES
+the body colour (fresh material per car, applied only to meshes sharing that car body material
+inside its own bodyG, so bumpers/glass/lamps are untouched). carblue is now 17649 against the
+ORIGINAL calibrated floor of 3000 and absent of 14 - piece 4 calibration untouched, nothing refit.
+Measured first: on the new build carblue separated cars from a carless reference by only x7.5
+(441 vs 59) and no colour-agnostic classifier did better than x2.1, because a body colour drawn
+from Math.random cannot be pinned by a hue window at all. Staging beat calibrating.

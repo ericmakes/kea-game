@@ -717,8 +717,21 @@ function grassBlade(x,z){
   const cell=Math.abs(Math.sin(Math.floor(x/2.5)*39.34+Math.floor(z/2.5)*11.13)*24634.6)%1;
   return {yaw:rnd(0,Math.PI),dir,lean,cell,h:rnd(0.6,1.5)*(0.8+cell*0.4),w:rnd(0.8,1.3)};
 }
+// GRASS TINT (2026-09-01): this used to draw from Math.random, so ANY change to the number of
+// objects in the world retinted the whole field - the entire residual tripwire noise. It cannot
+// move onto rnd() either: 42000 blades at two draws each would inject 84000 draws into the middle
+// of buildWorld and reshuffle every object built after it. So the tint gets its own fixed-seed
+// generator, which is the house idiom already used for keaScal mottle and the kea-sign scatter.
+// The blade tint sequence is now identical no matter what the world seed or Math.random do.
+let GTSEED=1337;
+function grassTintReset(){ GTSEED=1337; }
+function grassTint(col,cA,cB,cC){
+  const g=()=>{ GTSEED=(GTSEED*16807)%2147483647; return GTSEED/2147483647; };
+  const t=g(); return col.copy(t<0.5?cA:cB).lerp(cC,g()*0.55);
+}
 function buildGrass(){
   if(HEADLESS)return;
+  grassTintReset();
   const N=42000;
   const geo=new THREE.PlaneGeometry(0.095,0.55,1,2); geo.translate(0,0.27,0);
   { const p=geo.attributes.position; // taper: blades, not rectangles
@@ -752,7 +765,7 @@ function buildGrass(){
     d.position.set(x,0,z); d.quaternion.copy(qt).multiply(qy);
     d.scale.set(b.w,b.h,1); d.updateMatrix();
     im.setMatrixAt(i,d.matrix);
-    const t=Math.random(); col.copy(t<0.5?cA:cB).lerp(cC,Math.random()*0.55);
+    grassTint(col,cA,cB,cC);
     { const patch=Math.abs(Math.sin(Math.floor(x/7)*12.9898+Math.floor(z/7)*78.233)*43758.5)%1;
       if(patch>0.66)col.multiplyScalar(0.88); else if(patch<0.16)col.offsetHSL(0.012,0.06,0.035); }
     im.setColorAt(i,col); i++;
@@ -816,10 +829,11 @@ function buildWorld(){
   if(!HEADLESS){
     const dc=document.createElement('canvas'); dc.width=dc.height=256; const dctx=dc.getContext('2d');
     dctx.fillStyle='#FFFFFF'; dctx.fillRect(0,0,256,256);
-    for(let i=0;i<2600;i++){ const a=Math.random();
+    let ds=90210; const dr=()=>{ ds=(ds*16807)%2147483647; return ds/2147483647; }; // fixed-seed speckle
+    for(let i=0;i<2600;i++){ const a=dr();
       dctx.fillStyle=a<0.5?'rgba(70,60,20,0.10)':'rgba(255,246,214,0.09)';
-      const rr=1+Math.random()*3.2; dctx.beginPath();
-      dctx.arc(Math.random()*256,Math.random()*256,rr,0,6.3); dctx.fill(); }
+      const rr=1+dr()*3.2; dctx.beginPath();
+      dctx.arc(dr()*256,dr()*256,rr,0,6.3); dctx.fill(); }
     const dt=new THREE.CanvasTexture(dc); dt.encoding=THREE.sRGBEncoding;
     dt.wrapS=dt.wrapT=THREE.RepeatWrapping; dt.repeat.set(9,9);
     gMat=new THREE.MeshStandardMaterial({vertexColors:true,map:dt,roughness:0.95,metalness:0,envMapIntensity:0.3});
@@ -3365,7 +3379,7 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND};
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

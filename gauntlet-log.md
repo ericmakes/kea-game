@@ -490,3 +490,53 @@ CERTIFIED-SHIP, tripwire 24 compared 0 flagged after re-pinning 19/21/22, subjec
   UNMEASURED for stability - named as a next pick, and the tool now exists to do it.
 - EYEBALL: 19_roof_follow.png (stray human gone, true follow-cam framing, bird on the chimney),
   21_night_camp.png (stray human gone), 22_torch_beam.png (beam on the bird, alert mark up).
+
+### PIECE: seeded-grass-tint (TODO item 27) — CERTIFIED 1667e39746f7b0367c39f22273eaa18b
+Verdict: green. Gate CERTIFIED-SHIP, tripwire 24 compared 0 flagged after the sanctioned one-time
+re-pin sweep, subjects 6 checked 0 missing, stability clean.
+- THE BRIEFED PROOF WAS IMPOSSIBLE, and measuring first is what caught it. The TODO asked for two
+  headless builds producing identical blade tint sequences. buildGrass opens with
+  `if(HEADLESS)return` - node can never see the field. Third time this has happened (glass, preen,
+  now grass), which is the standing lesson: measure the rig before believing a brief.
+- AND THE BRIEFED FIX WOULD HAVE BEEN A DISASTER. "Move blade tinting onto rnd()" sounds right and
+  is not: 42000 blades at two draws each injects 84000 rnd draws into the MIDDLE of buildWorld, so
+  every object built after it moves. That would have reshuffled the entire country to fix a tint.
+- WHAT SHIPPED INSTEAD is the idiom the file already uses twice - keaScal fixed-seed mottle and the
+  kea-sign scatter both run a local Lehmer generator. The tint gets its own GTSEED, so it is
+  immune to Math.random AND to the world seed, and it touches the rnd stream not at all. PROVED:
+  the seeded headless world fingerprint is byte-identical before and after, 1039 meshes,
+  md5 6d9233cf3ce11c1e1e0cb1f8d78cac63.
+- THE PROOF is a seam, exported, plus a structural check stated plainly rather than disguised as a
+  behavioural one: a fresh SECOND instance with a different world seed and Math.random poisoned to
+  a constant produces the SAME 200-tint sequence; the seam calls Math.random zero times; and
+  buildGrass is read from source to confirm the field goes through that seam and no longer touches
+  Math.random anywhere. All five verified adversarially - putting the tint back on Math.random goes
+  red on three, and bypassing the seam goes red on the other two, with 400 calls counted, exactly
+  2 per blade.
+- THE PAYOFF, measured as an A/B instead of asserted. Inject ONE extra off-camera mesh, which
+  consumes a three uuid and so moves Math.random but not rnd, then reshoot 05_tussock_ground:
+    HEAD                              0.9735   <- the entire residual tripwire noise, as advertised
+    blades seeded                     0.9968
+    blades + detail map seeded        0.9983   <- the renderer own take-to-take floor is ~0.998
+  I went after the second one because the first fix left 0.003 on the table: the grass detail map
+  painter was another ~10k Math.random draws, and detailTex twenty lines below it already painted
+  from a fixed seed. The grass was the only painter in the file that did not.
+- THE SURPRISE, and the tripwire earned its keep: after the re-pin, subjects.mjs went RED on
+  07_jam - carblue 9930 -> 441. The frame was a perfectly good five-car jam. spawnTraffic picks
+  the body colour with pick(), which draws Math.random, so removing ~94k draws turned the queue
+  from blue to WHITE. The subject had not gone missing, it had changed identity, which is a thing
+  I did not know a presence tripwire could catch.
+  I did NOT re-fit the classifier, and I measured before deciding not to: against a purpose-shot
+  CARLESS reference frame, carblue separated by only x7.5 on the new build (441 vs 59), and every
+  colour-agnostic candidate I tried was worse - carglass x2.1, a tight glass window x1.5, a
+  glass-blue union x0.8. "Bright and desaturated" separated x28.6 but only because the cars happen
+  to be white this week; it would collapse the moment they turn blue again. The honest conclusion
+  is that a body colour drawn from Math.random cannot be pinned by ANY hue window.
+  So the photographer stages it, exactly as piece 4 established: 07 now assigns a fresh material
+  per held car, applied ONLY to meshes sharing that car body material inside its own bodyG, so
+  bumpers, glass and lamps are left alone. carblue is 17649 against the ORIGINAL floor of 3000 and
+  absent of 14. Nothing recalibrated, nothing refitted, and it is immune to the next stream shift.
+- grassTint and grassTintReset join the exports - the seam is the only way to make a browser-only
+  contract hermetic (the piece-5 precedent).
+- EYEBALL: 05_tussock_ground.png, 14_player_view.png, 03_kea_plate.png for the new tint, and
+  07_jam.png for the staged blue queue. Note the old 14 pin had a stray human in it too.
