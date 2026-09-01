@@ -1335,3 +1335,45 @@ The third pip, and the page-star set is complete: cleared, style, clean.
 - EYEBALL (controller, not frames): clear a page having been caged once, and the third pip stays hollow
   even if you mashed your way out. Clear a page without ever being caught and it fills, with a CLEAN
   GETAWAY popup. The full set on a good page reads three filled pips in the TAB header.
+
+### PIECE: home-positions (TODO item 17) — CERTIFIED e19fcd5a9ae90f754e36f26a64ef5509
+Foundation for pieces 19, 20 and 21: every prop remembers the transform it was BUILT at, so a later
+piece can put it back and a botched restore has something pristine to be botched against. Nothing in
+this piece moves anything or changes how anything looks.
+- HALF OF IT ALREADY EXISTED, which is worth checking before writing a line: propAt has recorded
+  home {x,y,z} all along, and it is already load bearing - the never-recovered boot score, the
+  missionFar relocations, the cleared-picnic-table detector and the human tidy-up all read it. What was
+  missing was ROTATION, and something subtler: WHEN to read it.
+- THE SWEEP IS WHY THIS IS NOT A ONE-LINER, and the skis are the proof. Reading the mesh rotation
+  inside propAt is not enough, because a build site can rotate a prop AFTER the factory returns - the
+  two skis on the rack are laid over at rotation.x=1.35 on the very next line. So the factory records
+  what it can see and homesRegister() sweeps the finished world afterwards, which is the only moment
+  the built transform is final. The sabotage that removes the sweep reports their home rotation as
+  0.00, which is precisely the bug: a restore would have stood the skis upright on the rack like new
+  stock. Props that spawn DURING play keep their factory home, which is their spawn point and correct.
+- THE ASSERTION FOUND A REAL GAP. Classification (consumable vs displaceable - a scoffed sandwich
+  cannot be carried home, it has to be replaced) was being set by the sweep, so props created mid-game
+  had no class at all. Moved into mkProp, which is the one choke point every prop passes through AFTER
+  its opts are merged, so the bin loot is classed exactly like the built world. The sweep now owns only
+  the transform.
+- AND IT TOOK A DETOUR THROUGH SOMEBODY ELSE'S BUG, which is now TODO 48. My build-time assertions kept
+  failing with "two skis on the rack (4)". harness-everything calls X.boot() a SECOND time in the snow
+  section, and boot() re-runs buildWorld without clearing G.props, G.inter or G.colliders - so from that
+  line on the battery has two of every prop, interactable and collider. Nothing asserted today depends
+  on a count, which is the only reason it has never bitten, but every section after that line is
+  testing a world the game can never be in. Worked around honestly rather than papered over: the
+  build-time truth is snapshotted at the FIRST boot and the section asserts against the snapshot,
+  with a comment saying why and where the real fix is filed.
+- ALSO FILED, TODO 47: propAt draws ry:rnd(0,6) for every prop and nothing ever applies it to a prop
+  mesh - it is the kea and human convention, not the prop one. So every prop carries a random number
+  that means nothing, and this piece had to record the MESH transform to get an honest answer. The draw
+  is NOT removed, because every later rnd() in the browser is downstream of it and deleting one draw
+  repins the world. Snow-patch lesson, applied without having to relearn it.
+- HOMER=1.6 IS NAMED AND FENCED, with atHome() asserted on both sides of it - inside the radius reads
+  home, just outside does not. That predicate is literally what piece 20 needs and nothing else.
+- VERIFIED ADVERSARIALLY, FOUR WAYS: removing the sweep fails four including the ski rotation; making
+  homeDist return zero fails the two radius assertions; dropping rotation from the factory fails only
+  the mid-game spawn; classing everything displaceable fails exactly the food pair.
+- NO CAPTURE: the piece adds fields and reads meshes. Nothing is moved, nothing is drawn, no rnd() draw
+  is added or removed, so the seeded stream is untouched and every frame is unchanged by construction.
+- EYEBALL: nothing visual, by design. This one is judged by pieces 19 to 21 using it.

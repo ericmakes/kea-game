@@ -1352,6 +1352,36 @@ function buildWorld(){
   }
 }
 
+/* ---------- HOME POSITIONS (TODO 17, 2026-09-02) ----------
+   Every displaceable and consumable prop remembers the transform it was BUILT at, so a later piece
+   can put it back. Foundation only: nothing in this piece changes where anything goes or how anything
+   looks. Pieces 19, 20 and 21 are the customers - a botched restore needs a pristine reference to be
+   botched AGAINST, and a carry-back needs to know what "within the home radius" means.
+   POSITION WAS ALREADY THERE and is already load bearing: propAt has recorded home {x,y,z} all along,
+   and the boot score, the missionFar relocations, the cleared-picnic-table detector and the human
+   tidy-up all read it. What was missing is ROTATION, and one thing more subtle - WHEN to read it.
+   THE SWEEP IS WHY THIS IS NOT A ONE-LINER. Reading the mesh rotation inside propAt is not enough,
+   because a build site can rotate a prop AFTER the factory returns: the two skis on the rack are laid
+   over at rotation.x=1.35 on the line after they are created. So the factory records what it can see,
+   and then homesRegister() sweeps the finished world and re-reads every prop, which is the only moment
+   at which the built transform is actually final. Props that spawn DURING play - bin loot, the muesli
+   bar out of the pack - keep their factory home, which is their spawn point and correct for them.
+   NOTE A FIELD THAT LIES, LEFT ALONE ON PURPOSE: propAt draws ry:rnd(0,6) for every prop and nothing
+   ever applies it to a prop mesh (it is the kea and human convention, not the prop one). So the honest
+   spawn rotation is the MESH transform, never p.ry. The draw is NOT removed, because every later rnd()
+   in the browser is downstream of it and deleting one draw repins the world - the snow-patch lesson.
+   Filed as TODO 47 instead. */
+const HOMER=1.6;                    // metres. FENCED FOR PLAYTEST: the catch radius for a carry-back
+function homeClass(p){ return !p?null:(p.food?'consumable':'displaceable'); }
+function homesRegister(){ let n=0;
+  for(const p of G.props){ if(!p.mesh)continue;
+    p.home={x:p.mesh.position.x,y:p.mesh.position.y,z:p.mesh.position.z,
+            rx:p.mesh.rotation.x,ry:p.mesh.rotation.y,rz:p.mesh.rotation.z};
+    n++; }
+  G.homesN=n; return n; }
+function homeDist(p){ return !p||!p.home?Infinity:Math.hypot(p.x-p.home.x,p.z-p.home.z); }
+function atHome(p,r){ return homeDist(p)<=(r===undefined?HOMER:r); }
+
 /* ---------- interactable + prop registries ---------- */
 let IID=0;
 function stripWorld(st,pt){ const v=new THREE.Vector3(pt.x,pt.y,pt.z);
@@ -1408,11 +1438,17 @@ function addTear(o){ o.id='t'+(IID++); o.kind='tear'; o.progress=0; o.done=false
 function addPeck(o){ o.id='k'+(IID++); o.kind='peck'; o.hits=0; o.done=false; G.inter.push(o); return o; }
 function mkProp(o){ // loose carryable
   o.id='p'+(IID++); o.kind='prop'; o.heldBy=null; o.banked=false; o.vy=0;
+  /* TODO 17: classified HERE and not in the sweep, because this is the one choke point every prop
+     passes through AFTER its opts have been merged - so a prop the bin coughs up mid-game is classed
+     the same way as one the world was built with. The sweep only owns the transform. */
+  o.homeClass=homeClass(o);
   G.props.push(o); G.inter.push(o); return o;
 }
 function propAt(name,x,y,z,buildFn,opts){
   const g=new THREE.Group(); g.position.set(x,y,z); buildFn(g); if(!HEADLESS)blob(g,0.2,0.26); G.scene.add(g);
-  return mkProp(Object.assign({name,mesh:g,x,y:y,z,home:{x,y,z},shiny:false,food:false,heavy:false,owner:null,ry:rnd(0,6)},opts||{}));
+  return mkProp(Object.assign({name,mesh:g,x,y:y,z,
+    home:{x,y,z,rx:g.rotation.x,ry:g.rotation.y,rz:g.rotation.z},   // spawn transform, TODO 17
+    shiny:false,food:false,heavy:false,owner:null,ry:rnd(0,6)},opts||{}));
 }
 
 /* prop visual builders */
@@ -3683,7 +3719,7 @@ const TOUCH={on:false,_st:{f:0,b:0,l:0,r:0},
       for(const t of e.changedTouches){ if(t.identifier===lid)lid=null; } },{passive:true});
   } };
 function boot(){
-  initScene(); buildWorld(); registerSheepPecks();
+  initScene(); buildWorld(); registerSheepPecks(); homesRegister();   // TODO 17: after the build, so site rotations count
   { const w1=mat(0x9FB8C4,GLASSX), w2=mat(PAL.sun);
     for(const m of [w1,w2]){ m.emissive=new THREE.Color(0xFFB35C).convertSRGBToLinear(); m.emissiveIntensity=0; }
     G.warmMats=[w1,w2]; }
@@ -3726,6 +3762,7 @@ if(typeof globalThis!=='undefined'){
            caged:pageCaged,judgeClean:cleanJudge,judgePage:pageJudge},
     TRAVEL:{ANCHOR:TRAVELANCHOR,BEAT:TRAVELBEAT,SPAN:TRAVELSPAN,phase:travelPhase,weight:travelWeight,
             start:travelStart,end:travelEnd,update:travelUpdate,fresh:travelFresh,aim:travelAim},
+    HOMES:{R:HOMER,cls:homeClass,register:homesRegister,dist:homeDist,at:atHome},
     grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();

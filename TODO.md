@@ -155,7 +155,7 @@ Thread the acting kea's idx through award() into per-kea ledgers alongside
 the shared score. Outside VS nothing visible changes.
 PROOF: two keas award separately; ledgers split; shared total unchanged.
 
-### 17. home-positions
+### 17. home-positions  — DONE session 6 (e19fcd5a9ae90f754e36f26a64ef5509)
 Record spawn transform (pos + rot) for every displaceable and consumable
 prop at build time. Foundation for pieces 20/21.
 PROOF: homes recorded for cones, boots, shinies, food props; survive
@@ -536,3 +536,35 @@ FIX: assert POSITIVELY rather than negatively - every battery must print its own
 the count of ALL PASS lines must equal the count of batteries. That also catches a battery file that
 is missing, renamed or silently skipped, which the current grep cannot see either.
 PROOF: the ready-made test case is any battery with a deliberate throw in it - the gate must go red.
+
+### 47. propAt DRAWS A ROTATION FOR EVERY PROP THAT NOTHING EVER READS
+Found in session 6 by piece 17. propAt sets ry:rnd(0,6) on every prop and no code path applies it to a
+prop mesh - ry is the kea and human convention (this.ry drives g.rotation.y for those), not the prop
+one. Props are built axis-aligned unless a build site rotates the mesh itself, which two do (the skis,
+rotation.x=1.35). So every prop in the world carries a random number that means nothing, and piece 17
+had to record the MESH transform instead to get an honest spawn rotation.
+DO NOT JUST DELETE THE DRAW. Every later rnd() in the browser is downstream of it, so removing one
+draw shifts the seeded stream and repins the whole world - the snow-patch lesson from session 5. The
+honest options are (a) apply it, which is a visual change to every prop in the game and therefore a
+judged art call, not an overnight one; or (b) keep the draw and rename the field so it stops looking
+like something that works - _ryUnused, or a comment at minimum. (b) is free and (a) might be nice.
+PROOF once built: for (a), assert every prop mesh rotation.y equals its own p.ry after build, and
+re-pin every vantage with props in it. For (b), nothing to prove but the md5 and the unchanged frames.
+
+### 48. harness-everything BOOTS THE GAME TWICE, so half its sections run against a doubled world
+Found in session 6 by piece 17, which could not make a build-time assertion about props until it
+worked out why there were four skis. The snow section calls X.boot() a second time (it wants a fresh
+world for its resolver sweep), and boot() runs buildWorld() again WITHOUT clearing G.props, G.inter or
+G.colliders - so from that line on the battery has two of every prop, two of every interactable and two
+of every collider in its registries. Nothing currently asserted depends on a count, which is the only
+reason this has never bitten; piece 17 worked around it by snapshotting the build-time truth at the
+first boot and asserting against the snapshot.
+WHY IT MATTERS BEYOND TIDINESS: any future assertion of the form "there are N of these" is silently
+wrong after that line, and a find() that expects to get the only one of something gets whichever
+duplicate is first. It also means the sections after it are testing a world the game can never be in.
+FIX OPTIONS: (a) make the snow section use a second rig instance instead of re-booting - but note
+rig.load() replaces global.localStorage, which would wipe the save the earlier sections wrote; (b) give
+boot() an idempotent guard or a teardown that empties the registries first, which is a game-file change
+with the whole gate behind it; (c) move the snow section to the top, before anything else runs.
+(c) is free and (b) is the real answer.
+PROOF once built: assert G.props.length after the last section equals the count after the first boot.

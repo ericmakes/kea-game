@@ -5,6 +5,17 @@ const ok=C.ok, tick=n=>{for(let i=0;i<n;i++)X.update(1/60);};
 const P1=H.P1, hold=H.hold, un=H.un, tap=H.tap;
 X.boot();
 
+/* TODO 17: THE BUILD-TIME TRUTH ABOUT PROP HOMES, captured here and nowhere else. The sections below
+   spend three hundred assertions carrying props around, and one of them boots the game a SECOND time
+   (the snow section, which needs a fresh world for its resolver sweep) - which rebuilds the world and
+   leaves TWO of every prop in G.props from that point on. So no later moment can speak for the build,
+   and the home-positions section asserts against this snapshot for anything build-shaped. The double
+   boot is filed as TODO 48; it is not this piece to fix. */
+const HOMESATBOOT=G.props.map(p=>({id:p.id,name:p.name,home:Object.assign({},p.home),
+  mx:p.mesh?p.mesh.position.x:null, my:p.mesh?p.mesh.position.y:null, mz:p.mesh?p.mesh.position.z:null,
+  mrx:p.mesh?p.mesh.rotation.x:null, mry:p.mesh?p.mesh.rotation.y:null, mrz:p.mesh?p.mesh.rotation.z:null,
+  cls:p.homeClass, food:!!p.food, shiny:!!p.shiny}));
+
 // ---- shared drivers (perch idiom throughout) ----
 const kq=()=>G.keas[0];
 function park(){ G.trafT.a=999; G.trafT.b=999;
@@ -1374,6 +1385,94 @@ C.section('THE CLEAN GETAWAY STAR — the cage is remembered, escaping does not 
     ok(S.rec(CH[0]).cleared===true,'so nobody loses a cleared page to the upgrade');
     ok(S.rec(CH[0]).clean===false,'but the clean star is NOT invented from a silent record');
     ok((snap(CH[0]).caged||0)===0,'the missing field reads as zero cagings, which is why judging is what gates it'); }
+}
+
+C.section('HOME POSITIONS — every prop remembers the transform it was built at');
+{ const HM=X.HOMES, B=HOMESATBOOT;
+  X.startGame(1); tick(8); park();
+
+  // 1. EVERY PROP BUILT WITH THE WORLD HAS A COMPLETE HOME. Six finite numbers, no exceptions - a prop
+  //    with a partial home is worse than one with none, because a restore would move it to NaN.
+  ok(B.length>15,'the built world has props to remember ('+B.length+')');
+  { const bad=B.filter(p=>!p.home||['x','y','z','rx','ry','rz'].some(k=>!isFinite(p.home[k])));
+    ok(bad.length===0,'every one carries a complete spawn transform (bad: '+
+       (bad.map(p=>p.name).join(', ')||'none')+')'); }
+  ok(HM.R===1.6,'the home radius is a named constant, fenced for playtest ('+HM.R+')');
+
+  // 2. THE CLASSES TODO 17 NAMES ARE ALL THERE, named by what the foundation is FOR: carry-back for
+  //    the displaceables, replacement for the consumables, because a scoffed sandwich cannot be
+  //    carried home.
+  { const names=B.map(p=>p.name);
+    for(const want of ['road cone','boot','ute keys','sandwich'])
+      ok(names.filter(nm=>nm===want).length>0,'the ledger covers '+want+' ('+
+         names.filter(nm=>nm===want).length+' of them)');
+    const cones=B.filter(p=>p.name==='road cone');
+    ok(cones.length>=4&&cones.every(c=>c.home),'all the cones remember where they were stacked ('+cones.length+')');
+    ok(B.filter(p=>p.shiny).length>0&&B.filter(p=>p.shiny).every(p=>p.home),'the shinies do too ('+
+       B.filter(p=>p.shiny).map(p=>p.name).join(', ')+')');
+    ok(B.filter(p=>p.food).length>0,'and the food ('+B.filter(p=>p.food).map(p=>p.name).join(', ')+')');
+    ok(B.filter(p=>p.food).every(p=>p.cls==='consumable'),'food is classed consumable');
+    ok(B.filter(p=>!p.food).every(p=>p.cls==='displaceable'),'and everything else is a displaceable');
+    ok(G.props.every(p=>p.homeClass===HM.cls(p)),'the stored class always agrees with the rule that made it'); }
+
+  // 3. THE SWEEP IS THE POINT OF THE PIECE, and the skis are the case that proves it. They are laid
+  //    over at rotation.x=1.35 on the line AFTER propAt returns, so a factory-time read would have
+  //    recorded them flat and a later restore would have stood them up on the rack like new stock.
+  { const skis=B.filter(p=>p.name==='ski');
+    ok(skis.length===2,'two skis on the rack at build ('+skis.length+')');
+    ok(skis.every(k=>Math.abs(k.home.rx-1.35)<1e-9),'their home rotation is the laid-over one they were BUILT with ('+
+       skis.map(k=>k.home.rx.toFixed(2)).join(', ')+')');
+    ok(skis.every(k=>Math.abs(k.home.rx-k.mrx)<1e-9),'which is exactly what the mesh said at build time');
+    const rot=B.filter(p=>Math.abs(p.home.rx)>1e-9||Math.abs(p.home.ry)>1e-9||Math.abs(p.home.rz)>1e-9);
+    ok(rot.length>0,'so at least one prop is built rotated and the sweep earns its keep ('+rot.length+')'); }
+  { let off=0;
+    for(const p of B){ if(p.mx===null)continue;
+      if(Math.hypot(p.home.x-p.mx,p.home.z-p.mz)>1e-9||Math.abs(p.home.y-p.my)>1e-9)off++;
+      if(Math.abs(p.home.rx-p.mrx)>1e-9||Math.abs(p.home.ry-p.mry)>1e-9||Math.abs(p.home.rz-p.mrz)>1e-9)off++; }
+    ok(off===0,'and at build time every home IS the mesh, position and rotation, not an approximation ('+off+' off)'); }
+
+  // 4. HOME IS NOT WHERE THE PROP IS. It survives being carried, dropped, tumbled and settled - the
+  //    whole point, since a home that follows the prop can never bring anything back.
+  { const b=G.props.find(p=>p.name==='boot');
+    ok(!!b,'a boot to displace');
+    const h0=JSON.stringify(b.home);
+    b.x=30; b.z=30; b.y=0.4; b.vy=-1; b.mesh.position.set(30,0.4,30); tick(40);
+    ok(JSON.stringify(b.home)===h0,'the home did not follow it ('+h0+')');
+    ok(!HM.at(b),'and it reads as away from home ('+HM.dist(b).toFixed(2)+'u > '+HM.R+')');
+    b.x=b.home.x+HM.R*0.5; b.z=b.home.z; b.mesh.position.set(b.x,b.y,b.z);
+    ok(HM.at(b),'brought back inside the radius it reads as home ('+HM.dist(b).toFixed(2)+'u)');
+    b.x=b.home.x+HM.R+0.2; b.mesh.position.set(b.x,b.y,b.z);
+    ok(!HM.at(b),'and just outside it does not ('+HM.dist(b).toFixed(2)+'u)');
+
+    // 5. IT SURVIVES SAVE AND RESTART. The blob carries no prop positions at all, so the risk is not
+    //    losing the home - it is a hydrate or a restart rewriting it to wherever the prop happens to
+    //    be lying, which would quietly declare every displaced prop already home.
+    X.SAVE.write(); X.startGame(1); tick(8);
+    const b2=G.props.find(p=>p.id===b.id);
+    ok(!!b2&&JSON.stringify(b2.home)===h0,'its home came through the save and the restart intact ('+
+       (b2?JSON.stringify(b2.home):'gone')+')'); }
+
+  // 6. A PROP THAT SPAWNS DURING PLAY GETS ITS OWN HOME FROM THE FACTORY - its spawn point, which is
+  //    the only honest answer for a thing the bin coughed up mid-game.
+  { const spy=G.props.map(p=>p.id);
+    X.startGame(1); tick(8);                        // startGame spawns the tramper beanie through propAt
+    const fresh=G.props.filter(p=>spy.indexOf(p.id)<0);
+    ok(fresh.length>0,'a prop was created after the world build ('+
+       (fresh.map(p=>p.name).join(', ')||'none')+')');
+    ok(fresh.every(p=>p.home&&['x','y','z','rx','ry','rz'].every(k=>isFinite(p.home[k]))),
+       'and it has a complete home of its own');
+    ok(fresh.every(p=>p.homeClass===HM.cls(p)),'classed like everything else'); }
+
+  // 7. THE REGISTER IS IDEMPOTENT, so a future biome load can re-run it. It rewrites homes to the
+  //    CURRENT transforms by design, so the live homes are put back afterwards - a battery that
+  //    leaves the world lying about where its props belong is a trap for the next section.
+  { const keep=G.props.map(p=>({p,h:Object.assign({},p.home)}));
+    const n1=HM.register(), n2=HM.register();
+    const withMesh=G.props.filter(p=>p.mesh).length;
+    ok(n1===n2&&n1===withMesh,'re-sweeping is idempotent and counts every prop ('+n1+' then '+n2+' of '+withMesh+')');
+    ok(G.homesN===n2,'and the count is on G where it can be inspected ('+G.homesN+')');
+    for(const k of keep)k.p.home=k.h;
+    ok(G.props.every(p=>!!p.home),'homes restored after the sweep test'); }
 }
 
 C.section('PERF FLOOR');
