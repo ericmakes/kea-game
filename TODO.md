@@ -310,6 +310,22 @@ subtle changes surface; or a dedicated shading check that samples a few known cu
 and compares gradient smoothness rather than whole-frame SSIM.
 PROOF: whatever ships must flag the piece-9 before/after pair, which is a ready-made test case -
 the baseline currently holds the banded shading and the working capture holds the smooth one.
+THE INSTRUMENT ALREADY HAS A RECIPE, worked out as a one-off in session 6 and left here so nobody has
+to invent it again. Two ffmpeg passes per frame, no new dependency (diff.mjs already shells to ffmpeg):
+  changed-pixel count, pixels differing by more than 8 grey levels -
+    ffmpeg -i FRESH -i BASE -lavfi \
+      "blend=all_mode=difference,format=gray,geq='if(gt(p(X\,Y)\,8)\,255\,0)',signalstats,metadata=print:key=lavfi.signalstats.YAVG" \
+      -f null -            then pixels = (YAVG/255) * width * height
+  worst amplitude -
+    ffmpeg -i FRESH -i BASE -lavfi "blend=all_mode=difference,format=gray,signalstats,metadata=print:key=lavfi.signalstats.YMAX" -f null -
+SESSION 6 READINGS against the pinned baselines, build e19fcd5a (four game pieces, none of them
+visual): 09_colossal 0 px / max 0, 15_sign 2 px / max 15, 08_readability_320 26 px / max 32, and
+everything else between 1031 (19_roof_follow) and 9315 (07_jam). Those big numbers are the item-33
+cross-run churn, not drift - compare item 33 own figures for the SAME build across runs (07 at 8919,
+13 at 4182, 19 at 3349, 23 at 1184, 08 at 1477, 22 at 2645). Note 08 came in at 26 rather than 1477
+this time, which is one sample and not a trend, but it is the kind of thing a real instrument would
+track. THE WARNING BAND SHOULD THEREFORE BE PER-VANTAGE, not global: a threshold that flags 07 at
+9000 flags nothing useful, while 09 and 15 should scream at three figures.
 
 ## FOUND IN SESSION 4 (appended 2026-09-01 by the overnight run)
 
