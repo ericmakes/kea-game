@@ -465,9 +465,9 @@ function syncClearedStars(){ let n=0;
   for(const a of (G.chapters||[])) if(pageCleared(a)&&!starRec(a).cleared){ starRec(a).cleared=true; n++; }
   return n; }
 function pageSnap(area){ if(!area)return null; if(!G.pageChaos)G.pageChaos={};
-  return G.pageChaos[area]||(G.pageChaos[area]={open:0,close:null,earned:0}); }
+  return G.pageChaos[area]||(G.pageChaos[area]={open:0,close:null,earned:0,paid:0}); }
 function pageOpen(area){ const p=pageSnap(area); if(!p)return null;
-  p.open=G.score||0; p.close=null; p.earned=0; return p; }
+  p.open=G.score||0; p.close=null; p.earned=0; p.paid=0; return p; }
 function pageClose(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return null;
   p.close=G.score||0; p.earned=Math.max(0,p.close-p.open); return p; }
 function pageEarned(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return 0;
@@ -493,10 +493,63 @@ function starsInit(b){
   // page still in progress must restart its style clock rather than measure against a stale open.
   if(pg)for(const a in pg){ const p=pg[a]||{};
     if(p.close==null)continue;
-    G.pageChaos[a]={open:+p.open||0,close:+p.close||0,earned:+p.earned||0}; }
+    G.pageChaos[a]={open:+p.open||0,close:+p.close||0,earned:+p.earned||0,paid:+p.paid||0}; }
   const retro=syncClearedStars();
   pageOpen(curPage());
   return {stars:!!st,pages:!!pg,retro,v:(b&&b.v)||1}; }
+
+/* ---------- THE STYLE STAR (TODO 13, 2026-09-02) ----------
+   Second of the three page stars: you cleared the page, but were you FLAMBOYANT about it. Granted
+   when the chaos earned while the page was open reaches par.
+   PAR IS MEASURED, NOT TABULATED, and that is a correction to the brief rather than a shortcut. TODO
+   13 asks for 1.5 x the sum of the page missions points, and the file has no such number: missions
+   carry no points field and every value lives inside the award() call in its own handler. Scraping
+   them out of the source pairs only 17 of the 40 done() ids - the rest award through prog(), through
+   a shared handler, or nowhere near their own done() - so a hand-written table would be thirty-nine
+   unverifiable numbers with nothing able to check one of them. Instead the page LEARNS what it paid:
+   award() drops every point into a per-frame purse and a mission finishing in that frame claims it.
+   A page can only turn once every row on it is done, so by page close paid IS the sum of that page
+   missions points - the figure the brief asked for, derived rather than transcribed, and it
+   re-derives itself if any award value in the file ever changes.
+   THE PURSE IS PER FRAME because BOTH ORDERS occur in the file: nine handlers award and then call
+   done(), eight call done() and then award. A frame is the exact window, since all handler code for
+   a tick runs synchronously inside update(), so a claim takes what the frame has banked so far AND
+   anything banked later in the same frame. Freelance chaos landing in the same frame as a mission is
+   counted as mission pay, which can only RAISE par, so the error is in the safe direction.
+   THE STAR IS JUDGED AT END OF FRAME, not at the turn, for exactly that reason: the mission that
+   turns the page may award AFTER done(), so at the instant of the turn the last payout is not in
+   G.score yet and the bar would depend on which order that one handler happened to use. FLAKES law 2
+   under another name - tick first, then read.
+   THE PURSE KEYS ON G.frames RATHER THAN G.time, because the photographer pins G.time in QUIET and a
+   pinned clock would collapse every frame into one purse. */
+const PARRATIO=1.5;   // FENCED FOR PLAYTEST: this one number is the whole difficulty of the star
+function purseFrame(){ if(G._purseF!==G.frames){ G._purseF=G.frames; G._purse=0; G._purseTaken=0;
+    G._purseOpen=false; G._purseArea=null; } }
+function purseAdd(pts){ purseFrame(); G._purse+=pts;
+  /* A LATE AWARD BELONGS TO THE PAGE THAT CLAIMED THE FRAME, NOT TO curPage(), and the difference is
+     not academic: the mission that TURNS a page is very often one that awards after done(), and by
+     then curPage() is already the NEXT page. Routing the payout there charged the new page for the
+     old page last mission - inflating its par before the player had done a thing on it - and handed
+     the old page a style star it had not earned, because its own par was short by that payout. */
+  if(G._purseOpen){ const p=G.pageChaos&&G._purseArea&&G.pageChaos[G._purseArea];
+    if(p){ p.paid=(p.paid||0)+pts; G._purseTaken+=pts; } } }
+function purseClaim(area){ if(!area||area!==curPage())return 0;
+  purseFrame();
+  const take=Math.max(0,(G._purse||0)-(G._purseTaken||0));
+  const p=pageSnap(area); if(p)p.paid=(p.paid||0)+take;
+  G._purseTaken=G._purse||0; G._purseOpen=true; G._purseArea=area; return take; }
+function pagePar(area){ const p=area&&G.pageChaos&&G.pageChaos[area];
+  return p?Math.round(PARRATIO*(p.paid||0)):0; }
+function styleQueue(area){ if(!area)return; (G._styleQ=G._styleQ||[]).push(area); }
+function styleJudge(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return null;
+  pageClose(area);                          // recompute, so a late award in the turning frame counts
+  const par=pagePar(area), earned=p.earned||0, had=!!starRec(area).style;
+  const win=(p.paid||0)>0&&earned>=par;
+  if(win&&!had){ starRec(area).style=true;
+    popup('\u2605 STYLE','THAT WAS SHOWING OFF  '+earned+' / '+par,0,null,true); AU.ding(); }
+  return {area,earned,par,paid:p.paid||0,granted:!!starRec(area).style,fresh:win&&!had}; }
+function styleDrain(){ const q=G._styleQ; if(!q||!q.length)return [];
+  G._styleQ=[]; const out=[]; for(const a of q){ const r=styleJudge(a); if(r)out.push(r); } return out; }
 
 /* ---------- THE CHAPTER TRAVEL BEAT (TODO 34, 2026-09-02) ----------
    A page turn should FEEL like arriving somewhere else. On a turn the camera leaves the bird, flies
@@ -611,7 +664,7 @@ if(!HEADLESS){
 /* ---------- state root ---------- */
 const G={
   scene:null, renderer:null, cams:[], mode:0, running:false, paused:false, headless:HEADLESS,
-  time:0, dawn:0,
+  time:0, frames:0, dawn:0,
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
@@ -3123,6 +3176,7 @@ function done(id){
   m.done=true; missionDone(m); renderTodo(); SAVE.write();
 }
 function missionDone(m){
+  purseClaim(m.area);   // what this page paid for this mission, whichever order the handler used
   AU.tick(); AU.ding();
   popup('✓ '+m.label.toUpperCase(),'',0,null,false,true);
   flashTodo();
@@ -3134,7 +3188,7 @@ function missionDone(m){
     while(G.chapIdx<G.chapters.length-1){
       const rows=G.missions.filter(x=>x.area===G.chapters[G.chapIdx]&&!x.finale&&!x.hide&&!x.bonus);
       if(rows.length&&!rows.every(x=>x.done))break;
-      pageClose(G.chapters[G.chapIdx]);
+      pageClose(G.chapters[G.chapIdx]); styleQueue(G.chapters[G.chapIdx]);
       G.chapIdx++; moved=true;
     }
     if(moved){ pageOpen(curPage());
@@ -3205,6 +3259,7 @@ function award(base,label,pos){
   const mult=Math.max(1,G.combo);
   const pts=Math.round(base*mult);
   G.score+=pts;
+  purseAdd(pts);                    // the page keeps its own books: TODO 13
   popup(label,'+'+pts+(mult>1?'  ×'+mult:''),pts,pos);
   if(G.colossal){ while(G.level<MAXLVL&&G.score>=lvlThresh(G.level))levelUp();
     el('chaos').textContent='CHAOS '+G.score+' · LV'+G.level+(G.level<MAXLVL?' ('+lvlThresh(G.level)+' next)':' MAX'); }
@@ -3478,7 +3533,7 @@ function update(dt){
     if(G.camIdleT>3&&G.camYaw){ G.camYaw*=Math.max(0,1-dt*1.6); if(Math.abs(G.camYaw)<0.02)G.camYaw=0; }
   }
   if(G.needHydrate){ G.needHydrate=false; applySave(); }
-  G.time+=dt;
+  G.time+=dt; G.frames=(G.frames||0)+1;
   if(G.running&&!G.paused&&!G.won){
     for(const k of G.keas)k.update(dt);
     for(const h of [...G.humans])h.update(dt);
@@ -3517,6 +3572,7 @@ function update(dt){
     G.wantedT=Math.max(0,G.wantedT-dt*0.045); const lvl=clamp(Math.floor(G.wantedT),0,5);
     if(lvl!==G.wanted){G.wanted=lvl;updWanted();}
     checkMisc(); checkFinale(); checkCaseFiles();
+    styleDrain();       // every award for this frame has landed by now: judge the page that turned
     travelUpdate(dt);   // before PRESSED is cleared, so the skip can see a fresh press
   } else if(!G.running){ updateFX(dt); updateSheep(dt); }
   hudReflow();
@@ -3644,7 +3700,8 @@ if(typeof globalThis!=='undefined'){
   globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
     STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
            rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
-           snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit},
+           snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit,
+           PARRATIO,par:pagePar,purse:purseClaim,judge:styleJudge,drain:styleDrain,queue:styleQueue},
     TRAVEL:{ANCHOR:TRAVELANCHOR,BEAT:TRAVELBEAT,SPAN:TRAVELSPAN,phase:travelPhase,weight:travelWeight,
             start:travelStart,end:travelEnd,update:travelUpdate,fresh:travelFresh,aim:travelAim},
     grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};

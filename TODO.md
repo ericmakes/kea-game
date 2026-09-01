@@ -131,7 +131,7 @@ load so nobody loses progress. TAB page headers render star pips.
 PROOF: save/load round trip headless; legacy blob loads and retro-grants;
 header render state asserts.
 
-### 13. style-star
+### 13. style-star  — DONE session 6 (071ced95438ec024e44cbb0f4c6c5d8f)
 Snapshot score at page open; on page turn, STYLE star if chaos earned
 during the page >= par. Par v1 = 1.5 x the sum of the page missions'
 points (placeholder — tuning is playtest, note it in the log).

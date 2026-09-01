@@ -1154,6 +1154,134 @@ C.section('THE CHAPTER TRAVEL BEAT — TODO 34');
     ok(G.travel===null&&G.travelLast===null,'startGame cleared it, and the record with it'); }
 }
 
+C.section('THE STYLE STAR — par is what the page paid you, times a named ratio');
+{ const S=X.STARS;
+  X.startGame(1); tick(8); park();
+  const CH=G.chapters.slice();
+  /* FLAKES law 1 again: done() writes the save and startGame hydrates it back, and this section also
+     has to own the star record, so the reset is explicit and happens AFTER the ticks. */
+  function freshBook(){ X.startGame(1); tick(8); park();
+    for(const m of G.missions){ m.done=false; if(m.need!==undefined)m.n=0; }
+    G.chapIdx=0; G.stars={}; G.pageChaos={}; S.open(CH[0]); tick(2); }
+  const snap=a=>G.pageChaos[a]||{};
+  /* every figure below is a MEASURED score delta, never a literal, because award() multiplies by the
+     live combo - an assertion written against the base value would be asserting the combo, not the star */
+  function pay(base){ const s0=G.score; X.award(base,'BATTERY PAY',null); return G.score-s0; }
+
+  // 1. THE RATIO IS NAMED, AND PAR IS NOTHING BUT THE RATIO TIMES WHAT THE PAGE PAID.
+  ok(S.PARRATIO===1.5,'par is a named ratio, fenced for playtest ('+S.PARRATIO+')');
+
+  // 2. THE PURSE CLAIMS BOTH HANDLER ORDERS. Nine handlers in the file award and then call done();
+  //    eight call done() and then award. A star that only saw one of them would be silently wrong on
+  //    half the missions, and the half it was wrong about would depend on nothing but house style.
+  freshBook();
+  { const rows=S.rows(CH[0]);
+    for(let q=0;q<rows.length-2;q++)rows[q].done=true;      // leave two, so the page does not turn yet
+    const first=pay(100);
+    X.done(rows[rows.length-2].id); tick(1);
+    ok(snap(CH[0]).paid===first,'award THEN done: the payout is on the page ('+snap(CH[0]).paid+' of '+first+')');
+    const before=snap(CH[0]).paid;
+    X.done(rows[rows.length-1].id);                          // this one turns the page
+    const atTurn=Object.assign({},snap(CH[0]));
+    const late=pay(100);                                     // ...and pays afterwards, mid-frame
+    tick(2);
+    const after=snap(CH[0]);
+    ok(after.paid===before+late,'done THEN award: the late payout is on the page too ('+
+       after.paid+' = '+before+' + '+late+')');
+
+    // 3. AND IT IS ON THE PAGE THAT EARNED IT, not on the page the turn moved to. The mission that
+    //    turns a page is very often one that awards after done(), by which time curPage() has already
+    //    moved on - so this is the difference between charging the new page for the old page last
+    //    mission and not. It also decided a star: with the payout misfiled, the old page par was
+    //    short by it and granted a style star for earning exactly what it paid.
+    ok(G.chapIdx===1,'the page turned ('+CH[G.chapIdx]+')');
+    ok((snap(CH[1]).paid||0)===0,'the new page starts owing nothing ('+(snap(CH[1]).paid||0)+')');
+
+    // 4. THE STAR IS JUDGED AT END OF FRAME. At the instant of the turn the last payout is not in
+    //    G.score yet; one tick later it is, and both sides of the comparison have it.
+    ok(atTurn.earned<after.earned,'the turning frame was still paying out when the page closed ('+
+       atTurn.earned+' -> '+after.earned+')');
+    ok(S.par(CH[0])===Math.round(S.PARRATIO*after.paid),'par is the ratio times the payout ('+
+       S.par(CH[0])+' = '+S.PARRATIO+' x '+after.paid+')');
+
+    // 5. DENY. This page paid what it paid and the bird earned not a point more, so there was no
+    //    flamboyance in it: earned equals paid, par is half again as much, no star.
+    ok(after.earned===after.paid,'nothing but mission pay landed on this page ('+after.earned+')');
+    ok(after.earned<S.par(CH[0]),'so it is under par ('+after.earned+' < '+S.par(CH[0])+')');
+    ok(S.rec(CH[0]).style===false,'and the style star is DENIED');
+    ok(S.rec(CH[0]).cleared===true,'while CLEARED still landed - the stars are independent'); }
+
+  // 6. GRANT, on the other side of the same par. Freelance chaos in its own frame is NOT mission pay,
+  //    which is the whole point of the purse: it lifts earned without lifting par.
+  freshBook();
+  { const rows=S.rows(CH[0]);
+    for(let q=0;q<rows.length-1;q++)rows[q].done=true;
+    const free=pay(500); tick(2);                            // its own frame, no mission in it
+    ok((snap(CH[0]).paid||0)===0,'freelance chaos in its own frame owes the page nothing ('+
+       (snap(CH[0]).paid||0)+')');
+    const mp=pay(100);
+    X.done(rows[rows.length-1].id); tick(2);
+    const p=snap(CH[0]);
+    ok(p.paid===mp,'only the mission frame counts as pay ('+p.paid+' of '+(free+mp)+' earned)');
+    ok(p.earned>=free,'the freelance points are still EARNED ('+p.earned+')');
+    ok(p.earned>=S.par(CH[0]),'which clears par ('+p.earned+' >= '+S.par(CH[0])+')');
+    ok(S.rec(CH[0]).style===true,'and the style star is GRANTED');
+
+    // 7. IDEMPOTENT. Judging again must not revoke a star already given, and must not re-announce it.
+    const again=S.judge(CH[0]);
+    ok(!!again&&again.granted===true&&again.fresh===false,'a second judgement keeps it and does not re-fire');
+    ok(S.rec(CH[0]).style===true,'the star survives being judged twice'); }
+
+  // 8. A PAGE THAT PAID NOTHING NEVER GRANTS ONE. A book cleared by staging (or by a future cheat)
+  //    has paid==0, and 1.5 x 0 is 0, so a naive comparison would hand out a free star to every page.
+  freshBook();
+  { const rows=S.rows(CH[0]);
+    for(const m of rows)m.done=true;                          // no award() anywhere in that
+    S.sync(); S.judge(CH[0]);
+    ok((snap(CH[0]).paid||0)===0,'the staged page paid nothing ('+(snap(CH[0]).paid||0)+')');
+    ok(S.rec(CH[0]).style===false,'so no style star, even though earned >= par arithmetically');
+    ok(S.par(CH[0])===0,'par on an unpaid page is zero, and zero is not a target ('+S.par(CH[0])+')'); }
+
+  // 9. THE PURSE KEYS ON G.frames, NOT G.time, because the photographer PINS G.time in QUIET and a
+  //    pinned clock would collapse every frame in the run into one purse - which would make freelance
+  //    chaos from any earlier frame count as mission pay.
+  { const f0=G.frames; X.update(1/60); X.update(1/60);
+    ok(G.frames===f0+2,'G.frames advances once per update ('+f0+' -> '+G.frames+')');
+    freshBook();
+    const rows=S.rows(CH[0]);
+    for(let q=0;q<rows.length-1;q++)rows[q].done=true;
+    const pinned=7;                                            // exactly what QUIET does to the clock
+    G.time=pinned; const free=pay(400);
+    G.time=pinned; X.update(1/60);
+    G.time=pinned; X.update(1/60);
+    G.time=pinned; const mp=pay(100);
+    X.done(rows[rows.length-1].id);
+    G.time=pinned; X.update(1/60); X.update(1/60);
+    ok(snap(CH[0]).paid===mp,'with the clock pinned the purse still separates the frames ('+
+       snap(CH[0]).paid+' of '+(free+mp)+')'); }
+
+  // 10. paid RIDES IN THE SAVE, because par has to survive a reload or the star becomes unearnable on
+  //     a page you came back to. Closed pages only - an open page restarts its clock, which is the law
+  //     piece 12 set when the meter itself restarts at zero on load.
+  { freshBook();
+    const rows=S.rows(CH[0]);
+    for(let q=0;q<rows.length-1;q++)rows[q].done=true;
+    pay(120); X.done(rows[rows.length-1].id); tick(2);
+    const paid=snap(CH[0]).paid;
+    ok(paid>0,'a closed page with a payout to remember ('+paid+')');
+    X.SAVE.write();
+    const blob=X.SAVE.load();
+    ok(!!blob&&!!blob.pages&&blob.pages[CH[0]]&&blob.pages[CH[0]].paid===paid,
+       'the payout is on the wire ('+(blob&&blob.pages&&blob.pages[CH[0]]?blob.pages[CH[0]].paid:'absent')+')');
+    G.stars={}; G.pageChaos={};
+    S.init(blob);
+    ok(snap(CH[0]).paid===paid,'and it comes back off a reload ('+snap(CH[0]).paid+')');
+    ok(S.par(CH[0])===Math.round(S.PARRATIO*paid),'so par survives the reload ('+S.par(CH[0])+')');
+    const cur=S.cur();
+    ok((snap(cur).paid||0)===0,'while the page still open restarts its own clock ['+cur+'] ('+
+       (snap(cur).paid||0)+')'); }
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

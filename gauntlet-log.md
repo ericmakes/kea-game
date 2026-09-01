@@ -1245,3 +1245,56 @@ which was the outcome I was least sure of going in.
   is Eric's call, not mine. Proposed replacement wording is in REPORT.md.
 - NO GAME CHANGE: md5 stays 49335b92f810540fbe5e52cfb816929a, gate CERTIFIED-SHIP three times, no
   capture, no re-pin. EYEBALL: nothing visual.
+
+### PIECE: style-star (TODO item 13) — CERTIFIED 071ced95438ec024e44cbb0f4c6c5d8f
+Second of the three page stars. Cleared says you did the page; STYLE says you were flamboyant about
+it. Granted when the chaos earned while the page was open reaches par.
+- THE BRIEF ASKED FOR A NUMBER THE FILE DOES NOT HAVE, and that is the interesting part. "Par v1 =
+  1.5 x the sum of the page missions points" assumes per-mission points exist. They do not: missions
+  carry no points field and every value sits inside the award() call in its own handler. I scraped the
+  source to see whether a table could be built mechanically - pairing each done('id') with the
+  award(N) in the same statement - and it pairs only 17 of the 40 ids. The rest award through prog(),
+  through a shared handler, or nowhere near their own done(). So a hand-written table would have been
+  thirty-nine unverifiable numbers with no assertion able to check a single one of them.
+- SO THE PAGE LEARNS WHAT IT PAID. award() drops every point into a per-frame purse and a mission
+  finishing in that frame claims it. Because a page can only turn once every row on it is done, by
+  page close paid IS the sum of that page missions points - the figure the brief asked for, derived
+  rather than transcribed. It also re-derives itself for free if any award value in the file ever
+  changes, which a table never would.
+- THE PURSE IS PER FRAME BECAUSE BOTH ORDERS EXIST IN THE FILE: nine handlers award and then call
+  done(), eight call done() and then award. A frame is the exact window - all handler code for a tick
+  runs synchronously inside update() - so a claim takes what the frame has banked so far AND anything
+  banked later in the same frame. Asserted in both directions; a star that saw only one order would
+  have been silently wrong on half the missions, and which half would depend on nothing but the house
+  style of whoever wrote each handler.
+- AND THE STAR IS JUDGED AT END OF FRAME, not at the turn. The mission that turns a page may award
+  AFTER done(), so at the instant of the turn the final payout is not in G.score yet and the bar would
+  depend on that handler order too. Measured: at the turn the page reads earned 100, one tick later
+  500. FLAKES law 2 under another name.
+- THE PROBE FOUND A BUG I WOULD OTHERWISE HAVE SHIPPED, which is the whole argument for probing before
+  writing assertions. A late award was routed to G.pageChaos[curPage()] - but the mission that turns
+  the page awards after the turn, when curPage() is ALREADY THE NEXT PAGE. So the new page was charged
+  for the old page last mission, its par inflated before the player had done a thing on it, and the old
+  page par came up short by that payout and handed out a style star for earning exactly what it paid.
+  The purse now remembers WHICH page claimed the frame. Before the fix the case-B page granted at par
+  150 on earned 500; after it correctly denies at par 750 on earned 500.
+- THE ASSERTIONS COMPARE MEASURED DELTAS, NEVER LITERALS, because award() multiplies the base by the
+  live combo. An assertion written against the base value would be asserting the combo multiplier and
+  would break the first time anything touched spree behaviour.
+- VERIFIED ADVERSARIALLY, FOUR WAYS: routing late awards back to curPage() fails five including "the
+  new page starts owing nothing (200)"; dropping the paid>0 guard fails exactly one, the free star for
+  an unpaid page; removing the end-of-frame judging fails four; keying the purse on G.time instead of
+  G.frames fails ten.
+- WHY G.frames AND NOT G.time: QUIET pins G.time for the photographer, and a pinned clock collapses
+  every frame in a run into one purse, which would count freelance chaos from any earlier frame as
+  mission pay. So the piece added a frame counter and the battery pins G.time to 7 exactly the way
+  QUIET does and asserts the purse still separates the frames.
+- paid RIDES IN THE SAVE at no schema cost: the blob already writes pages:G.pageChaos wholesale, so
+  the new field is on the wire and asserted there. Closed pages only, per piece 12 law - an open page
+  restarts its clock because the meter itself restarts at zero on load.
+- NO CAPTURE, same mechanical reason as piece 34: capture.mjs completes no mission and never touches
+  chapIdx, so no page can turn in a frame and the star popup cannot appear in one. Nothing re-pinned.
+- EYEBALL (controller, not frames): play a page, cause some chaos beyond the missions themselves, and
+  the second pip on that page header should fill when the page turns, with a STYLE popup naming the
+  numbers. Clear a page with nothing but the missions and it should stay hollow. PARRATIO is the one
+  number to argue about and it is fenced.
