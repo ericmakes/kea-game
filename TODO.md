@@ -395,3 +395,21 @@ PROOF: two headless builds on the same seed produce identical blade tint
 sequences; diff noise on grass vantages drops to ~zero afterwards.
 RE-PIN: expect a ONE-TIME flag on grass-heavy vantages from the tint
 reshuffle — eyeball, then re-pin the sweep. Permanent near-zero noise after.
+
+## VERDICTS (2026-09-01, Eric)
+- TODO 28 (buried snow patches): UNBURY. Slide both patches clear of the
+  shed footprint - snow banking against the hut walls is welcome. Judge
+  at 10 (and 11 if flagged); leave flagged.
+
+### 34. chapter-travel-beat
+Eric's stated intent: each mission page should FEEL like a different
+environment. The world already delivers this structurally (eight areas,
+one seamless map - the reference games' own pattern); what is missing is
+the presentation. On page turn: brief camera flyover from the bird to the
+new area's centroid, area title card ("THE SKI FIELD"), then return.
+Skippable with any input. No new areas, no teleports - the bird stays
+where it is.
+PROOF: headless - page turn sets the travel-beat state with the correct
+area target, timer expiry restores camera state, any input skips. Battery
+in house style.
+RE-PIN: none expected. Feel and timing: leave flagged for Eric.
