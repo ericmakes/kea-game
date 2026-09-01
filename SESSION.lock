@@ -1,9 +1,0 @@
-HOLDER: overnight gauntlet, session 6 (Claude Code, unattended)
-PURPOSE: OVERNIGHT.md gauntlet - TODO pieces from TODO.md, one piece one commit,
-         branch gauntlet. Writes: untitled-kea-game.html, audits/2026-08-28/harness-everything.js,
-         TODO.md, gauntlet-log.md, REPORT.md, gauntlet/verify/*, gauntlet/capture/baseline/*.
-STARTED: 2026-09-02 (session start, immediately after reading OVERNIGHT.md)
-NOTE: created retroactively the moment the SESSION LOCK rule appeared in OVERNIGHT.md
-      mid-run. At that point the only writes made were untitled-kea-game.html and
-      audits/2026-08-28/harness-everything.js for piece 34, both uncommitted and mine.
-RELEASE: deleted as the final act of the session.

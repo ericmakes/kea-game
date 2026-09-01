@@ -1377,3 +1377,31 @@ this piece moves anything or changes how anything looks.
 - NO CAPTURE: the piece adds fields and reads meshes. Nothing is moved, nothing is drawn, no rnd() draw
   is added or removed, so the seeded stream is untouched and every frame is unchanged by construction.
 - EYEBALL: nothing visual, by design. This one is judged by pieces 19 to 21 using it.
+
+## SESSION END — 2026-09-02, six pieces certified
+Stop condition reached on the 6-piece rule, not on failures: nothing was parked as failed, no piece
+needed a third staging attempt, and no assertion was weakened to pass anything. Tip is
+e19fcd5a9ae90f754e36f26a64ef5509, gate CERTIFIED-SHIP, working tree clean.
+    34 chapter-travel-beat     49335b92f810540fbe5e52cfb816929a
+    46 gate-asserts-positively harness-side, md5 unchanged
+    45 seeded-batteries        harness-side, md5 unchanged
+    13 style-star              071ced95438ec024e44cbb0f4c6c5d8f
+    14 clean-getaway-star      c8ced0cf4a7afb6a3a2faa5f000a476a
+    17 home-positions          e19fcd5a9ae90f754e36f26a64ef5509
+- CAPTURE: full 25-shot pass on the final build, diff 0 flagged, worst 0.9901 against 0.965, and
+  08/09/15 at 1.0000. NOTHING RE-PINNED - the baseline is untouched on disk and in git. A one-off
+  changed-pixel count is recorded in REPORT.md and its ffmpeg recipe is now in TODO 31, where the
+  piece that wants that instrument lives.
+- THE ORDER THE PIECES WERE TAKEN IN MATTERED, and it was not the order the diet lists them in. 46
+  and 45 came second and third on purpose: until the gate could see a dead battery and the batteries
+  stopped flaking, every later piece would have been certified against an instrument that lied a few
+  percent of the time. Piece 36 (tour-chassis) has a "zero observable change" proof contract, and that
+  contract is worth something now in a way it was not this morning.
+- FOUR THINGS FOUND AND FILED, none of them fixed tonight: 45 and 46 were found and fixed; 47 (propAt
+  draws a prop rotation nothing reads - do NOT delete the draw, it repins the world) and 48
+  (harness-everything boots twice, doubling every registry from that line on) are open.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: sections 1 to 3 of REPORT.md. Section 1 is the piece-34
+  collision and it needs Eric, not the next agent - do not revert 1c096b4 on your own judgement.
+- AND THE HABIT CHANGE THAT CAME OUT OF IT: re-read TODO.md and OVERNIGHT.md before STARTING each
+  piece, not once at session start. Both changed under me mid-session tonight, in the same commit, and
+  I only noticed the half of it that the harness told me about.
