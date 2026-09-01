@@ -305,3 +305,55 @@ trusted - measured on the birdless baselines, a naive olive window scored the tu
 the bird and would have passed the empty road.
 SECOND LAW: measure the rig before believing a brief. Two of six pieces (glass, preen) asked for
 something the geometry cannot do, and both were only caught by measuring first.
+
+## SESSION 3 — 2026-09-01
+
+### GATE WAS RED ON ARRIVAL (before any piece)
+The session opened by running the gate on a clean tree at the certified md5 and it came back
+CERT-FAIL: "every driven classic mission completes (12 driven, 1 failed)". Then it went green
+11 times running - 8 standalone battery runs and 3 full gate-shaped serial passes - and has not
+reproduced since.
+- The mission id was UNRECOVERABLE. gate.sh keeps only `tail -1` per battery, so the "FAILED:"
+  console line scrolls past, and the assertion message carried counts without names. That is the
+  actual defect worth fixing: a rare red that cannot say what went red is a red you cannot chase.
+- Fixed the DIAGNOSTICS, not the assertion. The message is byte-identical when green and only
+  grows the ids when it fails, so nothing was weakened and no baseline prose moved.
+- PROVED BY SABOTAGE, because a diagnostic nobody has seen fire is not a diagnostic: killing the
+  `can` driver prints "12 driven, 1 failed: can" - the exact shape of the opening failure. That
+  also settles what the numbers meant. 13 drive() calls each push to driven or failed, so
+  12+1=13: every mission WAS attempted and exactly one did not complete. No mission dropped out.
+- Logged as FLAKES law 11, review-tier under law 8. Next occurrence names itself.
+
+### PIECE: floating-text-cull (TODO item 7) — INVESTIGATION, PREMISE FALSIFIED, no game change
+Verdict: green gate, GAME FILE MD5 UNCHANGED at 347b4b936d00cd12f634f77177ce2f17. No patch,
+because the thing the piece was written to fix does not exist.
+- THE BRIEF OFFERED TWO FORKS - stray label, or legitimate signage - and the answer is neither.
+  THERE IS NO WORLD-SPACE TEXT IN THIS GAME AT ALL. Zero occurrences of the string Sprite in the
+  file, so there is no billboard/label system to leak one. Exactly two fillText sites exist
+  (mkKeaSign CAUTION / NEXT 5 km, and buildSign DONT FEED THE KEA), both painted into a canvas
+  texture on a plate bolted to a post, both accounted for, and neither anywhere near the region
+  complained about.
+- WHAT IS ACTUALLY OUT THERE, identified by projection rather than by squinting: I staged
+  vantage 20 under the capture harness, then projected every mesh in the scene through that
+  camera and listed what landed in the band x 800-960, y 170-210. Twenty hits. The one at the
+  complaint position is a CircleGeometry, 5.2 across, textured, pale #ebf3fa, at world
+  (1.2, 0.05, -38.3), 53 units from the lens, screen (899.5, 191.9). That is a SNOW PATCH.
+- CONFIRMED BY ABLATION, which is the only reason I believe it: hid every flat circle decal on
+  the live page and reshot the same frame. The pale glyph-like band is GONE, and nothing else in
+  the crop moved. Identification closed.
+- WHY IT READS AS TINY LETTERING: it is a flat disc at y=0.05 seen from eye height 2.3 at 53
+  units, so it projects to a roughly one-pixel sliver, and the tussock in front chops that sliver
+  into disconnected pale fragments on a dark ground. Fragmented high-contrast specks in a
+  horizontal row is exactly what small text looks like. It is aliasing, not glyphs.
+- AND IT IS NOT A DEFECT. I suspected the disc was buried in sloping ground - a flat decal at
+  fixed y is the classic way to get a clipped bright band - so I measured. groundHeightAt at
+  (1.2,-38.3) is 0.000, and sampling the whole footprint (16 rays x 4 radii) gives raised
+  samples 0/80. The disc sits correctly on dead-flat country. Distance culling was the briefed
+  remedy for the stray fork and it would be wrong here: a legitimate snow patch that pops out of
+  existence at 40 units is a worse artifact than a distant sliver, and the same aliasing would
+  come back on every other ground decal in the game.
+- NO CODE CHANGE IS THE DELIVERABLE. Recorded rather than improvised on.
+- SEPARATE REAL DEFECT FOUND WHILE DOING THIS, and it is visible in a pinned showcase frame -
+  see TODO item 28. Two of the ten snow patches are buried in the ski-field shed. That is a
+  different frame (vantage 10, not 20) and a different cause, so it is NOT folded into this
+  piece.

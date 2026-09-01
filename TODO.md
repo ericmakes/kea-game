@@ -217,6 +217,37 @@ the reflow logic from piece 5.
 PROOF: state-driven layout flags assert at narrow widths; leave the look
 flagged for Eric.
 
+## FOUND IN SESSION 3 (appended 2026-09-01 by the overnight run)
+
+### 28. snow-patch-grounding  (judge-adjacent — I did NOT improvise on this)
+Found while investigating item 7. Snow patches are laid by the tussock block with a hardcoded
+y=0.05 (halo 0.042), no ground query and no exclusion zones — the only ground decal in the file
+that does neither. Twenty-five lines above them, the G.wear desire paths call paintAt() and lay
+themselves on whatever surface they find (pa.top+0.006), and G.stones calls paintAt() to stay off
+the seal. Snow is the odd one out, and it is not recorded to G at all, so nothing can assert it.
+MEASURED, capture seed 20260828: two of the ten patches are buried in the ski-field shed —
+(-40.94,-40.41) r 2.57 with 45/80 footprint samples at ground height 2.00, and (-39.25,-39.79)
+r 1.69 with 62/80. The shed is a 3.2x2x2.4 box at (-40,1,-40), top 2.00, with a 3.6x0.14x2.8 eave
+slab at 2.10. So most of each disc sits inside the building volume and the rest exits through the
+walls as a hard straight chord. VISIBLE in vantage 10: the shed stands in a white saucer.
+WHY I PARKED IT rather than shipping it overnight:
+  - "lay it on the surface it finds" (the wear convention) is WRONG here — the raised sample is
+    the shed ROOF at 2.00 and the eave underside is at ~2.03, so a disc laid at 2.05 pokes
+    through the eave. Snow belongs on the country, not on the shed.
+  - so the patch must MOVE, and where scenery moves to is a taste call next door to the blocked
+    tussock wave.
+  - and the fix must be stream-neutral or it repins the world. It must consume identical rnd()
+    draws AND build an identical number of meshes: an exclusion test that `continue`s changes the
+    mesh count, and mesh count moves Math.random, which is what tints the grass (item 27). A
+    fixed deterministic offset ladder — try the spot, else try centre+(dx,dz) from a constant
+    table, first clear one wins — is count-neutral and draw-neutral and would do it.
+  - DO ITEM 27 FIRST and this constraint relaxes: once blade tint is on the seeded rnd(), mesh
+    count stops tinting the field and a plain exclusion `continue` becomes legal.
+PROOF once built: register the chosen spots to G.snow the way G.wear and G.stones already do,
+computed in BOTH paths with the meshes still built only when !HEADLESS, then assert no patch
+footprint contains a raised ground sample. That is what makes it node-assertable at all.
+RE-PIN: 10, and any grass vantage the moved patches touch. Leave flagged for Eric.
+
 ## FENCED FOR PLAYTEST (never overnight)
 Par values, timer defaults, DECAY/BOTCH feel, catch balance, results-screen
 look, mode-select copy. The machinery above gets built; the couch tunes it.
