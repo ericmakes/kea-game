@@ -277,6 +277,24 @@ RE-PIN: all of them, ONCE — the sway phase freezes at whatever G.time is chose
 moves slightly. Judge before pinning; leave flagged for Eric.
 WHY IT WAS NOT DONE IN SESSION 3: it is a one-line change with a 25-frame re-pin behind it, and
 that sweep deserves its own piece rather than riding along inside another one.
+CORRECTION, MEASURED IN SESSION 4 — THE SCOPE IS WIDER THAN THE SSIM NUMBERS SAY, AND SO IS THE
+LIST. The session-3 sweep recorded 01_carpark_wide at 1.0000 take-to-take and filed it under
+"clean as found". That figure is wrong. Reshot twice in session 4 against nothing but itself,
+baseline out of the picture: 755 pixels differ by more than 8 grey levels, spread across the FULL
+frame width (bbox x 5..959, y 145..267 - the tussock band at the horizon), hottest 60px cells at
+x 780, 600, 660, 540, 0 and 840, all at y 180. So 01 sways exactly like the frames already on the
+list; it merely hides it better. The reason SSIM missed it is amplitude, not area: max delta is
+only 33 levels, and a low-amplitude change spread thin over a wide band moves SSIM less than the
+fourth decimal place on a 960x540 frame.
+THAT IS THE SAME BLIND SPOT AS ITEM 31, FROM THE OTHER END. 31 is a large change nobody can see
+because SSIM averages it away over the whole frame; this is a small change nobody can see for the
+same reason. Any instrument built for 31 should be pointed at this too, and a changed-pixel count
+would have caught both - it is what caught this one.
+CONSEQUENCES FOR THIS ITEM: (a) do not trust the session-3 "clean as found" column to say which
+vantages the G.time pin will move - it under-reports, so re-measure with a pixel count rather than
+SSIM before deciding what the re-pin sweep covers; (b) "expect the whole set to land near 0.999"
+is optimistic phrasing, since several frames already READ as 0.999+ while still churning
+hundreds of pixels - the honest target is a changed-pixel count near zero, not an SSIM near one.
 
 ### 31. a-tripwire-that-can-see-shading  (harness-side only)
 Found in session 3 by piece 9. The facet-normal smoothing changed the shading of EVERY curved hull

@@ -721,3 +721,38 @@ suspected. Run the full sweep LAST, and salvage rather than rerun.
   tree for Eric. EYEBALL: the door should now read as a flush black door with glass, a handle and a
   step on the caravan flank, instead of a tab sticking out of it. 20 is the decisive one - dead
   astern is where a fin is unmistakable.
+
+### RE-PIN: the full set, judged by Eric — and two frames that needed a second pass
+Eric judged the door in 12, 18 and 20 and re-pinned the whole 25-frame set in one sweep (commit
+59a8493), which also pinned piece 9 smooth hulls and the piece 26 preen vantage. Recorded here
+because the sweep pinned MORE than it looked like it was pinning, and two frames were stale.
+- WHAT WAS STALE. Only 12, 18 and 20 were reshot for piece 10. The other 22 working captures were
+  session-3 shots taken against game md5 d5c59486, so `cp gauntlet/capture/*.png baseline/` pinned
+  22 frames from the PREVIOUS build. Harmless for any frame with no caravan in it, but 01 and 09
+  both look down the carpark at (-11,8), so both were pinned against the pre-door build. Nothing
+  would ever have flagged it - the residual sits at 0.998, far inside the 0.965 threshold - and the
+  next session would have inherited an unexplained ~0.002 on two frames with no cause in its own
+  work. That is precisely how 22_torch_beam sat in BASELINE.md as known-noisy for four builds.
+- CAUGHT BY RESHOOTING 01 AND 09 AFTER THE PIN, not by diff.mjs, which by construction read 1.0000
+  on all 25 immediately after the copy. The lesson generalises: a blanket cp to baseline makes the
+  tripwire agree with itself no matter what state the working captures are in, so the freshness of
+  the working set is a precondition of a re-pin and worth stating out loud before running one.
+- 09 DECOMPOSED CLEAN: 302 pixels changed by more than 8 grey levels, bbox x 452..464, y 189..214 -
+  a 12x25 box, max delta 189. One cause, the caravan door, real and permanent.
+- 01 DID NOT, and my first reading of it to Eric was too coarse. Whole-frame SSIM said 0.9981 and I
+  attributed all of it to the door. Localised, it is TWO causes: 405 pixels in one cell at x 360
+  y 180 (the caravan, max delta 193, real and permanent), plus ~750 pixels spread across the entire
+  frame width at y 145..267 with max delta only 33. The second is not this piece.
+- PROVED BY TAKING THE BASELINE OUT OF THE PICTURE, which is the FLAKES law 12 instrument: reshot
+  01 and diffed take against take. 755 pixels over 8 levels, same bbox, same hot cells at x 780,
+  600, 660, 540, 0, 840 all at y 180, and the caravan cell absent from the hot list. So the grass
+  band is take-to-take noise (TODO 30, the uTime sway) and the caravan cell is the door.
+- AND THE FINDING THAT OUTLASTS THIS PIECE: session 3 recorded 01 at 1.0000 take-to-take and filed
+  it under "clean as found". That number is wrong - 01 churns 755 pixels between takes. SSIM missed
+  it on AMPLITUDE, not area: 33 levels spread thin over a wide band does not move the fourth
+  decimal on a 960x540 frame. This is item 31 from the other end. 31 is a big change SSIM averages
+  away; this is a small change SSIM averages away, and one changed-pixel count catches both. The
+  correction is appended to TODO 30, including the consequence that the session-3 "clean as found"
+  column cannot be trusted to scope the G.time re-pin sweep.
+- 01 and 09 reshot against 006ae2061309cf5d9e96324bb8f1eef9 and pinned. Baseline is now internally
+  consistent with HEAD on all 25.
