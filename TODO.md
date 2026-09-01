@@ -401,7 +401,14 @@ reshuffle — eyeball, then re-pin the sweep. Permanent near-zero noise after.
   shed footprint - snow banking against the hut walls is welcome. Judge
   at 10 (and 11 if flagged); leave flagged.
 
-### 34. chapter-travel-beat  — DONE session 6 (49335b92f810540fbe5e52cfb816929a)
+### 34. chapter-travel-beat  — BUILT session 6 (49335b92f810540fbe5e52cfb816929a)
+SUPERSEDED-BY-38, AND THE TIMING NEEDS SAYING OUT LOUD: Eric's commission arrived in commit af9111e
+while this piece was already patched, proved and gated, and the only mid-session notice I got was the
+OVERNIGHT.md half of that commit, so "do not build 34 separately" was not visible until after the
+commit landed. It is NOT reverted, because what it builds is the machinery piece 38 specifies -
+named anchor table, pure state machine, blend before camLock, fresh-input skip with an arm delay -
+keyed by chapter area rather than by biome. Re-keying it to biomes is a rename of the table and its
+lookup, not a rebuild. If Eric would rather start 38 from nothing: git revert 1c096b4.
 Eric's stated intent: each mission page should FEEL like a different
 environment. The world already delivers this structurally (eight areas,
 one seamless map - the reference games' own pattern); what is missing is
@@ -493,8 +500,11 @@ One biome briefed at a time, only after its predecessor ships and its
 graduation is judged. Never improvised from the intent paragraph alone.
 
 ## FOUND IN SESSION 6 (appended 2026-09-02 by the overnight run)
+NUMBERING: Eric's South Island Tour commission (36-44) landed mid-session and took the numbers I had
+just used. He keeps 36-44 including the 41-44 reservations; my two findings are 45 and 46. Same
+handling as the session-5 collision on 34.
 
-### 36. THE BATTERIES ARE UNSEEDED, WHICH IS THE LAW-11 INTERMITTENT
+### 45. THE BATTERIES ARE UNSEEDED, WHICH IS THE LAW-11 INTERMITTENT
 Laws 11 and 13 blamed a cold or contended node process for two unreproduced red batteries. Session 6
 measured the rate against BUILD instead of shrugging: harness-systems.js fails 3 times in 40 runs on
 the OLD build ccd4782 and 1 in 40 on the new one, and the failing assertion MOVES between runs
@@ -516,7 +526,7 @@ one battery at a time. The prize is large - the gate becomes reproducible, a red
 laws 11 and 13 can be retired rather than worked around.
 PROOF once built: the same 40-run measurement, and it must read 0/40. Keep the instrument.
 
-### 37. gate.sh PASSES A BATTERY THAT CRASHES
+### 46. gate.sh PASSES A BATTERY THAT CRASHES
 Found in session 6 by adversarial sabotage C on piece 34: an unguarded read in a battery threw a
 TypeError, and the battery printed no findings line at all. gate.sh does
 `node $h | grep -v THREE.Material | tail -1` then `grep -q "✗\|FINDINGS"` - a stack trace matches

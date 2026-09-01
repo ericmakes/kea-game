@@ -1099,7 +1099,7 @@ bird to the new area, show a title card, come back, skippable with any input, no
   turn is not new input"; removing travelStart from the page turn fails seventeen.
 - AND SABOTAGE C FOUND A DEFECT IN MY OWN BATTERY, which is the point of doing it: an unguarded
   G.travelLast.ended threw a TypeError instead of reporting a finding. Guarded, re-run, 17 findings.
-  That miss is filed as TODO 37, because a battery that THROWS currently passes the gate.
+  That miss is filed as TODO 46, because a battery that THROWS currently passes the gate.
 - NO CAPTURE PASS, and the reason is mechanical rather than a judgement: capture.mjs never completes
   a mission and never touches chapIdx - grep it - so G.travel is null in all 25 frames, #travelcard
   is display:none by default, and the beat branch in updateCams is gated on G.travel.w>0. Nothing
@@ -1142,7 +1142,29 @@ WHAT I DID NOT PROVE: I could not reproduce the 'can' failure in isolation - 16 
 isolated driver all passed, with the can always landing 0.63u from the pinned bird. So it needs the
 full battery's accumulated prop scatter, not just the bin. That is consistent with the theory and is
 not a demonstration of it, and the honest disposition is a named piece with a real verification cost
-rather than a one-line seed added on a hunch. Filed as TODO 36.
+rather than a one-line seed added on a hunch. Filed as TODO 45.
 CONSEQUENCE FOR THE PROTOCOL TONIGHT: the gate needs re-running until green, and "green after rerun"
 still is not licence to commit on a shrug (law 13's corollary). Piece 34 was committed after the
 full nine-battery gate printed CERTIFIED-SHIP three consecutive times at the same md5.
+
+### COLLISION, SECOND TIME: Eric commissioned the South Island Tour while I was mid-piece
+Commit af9111e landed during piece 34 - OVERNIGHT.md gained the SESSION LOCK rule, WAVES.md gained a
+line, and TODO.md gained THE SOUTH ISLAND TOUR: items 36-44, one map per biome, level select as a
+DOC-brochure paper map, and a graduation rule that migrates each Carpark corner into its new biome as
+that biome ships. Two consequences for this session, and one lesson.
+- MY TWO FINDINGS ARE NOW 45 AND 46. Eric keeps 36-44 including the 41-44 reservations. Same handling
+  as the session-5 clash on 34: he keeps the numbers, I move, and every reference moves with me.
+- PIECE 34 IS SUPERSEDED BY HIS PIECE 38, WHICH SAYS "do not build 34 separately". I had already
+  patched, proved, gated and committed it by the time that sentence was visible: the only mid-session
+  notice I received was the OVERNIGHT.md half of the commit, and nothing re-read TODO.md. I have NOT
+  reverted it, and the reasoning is not sunk cost - piece 38's own BINDING EVIDENCE paragraph asks for
+  exactly the four things piece 34 implements, because it is quoting the session-5 investigation that
+  piece 34 was built from. What separates them is the KEY: 34 anchors per chapter area, 38 anchors per
+  biome, and 38 also wants control state restored across a map load, which cannot exist before the
+  chassis (36) does. Re-keying the table is a rename; the state machine, the fresh-input skip, the arm
+  delay and the pre-camLock blend all carry over unchanged. The revert is one command and it is his
+  call, not mine: git revert 1c096b4.
+- THE LESSON, AND IT IS MINE TO WEAR: I read TODO.md once, at session start, and treated it as stable
+  for the rest of the shift. With a second writer live in the tree that is not safe. From here I
+  re-read TODO.md and OVERNIGHT.md before STARTING each piece, not just at session start, and the
+  SESSION.lock rule Eric added in the same commit exists precisely because this keeps happening.
