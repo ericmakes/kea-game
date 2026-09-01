@@ -635,3 +635,20 @@ see below), subjects 7 checked 0 missing. NOTHING RE-PINNED, per the brief.
   call, which is why the brief marked this judge-required and why I pinned nothing.
 - EYEBALL: crop the caravan front-top rounded corner in 12_seal_midpeel.png and compare against
   gauntlet/capture/baseline/12_seal_midpeel.png. Also 18_rear_close and 01/09 for the ute bonnet.
+
+### STABILITY: THE WHOLE SET IS NOW MEASURED
+Ran the deferred sweep at the end of the session, once no more file edits were needed. Combined
+with the earlier measurements and the takes salvaged from the sweep I killed mid-run, ALL 25
+vantages have now been checked for take-to-take reproducibility, and all 25 pass at 0.995.
+  clean as found   01 1.0000  03 0.9972  04 0.9999  05 0.9969  06 0.9981  07 0.9995  08 0.9983
+                   09 1.0000  10 0.9984  11 0.9988  12 0.9986  13 0.9970  14 0.9978  15 1.0000
+                   17 0.9980  18 0.9995  20 0.9994  23 0.9998  24 0.9997
+  FIXED this run   02 0.9899 -> 0.9988   16 0.9911 -> 0.9983   19 0.9850 -> 0.9988
+                   21 0.9860 -> 0.9986   22 0.9852 -> 0.9970   25 0.9949 -> 0.9998
+So the set was 6 for 25 unreproducible and is now 25 for 25. Worth noting the floor: the best
+frames sit at 0.997-1.000 and the grass-heavy ones at 0.997, which is the uTime sway residual that
+TODO 30 would remove.
+LESSON FOR THE NEXT RUN, on my own process: I started this sweep in the middle of the session and
+it blocked every game-file edit for 25 minutes before I killed it. Its take files were still on
+disk and I recovered real data from them - that is how 02_hut_snow was caught, which I had not
+suspected. Run the full sweep LAST, and salvage rather than rerun.
