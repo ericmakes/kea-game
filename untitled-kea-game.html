@@ -436,17 +436,76 @@ const AMB={on:false,
 const WEARABLE={"ranger's cap":{build:'rangercap',owner:'rex',mission:'b_cap'},
                 "tramper's beanie":{build:'beanie',owner:'tom',mission:'b_beanie'},
                 "ski goggles":{build:'goggles',owner:null,mission:'s_goggles'}};
+/* THE STAR LEDGER (2026-09-01). Three stars per PAGE of the to-do list:
+     cleared - every mission on the page is done (derivable, so it can always be retro-granted)
+     style   - the chaos earned WHILE the page was open cleared par (piece 13 grants it)
+     clean   - nobody got caged while the page was open (piece 14 grants it)
+   Keyed by AREA rather than by chapter index, so reordering or inserting a chapter cannot
+   silently move somebody stars. The per-page chaos snapshot is what makes 'earned while the page
+   was open' answerable at all: the run total cannot tell you which page paid for it.
+   NOTE the meter is G.score. G.chaos is read once at the night auto-driver and never assigned
+   anywhere in the file, so it is undefined - filed as TODO 34, deliberately not fixed here. */
+const STARKINDS=['cleared','style','clean'];
+function starRec(area){ if(!G.stars)G.stars={};
+  let r=G.stars[area]; if(!r){ r={cleared:false,style:false,clean:false}; G.stars[area]=r; } return r; }
+function starCount(area){ const r=G.stars&&G.stars[area]; return r?STARKINDS.filter(k=>!!r[k]).length:0; }
+function starPips(area){ const r=G.stars&&G.stars[area];
+  return STARKINDS.map(k=>(r&&r[k])?'★':'☆').join(''); }
+function pageRows(area){ return G.missions.filter(m=>m.area===area&&!m.finale&&!m.hide&&!m.bonus); }
+function pageCleared(area){ const rows=pageRows(area); return rows.length>0&&rows.every(m=>m.done); }
+function curPage(){ return (G.chapters&&G.chapters[G.chapIdx||0])||null; }
+/* CLEARED is a function of the done list, so the same call serves the live grant and the
+   retro-grant for a legacy blob that never stored a star. Idempotent, returns how many it added. */
+function syncClearedStars(){ let n=0;
+  for(const a of (G.chapters||[])) if(pageCleared(a)&&!starRec(a).cleared){ starRec(a).cleared=true; n++; }
+  return n; }
+function pageSnap(area){ if(!area)return null; if(!G.pageChaos)G.pageChaos={};
+  return G.pageChaos[area]||(G.pageChaos[area]={open:0,close:null,earned:0}); }
+function pageOpen(area){ const p=pageSnap(area); if(!p)return null;
+  p.open=G.score||0; p.close=null; p.earned=0; return p; }
+function pageClose(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return null;
+  p.close=G.score||0; p.earned=Math.max(0,p.close-p.open); return p; }
+function pageEarned(area){ const p=area&&G.pageChaos&&G.pageChaos[area]; if(!p)return 0;
+  return p.close==null?Math.max(0,(G.score||0)-p.open):p.earned; }
+/* the header line for chapter i, computed WITHOUT the DOM so it can be asserted headless */
+function pageHeader(i){ const a=G.chapters&&G.chapters[i]; if(!a)return null;
+  const ci=G.chapIdx||0, pips=starPips(a), stars=starCount(a);
+  const state=i<ci?'cleared':(i===ci?'open':(i===ci+1?'next':'hidden'));
+  const text=state==='cleared'?('✓ '+a+' — PAGE CLEARED  '+pips)
+            :state==='open'?(a+'  '+pips)
+            :state==='next'?'??? — THE NEXT PAGE':null;
+  return {area:a,state,pips,stars,text}; }
+/* hydrate from a save blob of ANY vintage, then open the live page */
+function starsInit(b){
+  // the BLOB is authoritative, exactly as the done list is: reset then hydrate, so that wiping the
+  // save at the title and restarting cannot leave a star behind that no save record supports.
+  G.stars={}; G.pageChaos={};
+  const st=b&&b.stars;
+  if(st)for(const a in st){ const r=starRec(a), sv=st[a]||{};
+    for(const k of STARKINDS)if(sv[k])r[k]=true; }
+  const pg=b&&b.pages;
+  // only CLOSED pages restore their snapshot: the chaos meter itself restarts at 0 on load, so a
+  // page still in progress must restart its style clock rather than measure against a stale open.
+  if(pg)for(const a in pg){ const p=pg[a]||{};
+    if(p.close==null)continue;
+    G.pageChaos[a]={open:+p.open||0,close:+p.close||0,earned:+p.earned||0}; }
+  const retro=syncClearedStars();
+  pageOpen(curPage());
+  return {stars:!!st,pages:!!pg,retro,v:(b&&b.v)||1}; }
+
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
   write(){ if(!this.ok())return; try{ localStorage.setItem(this.key(),JSON.stringify({
+    v:2,
     done:G.missions.filter(m=>m.done).map(m=>m.id), chapIdx:G.chapIdx||0,
     peak:G.chaosPeak||0, t:G.playT||0, band:G.bandIdx||0,
+    stars:G.stars||{}, pages:G.pageChaos||{},
     hats:G.keas.map(k=>(k.hatProp&&k.hatProp.name)||null) })); }catch(e){} },
   load(){ if(!this.ok())return null; try{ const r=localStorage.getItem(this.key()); return r?JSON.parse(r):null; }catch(e){ return null; } },
   wipe(){ if(!this.ok())return; try{ localStorage.removeItem('keaSaveV1_n'); localStorage.removeItem('keaSaveV1_c'); }catch(e){} }
 };
-function applySave(){ const b=SAVE.load(); if(!b)return renderTodo();
+function applySave(){ const b=SAVE.load(); if(!b){ starsInit(null); return renderTodo(); }
   G.chaosPeak=Math.max(G.chaosPeak||0,b.peak||0); G.playT=b.t||G.playT||0; G.bandIdx=b.band||0;
   let any=false; for(const id of (b.done||[])){ const m=G.missions.find(m=>m.id===id); if(m&&!m.done){ m.done=true; any=true; } }
   if(any){
@@ -457,6 +516,7 @@ function applySave(){ const b=SAVE.load(); if(!b)return renderTodo();
       for(const x of G.missions)if(x.bonus&&x.locked)x.locked=false;
       popup('THE FINALE UNLOCKS','APEX MENACE — four in pursuit, then home to the nest',0,null,true); AU.fanfare&&AU.fanfare(); }
   }
+  starsInit(b);
   rewear(b.hats);
   renderTodo();
 }
@@ -486,6 +546,7 @@ const G={
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
+  stars:{}, pageChaos:{},
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -2955,13 +3016,16 @@ function missionDone(m){
   const open=G.missions.filter(x=>!x.finale&&!x.bonus&&!x.done);
   if(G.colossal)return;
   if(G.chapters){
+    syncClearedStars();
     let moved=false;
     while(G.chapIdx<G.chapters.length-1){
       const rows=G.missions.filter(x=>x.area===G.chapters[G.chapIdx]&&!x.finale&&!x.hide&&!x.bonus);
       if(rows.length&&!rows.every(x=>x.done))break;
+      pageClose(G.chapters[G.chapIdx]);
       G.chapIdx++; moved=true;
     }
-    if(moved){ popup('PAGE TURNED','NOW: '+G.chapters[G.chapIdx],0,null,true); AU.ding(); flashTodo(); }
+    if(moved){ pageOpen(curPage());
+      popup('PAGE TURNED','NOW: '+G.chapters[G.chapIdx],0,null,true); AU.ding(); flashTodo(); }
   }
   if(open.length===0&&!G.finaleOn){
     G.finaleOn=true; const f=G.missions.find(x=>x.id==='apex'); f.locked=false;
@@ -3140,9 +3204,10 @@ function renderTodo(){
     for(let i=0;i<G.chapters.length;i++){
       const rows=G.missions.filter(m=>m.area===G.chapters[i]&&!m.finale&&!m.hide&&!m.bonus);
       if(!rows.length)continue;
-      if(i<G.chapIdx){ addHead('\u2713 '+G.chapters[i]+' \u2014 PAGE CLEARED'); continue; }
-      if(i===G.chapIdx){ addHead(G.chapters[i]); rows.forEach(addRow); continue; }
-      if(i===G.chapIdx+1){ addHead('??? \u2014 THE NEXT PAGE'); }
+      const hd=pageHeader(i);
+      if(i<G.chapIdx){ addHead(hd.text); continue; }
+      if(i===G.chapIdx){ addHead(hd.text); rows.forEach(addRow); continue; }
+      if(i===G.chapIdx+1){ addHead(hd.text); }
     }
     const bonus=G.missions.filter(m=>m.bonus&&!m.locked&&!m.hide);
     if(bonus.length){ addHead(bonus[0].area); bonus.forEach(addRow); }
@@ -3453,7 +3518,11 @@ function boot(){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,jailFull,jailedKea,grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,jailFull,jailedKea,
+    STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
+           rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
+           snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit},
+    grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

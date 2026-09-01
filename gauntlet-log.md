@@ -859,3 +859,59 @@ first node invocation of the session, so no repeat of the FLAKES law 13 cold-nod
 - EYEBALL (controller, not frames): at WANTED 3 with two birds, get one caged, then walk the second
   into rex. Expect a feather burst and NO VACANCY / "the cell is taken - shooed instead", and the
   first bird still in the crate.
+
+### PIECE: star-ledger (TODO item 12) — CERTIFIED cb5ae4fc49ea795e65aab68cd4dca0a5
+- WHAT IT IS. Three stars per PAGE of the to-do list - cleared, style, clean - plus a per-page chaos
+  snapshot, saved as schema v2. This piece owns the storage, the one grant that is derivable
+  (cleared), the retro-grant for old saves, and the header pips. Pieces 13 and 14 grant style and
+  clean on top of it and need nothing else from the game file.
+- KEYED BY AREA, NOT BY CHAPTER INDEX. G.chapters is an array of area names and G.chapIdx is a
+  position in it; if a chapter is ever inserted or reordered, an index-keyed ledger silently moves
+  somebody stars from one page to another. Area strings are what the missions themselves carry
+  (m.area), so they are the stable key.
+- THE SNAPSHOT IS THE LOAD-BEARING PART, and it is why this piece exists before 13. "Chaos earned
+  while the page was open" is not answerable from the run total - the total cannot say which page
+  paid for it. So each page records {open, close, earned}: pageOpen stamps the meter, pageClose
+  stamps it again and stores the difference, and pageEarned reads the live delta for a page still
+  in progress. The page turn in missionDone now closes the page it leaves before advancing chapIdx
+  and opens the page it lands on, which is the only moment either fact is knowable.
+- THE METER IS G.score, AND FINDING THAT OUT TURNED UP A DEAD BRANCH. I went looking for G.chaos
+  because the night driver reads it, and G.chaos is never assigned anywhere in the file - one read,
+  zero writes - so `G.wanted>=3||G.chaos>=260` can only ever fire on the WANTED half and night can
+  never arrive on chaos alone. The HUD renders 'CHAOS '+G.score, so G.score is the meter and that is
+  what the ledger snapshots. Filed as TODO 34 with both honest fixes; NOT fixed here, because
+  switching that clause on changes when night falls, which is a feel change on the night vantages.
+- CLEARED IS DERIVABLE, AND THAT IS THE WHOLE RETRO-GRANT. One function, syncClearedStars(), grants
+  the star for any page whose every non-finale non-bonus non-hidden row is done. It is idempotent,
+  it runs on the page turn AND on load, and because a v1 blob still carries the done list, a player
+  who cleared four pages before this piece existed gets four pips back on their first load. Style
+  and clean are NOT derivable from a done list, so the loader does not invent them - asserted.
+- THE BLOB IS AUTHORITATIVE, RESET-THEN-HYDRATE, which is the same contract the done list already
+  has. starsInit clears G.stars and G.pageChaos and rebuilds them from the save. Without that, the
+  Backspace-at-title wipe leaves stars standing in memory with no save record behind them, and the
+  next startGame shows pips for a run that no longer exists. Adversarially confirmed: keeping the
+  old `if(!G.stars)` guard goes red on four assertions including "wiping the save clears the ledger
+  too (2 pages recorded)".
+- A PAGE STILL IN PROGRESS IS RE-OPENED, NOT RESTORED. Its saved `open` was stamped against a meter
+  from a previous session, and G.score restarts at whatever it restarts at, so restoring the old
+  open would compute a nonsense earned - negative, clamped to zero, silently robbing the style star.
+  Only CLOSED pages restore their snapshot; the live page restarts its style clock. Stated in a
+  comment in the file because it is a rule somebody will otherwise "fix".
+- THE STORAGE KEY IS UNCHANGED. 'keaSaveV1_'+n/c stays exactly as it was and v:2 rides inside the
+  blob. Bumping the key name is the obvious move and it is wrong: the key is how a returning player
+  is identified, so a new key wipes every run currently alive. Every v1 field is still written, so
+  an older build reading a v2 blob still works - asserted on the wire.
+- THE HEADER IS COMPUTED WITHOUT THE DOM. pageHeader(i) returns {area,state,pips,stars,text} and
+  renderTodo does nothing but hand text to addHead. That is the same seam piece 5 used for the TAB
+  reflow and piece 2 for MAPKIND - the render becomes assertable node-only, HEADLESS untouched.
+  States are cleared / open / next / hidden, and off the end of the book returns null.
+- VERIFIED ADVERSARIALLY, THREE WAYS, each red on exactly its own assertions: dropping the
+  retro-grant fails only "CLEARED is retro-granted from a v1 done list"; dropping pageClose fails
+  four including "earned figure (2105 -> null = 0)"; keeping stars across startGame fails the wipe
+  and the fresh-run assertions. Restored and the md5 re-confirmed each time.
+- NO CAPTURE, and this one is worth stating precisely because it looks like a HUD change. QUIET in
+  capture.mjs sets #todo display:none for every shot, so the to-do panel is not in a single one of
+  the 25 frames and the pips cannot appear in the baseline. Nothing reshot, nothing re-pinned.
+- EYEBALL (controller, not frames): TAB open. Every page header should carry three pips, hollow to
+  start. Clear a page and its header should read "✓ THE CARPARK — PAGE CLEARED  ★☆☆". Wipe with
+  Backspace at the title and every pip should go hollow again.

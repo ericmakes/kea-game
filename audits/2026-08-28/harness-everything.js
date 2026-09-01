@@ -795,6 +795,107 @@ C.section('ONE CELL, ONE BIRD — jail occupancy is global, and a full cell shoo
   G._cageSpy=null; G._shooSpy=null;
 }
 
+C.section('THE STAR LEDGER — three stars a page, schema v2, and no cleared page is ever lost');
+// The to-do list already has PAGES; it had no memory of how well any of them went. The ledger adds
+// three stars per page keyed by AREA - cleared, style, clean - plus a per-page chaos snapshot,
+// which is the thing that makes "earned WHILE the page was open" answerable at all: the run total
+// cannot tell you which page paid for it. Pieces 13 and 14 grant style and clean; this piece owns
+// the storage, the derivable cleared grant, the retro-grant for old saves, and the header pips.
+// Storage is swapped for an inspectable Map so the wire format can be read, then handed back.
+{
+  const realLS=globalThis.localStorage, _m=new Map();
+  globalThis.localStorage={getItem:k=>_m.has(k)?_m.get(k):null,
+                           setItem:(k,v)=>_m.set(k,String(v)),removeItem:k=>_m.delete(k)};
+  const S=X.STARS;
+  try{
+    // 1. A FRESH RUN. The ledger is reset and hydrated on every startGame the way the done list is,
+    //    so a wiped save cannot leave a star standing that no save record supports.
+    X.SAVE.wipe(); X.startGame(1); tick(8); park();
+    const P1A=S.cur();
+    ok(P1A==='THE CARPARK','page one is the open page ('+P1A+')');
+    ok(Object.keys(G.stars).length===0,'no page has a star yet on a fresh run ('+
+       Object.keys(G.stars).length+' recorded)');
+    ok(S.pips(P1A)==='☆☆☆'&&S.count(P1A)===0,'so the open page shows three hollow pips ('+S.pips(P1A)+')');
+    { const snap=G.pageChaos[P1A];
+      ok(!!snap&&snap.close===null,'the open page has a live snapshot, not a closed one');
+      ok(snap.open===(G.score||0),'and it opened at the current meter ('+snap.open+' vs score '+(G.score||0)+')'); }
+
+    // 2. THE HEADER IS COMPUTED WITHOUT THE DOM, which is what makes the render assertable at all
+    //    (the same seam as plateLines and hudReflow).
+    ok(S.header(0).state==='open'&&S.header(0).text.indexOf('☆☆☆')>0,
+       'the open page header carries its pips ('+S.header(0).text+')');
+    ok(S.header(1).state==='next'&&S.header(1).text.indexOf('THE NEXT PAGE')>0,
+       'the page after it is still a question mark ('+S.header(1).text+')');
+    ok(S.header(2).text===null,'and pages beyond that render no header at all');
+    ok(S.header(99)===null,'off the end of the book returns nothing');
+
+    // 3. CLEAR THE PAGE. Chaos is banked first so the snapshot has something to measure, then every
+    //    row of page one is ticked through done() - the real completion path, popups and all.
+    const before=G.score||0;
+    X.award(60,'LEDGER TEST',null); X.award(40,'LEDGER TEST',null);
+    ok((G.score||0)>before,'the meter moved while page one was open ('+before+' -> '+(G.score||0)+')');
+    const rows=S.rows(P1A);
+    ok(rows.length>0,'page one has rows to clear ('+rows.length+')');
+    for(const m of rows)X.done(m.id);
+    tick(6);
+    ok(S.rec(P1A).cleared===true,'CLEARED lands on the page whose every row is done');
+    ok(S.count(P1A)===1&&S.pips(P1A)==='★☆☆','one filled pip, and it is the first one ('+S.pips(P1A)+')');
+    ok(S.cur()!==P1A,'the page turned ('+P1A+' -> '+S.cur()+')');
+    { const snap=G.pageChaos[P1A];
+      ok(snap.close!==null,'the page it left is CLOSED');
+      ok(snap.earned===snap.close-snap.open&&snap.earned>0,
+         'and its earned figure is the meter it actually moved while open ('+snap.open+' -> '+
+         snap.close+' = '+snap.earned+')'); }
+    { const snap=G.pageChaos[S.cur()];
+      ok(!!snap&&snap.close===null&&snap.open===(G.score||0),
+         'the page it landed on opened fresh at the current meter ('+(snap?snap.open:'none')+')');
+      ok(S.earned(S.cur())===0,'so the new page has earned nothing yet ('+S.earned(S.cur())+')'); }
+    ok(S.header(0).state==='cleared'&&S.header(0).text.indexOf('★☆☆')>0,
+       'and the cleared page header shows the star it won ('+S.header(0).text+')');
+
+    // 4. THE WIRE FORMAT. v2, with a stars map and a pages map, under the SAME storage key - the
+    //    key is what a returning player is identified by, so bumping it would wipe every run alive.
+    X.SAVE.write();
+    const raw=_m.get('keaSaveV1_n');
+    ok(!!raw,'a blob was written under the unchanged v1 key name');
+    const blob=JSON.parse(raw);
+    ok(blob.v===2,'the schema announces itself as v2 ('+blob.v+')');
+    ok(!!blob.stars&&blob.stars[P1A]&&blob.stars[P1A].cleared===true,'the star is on the wire');
+    ok(!!blob.pages&&blob.pages[P1A]&&blob.pages[P1A].earned>0,
+       'so is the page chaos snapshot ('+JSON.stringify(blob.pages[P1A])+')');
+    ok(Array.isArray(blob.done)&&blob.done.length>=rows.length&&'peak' in blob&&'hats' in blob,
+       'and every v1 field is still there, so an older build reading this blob still works');
+
+    // 5. ROUND TRIP. Restart and the stars come back off the blob, not off the world.
+    const earnedV2=blob.pages[P1A].earned;
+    X.startGame(1); tick(12);
+    ok(S.rec(P1A).cleared===true,'the star survives the reload');
+    ok(G.pageChaos[P1A]&&G.pageChaos[P1A].earned===earnedV2,
+       'and so does the closed page snapshot ('+(G.pageChaos[P1A]||{}).earned+' vs '+earnedV2+')');
+    ok(G.pageChaos[S.cur()]&&G.pageChaos[S.cur()].close===null,
+       'while the page still in progress is re-opened rather than restored, because the meter itself restarts');
+
+    // 6. THE LEGACY BLOB — the assertion the piece exists for. A v1 save has a done list and no
+    //    stars at all. CLEARED is a function of the done list, so it is re-derived and nobody who
+    //    cleared a page before this piece existed loses the pip for it.
+    const legacy={done:blob.done,chapIdx:blob.chapIdx,peak:blob.peak,t:blob.t,band:blob.band,hats:blob.hats};
+    ok(!('v' in legacy)&&!('stars' in legacy)&&!('pages' in legacy),'the legacy blob has no schema marker and no ledger');
+    _m.set('keaSaveV1_n',JSON.stringify(legacy));
+    X.startGame(1); tick(12);
+    ok(S.rec(P1A).cleared===true,'CLEARED is retro-granted from a v1 done list ('+S.pips(P1A)+')');
+    ok(S.rec(P1A).style===false&&S.rec(P1A).clean===false,
+       'and ONLY cleared - style and clean are not derivable, so they are not invented');
+    ok(!G.pageChaos[P1A]||G.pageChaos[P1A].close===null||G.pageChaos[P1A].earned===0,
+       'no chaos snapshot is fabricated for a page the old save never measured');
+
+    // 7. A WIPE TAKES THE LEDGER WITH IT. Same path as the Backspace-at-title wipe.
+    X.SAVE.wipe(); X.startGame(1); tick(12);
+    ok(Object.keys(G.stars).length===0,'wiping the save clears the ledger too ('+
+       Object.keys(G.stars).length+' pages recorded)');
+    ok(S.pips('THE CARPARK')==='☆☆☆','back to three hollow pips on page one');
+  } finally { globalThis.localStorage=realLS; }
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

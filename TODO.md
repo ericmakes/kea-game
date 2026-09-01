@@ -413,3 +413,20 @@ PROOF: headless - page turn sets the travel-beat state with the correct
 area target, timer expiry restores camera state, any input skips. Battery
 in house style.
 RE-PIN: none expected. Feel and timing: leave flagged for Eric.
+
+### 34. G.chaos is read but never assigned  (found in session 5 by piece 12)
+The night auto-driver at the `if(!G.nightManual&&!G.night&&G.running&&!G.won&&(G.wanted>=3||G.chaos>=260))`
+test reads G.chaos. Nothing in the file ever assigns G.chaos - grep it: one read, zero writes. The
+chaos meter is G.score (the HUD literally renders 'CHAOS '+G.score). So `G.chaos>=260` evaluates
+`undefined>=260`, which is false forever, and the second half of that condition is dead code: night
+can only ever be triggered by WANTED >= 3, never by a big quiet chaos total.
+NOT FIXED IN PIECE 12, deliberately - piece 12 needed to know which property is the meter (it uses
+G.score) and finding this was a side effect. Fixing it CHANGES WHEN NIGHT FALLS, which is a feel
+change on the night vantages (21, 22) and arguably a playtest call, not an overnight one.
+TWO HONEST OPTIONS: (a) point the test at G.score, which switches the branch on and makes night
+arrive at 260 chaos as the code plainly intends; or (b) delete the clause, which keeps today's
+behaviour and stops the file lying about it. (a) is almost certainly what was meant.
+PROOF once built: stage chaos just under and just over the threshold with wanted at 0 and assert
+G.night flips on exactly one side of it - currently that test cannot be made to pass at all.
+RE-PIN: none from the code change itself, but night arriving earlier may change what a playtest
+sees. Leave the decision to Eric.
