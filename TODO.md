@@ -1265,3 +1265,34 @@ override it. PIN the same assignment every frame instead, which is what the othe
 do, and derive the offset the way the stage line already does.
 RE-PIN: 20 only, and it is a judged frame because holding the camera still WILL land it somewhere
 slightly different from the eased position the baseline caught. Measure first, leave flagged.
+
+### 70. THE LAST OF THE CHURN IS dt-WEIGHTED LERPS, AND ONE VANTAGE IS NOT THAT
+Investigated in session 12, with the TODO 30+67 patch applied so that only the residual was left.
+After the caption is parked and the clock is pinned, the whole set churns under 130 px except four
+vantages, and this is what those four are. NOTHING IS SHIPPED HERE - it is a name for the class the
+08_readability_320 comment guessed at in session 8, now measured on a second and third vantage.
+    20_dead_rear   5037   TODO 69, the easing camera. Not this class.
+    09_colossal     820   its own award popups, kept on purpose by the __keaFeedKeep exception.
+    12_seal_midpeel 704   THIS CLASS.
+    22_torch_beam   364   NOT this class, and not yet named. See below.
+    13_idle_preen   229   this class.
+12_seal_midpeel IS THE CLEAN CASE AND IT IS THE WINGS. Probed at shutter time across takes: the frame
+count is 142, 142, 143; the bird is y 0, vy 0, grounded true every time; body, head and tail
+rotations are IDENTICAL to five decimals; the four freed seal segments are identical to four
+decimals. The changed pixels are a single blob at x420..540 y360..420, which is the bird itself. The
+wings are what differ - rz 0.45017, 0.45034, 0.47679 - and the third take has the SAME flapPh as the
+first, so it is not the flap phase. Wing rest is a lerp(current, target, dt*k), so its value depends
+on the SEQUENCE of real dt values and not on the frame count or on any pinnable clock.
+PROVED BY LETTING IT CONVERGE. With the settle raised from 900ms to 4000ms: 12_seal_midpeel
+704 -> 106 and 13_idle_preen 89 -> 28. That is a converging accumulator, measured, not argued.
+22_torch_beam DOES NOT CONVERGE: 364 -> 297 over the same test, so it is something else. Its churn
+sits at x660..720 y180..300, which is Rex and the torch. Rex is pinned to state 'chase' every frame
+by that vantage and a chase walk cycle may never settle. NOT INVESTIGATED FURTHER - time-boxed under
+FLAKES law 8 after three probes on 12, and filed rather than guessed at.
+THE TWO WAYS OUT, and both re-pin, so both are yours:
+  (a) A FIXED dt FOR THE RIG - the deterministic frame clock the 08_readability_320 comment already
+      named and attributed to TODO 33. It fixes the class outright and every frame moves.
+  (b) A LONGER SETTLE on the four affected vantages, which is one number per shot rather than a rig
+      change. Cheaper, weaker - 106 px is not 0 - and it still moves those frames.
+DO NOT take (b) globally: the settle is 900ms x 30 shots today and 4000ms would make a capture pass
+take three times as long for four vantages worth of benefit.
