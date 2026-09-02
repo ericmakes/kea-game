@@ -775,3 +775,14 @@ mission and that it is the cage one. The day somebody makes it reachable, that a
 says so - which is exactly when a human should read the copy and decide.
 PROOF once built: stand a bird in the hint radius in both modes and assert the plate carries the
 resolved line for the mode it is in. The resolver and its display path are already proved by 52.
+
+### 56. bird-shadow-quality  (spotted in a live frame, 2026-09-02)
+The kea's cast shadow reads as a hard-edged flat duplicate of the mesh -
+oversized and stretched for the near-overhead light, and detached under
+the tail - not a soft contact shadow. Distinct from the Wave-1 "nothing
+else casts a shadow" gap, which stands. Soften/scale the bird's own
+shadow toward a grounded contact read; if it's a blob, fix its size and
+anchor; if it's a shadow map, soften the edge and correct the projection.
+PROOF: shadow footprint bounded to a sane contact size at the feet across
+representative poses; no detached gap under the tail.
+RE-PIN: leave any affected vantage flagged for Eric.
