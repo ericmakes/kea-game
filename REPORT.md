@@ -1,145 +1,150 @@
-# REPORT — overnight session 11, 2026-09-02
+# REPORT — overnight session 12, 2026-09-02
 
-Stop condition: **6 pieces certified**. Your order was 39 first, additive only, no graduation — then
-the numbered queue — and that is what happened. Final build **8232590523658dfc3f5a1fe59a916de0**,
-gate CERTIFIED-SHIP, working tree clean, **0 of 25 pinned vantages flagged**, three new vantages shot,
-measured and deliberately left unpinned.
+Stop condition: **6 pieces certified**. Your order was the numbered queue, and the numbered queue is
+what ran. **The game file was never opened.** Final build **8232590523658dfc3f5a1fe59a916de0**,
+unchanged from the tip you left, gate CERTIFIED-SHIP, working tree clean, **0 of 28 pinned vantages
+flagged**, subjects 15 checked 0 missing, boxdiff 11 compared with only the two known ones flagged,
+three selftests ALL PASS. **Nothing was re-pinned.**
 
-**THE TOUR IS REACHABLE. A PLAYER CAN GO TO THE SKI FIELD AND FIND ITS OWN LIST OF JOBS THERE.** 37
-built the brochure, 38 built the flyover, and for two sessions neither could be triggered by anybody.
-Tonight: press **M** with six stars, click **GO** on THE CLUB SKI FIELD, and the flyover carries you
-to a club field with a rope tow, a day lodge, three racks of somebody else's gear, a groomed band and
-sixteen drifts banked against the buildings — where **TAB** shows THE ROPE TOW ☆☆☆ and eight jobs
-about a mountain instead of eight pages about a carpark. Driven end to end in a real browser by
-`node gauntlet/verify/journey.mjs`, which no longer injects a stand-in because there is a real map to
-drive into.
+**ONE PATCH AND ONE RE-PIN MAKES THIS RIG DETERMINISTIC, AND THAT IS THE WHOLE REPORT.** Park the
+caption, pin the clock, and **nineteen of twenty-eight vantages fall under 100 changed pixels of
+cross-run churn, with four at exactly zero** — from a set whose worst was 8791. That is the target
+TODO 33 named back in session 4 and that nothing here could measure until tonight. It costs 11
+flagged frames and a look call on the whole set, so it is measured, packaged and **parked for you**:
+`gauntlet/parked/todo30-and-67-deterministic-rig.patch` applies clean.
 
 ## Shipped
 
-| # | piece | md5 | one line |
-|---|-------|-----|----------|
-| 39 | skifield-biome | `aff1fa389a8e8ed138299474e77dc028` | the second map, additive only — and three globals that only looked like constants |
-| 40 | skifield-missions | `1ba30ea41fe5df6e624f3919ad4cfad9` | the to-do list belongs to the map; eight jobs, a finale, a coop row |
-| 62 | build-handles-swept | `789c9056e7c0e0d96007888e4aa22389` | twenty-one handles a build left pointing at a discarded scene |
-| 63 | props-rest-on-rails | `b541758aae2631001ea2a397106fbffc` | twelve of twenty-two props were on the ground in three seconds |
-| 65 | peak-chaos-is-alive | `9dfe7f3d147d65b4dc639df8775ab575` | PEAK 0 was not modesty, it was a dead read, for every player, always |
-| 66 | the-footer-is-a-clock | `8232590523658dfc3f5a1fe59a916de0` | and the footer only told you about it when a mission landed |
+| # | piece | one line |
+|---|-------|----------|
+| 31 | changed-pixel-tripwire | `pxdiff.mjs` — every instrument here was SSIM, and SSIM cannot see a re-shade |
+| 33 | cross-run-churn | `crossrun.mjs` — the third question about a frame, and it corrected 31 an hour later |
+| 61 | subject-boxes-03-13-18 | boxdiff coverage 8 → 11; two of three re-posings pass `diff.mjs` outright |
+| 32 | bevel-flank-audit | it is not caravan-only: 52 panels prove their own intent across nine bodies |
+| 70 | name-the-last-churn | the residual is dt-weighted lerps, measured by letting them converge |
+| 22 | name-the-torch-churn | Rex's arm, not the torch — and it corrects piece 70 one commit later |
 
-Plus one commit that is not a piece: the **stability record** for the three new vantages, written into
-`capture.mjs` beside their staging.
+Plus two commits that are **not** pieces: the **MEASURE** records for TODO 67 and TODO 30, each with
+a patch in `gauntlet/parked/` and the full before/after table in its TODO entry.
 
 ## Three things I need you to decide
 
-1. **The graduation is still yours, and it is now filed as its own piece (39b).** The carpark ski
-   corner and its five missions still live in the carpark. `propAt` keeps a deliberate `rnd` draw per
-   prop precisely so the country does not move, so deleting five props reshuffles grass, snow, tussock
-   and beech across all 25 baselines — and it takes five missions and a star page out of a live save.
-   **My recommendation: do it AFTER 40b**, so the missions graduate INTO a map that already has verbs
-   of its own rather than being deleted from one map and reinvented in another.
-2. **Three first pins to judge, and reproducibility is no longer part of the question.** 28, 29 and 30
-   were measured before anybody pins them — three sweeps of five takes plus a fourth at the shipped
-   build, worst take-to-take 0.9990 against a 0.995 bar, where your twitchy carpark set reads 0.9960
-   on the same machine tonight. They are pinnable. What is left is the look: the mountain ring is the
-   carpark's own construction with ski-field radii (deliberately NOT a new silhouette language, which
-   is on your blocked list), and the skis now stand upright in the racks.
-3. **`10_skifield` is RE-PINNED and it is the one pin I made tonight.** The skis and poles are on the
-   rack instead of lying in the tussock, which read 0.9909 — under the 0.965 threshold, so it would
-   have sat in the set as a permanent 1% drift, which is exactly the law-12 trap. Eyeball the pair and
-   revert the pin if you disagree with the change rather than with the pinning.
+1. **THE DETERMINISTIC RIG, and it is one patch.** `todo30-and-67-deterministic-rig.patch` carries
+   both causes because between them they want **one** re-pin sweep, not two. Before → after churn is
+   tabled in TODO 30; the short version is 19 of 28 under 100 px and 19_roof_follow, 05_tussock_ground,
+   28, 29 and 30 at zero. **The cost:** `diff.mjs` goes to 11 flagged, worst **13_idle_preen at
+   0.8467**, then 14_player_view 0.8884 and 16_trish 0.9166. The session-3 note said "every frame
+   moves slightly" and slightly is wrong — pinning the clock freezes **poses**, because the idle
+   animations are sines on `G.time`. Every bird is still present (subjects 15/0); they are in
+   different phases of their idles. **`12.0` is a free parameter** and it is one number in the patch,
+   so a sweep to pick the value that disturbs the set least is worth an hour before the re-pin.
+2. **TODO 67 alone, if you want the cheap half.** `todo67-park-the-feed.patch` is the caption on its
+   own: the single biggest churn source in the set, ten vantages under 100 px by itself, one flagged
+   frame (08_readability_320 at 0.9506, where the caption is a tenth of a 320x180 picture). I tried
+   three ways to get it for free and there is no free version — the caption is in essentially every
+   baseline, so any deterministic choice costs ~2900 px per frame. My recommendation is to take the
+   combined patch and re-pin once, in daylight.
+3. **TODO 32 is not caravan-only, and the scope is now known rather than guessed.** 52 panels stand
+   proud of their skin on the exact axis and inside it on a bevelled one, across nine bodies. **The
+   hut is the witness and it is one object:** `rbox(7,2.6,5.4,0.1)` really measures 7.184 wide, and
+   the five weatherboard lines at `box(7.02,0.02,5.42)` sit **buried 0.082 on x** and **proud 0.010
+   on z** — one mesh, one +0.02 margin, visible on two walls and sealed inside the other two. Nobody
+   has ever seen the grooves on the long walls. The fix is still the reposition sweep with a look on
+   every frame, which is yours.
 
 ## Parked
 
-- **39b skifield-graduation** — filed, not attempted. Judged, per the brief and your order.
-- **40b skifield-signature-acts** — filed: the tray-slide as a new chaos verb, the tow ride, the deck
-  lunch raids (which need a cast and food props, so they land on top of piece 21), and the buried
-  lunchbox digs. One piece each. None of them needs a diorama change — 39 built the furniture they all
-  want.
-- **61 subject-drift coverage** — not run, per your order.
-- **60 07_jam** — still your judgement. `boxdiff` reports it unchanged at 0.9580 tonight, and 17 at
-  0.6389, both exactly as session 10 left them.
-- **56 bird-shadow-quality** — still on your blocked art list. Untouched.
-- **64 the beanie rests on a head** — found by 63 and filed with the design question: a prop that
-  RIDES a thing that moves is not a prop that rests on a thing that does not.
-- **35 the night auto-driver** — the peak half is fixed; the night half is still yours, and today's
-  behaviour is now pinned by an assertion that goes red the day you take option (a). That is deliberate.
-- **Nothing failed.** No piece burned three rounds; no assertion was weakened to pass. Where an old
-  assertion had to change, it got MORE precise — the details are in the log and in the two entries
-  below.
+- **TODO 30 + 67** — measured, built, patched, parked. See the two decisions above.
+- **TODO 69, new** — `20_dead_rear` assigns `G.cams[0].position` once with no camLock and no PIN,
+  which is the one law-12 case FLAKES names in its own text. **Piece 61 proved something worse than
+  drift while trying to measure a floor for it: that vantage cannot be reproduced from its own stage
+  line at all.** Parking its bird moves the camera with it; locking the camera to the position the
+  stage line computes gives a *close-up*, nothing like the pinned wide frame. The baseline is the
+  **eased** position. Needs a PIN and a judged re-pin of 20.
+- **TODO 70, new** — the last of the churn, named: dt-weighted lerp convergence on animated bones,
+  which is the class the `08_readability_320` comment guessed at in session 8. Two ways out, both
+  re-pin: a fixed `dt` for the rig, or a longer settle on four vantages. ~300 px on 22_torch_beam is
+  a **named unknown of known size** — likeliest the spotlight shadow map, and that is labelled a guess.
+- **TODO 68, rewritten** — see the correction below. What survives is the establishment that the
+  pinned set is far less reproducible across processes than any instrument here had ever said.
+- **39b, 40b, 60, 64, 56** — untouched. Judged, design-blocked or blocked art, exactly as filed.
+- **Nothing failed.** No piece burned three rounds. No assertion was weakened to pass; three of mine
+  had to get *less* absolute and more honest, and the details are in the log.
+
+## The correction you should read before the table
+
+**I SHIPPED A WRONG TABLE AND THE NEXT PIECE CAUGHT IT, AND THAT WAS THE MOST USEFUL HOUR OF THE
+NIGHT.** Piece 31 filed four drift findings off five capture sweeps — `09_colossal` at 1565..1584 px
+from its baseline against a churn of 22, **seventy-one times over**, ssim 0.9992, with session 6
+measuring that same pair at 0 px. It looked unanswerable. Piece 33 then shot five more sweeps an hour
+later on the same unchanged build and **09 churned 2233 px by itself**; fourteen of twenty-eight
+vantages beat their five-sweep ceiling. All four new claims collapsed. Only `07_jam` and `17_flight`
+survive ten sweeps and both were already known to you. The table, the file header and TODO 68 were
+corrected in the same commit that found it.
+
+The lesson is now written into the table about itself: **a ceiling from three samples is a floor, and
+so is a ceiling from five.** Three sweeps said 07_jam churns 20 px; five said 1881; ten said 2865.
 
 ## Frames to eyeball
 
-    gauntlet/capture/28_skifield_base.png    the bottom station, the wheel, drifts on the shed, and a
-                                            bird at the rack with GRAB SKI GOGGLES up
-    gauntlet/capture/29_lodge_deck.png       the day lodge, the deck, three skis standing in the rack
-    gauntlet/capture/30_groomed_band.png     up the corduroy with the tow line running away
-    gauntlet/capture/10_skifield.png         RE-PINNED — the carpark rack, holding its skis at last
-    gauntlet/capture/probe_todo_skifield.png the to-do list on the mountain, which is piece 40 in one
-                                             picture
+    gauntlet/capture/baseline/20_dead_rear.png   the caption, top-centre — the thing TODO 67 removes,
+                                                 and the frame that cannot be reproduced (TODO 69)
+    gauntlet/capture/baseline/09_colossal.png    the popup fanout, which is why 67 freezes rather
+                                                 than clears for this one vantage
+    gauntlet/capture/baseline/03_kea_plate.png   the first of piece 61's three new subject boxes
+    gauntlet/capture/baseline/18_rear_close.png  the vantage the pixel tripwire was proved on
 
-Two things to *do* rather than look at: press **M** in a run with six stars and click **GO**; then on
-the mountain press **TAB** and watch the footer clock tick while you read it.
+Nothing moved tonight, so there is no before/after pair to judge — the frames above are for reading
+the two decisions against, not for approving a change.
+
+Two things to *run* rather than look at: `node gauntlet/verify/pxdiff.mjs` after any capture pass
+(add `PXCELLS=1` and it tells you *where*), and `BEVELALL=1 node
+audits/2026-08-28/audit-bevel-flanks.js` for the whole 32 ledger.
 
 ## What the night cost me, and what it bought you
 
-**THE SAME BUG, FOUR LAYERS DEEP, AND EVERY LAYER HID THE ONE BELOW IT.** TODO 58 moved a hint into
-the thing that builds it. Tonight the same shape came back three more times, each one a live throw or
-a visible lie on the second map: the **cast** (startGame read `G.ladder` with no guard — a fresh load
-into a map with no hut died before the run started, in every mode), the **nest site**, the **snow
-envelope**, and — found by a soak test rather than a brief — **the road**: `spawnTraffic` had the
-carpark lane numbers written into it, so thirty seconds up the mountain put **seven hatchbacks across
-the snow at z 34**, driving through a road that is not there.
+**FLAKES 14 FROM ITS OTHER SIDE, TWICE IN ONE PIECE, exactly as your session-11 log warned.** Two of
+piece 33's sabotages were **no-ops**: my sed anchor ended `)};` where the file says `)});`, so nothing
+was edited. One reported ALL PASS on an unmodified file; the other "found" something only because an
+unrelated real flake fired in the same run. Assert the anchor exists *first* — it is the law for the
+game file and it should have been the law for my own tooling.
 
-**AND THE REASON IT COULD HIDE FOR TWO SESSIONS IS TODO 62, WHICH THE 39 SABOTAGE SWEEP FOUND BY
-ACCIDENT.** A stale `G.ladder` made a hutless boot look perfectly safe in every battery, because Dave
-found the LAST map's ladder and climbed that. The transcript worth keeping: with `G.towWheel` deleted
-from the ski field builder, the battery reported the wheel at **-37.9,-40 from inside the ski field** —
-the carpark one, still spun by update every frame, still able to answer a proximity detector at
-coordinates in a country that was not loaded. Twenty-one handles, three lists and six latches now come
-off the board with the world.
+**THREE OF MY OWN ASSERTIONS WERE FLAKES, and running them is what found all three.** A claim that the
+re-shade *passes* the diff threshold (0.9868, 0.9863, 0.9863 — then **0.9580** on one run in six,
+because the pair straddles the bar). A ratio against a control whose denominator churns. And two
+assertions that passed on the **null** fixture, because ordinary churn on that vantage moves 49 grey
+levels and warms 12 cells — measured, **the re-shade peaks lower than the churn does**, so amplitude
+does not discriminate a re-shade at all. The count and the spread do.
 
-**THE BATTERY HAD THREE SECTIONS THAT ENCODED THERE IS ONE MAP, and one of them was dangerous.** The
-tour section's `finally` deleted `TABLE[1]` by index — the stub while the ski field was hypothetical,
-and as of piece 39 that line would have deleted the REAL ski field out of the registry for every
-section after it. The chassis used `skifield` as its unregistered-id case, which would have quietly
-become a test that booting the ski field lands in the ski field. Both re-aimed at real maps.
+**AND THE NEW INSTRUMENT STOPPED ME SHIPPING SOMETHING ON ITS FIRST DAY.** My first TODO 67 fix froze
+each popup at a fixed phase of its own animation. It keeps the stagger, it reads beautifully, and it
+requires clone-replacing the wrapper so it survives its own pending `remove()` — which makes the
+caption **permanent and fully opaque in all 28 frames** and drops 08_readability_320 to **0.8711**. A
+rig change that reds the diff on a vantage it was not aiming at is not a staging fix. `pxdiff` and
+`diff` caught it before it was committed.
 
-**A PROP NAME IS A DETECTOR IN THIS ENGINE.** Anything called `boot` scores the carpark's ONE BOOT,
-NEVER RECOVERED the moment it is carried 22 metres from home, and two of them complete `b_boot2`. The
-ski field's is called a **ski boot** for that reason, and the battery now holds every mission id on
-every prop to being one the map it stands on declares.
+**ONE HYPOTHESIS DIED IN ONE PROBE, and it is the cheapest lesson here.** `12_seal_midpeel` sets the
+bird `grounded=false` with no PIN, so I expected a bird still falling through the settle. Measured at
+shutter: `y 0, vy 0, grounded true`, five takes out of five, frame count 142 every time. It is the
+**wings** — a `lerp(current, target, dt*k)` that had not converged. Reading the state beat reasoning
+about the stage line, and it beat it in about ninety seconds.
 
-**AND TWO ASSERTIONS THAT WERE TRUE FOR THE WRONG REASON.** Piece 63 put three rails into the snow
-band, and the snow section's claim — *a disc centred on any slender upright stays put* — was true of
-tree trunks in the open and quietly assumed no other kind of slender upright could exist. Two of the
-new rails stand within arm's reach of a building. The claim is split into the two things it was
-conflating. The same section filtered the band with hand-picked constants (-53, -17) that were
-*generous* around SNOWFIELD, and generous was wrong the moment a slender upright landed at z -17: the
-clothesline sits inside that window and outside the real envelope, so a disc centred on it starts
-off-map, slides to get on-map, and read as a trunk that failed to hold. It reads `X.SNOWFIELD` now.
-That is FLAKES law 10 twice in one piece.
+**AND ONE OUTLIER IS DELIBERATELY NOT IN THE TABLE.** `18_rear_close` returned **16317 px** once in a
+real cross-run pair, against a distribution topping out at 3909 over thirty-odd pairs and 2563 over
+fifteen more taken straight afterwards. Fitting to it would push 18's band above the piece-9 re-shade
+and blind the tripwire on the one vantage it was proved with. Recorded as law 9, watched, not absorbed.
 
-**THE THING I AM LEAST COMFORTABLE WITH, said plainly:** piece 63 raised the skis onto the rack and
-broke `s_binding` and the whole of piece 18's fix-verb section, because `interact()` measures from the
-beak — y plus 0.4 — and a ski at rack height sat **0.395** from the beak against the CHEW THE BINDING
-tear at **0.410**. Somebody else's test found my regression, I measured it rather than guessing, and
-half a ski width each way fixed it. But it is a reminder that this file's interaction chooser is a
-nearest-thing race and every prop I place on a surface joins that race.
-
-**Thirty-six sabotages across the six pieces, all caught, and two of them were my own broken
-sabotages** — a no-op edit that reported zero findings and was NOT the test being thin (law 14's tell,
-met from the other side), and a `find(...&&!c.solid)` that let the property under test decide whether
-the assertion ran at all.
+One process note, and it is the third session in a row it has been made: **`boxdiff.mjs` still is not
+in the per-piece protocol at step 6 of OVERNIGHT.md, and now `pxdiff.mjs` should be beside it.** I ran
+both by hand again tonight.
 
 ## Suggested next three picks
 
-1. **40b, starting with the tray-slide** — the signature act of the whole map and the one thing the
-   ski field is shaped around. It is a new chaos verb and the feel is yours, so my recommendation is to
-   build it with the feel flagged and a frame, the way 38 was built: the piste is a 20x74 band at y 0.1
-   with no collider at all, and the roof luge already proves the mechanic exists.
-2. **39b, once 40b has landed** — with the full re-pin diff in front of you, in daylight.
-3. **64, the beanie** — small, self-contained, and it needs your design answer first: does the beanie
-   ride his head until it is stolen, or does a wearer carry a rest-on-me anchor that any prop can sit
-   in? I would take the second one, because the deck tables in 29 want the same thing for a lunchbox.
-
-One process note, and it is the same one session 10 left: `boxdiff.mjs` still belongs in the per-piece
-protocol beside `diff.mjs` at step 6 of OVERNIGHT.md. I ran it by hand again tonight.
+1. **The re-pin sweep, with both patches in and in daylight.** It is the gate to a great deal: TODO
+   69 and 70 both want it, and every future drift reading in this repo gets sharper the moment the
+   rig stops churning thousands of pixels. Pick the `G.time` value first.
+2. **TODO 69** — small, self-contained, harness-side, and piece 61 has already done the diagnosis. It
+   wants a PIN of the same assignment every frame, the way the other nine live vantages do it, and a
+   re-pin of one frame. Take it in the same sitting as the sweep.
+3. **40b, starting with the tray-slide** — unchanged from session 11's recommendation and still the
+   signature act of the map. Nothing tonight touched it and nothing tonight blocks it.
