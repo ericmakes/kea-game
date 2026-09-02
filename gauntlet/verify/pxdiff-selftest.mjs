@@ -98,7 +98,11 @@ try{
       `SSIM BARELY REGISTERS IT: ssim ${s9.toFixed(4)} sits ${(s9-0.965>=0?'+':'')}`+
       `${(s9-0.965).toFixed(4)} from the 0.965 gate it is supposed to be policed by`);
     ok(d9.px>band, `AND PXDIFF FLAGS IT: ${d9.px} px moved against a band of ${band}`);
-    ok(d9.px/band>4, `by ${(d9.px/band).toFixed(1)} times its band, which is not a close call`);
+    // NOT A MULTIPLE ANY MORE, AND THE SHRINKING IS THE POINT. This asked for four times the band
+    // when 18 churn was recorded as 825. Measured properly it churns 3909, the band doubled twice
+    // over, and the same re-shade now clears it by about 1.6x rather than 7x. The flag holds; the
+    // margin is thin, and a 4x assertion would be lying about the instrument on this vantage.
+    ok(d9.px/band>1.2, `by ${(d9.px/band).toFixed(1)} times its band - thin, because the churn is`);
     // NOT A RATIO AGAINST THE CONTROL, AND THIS IS THE SECOND FLAKE THIS FIXTURE TAUGHT ME. The
     // first version asked for four times the control and went red twice in eight runs, because the
     // control has its own churn and it is not small: eight shots of the untouched frame against

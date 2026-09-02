@@ -30,13 +30,25 @@
 // Churn is not the take-to-take variance stability.mjs measures inside one run, and it is not
 // drift. It is what the same photograph costs you for being taken twice.
 //
-// MEASURED WITH FIVE FULL SWEEPS, and three would have lied. The first cut of this table used three
-// sweeps and I nearly shipped it. Then the selftest control - an untouched frame shot through the
-// same rig - came back at 3909 px on a vantage whose three-sweep ceiling was 825, twice in eight
-// runs. Sampled properly, over all ten pairwise distances of five sweeps, 07_jam went from 20 to
-// 1881, 10_skifield from 3 to 1152, 19_roof_follow from 890 to 4168 and 13_idle_preen from 2922 to
-// 6932. THE STATES ARE DISCRETE BUT THERE ARE MORE THAN THREE OF THEM, so a ceiling taken from
-// three samples is a floor.
+// CHURN HAS GROWN EVERY TIME IT HAS BEEN MEASURED, AND THAT IS THE MOST IMPORTANT LINE IN THIS
+// FILE. First cut: three full sweeps. The selftest control - an untouched frame through the same
+// rig - blew straight past it, so it was re-measured over the ten pairwise distances of FIVE
+// sweeps: 07_jam 20 -> 1881, 10_skifield 3 -> 1152, 19_roof_follow 890 -> 4168. Then crossrun.mjs
+// shot five MORE sweeps an hour later on the same build and fourteen of twenty-eight vantages beat
+// the five-sweep ceiling too: 09_colossal 22 -> 2233, 11_trailhead 673 -> 4446, 23_paddock_gate
+// 117 -> 1252, 10_skifield 1152 -> 5822. The states are discrete but the number of them is not
+// small, and which of them a batch of sweeps visits depends on the machine that night.
+// SO TREAT THIS TABLE AS A FLOOR THAT HAS NEVER STOPPED RISING, not as a ceiling. It is the max of
+// everything measured on 2026-09-02 - two batches of five sweeps, twenty pairwise distances per
+// vantage, plus the selftest control shots - and it will move again. crossrun.mjs prints a
+// paste-ready replacement and goes red when a vantage beats its row.
+// ONE OUTLIER IS DELIBERATELY NOT IN HERE. 18_rear_close came back 16317 px once, in a real
+// cross-run pair inside the selftest, against a distribution that otherwise tops out at 3909 over
+// thirty-odd pairs and 2563 over a further fifteen taken straight afterwards. A single five-fold
+// outlier that will not reproduce is FLAKES law 9 - SwiftShader is moody and shotR retakes - not a
+// state, and fitting the table to it would put the 18 band above the piece-9 re-shade and blind
+// this instrument on the one vantage it was proved with. Written down rather than absorbed: if it
+// comes back, the resolution on 18 is gone and the selftest is where it will show.
 //
 // AND THE COUNT IS A STEP FUNCTION, WHICH IS WORTH KNOWING BEFORE READING IT AS A DISTANCE.
 // 29_lodge_deck sits 129 px from its baseline on four sweeps and 1452 on the fifth, while its worst
@@ -45,17 +57,20 @@
 // across the boundary at once. That is why the amplitude is reported beside the count and why the
 // markers have headroom: the count says HOW MUCH MOVED, not how far anything went.
 //
-// WHAT IT SAID ON ITS FIRST RUN, against the pinned set at 8232590523658dfc3f5a1fe59a916de0. Six
-// vantages read over churn on all five sweeps, so what separates them from their baseline is not
-// churn. Two were already known and four had never been seen by any instrument here:
-//     07_jam        7497..9372 px over a churn of 1881   known - boxdiff 0.9580, TODO 60
-//     17_flight     7333..9189 px over a churn of 1951   known - the piece 54 wing, TODO 57
-//     09_colossal   1565..1584 px over a churn of   22   NEW. seventy times its own churn, and
-//                                                        ssim 0.9992. it read 0 px in session 6.
-//     20_dead_rear  3512..5425 px over a churn of 2475   NEW
-//     11_trailhead  1221..1893 px over a churn of  673   NEW
-//     23_paddock_gate 235..319 px over a churn of  117   NEW, and small enough that only the ~
-//                                                        marker ever sees it
+// WHAT IT SAYS ABOUT THE PINNED SET AT 8232590523658dfc3f5a1fe59a916de0, and this is the corrected
+// version of it. A vantage whose distance from its baseline beats its churn on every sweep has
+// moved rather than churned. On five sweeps that looked like six vantages. On ten it is TWO, and
+// both were already known:
+//     07_jam       7497..9372 px against a churn of 2865   boxdiff 0.9580, TODO 60
+//     17_flight    7333..9189 px against a churn of 1951   the piece 54 wing, TODO 57
+// THE OTHER FOUR COLLAPSED WHEN THE CHURN WAS MEASURED AGAIN, and the first version of this header
+// claimed them. 09_colossal read 1565..1584 from its baseline against a churn of 22 - seventy-one
+// times over, and it looked like the cleanest signal in the set - and then churned 2233 all by
+// itself. Same for 20_dead_rear, 11_trailhead and 23_paddock_gate. TODO 68 carries what is left.
+// WHICH IS THE REAL FINDING, AND IT IS NOT ABOUT ANY ONE FRAME: while the rig churns thousands of
+// pixels, a pixel count cannot separate drift from churn on most of this set. A warn here is a
+// LOOK, never a verdict. TODO 67 and 30 are the fix - park the caption, freeze the clock - and the
+// target TODO 33 named all along, a count near zero, is reachable that way and no other.
 // THE RECIPE is ffmpeg, no new dependency - diff.mjs already shells to it. Pass one thresholds the
 // absolute difference and averages the mask, which turns a count into a mean; pass two takes the
 // peak; the optional cell pass area-scales the same mask to 16x9 and reads it back raw, so a whole
@@ -67,20 +82,20 @@ const CAP=path.resolve(HERE,'..','capture'), BASE=path.join(CAP,'baseline');
 const GREY=+(process.env.PXGREY||8);
 const SCALE=+(process.env.PXBAND||1);
 
-// MEASURED 2026-09-02 on build 8232590523658dfc3f5a1fe59a916de0: the worst of the ten pairwise
-// distances between five full capture sweeps. A vantage with no row here gets DEFAULT, which is
-// deliberately loud, and the selftest goes red if a pinned vantage has no measured row.
+// MEASURED 2026-09-02 on build 8232590523658dfc3f5a1fe59a916de0: the worst distance seen between
+// any two capture sweeps of that build, over two batches of five. A vantage with no row here gets
+// DEFAULT, which is deliberately loud, and the selftest goes red if a pinned vantage has no row.
 const DEFAULT=200;
 const CHURN={
   '01_carpark_wide'    :3996, '02_hut_snow'      :2575, '03_kea_plate'     :3033,
-  '04_flight_underwing':3086, '05_tussock_ground':2546, '06_skyline'       :5871,
-  '07_jam'             :1881, '08_readability_320':1480,'09_colossal'      :  22,
-  '10_skifield'        :1152, '11_trailhead'     : 673, '12_seal_midpeel'  :3123,
-  '13_idle_preen'      :6932, '14_player_view'   :1611, '15_sign'          :1474,
-  '16_trish'           :1700, '17_flight'        :1951, '18_rear_close'    : 825,
-  '19_roof_follow'     :4168, '20_dead_rear'     :2475, '21_night_camp'    :2399,
-  '22_torch_beam'      :2690, '23_paddock_gate'  : 117, '24_verge_paddle'  :1620,
-  '25_preen_follow'    :2801, '28_skifield_base' : 233, '29_lodge_deck'    : 229,
+  '04_flight_underwing':3086, '05_tussock_ground':2775, '06_skyline'       :8791,
+  '07_jam'             :2865, '08_readability_320':1480,'09_colossal'      :2233,
+  '10_skifield'        :5822, '11_trailhead'     :4446, '12_seal_midpeel'  :3123,
+  '13_idle_preen'      :6932, '14_player_view'   :3872, '15_sign'          :1924,
+  '16_trish'           :1700, '17_flight'        :1951, '18_rear_close'    :3909,
+  '19_roof_follow'     :4168, '20_dead_rear'     :5489, '21_night_camp'    :2399,
+  '22_torch_beam'      :5308, '23_paddock_gate'  :1252, '24_verge_paddle'  :1922,
+  '25_preen_follow'    :2801, '28_skifield_base' : 453, '29_lodge_deck'    : 229,
   '30_groomed_band'    :1597,
 };
 export const churnOf=id=>(id in CHURN?CHURN[id]:DEFAULT)*SCALE;

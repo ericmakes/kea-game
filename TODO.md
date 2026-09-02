@@ -1155,19 +1155,27 @@ animation. Harness-side, one idiom, no game change.
 RE-PIN: the caption is IN eleven of the pinned frames and it is part of the composition, so removing
 it is a look change on every one of them. MEASURE FIRST, then leave flagged for Eric. Do not pin.
 
-### 68. FOUR BASELINES HAVE DRIFTED WHERE NO SSIM COULD SEE IT
-Found in session 12 by piece 31 on its first run, and the arithmetic is in that file header. A
-vantage whose distance from its baseline exceeds its own five-sweep churn ceiling on EVERY sweep is
-not churning, it has moved. Two of the six were already known (07_jam, TODO 60; 17_flight, the piece
-54 wing). These four are new, and diff.mjs reads all of them as clean:
-    09_colossal      1565..1584 px over a churn of 22    ssim 0.9992   SEVENTY-ONE TIMES its churn,
-                     and session 6 measured this same pair at 0 px, so it moved after that
-    20_dead_rear     3512..5425 px over a churn of 2475  ssim 0.9985
-    11_trailhead     1221..1893 px over a churn of  673  ssim 0.9992
-    23_paddock_gate   235..319  px over a churn of  117  ssim 0.9996   small, but five for five
-09 IS THE ONE TO TAKE FIRST. It is the cleanest signal in the set - a frame that reshoots to twenty
-pixels and sits fifteen hundred from its pin - and its baseline has not been re-pinned since 9cd861e,
-so a bisect over the builds since session 6 is a short walk. Some of TODO 67 is probably inside
-20_dead_rear, which is one of the three frames whose hot cells are the caption.
-PROOF once built: name the build that moved each one. Do NOT re-pin to make the instrument quiet -
-that is the law-12 trap from the other end, and it is what this piece exists to stop.
+### 68. WHAT A PIXEL COUNT CAN AND CANNOT SAY ABOUT THE PINNED SET
+Filed in session 12 by piece 31, and CORRECTED the same night by piece 33 before it had been read by
+anybody. Keep the correction: it is the useful half.
+AS FILED, this said four baselines had provably drifted - 09_colossal, 20_dead_rear, 11_trailhead and
+23_paddock_gate - on the argument that each sat further from its baseline than it churned on every
+one of five capture sweeps. 09 looked unanswerable: 1565..1584 px from its pin against a churn of 22,
+seventy-one times over, ssim 0.9992, and session 6 measured that same pair at 0 px.
+CROSSRUN THEN SHOT FIVE MORE SWEEPS AN HOUR LATER AND 09 CHURNED 2233 PX BY ITSELF. Fourteen of
+twenty-eight vantages beat their five-sweep ceiling on the second batch. All four claims collapse;
+only the two that were already known survive ten sweeps, and both survive comfortably:
+    07_jam      7497..9372 px against a churn of 2865   TODO 60, boxdiff 0.9580
+    17_flight   7333..9189 px against a churn of 1951   TODO 57, the piece 54 wing
+WHAT IS ACTUALLY ESTABLISHED, and it is worth more than the four claims were: THE PINNED SET IS FAR
+LESS REPRODUCIBLE ACROSS PROCESSES THAN ANY INSTRUMENT HERE HAS EVER SAID. Ten sweeps of one
+unchanged build put 06_skyline at 8791 px of churn, 13_idle_preen at 6932, 10_skifield at 5822 and
+20_dead_rear at 5489. stability.mjs reports these frames clean because it compares takes inside one
+run; diff.mjs reads them at ssim 0.998 and passes. The churn is not noise - it is a handful of
+DISCRETE states, and a sweep lands on whichever one the machine gives it that night.
+SO THE ORDER OF WORK IS SETTLED, AND IT IS NOT MORE MEASUREMENT. No number of sweeps will make a
+churn ceiling stable while the causes are live; TODO 67 (the caption animates on the wall clock) and
+TODO 30 (the grass sways on G.time) are the two named causes, and 33 said from the start that the
+honest target is a changed-pixel count near zero. Fix those, re-run crossrun, and the ceilings should
+collapse - at which point a band means something and this item can be asked again with real teeth.
+DO NOT RE-PIN ANYTHING TO MAKE AN INSTRUMENT QUIET. That is the law-12 trap from the other end.
