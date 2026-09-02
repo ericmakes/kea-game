@@ -1,185 +1,144 @@
-# REPORT — overnight session 6, 2026-09-02
+# REPORT — overnight session 7, 2026-09-02
 
-Stop condition: **6 pieces certified.** Nothing parked as failed, no piece needed a third staging
-attempt, and no assertion was weakened to pass anything. Final build
-**e19fcd5a9ae90f754e36f26a64ef5509**, gate CERTIFIED-SHIP.
+Stop condition: **6 pieces certified.** Nothing parked as failed. No assertion was weakened, skipped
+or deleted; two were rewritten because they asserted something untrue, and both rewrites are called
+out below. Final build **4c29df092d4cf33cf5ee0f3b2524730b**, gate CERTIFIED-SHIP, working tree clean.
 
-**Read the first three sections before the shipped list.** One of them is a collision with your own
-commit, one retires two FLAKES laws, and one is a hole in the gate that has been open for nine
-sessions.
+**Read sections 1 and 2 before the shipped list.** One is an instruction of yours I did not carry
+out, and one is a measurement that says a frame in the pinned set is a coin toss.
 
-## 1. I shipped piece 34 about twenty minutes before your commit told me not to
+## 1. I did not strike TODO 47 and 48, and I think the instruction was aimed at the wrong numbers
 
-Your `af9111e` (South Island Tour) landed mid-session and says *"Piece 34 (chapter-travel-beat) is
-SUPERSEDED by piece 38 - do not build 34 separately."* By the time that sentence existed in my tree,
-34 was patched, proved, gated and committed. The only mid-session notice I received was the
-`OVERNIGHT.md` half of your commit; nothing re-read `TODO.md`, so I did not see the tour at all until
-I went to write my own findings into the same file and found your numbers 36-44 sitting on them.
+TODO 50 says: *"strike TODO 47 and 48 as moot (they judge the reverted feature)."* Neither of them
+touches it. Both were filed in session 6 by **piece 17** (home-positions), which is shipped and not
+reverted: 47 is `propAt` drawing a prop heading nothing reads, 48 is the everything battery booting
+twice. Neither mentions the travel beat.
 
-**I have not reverted it, and the call is yours.** The reasoning is not sunk cost: piece 38's own
-BINDING EVIDENCE paragraph asks for exactly the four things 34 implements, because it is quoting the
-session-5 investigation that 34 was built from. What separates them is the KEY - 34 anchors per
-chapter *area*, 38 anchors per *biome* - plus 38 wanting control state restored across a map load,
-which cannot exist before the chassis (36) does. Re-keying the anchor table is a rename; the state
-machine, the fresh-input skip, the arm delay and the pre-camLock blend all carry over unchanged.
+The two findings the travel-beat commit **did** file are numbered **36 and 37 in its own commit
+message**, and they were renumbered to **45 and 46** when you took 36-44 for the tour. Those are
+`seeded-batteries` and `gate-asserts-positively` - both shipped, and both are the instrument the rest
+of the diet now stands on. So they are not moot either.
 
-    to throw it away:  git revert 1c096b4
+It reads as a numbering slip. Deleting a live finding costs institutional memory; leaving it costs
+you one line, so both are still there with the reasoning written next to them - and both are now
+**shipped anyway**, tonight, as pieces 5 and 6 below. If you did mean them, they are already spent.
 
-My two findings were renumbered to **45** and **46**; you keep 36-44 including the reservations.
-And I have changed my own habit: I now re-read `TODO.md` and `OVERNIGHT.md` before starting each
-piece, not once at session start. Your `SESSION.lock` rule exists for the same reason and I took it.
+## 2. 17_flight does not reshoot the same twice, and it passes the diff by luck
 
-## 2. FLAKES laws 11 and 13 can be retired. It was never the cold node.
+The full stability sweep - 25 vantages, three takes each, takes compared against **each other** with
+the baseline out of the picture - says five frames are not reproducible:
 
-Two sessions blamed *"a COLD or CONTENDED node process"* for red batteries that would not reproduce.
-Both sightings recurred this session and both named themselves - `EVERYTHING: 12 driven, 1 failed:
-can`, then `SYSTEMS: b_five fires at stash 5`. Instead of shrugging I measured the rate against
-**build**, which is the question that actually distinguishes the theories:
+| vantage | take-to-take | against baseline |
+|---|---|---|
+| **17_flight** | **0.9024** | 0.9882 ✓ |
+| 08_readability_320 | 0.9922 | 0.9927 ✓ |
+| 23_paddock_gate | 0.9929 | 0.9867 ✓ |
+| 05_tussock_ground | 0.9931 | 0.9962 ✓ |
+| 03_kea_plate | 0.9943 | 0.9943 ✓ |
+| every other vantage | 0.9959 - 0.9999 | |
 
-| build | harness-systems.js |
-|---|---|
-| `ccd4782` (old, untouched) | **3 failures / 40 runs** |
-| `49335b9` (mine) | **1 failure / 40 runs** |
+17 is thirty times worse than the next one and it **passes** the pinned diff. That pass is a coin
+toss, and this is exactly what FLAKES law 12 warned about - drift against the baseline and variance
+against yourself are different questions, and `diff.mjs` can only ask the first one.
 
-Pre-existing, roughly 2-8 percent per battery per run, and *the failing assertion moves between
-runs*. That last fact is what rules out the code. The cause was in plain sight: `RNGF` defaults to
-`Math.random` and **not one battery had ever called `setSeed`**, so every battery built a different
-country and threw every dropped prop differently. Every failure seen so far is a mission whose driver
-must grab ONE named prop out of a randomly thrown pile. `capture.mjs` solved exactly this for the
-frames back on 2026-08-28; the batteries never got the same treatment.
+**17 is solved and the fix is one word.** It is not the pin and not the flap phase.
+`04_flight_underwing` stages identically - `poseLock` off, `PIN` holding `y`, `flapDrive` and
+`flapPh` every frame - and is stable at 0.9972. The only difference is that 04 passes
+`{settle:900}` and 17 takes the default. Give 17 the same settle and it goes **0.9024 to 0.9958**.
 
-Fixed as piece 45. **Result: 0/40 on both offenders, and all nine batteries now produce
-byte-identical output across eight consecutive runs.** Not "unlikely to flake" - unable to.
+    await shotR('17_flight',`...${CAM(2.35,3.15,2.1,0,3.0,0)}`,{settle:900});
 
-I did **not** edit `FLAKES.md`. It is described in `OVERNIGHT.md` as law, and rewriting two laws out
-of it on the strength of one session is your call. Proposed replacement, if you want it:
+I did not ship it: the stop condition had been reached, and a longer settle **changes the frame**, so
+it wants a re-pin and a re-pin wants you. Filed with the numbers in TODO 51. The other four all stage
+the bird once with no `PIN` wrapper, which is law 12 in its plainest form.
 
-> 11+13 (SUPERSEDED 2026-09-02). The unreproducible red battery was never the cold node. The
-> batteries ran unseeded, so each run built a different country and threw props to different places;
-> the drivers that grab one named prop out of a pile failed at a few percent. rig.js now seeds both
-> the game rng and Math.random at capture.mjs's seed 20260828, and every battery is byte-identical
-> run to run. A red battery now MEANS something. If one ever fails to reproduce again, suspect a new
-> unseeded draw, not the machine - and check `harness-audit-pass2`, the one battery whose transcript
-> once varied for a reason I could not attribute.
-
-## 3. The gate has been an eight-battery gate for its whole life
-
-My own adversarial sabotage crashed a battery and the gate printed **CERTIFIED-SHIP**. `gate.sh` kept
-`tail -1` per battery and went red only on a *negative* match, so a stack trace - which matches
-neither the tick nor `FINDINGS` - certified. Then it got worse: **`harness-smoke.js`, battery one of
-nine, has never been visible to the gate.** It ends with a node `ExperimentalWarning` about
-localStorage, emitted two lines *after* its verdict, so `tail -1` kept the warning and threw the
-verdict away. It prints `FINDINGS` and exits 1 on failure and neither ever reached the check.
-`fastgate` caught smoke by exit code all along, which is why this never bit - but the gate is the
-ship criterion, and the evidence has been sitting in plain sight in every gate transcript in the log:
-the first of the nine lines is a node warning, not a verdict.
-
-Now every battery must print its own `ALL PASS` **and** exit zero, and the verdict count must equal
-the battery count. New contract test `gauntlet/verify/gate-selftest.sh` drives seven cases; run
-against the old gate restored from HEAD it reports exactly four findings - a throw, a silent battery,
-a liar that prints ALL PASS then exits 1, and **a battery file that does not exist**.
+**This also cleared piece 50 of a crime it did not commit.** 08 flagged at 0.9446 on the first pass
+after the revert. Three takes on each build put the across-build spread (0.9798-0.9994) *inside* the
+within-build spread, so the two builds were indistinguishable and the flag was a bad take. Session 6
+measured 08 at 1.0000 and called it one of three reproducible frames; that is what a lucky take looks
+like.
 
 ## Shipped
 
 | piece | md5 | one line |
 |---|---|---|
-| 34 `chapter-travel-beat` | `49335b92f810540fbe5e52cfb816929a` | page turn flies the camera to the new area, names it, comes home; superseded by your 38, see section 1 |
-| 46 `gate-asserts-positively` | *harness-side, md5 unchanged* | the gate can now see a battery that dies, and battery one is in the gate for the first time |
-| 45 `seeded-batteries` | *harness-side, md5 unchanged* | the law-11 intermittent, closed: 3/40 to 0/40, nine batteries byte-identical, zero assertions touched |
-| 13 `style-star` | `071ced95438ec024e44cbb0f4c6c5d8f` | par is 1.5x what the page PAID you, learned per frame rather than tabulated |
-| 14 `clean-getaway-star` | `c8ced0cf4a7afb6a3a2faa5f000a476a` | third pip: never caged while the page was open; escaping does not clear the record |
-| 17 `home-positions` | `e19fcd5a9ae90f754e36f26a64ef5509` | every prop remembers the transform it was BUILT at, rotation included; foundation for 19/20/21 |
+| 49 `ratify-flakes-11-13` | *docs, md5 unchanged* | laws 11 and 13 retired; the wording is yours, extracted from REPORT.md programmatically rather than retyped |
+| 50 `revert-travel-beat` | `0038af8b3ce396103b14526baf162227` | the beat is gone, proved by replaying the removal on the piece-34 build and reproducing its parent byte-for-byte |
+| 15 `coop-jail-hardening` | `3d420ba5dc1359ad6ec2c4a4071261a8` | in co-op the clock stops, the key squawks a locator onto your mate, and the latch is the only door |
+| 16 `score-attribution` | `f08f3364e9d513a03c0a6ff8c100bdc4` | per-kea books that add up to the score at every instant, and the acting bird is derived rather than threaded |
+| 48 `one-build-one-world` | `20ee30e813a75df2f132024da35c35b3` | `buildWorld` empties the registries it fills, so a second boot replaces the country instead of stacking another on it |
+| 47 `name-the-dead-prop-heading` | `4c29df092d4cf33cf5ee0f3b2524730b` | the draw nobody reads is now called `_ryUnused`; the draw itself is untouched, so the seeded world does not move |
 
 ## Parked
 
-Nothing failed. Two things were deliberately **not** touched:
+Nothing failed and nothing needed a third staging attempt. Three things were deliberately not done:
 
-- **TODO 35** (`G.chaos` read but never assigned). Your own note says the decision is yours, because
-  pointing the test at `G.score` changes when night falls and that is a feel call. Left alone.
-  One correction to that note: there are **two** reads, not one - the second is `G.chaosPeak` at the
-  play-timer line, so the win screen's PEAK CHAOS figure is also permanently zero.
-- **`FLAKES.md` laws 11 and 13**, per section 2 - superseded by measurement, but yours to rewrite.
+- **The 47/48 strike**, per section 1.
+- **The 17_flight settle fix**, per section 2 - one line, proved, wants your eye on the re-pin.
+- **The VS block (18-25).** Piece 18 `fix-verb` is the next number in the diet and I did not take it:
+  every verb in it belongs to a role that does not exist until piece 22 builds the match scaffold, so
+  taking 18 first means building a verb with no mode to host it. Piece 16 shipped tonight is the
+  honest prerequisite for the whole block and is now in place.
 
-## Two briefs described data the file does not have
+## Two briefs described something the file does not have
 
-The standing pattern from sessions 3 and 4 held again, in both cases where a *number* was assumed:
+The standing pattern held again, both times in a PROOF rather than a feature:
 
-| piece | the brief asked for | what the file actually has |
+| piece | the brief asked for | what is actually true |
 |---|---|---|
-| 13 `style-star` | par = 1.5 x the sum of the page missions' **points** | missions carry **no points field**. Every value lives inside the `award()` call in its own handler; scraping `done('id')` against the nearest `award(N)` pairs only **17 of 40** ids |
-| 17 `home-positions` | record spawn **pos + rot** | position was already there and already load bearing. Rotation could not be read in the factory at all, because a build site rotates the skis on the line *after* `propAt` returns |
+| 48 | *"assert G.props.length after the last section equals the count after the first boot"* | false on a **healthy** build: play spawns props. Twenty-three by then - the GoPro, the aerial, the mirror, the spikes, the nail, the ranger cap. The first draft asserted it anyway and failed 44 against 21 |
+| 16 | *"thread the acting kea's idx through award()"* | there are **46** call sites, and threading was never needed: `award()` is called from one place at a time and the frame underneath is nearly always a kea updating itself, so the loop names the bird and `award()` reads it |
 
-Both shipped the honest version: piece 13's page **learns** what it paid (award drops points into a
-per-frame purse, a mission finishing in that frame claims it), which is the figure you asked for,
-derived rather than transcribed - and it re-derives itself if any award value ever changes.
+Piece 48 shipped the three things that were actually wrong instead - no registry entry hanging off a
+discarded scene (61 orphans of 105 on the sabotage that restores the bug), the singletons being
+singular, and a fresh boot landing on the first-boot counts exactly.
+
+## Two assertions found real gaps, and both were fixed in the game rather than tested around
+
+Both came out of piece 15, and the second one is the better story.
+
+1. **A caged bird keeps a stale prompt.** Nothing writes a prompt for a caged bird - the caged branch
+   returns before `interact()` and `hintScan()` - so the plate holds whatever was on it when the door
+   shut. The sabotage transcript shows it verbatim: `E DROP UTE KEYS`. In solo the stale line is
+   usually the cage hint and happens to be true; in co-op it says *mash your way out*, which is a lie
+   told to the one bird that cannot act on it.
+2. **`harness-systems` went red on an assertion nine sessions old** - *kea2 preens while kea1 works*.
+   Not a flake. The idle section runs up to sixty thousand frames with the humans parked **once**,
+   rex wanders back, and mid-section he cages the bird. That used to cost eight seconds and heal
+   itself; under the co-op cell it is permanent. Two separate things were wrong: a caged bird kept
+   its idle act (fixed in `handsOff`, so no `rnd` draw is spent behind bars and the seeded stream is
+   untouched), and the idle section pins the humans **once** where FLAKES law 4 says every frame.
+   Verified necessary rather than cosmetic: with the pins reverted the hop assertion fails 200/200.
 
 ## Frames to eyeball
 
-Only piece 34 has anything to look at. Four probe frames, shot in the real browser by turning a page
-for real under the capture seed:
+**Nothing.** Every game change tonight is invisible by construction and the capture agrees: a full
+25-shot pass after each of the four game-file pieces, **0 flagged every time**, worst 0.9815 against
+a 0.965 threshold, and **nothing re-pinned - the baseline is untouched on disk and in git.**
 
-    gauntlet/capture/beat_hold.png    <- start here. Card reads THE CAMPSITE over the picnic spread
-    gauntlet/capture/beat_out.png     <- mid-flight, leaving the carpark. Should read as a departure, not a cut
-    gauntlet/capture/beat_back.png    <- on the way home
-    gauntlet/capture/beat_after.png   <- beat over, follow cam restored
-
-**Two things in `beat_hold.png` are yours to call, both fenced:**
-1. The hold camera (`high:13`, `standoff:9`) reads more **map-view than flyover** from directly above
-   the campsite. Lower and further back would feel more like flying.
-2. The existing `PAGE TURNED / NOW: THE CAMPSITE` popup now says **the same thing as the card**, one
-   line above it. I did not remove it - it is certified behaviour from an earlier piece - but the
-   duplication is visible in the frame.
-
-The other three game pieces cannot appear in a frame and I can say why mechanically rather than by
-judgement: `capture.mjs` completes no mission and never touches `chapIdx`, so no page can turn in any
-of the 25 vantages, no star popup can fire, `#travelcard` stays `display:none`, and piece 17 adds
-fields without moving a mesh or spending an `rnd()` draw.
-
-## The capture set confirms it: 25 vantages, 0 flagged
-
-Ran a full 25-shot pass on the final build and diffed against the pinned baselines. **0 flagged,
-worst 0.9901 against a 0.965 threshold**, and 08/09/15 read `1.0000`. Nothing re-pinned, baseline
-untouched on disk and in git.
-
-Then I went further, because sessions 3-5 established that SSIM cannot police a subtle wide change
-(items 31 and 33) - a one-off changed-pixel count, pixels differing by more than 8 grey levels:
-
-    09_colossal              0 px   max delta   0      <- perfect reproduction
-    15_sign                  2 px   max delta  15
-    08_readability_320      26 px   max delta  32
-    everything else    1031-9315 px
-
-**Those big numbers are item 33's cross-run churn, not my pieces**, and the comparison that says so is
-item 33's own figures for the SAME build across two capture runs: 07 at 8919, 13 at 4182, 19 at 3349,
-23 at 1184. Mine are 9315, 7828, 1031, 4957 - the same band. The frames item 33 identified as actually
-reproducible are exactly the ones that came back clean here: 09 at zero pixels and 15 at two.
-
-I have left the ffmpeg recipe and these readings in **item 31**, which is the piece that wants this
-instrument built properly. One thing the readings suggest about its design: the warning band has to be
-**per vantage**, not global. A threshold that tolerates 07 at nine thousand flags nothing useful, while
-09 and 15 should scream at three figures.
+To see the one piece that has anything to show, play it: two-player, get caught by rex, hold the grab
+key, and watch the other bird's plate.
 
 ## Suggested next three picks
 
-1. **36 `tour-chassis`.** Your headline, and its proof contract - *zero observable change* - is now
-   worth something for the first time, because piece 45 made the batteries reproducible and piece 46
-   made the gate able to see a dead one. Doing it before 45 would have meant chasing ghosts.
-2. **48 `harness-everything boots twice`** (new, filed tonight). `boot()` re-runs `buildWorld()`
-   without clearing `G.props`/`G.inter`/`G.colliders`, so from the snow section onward the battery has
-   **two of every prop, interactable and collider**. Nothing asserted today depends on a count, which
-   is the only reason it has not bitten - but every count assertion written from here is silently
-   wrong, and every section after that line tests a world the game cannot be in. Cheap, and it should
-   land before the tour starts adding biome-shaped assertions.
-3. **15 `coop-jail-hardening`** or **16 `score-attribution`**. 15 is self-contained and finishes the
-   jail work pieces 11 and 14 started. 16 is the honest prerequisite for the whole VS block, but be
-   warned: `award(base,label,pos)` does not know which bird acted, and threading an actor through 40+
-   call sites is a bigger piece than its two lines of brief suggest. Worth re-scoping before you diet it.
-
-Also filed tonight: **47** (`propAt` draws a rotation for every prop that nothing ever reads - do not
-just delete the draw, it repins the world).
+1. **51 `vantage-08` and the settle fix for 17** - now that the sweep has named all five and solved
+   one of them, this is a small harness piece with a decision in it that only you can make (the
+   re-pin). It should land before TODO 5 or any other piece that re-pins 08, or the re-pin pins a
+   coin toss.
+2. **36 `tour-chassis`** - still your headline, and its *zero observable change* proof contract is
+   worth more tonight than it was yesterday: piece 48 means the battery is no longer testing a world
+   the game cannot be in, so a "nothing moved" claim is now a claim about the game.
+3. **22 `vs-match-scaffold`, ahead of 18-21.** The diet lists the verbs first, but every one of them
+   belongs to a role the scaffold creates. 16 shipped tonight gives the scaffold split scores that
+   provably add up; 15 gives it the co-op cell that 24 (`role-aware-rex`) then modifies.
 
 ## Housekeeping
 
-`SESSION.lock` was created the moment your rule appeared and deleted as my final act. Every commit
-names its paths - no `git add -A` - and the one file of yours I found in the tree at session start
-(`gauntlet/verify/sidebyside.mjs`, already committed in `308f536`) was never touched.
+`SESSION.lock` was created before the first write and deleted as the final act. Every commit names
+its paths - no `git add -A`. Six piece commits plus two `TODO:` filings, and the log has a section
+per piece. The four `beat_*.png` probe frames are deleted per TODO 50; there was never any committed
+staging for them, so nothing else needed removing.
+
+**Filed tonight:** TODO 51 (`vantage-08` plus the whole stability sweep) and TODO 52 (the world hint
+at the ute still tells a co-op bird to mash its way out; not a one-line fix because `addHint` refuses
+to replace an existing mid and nothing clears `G.hints` between runs).
