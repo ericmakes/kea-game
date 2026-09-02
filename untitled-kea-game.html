@@ -703,6 +703,41 @@ function vsScreen(r){
    VS ONLY. Outside a match there is no management, nothing is restorable, no cycle is counted and no
    award is scaled - the hook reads G._decay and G._decay is only ever set inside a match. */
 const DECAY=0.60;                    // per object, per cycle, both directions. FENCED FOR PLAYTEST
+/* ---------- THE BOTCH (TODO 19, 2026-09-02) ----------
+   A restore never lands pristine. THE MANAGEMENT puts the thing back and it goes back CROOKED - a
+   small rotation, a small offset - because a bird did it with its beak. The success condition is
+   untouched: the object is restored, the mission reads restored, and only the transform is wonky.
+   NON-COMPOUNDING, WHICH IS THE CONSTANT SPEAKING. Every wonk is measured from the PRISTINE
+   transform, never from the last restore, so an object put back five times is exactly as crooked as
+   one put back once. Compounding would turn a contested object into scenery on the floor, and the
+   mode constants explicitly reserve compounding as a playtest experiment rather than the default.
+   SEEDED PER OBJECT AND PER CYCLE, NOT OFF THE WORLD STREAM. rnd() would work and would be wrong:
+   the wonk would then depend on how many draws happened to have been spent before the restore, so
+   the same object restored at the same point in two runs could land differently and the tripwire
+   would have to tolerate it. Hashing the object id with the cycle instead makes the wonk a FUNCTION
+   of what is being restored - reproducible from nothing but the object, and still different every
+   time it is put back. */
+const BOTCH=0.80;                                        // fidelity of pristine. FENCED FOR PLAYTEST
+const BOTCHBAND={rot:(1-BOTCH)*0.6, off:(1-BOTCH)*0.18}; // radians and metres, derived from the constant
+function botchNoise(key){                                // deterministic, in [-1,1], from a string
+  let h=2166136261>>>0;
+  for(let i=0;i<key.length;i++){ h^=key.charCodeAt(i); h=Math.imul(h,16777619)>>>0; }
+  h=(h+0x6D2B79F5)>>>0; let r=Math.imul(h^h>>>15,1|h); r^=r+Math.imul(r^r>>>7,61|r);
+  return ((((r^r>>>14)>>>0)/4294967296)*2)-1; }
+function botchWonk(id,cycle){ const k=String(id)+':'+(cycle||0)+':';
+  return {rz:botchNoise(k+'rz')*BOTCHBAND.rot, rx:botchNoise(k+'rx')*BOTCHBAND.rot,
+          px:botchNoise(k+'px')*BOTCHBAND.off, pz:botchNoise(k+'pz')*BOTCHBAND.off}; }
+/* the ONE place a restore lands, so pieces 20 and 21 put their carried props and their replacements
+   back through exactly this and cannot invent a second kind of crooked. */
+function botchApply(it,cycle){
+  if(!it||!it.mesh||!it.base)return null;
+  const w=botchWonk(it.id,cycle);
+  it.mesh.position.x=it.base.px+w.px;
+  it.mesh.position.z=it.base.pz+w.pz;
+  it.mesh.rotation.x=(it.base.rx||0)+w.rx;
+  it.mesh.rotation.z=(it.baseRz||0)+w.rz;
+  it.botch=w;
+  return w; }
 function canRestore(k){ return !!(k&&vsOn()&&vsRoleOf(k.idx)==='management'); }
 function fixable(it,k){ return !!(it&&it.kind==='tear'&&it.done&&canRestore(k)); }
 function orderValue(it){ return Math.round((it&&it.paid||0)*Math.pow(DECAY,(it&&it.cycles)||0)); }
@@ -712,7 +747,8 @@ function fixTear(it,by){
   it.done=false; it.progress=0; it.fixProgress=0; it.hits=0;
   if(it.mesh){ it.mesh.visible=true;
     if(it.base){ it.mesh.position.set(it.base.px,it.base.py,it.base.pz); it.mesh.rotation.x=it.base.rx||0; }
-    it.mesh.rotation.z=it.baseRz||0; }
+    it.mesh.rotation.z=it.baseRz||0;
+    botchApply(it,it.cycles||0); }   // TODO 19: it goes back, and it goes back crooked
   it.cycles=((it.cycles||0)+1);
   const p=it.getPos?it.getPos():null;
   if(pts>0)award(pts,'ORDER: '+String(it.label||'PUT BACK').toUpperCase(),p,by);
@@ -3972,6 +4008,7 @@ if(typeof globalThis!=='undefined'){
     WORLDREGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
     FIX:{DECAY,can:canRestore,fixable,value:orderValue,fix:fixTear},
+    BOTCH:{FIDELITY:BOTCH,BAND:BOTCHBAND,noise:botchNoise,wonk:botchWonk,apply:botchApply},
     VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,
         scores:vsScores,role:vsRoleOf,note:vsNote},
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};

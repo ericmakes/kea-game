@@ -1976,3 +1976,40 @@ should be unchanged in each; only the blade phase moves". What is actually true:
 - THE SHEEP IN 23 ARE STILL UNPINNED and are ambient, so they are a residual source in that frame
   that this piece did not address. Pinning them is the same FLAKES law 4 move QUIET already makes for
   humans. Not done, because it moves the subject again and 23 already measures 0.9991 to 0.9997.
+
+## SESSION 9 — 2026-09-02, resuming the ratified order at 19
+Lock taken. Eric pasted a command to launch a SECOND claude session against this tree; not run - that
+is the two-writer collision SESSION.lock exists to prevent - and the run was continued in place.
+
+### PIECE 19 — botch-system — CERTIFIED ed17c5d8cb9f044870769dedc59b8e83
+Verdict: green. Two staging rounds, both of them the world being more interesting than my driver.
+- A RESTORE NEVER LANDS PRISTINE. The management puts a thing back with its beak, so it lands crooked
+  - a small rotation and a small offset - and the SUCCESS CONDITION is untouched: the object reads
+  restored, the mission reads restored, only the transform is wonky.
+- NON-COMPOUNDING IS THE WHOLE PIECE, and it is the constant speaking rather than my taste. Every
+  wonk is measured from PRISTINE, never from where it last landed, so an object fought over seven
+  times is exactly as crooked as one put back once. Asserted at one restore, at two, and at seven -
+  because compounding is the kind of bug that only shows after a few. The sabotage that multiplies
+  the wonk by the cycle fails at the second restore and is a full radian out by the seventh.
+- THE BAND IS DERIVED FROM THE CONSTANT, not written next to it: rot and off are (1-BOTCH) times a
+  fixed shape. Sabotaging that took two goes to do honestly - replacing the derivation with literals
+  of the SAME value changes nothing observable and rightly caught nothing. The real sabotage moves
+  BOTCH to 0.5 and leaves the band behind, and that fails two assertions.
+- SEEDED PER OBJECT AND PER CYCLE, NOT OFF THE WORLD STREAM. rnd() would have worked and would have
+  been wrong: the wonk would then depend on how many draws happened to be spent before the restore.
+  Hashing the object id with the cycle makes the wonk a FUNCTION of what is being restored -
+  reproducible from nothing but the object. The assertion that says so spends FIFTY rnd() draws
+  between two calls and requires the same answer.
+- ONE ENTRY POINT, because pieces 20 and 21 have to put carried props and replacements back through
+  exactly this and must not be able to invent a second kind of crooked.
+- TWO STAGING ROUNDS, BOTH WORTH KEEPING. First, dist2 is a game function and not a battery one, so
+  the helper threw. Second and better: RIP OFF SPIKES SPAWNS A LOOSE SPIKE AT THE TEAR POSITION when
+  it is wrecked, so the restorer standing on the wreckage picks the PROP as its nearest interactable
+  and never sees the thing it came to fix - fixProgress stayed undefined and the fix silently never
+  ran. FLAKES law 3, exactly: the driver now clears the ground around the tear every frame.
+- VERIFIED ADVERSARIALLY, FIVE WAYS: a restore landing pristine, every restore being the same frozen
+  pose, the wonk compounding with the cycle, the constant moving without the band, and the noise
+  losing its negative half.
+- CAPTURE: 25 shots, 0 flagged, worst 0.9894. Nothing re-pinned. The botch only fires inside a match
+  and no vantage runs one.
+- EYEBALL: nothing in the set. Press 4, wreck something, put it back, and look at how it sits.

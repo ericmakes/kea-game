@@ -1925,6 +1925,86 @@ C.section('THE FIX VERB - wreck it, put it back, wreck it again, and it is worth
   X.startGame(1); tick(6);
 }
 
+C.section('THE BOTCH - a restore goes back, and it goes back crooked, and it never gets worse');
+// TODO 19. THE MANAGEMENT puts a thing back with its beak, so it lands wonky: a small rotation and a
+// small offset off pristine, bounded by the mode constant. The success condition is untouched - only
+// the transform is crooked - and the wonk is measured from PRISTINE every time, so an object fought
+// over five times is exactly as crooked as one fought over once.
+{
+  const B=X.BOTCH, FIX=X.FIX, V=X.VS, P2=H.P2;
+  ok(B.FIDELITY===0.80,'the fidelity constant is the one the mode constants name ('+B.FIDELITY+')');
+  ok(Math.abs(B.BAND.rot-(1-B.FIDELITY)*0.6)<1e-12&&Math.abs(B.BAND.off-(1-B.FIDELITY)*0.18)<1e-12,
+     'and the band is DERIVED from it rather than a second number to keep in step ('+
+     B.BAND.rot.toFixed(3)+' rad, '+B.BAND.off.toFixed(3)+'m)');
+
+  /* THE WONK IS A FUNCTION OF THE OBJECT, NOT OF THE WORLD STREAM. This is the assertion that says
+     so: spend a pile of rnd() draws between two calls and the answer does not move. Off rnd() it
+     would, and the tripwire would have to tolerate it. */
+  { const a=B.wonk('t99',0); for(let i=0;i<50;i++)X.rnd(0,1); const b=B.wonk('t99',0);
+    ok(JSON.stringify(a)===JSON.stringify(b),'the same object at the same cycle wonks identically, fifty draws apart');
+    ok(JSON.stringify(B.wonk('t99',1))!==JSON.stringify(a),'a later cycle is a different wonk, so it is not one frozen pose');
+    ok(JSON.stringify(B.wonk('t98',0))!==JSON.stringify(a),'and a different object is a different wonk'); }
+  { const vals=[]; for(let i=0;i<200;i++)vals.push(B.noise('k'+i));
+    ok(vals.every(v=>v>=-1&&v<=1),'the noise is bounded to -1..1 over two hundred keys');
+    ok(vals.some(v=>v<-0.3)&&vals.some(v=>v>0.3),'and it uses both signs rather than leaning one way'); }
+
+  // ---- through a REAL restore ----
+  X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  const a=G.keas[0], b=G.keas[1];
+  G.vs.roles={menace:0,management:1};
+  const t=G.inter.find(it=>it.kind==='tear'&&!it.done&&!it.needsBoth&&!it.needsPartner&&it.getPos&&it.mesh&&it.base);
+  ok(!!t,'a solo-finishable tear with a mesh and a base transform ('+(t?t.label:'none')+')');
+  const pristine={px:t.base.px,pz:t.base.pz,rx:t.base.rx||0,rz:t.baseRz||0};
+  const far=k=>{ k.x=46; k.z=46; k.y=0.25; k.vy=0; k.grounded=true; };
+  /* FLAKES law 3, and it cost a round to remember: RIP OFF SPIKES spawns a loose spike prop AT the
+     tear position when it is wrecked, so the restorer standing on the wreckage picks the PROP as its
+     nearest interactable and never sees the thing it came to fix. Clear the ground first. */
+  const clearGround=q=>{ for(const p of G.props){ if(p.heldBy||p.banked)continue;
+    if(Math.hypot(p.x-q.x,p.z-q.z)<3.5){ p.x=44; p.z=44; p.vy=0; if(p.mesh)p.mesh.position.set(44,0.3,44); } } };
+  const act=(k,map,other,want)=>{ far(other);
+    const q=t.getPos(), yy=Math.max(q.y,X.groundHeightAt(q.x,q.z,3)+0.02);
+    if(k.held){k.held.heldBy=null;k.held=null;}
+    clearGround(q);
+    hold(map.grab); let st=0;
+    while(t.done!==want&&st<60*20){ G.combo=0; G.comboT=0; clearGround(q);
+      k.x=q.x; k.z=q.z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); st++; }
+    un(map.grab); tick(2); return st; };
+  const dev=()=>({ px:t.mesh.position.x-pristine.px, pz:t.mesh.position.z-pristine.pz,
+                   rx:t.mesh.rotation.x-pristine.rx, rz:t.mesh.rotation.z-pristine.rz });
+  const inBand=d=>Math.abs(d.px)<=B.BAND.off+1e-9&&Math.abs(d.pz)<=B.BAND.off+1e-9&&
+                  Math.abs(d.rx)<=B.BAND.rot+1e-9&&Math.abs(d.rz)<=B.BAND.rot+1e-9;
+  const mag=d=>Math.max(Math.abs(d.px),Math.abs(d.pz),Math.abs(d.rx),Math.abs(d.rz));
+
+  act(a,P1,b,true);
+  ok(t.done===true,'the menace wrecks it');
+  act(b,P2,a,false);
+  ok(t.done===false,'THE SUCCESS CONDITION STILL HOLDS - it is restored');
+  ok(t.mesh.visible===true,'and it is back in the world');
+  const d1=dev();
+  ok(mag(d1)>1e-6,'but it did NOT land pristine ('+JSON.stringify(d1)+')');
+  ok(inBand(d1),'and it landed inside the band the constant sets');
+  ok(!!t.botch,'the object records the wonk it is wearing');
+
+  /* NON-COMPOUNDING IS THE PIECE. Wreck it and restore it again: the deviation is measured from
+     PRISTINE both times, so the second one is a DIFFERENT wonk of the SAME size, not a bigger one. */
+  act(a,P1,b,true); act(b,P2,a,false);
+  const d2=dev();
+  ok(t.done===false,'restored a second time');
+  ok(inBand(d2),'still inside the band, measured from pristine and not from where it last landed ('+
+     JSON.stringify(d2)+')');
+  ok(JSON.stringify(d2)!==JSON.stringify(d1),'and it is a different crooked, because the cycle moved on');
+  ok(mag(d2)<=B.BAND.rot+1e-9,'the second restore is not twice as wonky as the first ('+
+     mag(d1).toFixed(4)+' then '+mag(d2).toFixed(4)+', band '+B.BAND.rot.toFixed(4)+')');
+
+  // five more rounds, because compounding is the kind of bug that only shows after a few
+  { for(let i=0;i<5;i++){ act(a,P1,b,true); act(b,P2,a,false); }
+    const d=dev();
+    ok(t.done===false&&inBand(d),'seven restores in and it is still inside the same band ('+
+       JSON.stringify(d)+')');
+    ok(mag(d)<=B.BAND.rot+1e-9,'so an object fought over all match is as crooked as one put back once, no worse'); }
+  X.startGame(1); tick(6);
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

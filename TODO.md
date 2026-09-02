@@ -168,7 +168,7 @@ directions share the cycle count).
 PROOF: wreck/fix/wreck/fix one object headless; assert the decaying value
 sequence and the state flips.
 
-### 19. botch-system  (VS)
+### 19. botch-system  (VS)  — DONE session 9 (ed17c5d8cb9f044870769dedc59b8e83)
 Every restore lands at BOTCH fidelity: seeded wonk transform — slight
 rotation, offset, misalignment — signs crooked, wipers skewed. Success
 condition still true. Applies to fixes, carry-back placements, and
