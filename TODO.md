@@ -658,6 +658,28 @@ PROOF: stability.mjs 08 at TAKES=5 comes back above 0.995; diff unchanged or re-
 reason recorded. Game md5 unchanged - say so in the commit message.
 NOTE FOR TODO 5 (hud-tab-reflow), which re-pins 08: land this first or the re-pin pins a coin toss.
 
+FULL SWEEP, SESSION 7, on the final build 4c29df092d4cf33cf5ee0f3b2524730b - all 25 vantages, three
+takes each, compared against EACH OTHER (baseline out of the picture). Five do not reshoot the same:
+
+    17_flight            0.9024   <- thirty times worse than the next one, and it PASSES the
+                                     baseline diff at 0.9989. That number is a coin toss.
+    08_readability_320   0.9922
+    23_paddock_gate      0.9929
+    05_tussock_ground    0.9931
+    03_kea_plate         0.9943
+    every other vantage  0.9959 to 0.9999
+
+17 IS SOLVED AND THE FIX IS ONE WORD. It is not the pin and it is not the flap phase: it is the
+SETTLE. 04_flight_underwing stages the same way - poseLock off, PIN holding y, flapDrive and flapPh
+every frame - and it is stable at 0.9972, and the only difference between them is that 04 passes
+{settle:900} and 17 takes the default. Measured: give 17 the same settle and it goes 0.9024 to
+0.9958, three takes, on the same build. NOT SHIPPED, because the stop condition had been reached and
+the longer settle CHANGES THE FRAME, so it wants a re-pin and a re-pin wants Eric.
+    await shotR('17_flight',`...${CAM(2.35,3.15,2.1,0,3.0,0)}`,{settle:900});
+The other four (08, 23, 05, 03) all stage the bird ONCE with no PIN wrapper, which is FLAKES law 12
+in its plainest form. Whether they want a PIN, a longer settle, or both is one measurement each -
+run stability.mjs after every change, because diff.mjs cannot answer this question at all.
+
 ### 52. THE CAGE HINT STILL TELLS A CO-OP BIRD TO MASH ITS WAY OUT
 Found in session 7 by piece 15, and deliberately not fixed there because it is a world hint rather
 than the cell. startGame adds hint 'cage' at the ute with the text 'the night ranger cages
