@@ -71,6 +71,31 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0c1420;font-family:
 .bigbtn.col:hover{background:#8E4A38}
 .bigbtn.alt{background:#7A5E2F;box-shadow:0 5px 0 #4d3a1b}
 .btnrow{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+/* ---------- the tour brochure (TODO 37). LOOK IS FLAGGED: the pins are decorative and the LIST is
+   what you actually click, so the thing stays legible at 320px while the paper stays a picture. */
+#tour{display:none}
+/* THE BROCHURE IS TALLER THAN A SHORT WINDOW, and .screen centres its children inside overflow
+   hidden - which cut the heading off the top and the BACK button off the bottom at 960x540. So this
+   screen scrolls from the top instead of centring. Measured on the 26 vantage, which is why it has
+   one. */
+#tour.open{display:flex;justify-content:flex-start;overflow-y:auto;padding:16px 18px}
+.brochure{background:var(--paper);color:var(--ink);border-radius:14px;box-shadow:0 10px 34px rgba(0,0,0,.35);padding:16px 20px 6px;max-width:min(880px,94vw);width:100%;border:5px solid #d8ceac}
+.brochure h2{font-family:'Fredoka';font-size:clamp(20px,3vw,27px);letter-spacing:1px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.brochure h2 span{font-size:.62em;color:#8a7a2f}
+.brochure .note{font-family:'Patrick Hand';font-size:15px;opacity:.8;text-align:left}
+.brochure .paper{position:relative;height:min(240px,30vh);margin:10px 0 6px;border-radius:10px;background:linear-gradient(160deg,#e9e2c6,#cfe0c8 55%,#e8d9b4);overflow:hidden;border:2px dashed #b9ad86}
+.tpin{position:absolute;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;border:3px solid #fffdf4;box-shadow:0 2px 5px rgba(0,0,0,.35);background:#9a9384}
+.tpin.open{background:var(--kea)}
+.tpin.current{background:var(--org);box-shadow:0 0 0 6px rgba(255,122,26,.26)}
+.tpin.soon{background:var(--alp)}
+.tpin b{position:absolute;left:50%;top:17px;transform:translateX(-50%);font-family:'Patrick Hand';font-weight:400;font-size:13px;white-space:nowrap;color:#3a3626;text-shadow:0 1px 0 rgba(255,255,255,.75)}
+.trow{display:flex;align-items:center;gap:10px;padding:7px 4px;border-top:2px solid #e2d9bb;text-align:left}
+.trow .nm{font-family:'Fredoka';font-weight:700;font-size:17px;flex:1;min-width:0}
+.trow .nm i{display:block;font-style:normal;font-family:'Patrick Hand';font-weight:400;font-size:14px;opacity:.72}
+.trow .pips{font-family:'Fredoka';font-size:14px;color:#8a7a2f;flex:none}
+.trow .stamp{font-family:'Fredoka';font-size:11px;color:var(--bad);border:2px solid var(--bad);border-radius:6px;padding:1px 6px;transform:rotate(-7deg);flex:none}
+.trow button{font-family:'Fredoka';font-weight:700;font-size:14px;border:none;border-radius:10px;padding:7px 13px;background:var(--kea);color:#fff;cursor:pointer;flex:none}
+.trow button[disabled]{background:#b4ad99;cursor:not-allowed}
 .controls{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;margin-top:6px}
 .ctl{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;font-size:15px;color:#2c3318;min-width:200px}
 .ctl h3{font-size:15px;letter-spacing:1px;margin-bottom:6px;color:#5E6E2F}
@@ -174,14 +199,25 @@ body.photo #touchui{opacity:0;pointer-events:none}
     <button class="bigbtn alt" id="btn2p">2 KEA (couch)</button>
     <button class="bigbtn col" id="btncol">🌋 COLOSSAL — grow with every point (solo)</button>
     <button class="bigbtn alt" id="btnvs">⚔ 2 KEA VERSUS — menace vs management</button>
+    <button class="bigbtn alt" id="btntour">🗺 THE TOUR — pick your map</button>
   </div>
-  <div id="hint2p">press <b>1</b> / <b>2</b> / <b>3</b> / <b>4</b> (or Enter) to start · real kea work as a team to inflict maximum damage on one car — two-player is the scientifically accurate mode</div>
+  <div id="hint2p">press <b>1</b> / <b>2</b> / <b>3</b> / <b>4</b> (or Enter) to start · <b>M</b> for the tour map · real kea work as a team to inflict maximum damage on one car — two-player is the scientifically accurate mode</div>
   <div class="controls">
     <div class="ctl"><h3>KEA 1</h3><b>W A S D</b> waddle &nbsp; HOLD <b>SPACE</b> — fly<br><b>E</b> grab · rip (hold) &nbsp; <b>Q</b> screech</div>
     <div class="ctl"><h3>KEA 2</h3><b>ARROWS</b> waddle &nbsp; HOLD <b>/</b> — fly<br><b>.</b> grab · rip (hold) &nbsp; <b>,</b> screech</div>
     <div class="ctl"><h3>EVERYONE</h3><b>TAB</b> to-do list &nbsp; <b>P</b> pause &nbsp; <b>O</b> photo mode<br><b>C</b> band colour &nbsp; feathers = dignity — run out and you're only briefly embarrassed<br>stash shinies &amp; scoff food at <b>your nest</b> · progress saves itself (<b>⌫</b> at title wipes it)</div>
   </div>
   <div class="crimes">based on documented crimes: the Homer Tunnel cone gang · the 2009 passport theft · the Craigieburn snow-ambush crew (they used a sentry) · nails stolen and stashed sorted by size · one hiking boot never recovered</div>
+</div>
+
+<div class="screen" id="tour">
+  <div class="brochure">
+    <h2>THE KEA TOUR<span id="tourstars"></span></h2>
+    <div class="note">Department of Conservation visitor brochure. Somebody has drawn on it.</div>
+    <div class="paper" id="tourpaper"></div>
+    <div id="tourlist"></div>
+  </div>
+  <div class="btnrow"><button class="bigbtn alt" id="tourback">BACK [ESC]</button></div>
 </div>
 
 <div class="screen" id="win">
@@ -489,7 +525,7 @@ function pageHeader(i){ const a=G.chapters&&G.chapters[i]; if(!a)return null;
             :state==='next'?'??? — THE NEXT PAGE':null;
   return {area:a,state,pips,stars,text}; }
 /* hydrate from a save blob of ANY vintage, then open the live page */
-function starsInit(b){
+function starsInit(b,ver){
   // the BLOB is authoritative, exactly as the done list is: reset then hydrate, so that wiping the
   // save at the title and restarting cannot leave a star behind that no save record supports.
   G.stars={}; G.pageChaos={};
@@ -505,7 +541,7 @@ function starsInit(b){
                     caged:+p.caged||0}; }
   const retro=syncClearedStars();
   pageOpen(curPage());
-  return {stars:!!st,pages:!!pg,retro,v:(b&&b.v)||1}; }
+  return {stars:!!st,pages:!!pg,retro,v:ver||(b&&b.v)||1}; }
 
 /* ---------- THE STYLE STAR (TODO 13, 2026-09-02) ----------
    Second of the three page stars: you cleared the page, but were you FLAMBOYANT about it. Granted
@@ -880,20 +916,58 @@ function fixTear(it,by){
   if(it.tuggers)it.tuggers.forEach(k=>{k.tug=null;});
   return {pts,cycles:it.cycles}; }
 
+/* ---------- THE SAVE, SCHEMA v3: PROGRESS IS PER BIOME (TODO 37, 2026-09-02) ----------
+   v2 stored one world because there WAS one world. The tour makes that assumption wrong in the only
+   way that costs a player something: two maps whose chapters happen to share a name would have
+   written over each other stars. So the blob now carries a slot per biome and nothing else about it
+   changes - same storage key, because the key is how a returning player is identified and bumping it
+   would wipe every run alive.
+   MIGRATION IS RETRO-GRANTING, NOT GUESSING. A v1 or v2 blob described the carpark, so the whole of
+   it becomes the carpark slot and the slot records which vintage it came from. Nothing is dropped
+   and nothing is invented for a map that never existed.
+   AND IT STILL WRITES THE OLD SHAPE ALONGSIDE, as a mirror of whichever biome you are standing in.
+   That is not belt and braces, it is the promise the v2 assertion made and this piece has no right
+   to break: somebody who opens an older copy of this file - and there are copies - still finds the
+   map that build knows about, exactly where it looks for it. The mirror is written and never read;
+   every reader goes through migrate() to the slots. */
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
-  write(){ if(!this.ok())return; try{ localStorage.setItem(this.key(),JSON.stringify({
-    v:2,
+  slot(){ return {
     done:G.missions.filter(m=>m.done).map(m=>m.id), chapIdx:G.chapIdx||0,
-    peak:G.chaosPeak||0, t:G.playT||0, band:G.bandIdx||0,
     stars:G.stars||{}, pages:G.pageChaos||{},
-    hats:G.keas.map(k=>(k.hatProp&&k.hatProp.name)||null) })); }catch(e){} },
+    hats:G.keas.map(k=>(k.hatProp&&k.hatProp.name)||null),
+    areas:(G.chapters||[]).slice() }; },   // so a map can say n stars of m without being loaded
+  write(){ if(!this.ok())return; try{
+    const b=this.migrate(this.load())||{v:3,biome:BIOME_DEFAULT,peak:0,t:0,band:0,biomes:{}};
+    const id=G.biome||BIOME_DEFAULT, s=this.slot();
+    b.v=3; b.biome=id; b.biomes=b.biomes||{}; b.biomes[id]=s;
+    b.peak=Math.max(b.peak||0,G.chaosPeak||0); b.t=G.playT||b.t||0; b.band=G.bandIdx||0;
+    b.done=s.done; b.chapIdx=s.chapIdx; b.stars=s.stars; b.pages=s.pages; b.hats=s.hats; // the mirror
+    localStorage.setItem(this.key(),JSON.stringify(b)); }catch(e){} },
   load(){ if(!this.ok())return null; try{ const r=localStorage.getItem(this.key()); return r?JSON.parse(r):null; }catch(e){ return null; } },
-  wipe(){ if(!this.ok())return; try{ localStorage.removeItem('keaSaveV1_n'); localStorage.removeItem('keaSaveV1_c'); }catch(e){} }
+  /* any vintage in, v3 shape out, and the containers always exist so no caller has to test for them */
+  migrate(b){ if(!b||typeof b!=='object')return null;
+    const base={v:3, biome:(b.v>=3&&b.biome)||BIOME_DEFAULT,
+                 peak:+b.peak||0, t:+b.t||0, band:+b.band||0, biomes:{}};
+    if(b.v>=3&&b.biomes&&typeof b.biomes==='object'){ base.biomes=b.biomes; return base; }
+    base.biomes[BIOME_DEFAULT]={done:b.done||[], chapIdx:+b.chapIdx||0,
+      stars:b.stars||{}, pages:b.pages||{}, hats:b.hats||null,
+      areas:(b.areas&&b.areas.slice())||null, from:'v'+(+b.v||1)};
+    return base; },
+  pick(id){ if(!this.ok())return; try{ localStorage.setItem(TOURKEY,String(id)); }catch(e){} },
+  picked(){ if(!this.ok())return null; try{ const v=localStorage.getItem(TOURKEY);
+    return (v&&BIOMES[v])?v:null; }catch(e){ return null; } },
+  wipe(){ if(!this.ok())return; try{ localStorage.removeItem('keaSaveV1_n'); localStorage.removeItem('keaSaveV1_c');
+    localStorage.removeItem(TOURKEY); }catch(e){} }
 };
-function applySave(){ const b=SAVE.load(); if(!b){ starsInit(null); return renderTodo(); }
-  G.chaosPeak=Math.max(G.chaosPeak||0,b.peak||0); G.playT=b.t||G.playT||0; G.bandIdx=b.band||0;
+/* THE SLOT FOR THE MAP YOU ARE STANDING IN IS THE ONE THAT HYDRATES, and the career-wide numbers -
+   peak chaos, time played, band colour - stay at the top of the blob because they are the player,
+   not the map. */
+function applySave(){ const blob=SAVE.migrate(SAVE.load());
+  const b=blob&&blob.biomes&&blob.biomes[G.biome||BIOME_DEFAULT];
+  if(!blob||!b){ starsInit(null); return renderTodo(); }
+  G.chaosPeak=Math.max(G.chaosPeak||0,blob.peak||0); G.playT=blob.t||G.playT||0; G.bandIdx=blob.band||0;
   let any=false; for(const id of (b.done||[])){ const m=G.missions.find(m=>m.id===id); if(m&&!m.done){ m.done=true; any=true; } }
   if(any){
     if(G.chapters){ while(G.chapIdx<G.chapters.length-1){ const rows=G.missions.filter(x=>x.area===G.chapters[G.chapIdx]&&!x.finale&&!x.hide&&!x.bonus);
@@ -903,7 +977,7 @@ function applySave(){ const b=SAVE.load(); if(!b){ starsInit(null); return rende
       for(const x of G.missions)if(x.bonus&&x.locked)x.locked=false;
       popup('THE FINALE UNLOCKS','APEX MENACE — four in pursuit, then home to the nest',0,null,true); AU.fanfare&&AU.fanfare(); }
   }
-  starsInit(b);
+  starsInit(b,blob.v);
   rewear(b.hats);
   renderTodo();
 }
@@ -1631,6 +1705,99 @@ function buildCarpark(){
   }
 }
 defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark});
+
+/* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
+   The level select. One table, and everything the brochure says comes out of it: the order of the
+   maps, the copy on each pin, where the pin sits on the paper, and what it costs to open. Tuning the
+   tour means editing THIS and nothing else - which is the whole reason it is a table and not six
+   branches somewhere in a render function.
+   THE CURRENCY IS STARS, because that is the only progress measure the game already keeps that
+   survives a reload and cannot be farmed by replaying one act: three per page, granted by pieces 12,
+   13 and 14, and banked in the save. need is a TOTAL across the whole tour, so a map can be opened
+   by being good anywhere rather than by grinding the one before it.
+   A PIN HAS FOUR STATES AND THEY ARE NOT THE SAME QUESTION. locked means you have not paid for it;
+   soon means you have and the map does not exist yet, which is the honest thing to say while the
+   tour is half built; open means go; current is where you are standing. A pin can be unlocked and
+   unbuilt, and saying open when there is nothing to walk into would be the lie.
+   THE MODEL IS DATA AND CARRIES NO DOM, so the whole state machine is assertable under node - which
+   matters here more than usual, because five of the six pins cannot be photographed yet. */
+const TOURKEY='keaTourPick';
+const TOUR=[
+  {id:'carpark',   need:0,  name:'THE CARPARK',        sub:'where it started - rubber, sandwiches, no witnesses', pin:{x:0.27,y:0.60}},
+  {id:'skifield',  need:6,  name:'THE CLUB SKI FIELD', sub:'a rope tow, a day lodge, and a carpark full of nutters', pin:{x:0.44,y:0.28}},
+  {id:'campground',need:12, name:'THE DOC CAMPGROUND', sub:'a tent is a bag that somebody left out', pin:{x:0.62,y:0.52}},
+  {id:'village',   need:18, name:'THE VILLAGE',        sub:'cafe tables, a bakery, a great deal of glass', pin:{x:0.79,y:0.24}},
+  {id:'river',     need:24, name:'THE BRAIDED RIVER',  sub:'jetboats, sandflies, and somebody lunch', pin:{x:0.51,y:0.80}},
+  {id:'station',   need:30, name:'THE HIGH STATION',   sub:'a woolshed, a dog kennel, ten thousand sheep', pin:{x:0.86,y:0.66}},
+];
+function tourStarsIn(rec){ let n=0; if(!rec)return 0;
+  for(const a in rec)for(const k of STARKINDS)if(rec[a]&&rec[a][k])n++; return n; }
+/* THE MAP YOU ARE STANDING IN IS READ LIVE, not off the blob, so the brochure is right the moment a
+   star is granted rather than the next time the game happens to write. */
+function tourModel(blob){
+  const b=blob||SAVE.migrate(SAVE.load())||{v:3,biomes:{}};
+  const here=G.biome||BIOME_DEFAULT, slots=b.biomes||{};
+  let total=0;
+  const pins=TOUR.map(t=>{ const s=slots[t.id]||null, cur=(t.id===here);
+    const stars=cur?tourStarsIn(G.stars):tourStarsIn(s&&s.stars);
+    const pages=cur?((G.chapters||[]).length):((s&&s.areas&&s.areas.length)||0);
+    total+=stars;
+    return {id:t.id, name:t.name, sub:t.sub, pin:t.pin, need:t.need, stars, pages,
+            of:pages*STARKINDS.length, built:!!BIOMES[t.id], visited:cur||!!s, current:cur}; });
+  for(const p of pins){ p.have=total; p.unlocked=total>=p.need;
+    p.stamp=p.of>0&&p.stars>=p.of;                       // every page on that map, every star on it
+    p.state=!p.unlocked?'locked':(p.current?'current':(p.built?'open':'soon')); }
+  return {stars:total, here, pins, v:b.v||3};
+}
+function tourPin(id){ return tourModel().pins.find(p=>p.id===id)||null; }
+/* PICKING A MAP IS A DECISION, NOT A NAVIGATION. It says yes or no and records the choice; the
+   flyover that carries you there is piece 38, and until it exists the browser reloads into the
+   pick. boot() reads it, so nothing about the pick has to survive in memory. */
+function tourPick(id){
+  const m=tourModel(), p=m.pins.find(x=>x.id===id);
+  if(!p)return {ok:false,why:'no such map on the brochure',id};
+  if(!p.unlocked)return {ok:false,why:'locked',id,need:p.need,have:m.stars};
+  if(!p.built)return {ok:false,why:'not built yet',id};
+  SAVE.pick(id);
+  return {ok:true,id};
+}
+/* THE BROCHURE ITSELF. Everything above is data; this is the only part that touches the DOM, and it
+   reads the model rather than recomputing anything. The PINS are decoration - the rows underneath
+   are what a player clicks - because a pin layer that has to stay hit-testable at 320px stops being
+   a drawing and starts being a layout problem, and vantage 08 is the standing reminder of what 320px
+   does to layouts here. A locked map does not even give its name away. */
+function tourRender(){
+  if(HEADLESS)return null;
+  const m=tourModel();
+  const head=document.getElementById('tourstars');
+  if(head)head.textContent=m.stars+(m.stars===1?' STAR':' STARS');
+  const paper=document.getElementById('tourpaper');
+  if(paper){ paper.innerHTML='';
+    for(const p of m.pins){ const d=document.createElement('div');
+      d.className='tpin '+p.state;
+      d.style.left=(p.pin.x*100).toFixed(1)+'%'; d.style.top=(p.pin.y*100).toFixed(1)+'%';
+      const b=document.createElement('b'); b.textContent=p.unlocked?p.name:'???';
+      d.appendChild(b); paper.appendChild(d); } }
+  const list=document.getElementById('tourlist');
+  if(list){ list.innerHTML='';
+    for(const p of m.pins){ const r=document.createElement('div'); r.className='trow';
+      const nm=document.createElement('div'); nm.className='nm';
+      const i=document.createElement('i');
+      i.textContent=p.unlocked?p.sub:('locked - '+p.need+' stars opens it, you have '+p.have);
+      nm.textContent=p.unlocked?p.name:'???'; nm.appendChild(i); r.appendChild(nm);
+      if(p.stamp){ const st=document.createElement('span'); st.className='stamp'; st.textContent='CLEARED'; r.appendChild(st); }
+      if(p.of){ const pp=document.createElement('div'); pp.className='pips'; pp.textContent=p.stars+' / '+p.of+' STARS'; r.appendChild(pp); }
+      const btn=document.createElement('button');
+      btn.textContent=p.state==='current'?'YOU ARE HERE':p.state==='open'?'GO':p.state==='soon'?'NOT BUILT YET':'LOCKED';
+      btn.disabled=p.state!=='open';
+      btn.onclick=()=>{ if(tourPick(p.id).ok)location.reload(); };   // TODO 38 replaces the reload with a flyover
+      r.appendChild(btn); list.appendChild(r); } }
+  return m;
+}
+function tourOpen(on){ if(HEADLESS)return false; const t=document.getElementById('tour');
+  if(!t)return false;
+  if(on===false){ t.classList.remove('open'); return false; }
+  tourRender(); t.classList.add('open'); return true; }
 
 /* ---------- HOME POSITIONS (TODO 17, 2026-09-02) ----------
    Every displaceable and consumable prop remembers the transform it was BUILT at, so a later piece
@@ -4130,6 +4297,7 @@ function startGame(mode,opts){
         {free:true}); } }
   if(!HEADLESS){
     document.getElementById('title').style.display='none';
+    tourOpen(false);                                        // the brochure never survives into play
     G.tabHintOn=true;
     document.getElementById('mutebtn').style.display='block';
     if(mode===2){ document.getElementById('phud2').style.display='flex'; document.getElementById('splitline').style.display='block'; }
@@ -4176,7 +4344,9 @@ const TOUCH={on:false,_st:{f:0,b:0,l:0,r:0},
       for(const t of e.changedTouches){ if(t.identifier===lid)lid=null; } },{passive:true});
   } };
 function boot(opts){
-  initScene(); buildWorld(opts&&opts.biome); registerSheepPecks(); homesRegister();   // TODO 17: after the build, so site rotations count
+  /* TODO 37: an explicit biome still wins - the capture rig passes one and every baseline depends
+     on it - and a pick made on the brochure is the fallback, ahead of the default. */
+  initScene(); buildWorld((opts&&opts.biome)||SAVE.picked()); registerSheepPecks(); homesRegister();   // TODO 17: after the build, so site rotations count
   { const w1=mat(0x9FB8C4,GLASSX), w2=mat(PAL.sun);
     for(const m of [w1,w2]){ m.emissive=new THREE.Color(0xFFB35C).convertSRGBToLinear(); m.emissiveIntensity=0; }
     G.warmMats=[w1,w2]; }
@@ -4188,13 +4358,20 @@ function boot(opts){
   document.getElementById('btn2p').onclick=()=>startGame(2);
   document.getElementById('btncol').onclick=()=>startGame(1,{colossal:true});
   document.getElementById('btnvs').onclick=()=>startGame(2,{vs:true});
+  document.getElementById('btntour').onclick=()=>tourOpen(true);
+  document.getElementById('tourback').onclick=()=>tourOpen(false);
   document.getElementById('btnvsagain').onclick=()=>location.reload();
   document.getElementById('btnagain').onclick=()=>location.reload();
   document.getElementById('cfgo').onclick=()=>closeCaseFile(true);
   document.getElementById('cfskip').onclick=()=>closeCaseFile(false);
   document.getElementById('mutebtn').onclick=e=>{ AU.muted=!AU.muted; e.target.textContent=AU.muted?'🔇 muted':'🔊 sound'; };
   addEventListener('keydown',e=>{
-    if(!G.running){ if(e.code==='Enter'||e.code==='Digit1')startGame(1); else if(e.code==='Digit2')startGame(2); else if(e.code==='Digit3')startGame(1,{colossal:true}); else if(e.code==='Digit4')startGame(2,{vs:true}); return; }
+    if(!G.running){
+      const tOpen=document.getElementById('tour').classList.contains('open');
+      if(e.code==='Escape'){ tourOpen(false); return; }
+      if(e.code==='KeyM'){ tourOpen(!tOpen); return; }
+      if(tOpen)return;                       // the brochure owns the keyboard while it is up
+      if(e.code==='Enter'||e.code==='Digit1')startGame(1); else if(e.code==='Digit2')startGame(2); else if(e.code==='Digit3')startGame(1,{colossal:true}); else if(e.code==='Digit4')startGame(2,{vs:true}); return; }
     if(G.cfOpen){ if(e.code==='Enter')closeCaseFile(true); else if(e.code==='Escape')closeCaseFile(false); e.preventDefault(); return; }
     if(e.code==='Tab'&&G.running){ const t=document.getElementById('todo'); G.todoPinned=!t.classList.contains('open'); t.classList.toggle('open'); }
     if(e.code==='Backspace'&&!G.running){ SAVE.wipe(); const h=document.getElementById('hint2p'); if(h)h.innerHTML='<b>save wiped</b> — fresh beak, fresh crimes'; }
@@ -4225,6 +4402,7 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
     WORLDREGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
+    TOUR:{TABLE:TOUR,KEY:TOURKEY,model:tourModel,pin:tourPin,pick:tourPick,render:tourRender,open:tourOpen},
     FIX:{DECAY,can:canRestore,fixable,value:orderValue,fix:fixTear},
     BOTCH:{FIDELITY:BOTCH,BAND:BOTCHBAND,noise:botchNoise,wonk:botchWonk,apply:botchApply},
     CARRY:{value:carryValue,back:carryBack,HOMER,at:atHome,dist:homeDist},

@@ -809,7 +809,7 @@ C.section('ONE CELL, ONE BIRD — jail occupancy is global, and a full cell shoo
   G._cageSpy=null; G._shooSpy=null;
 }
 
-C.section('THE STAR LEDGER — three stars a page, schema v2, and no cleared page is ever lost');
+C.section('THE STAR LEDGER — three stars a page, and no cleared page is ever lost');
 // The to-do list already has PAGES; it had no memory of how well any of them went. The ledger adds
 // three stars per page keyed by AREA - cleared, style, clean - plus a per-page chaos snapshot,
 // which is the thing that makes "earned WHILE the page was open" answerable at all: the run total
@@ -879,12 +879,21 @@ C.section('THE STAR LEDGER — three stars a page, schema v2, and no cleared pag
     const raw=_m.get('keaSaveV1_n');
     ok(!!raw,'a blob was written under the unchanged v1 key name');
     const blob=JSON.parse(raw);
-    ok(blob.v===2,'the schema announces itself as v2 ('+blob.v+')');
+    ok(blob.v===3,'the schema announces itself as v3, one slot per map (TODO 37) ('+blob.v+')');
     ok(!!blob.stars&&blob.stars[P1A]&&blob.stars[P1A].cleared===true,'the star is on the wire');
     ok(!!blob.pages&&blob.pages[P1A]&&blob.pages[P1A].earned>0,
        'so is the page chaos snapshot ('+JSON.stringify(blob.pages[P1A])+')');
+    /* THE v1 SHAPE IS STILL AT THE TOP OF THE BLOB, and after TODO 37 it is a MIRROR of whichever
+       map you are standing in rather than the only copy. The promise this assertion protects is the
+       reason the mirror is written at all: there are older copies of this file, and one of them
+       opening this save has to find the carpark exactly where it looks for it. */
     ok(Array.isArray(blob.done)&&blob.done.length>=rows.length&&'peak' in blob&&'hats' in blob,
        'and every v1 field is still there, so an older build reading this blob still works');
+    { const sl=blob.biomes&&blob.biomes.carpark;
+      ok(!!sl,'the same progress is also in the carpark slot, which is what this build reads');
+      ok(!!sl&&JSON.stringify(sl.stars)===JSON.stringify(blob.stars)&&
+         JSON.stringify(sl.done)===JSON.stringify(blob.done),
+         'and the mirror at the top is exactly that slot, not a second version of the truth'); }
 
     // 5. ROUND TRIP. Restart and the stars come back off the blob, not off the world.
     const earnedV2=blob.pages[P1A].earned;
@@ -1790,6 +1799,198 @@ C.section('THE TOUR CHASSIS - the world is now a biome, and it is the only one r
   H.boot(); ok(G.biome==='carpark','the rig boots the default with no argument');
   H.boot('carpark'); ok(G.biome==='carpark','and takes a name when it is given one');
   X.startGame(1); tick(6);
+}
+
+C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open one');
+/* TODO 37. Two things, and the second one only makes sense because of the first: progress is now
+   stored per BIOME, and there is a brochure that reads that store and decides what you are allowed
+   to walk into.
+   THE SCHEMA IS THE PART THAT COULD LOSE SOMEBODY SOMETHING. v2 stored one world because there was
+   one, and the tour makes that assumption expensive in a specific way: the star ledger is keyed by
+   AREA, and two maps are perfectly free to have a page with the same name. Under v2 they would have
+   written over each other. So the round trip below deliberately uses two biomes whose page names are
+   IDENTICAL - the stub builds the carpark - because that is the collision the slots exist for and a
+   test with two different chapter lists would not have touched it.
+   THE BROCHURE IS DATA, and it has to be, because five of its six pins cannot be photographed yet.
+   The look is flagged for Eric; the state machine is asserted here. */
+{
+  const realLS=globalThis.localStorage, _m=new Map();
+  globalThis.localStorage={getItem:k=>_m.has(k)?_m.get(k):null,
+                           setItem:(k,v)=>_m.set(k,String(v)),removeItem:k=>_m.delete(k)};
+  const T=X.TOUR, S=X.STARS, B=X.BIOME;
+  const grant=(area,kinds)=>{ const r=S.rec(area); for(const k of kinds)r[k]=true; return r; };
+  try{
+    // 1. THE TABLE IS THE TUNING SURFACE, so the things a tuner could get wrong are asserted.
+    ok(Array.isArray(T.TABLE)&&T.TABLE.length>=2,'the tour is one table ('+T.TABLE.length+' pins)');
+    ok(T.TABLE[0].id===B.DEFAULT&&T.TABLE[0].need===0,
+       'the first pin is the map that already exists and costs nothing ('+T.TABLE[0].id+', need '+T.TABLE[0].need+')');
+    { let asc=true, prev=-1; for(const t of T.TABLE){ if(!(t.need>prev)&&t.need!==0)asc=false; if(t.need<prev)asc=false; prev=t.need; }
+      ok(asc,'the thresholds only go up, so no later pin is cheaper than an earlier one ('+
+         T.TABLE.map(t=>t.need).join(',')+')'); }
+    ok(new Set(T.TABLE.map(t=>t.id)).size===T.TABLE.length,'no map is pinned twice');
+    ok(T.TABLE.every(t=>t.pin&&t.pin.x>0&&t.pin.x<1&&t.pin.y>0&&t.pin.y<1),
+       'every pin sits on the paper, in fractions rather than pixels');
+    ok(T.TABLE.every(t=>!!t.name&&!!t.sub),'and every pin carries its own copy');
+    /* TWO SOURCES FOR A NAME IS ONE TOO MANY, so where a map is actually built the brochure and the
+       biome registry are held to the same string. This is the assertion that catches a rename in
+       one place and not the other. */
+    for(const t of T.TABLE) if(B.ALL[t.id])
+      ok(B.ALL[t.id].label===t.name,'the brochure and the registry agree on the name of '+t.id+
+         ' ('+B.ALL[t.id].label+' vs '+t.name+')');
+
+    // 2. A VIRGIN CAREER. Nothing is invented for a map nobody has been to.
+    X.SAVE.wipe(); X.boot(); X.startGame(1); tick(8); park();
+    { const m=T.model();
+      ok(m.stars===0,'a fresh career has no stars ('+m.stars+')');
+      ok(m.here===B.DEFAULT,'and the brochure knows which map the bird is standing in ('+m.here+')');
+      ok(m.pins[0].state==='current','the carpark reads as where you are');
+      ok(m.pins.slice(1).every(p=>p.state==='locked'),
+         'every other pin is LOCKED, which is a different answer from not built yet ('+
+         m.pins.map(p=>p.id+':'+p.state).join(' ')+')');
+      ok(m.pins.slice(1).every(p=>p.stars===0&&p.of===0&&!p.visited),
+         'and carries no stars and no denominator, because a map nobody has opened has no pages yet');
+      ok(m.pins[0].of===(G.chapters||[]).length*S.KINDS.length,
+         'the carpark denominator is its own page count times three ('+m.pins[0].of+')');
+      ok(m.pins[0].stamp===false,'and it is not stamped on a fresh run'); }
+
+    // 3. THE CURRENCY IS THE TOTAL, and it is the ledger the game already keeps.
+    const NEED2=T.TABLE[1].need;
+    grant(G.chapters[0],S.KINDS); grant(G.chapters[1],S.KINDS);
+    { const m=T.model();
+      ok(m.stars===2*S.KINDS.length,'six stars granted on two pages count as six ('+m.stars+')');
+      ok(m.pins[0].stars===m.stars,'all of them belong to the map they were earned on');
+      ok(NEED2<=m.stars,'which is what the second pin costs ('+NEED2+')');
+      ok(m.pins[1].unlocked===true,'so the second pin is paid for');
+      ok(m.pins[1].state==='soon',
+         'and it says NOT BUILT YET rather than GO, because the map does not exist ('+m.pins[1].state+')');
+      ok(m.pins[2].state==='locked','while the third pin is still locked at '+m.pins[2].need); }
+
+    /* A PICK IS REFUSED FOR TWO DIFFERENT REASONS AND SAYS WHICH, because the brochure button and
+       whatever piece 38 builds both need to tell the player something true. */
+    { const r1=T.pick(T.TABLE[2].id);
+      ok(r1.ok===false&&r1.why==='locked'&&r1.need===T.TABLE[2].need,
+         'picking a locked map is refused as locked, with the price in the answer ('+JSON.stringify(r1)+')');
+      const r2=T.pick(T.TABLE[1].id);
+      ok(r2.ok===false&&r2.why==='not built yet',
+         'picking a paid-for map that has no builder is refused as unbuilt ('+JSON.stringify(r2)+')');
+      const r3=T.pick('nowhere');
+      ok(r3.ok===false&&/no such map/.test(r3.why||''),'and a map that is not on the brochure at all is refused');
+      ok(!_m.has(T.KEY),'none of the three refusals recorded a pick ('+(_m.get(T.KEY)||'nothing')+')'); }
+
+    X.SAVE.write();
+    { const blob=JSON.parse(_m.get('keaSaveV1_n'));
+      ok(blob.v===3&&!!blob.biomes&&!!blob.biomes.carpark,'the write puts the carpark in its own slot');
+      ok(blob.biome==='carpark','and records which map it was written from ('+blob.biome+')');
+      ok(Array.isArray(blob.biomes.carpark.areas)&&blob.biomes.carpark.areas.length===G.chapters.length,
+         'with its page list, so the brochure can say n of m without loading the map ('+
+         blob.biomes.carpark.areas.length+')'); }
+
+    // 4. THE MAP EXISTS NOW. Same table, same save, and the pin flips to GO.
+    B.define(T.TABLE[1].id,{label:T.TABLE[1].name,build:B.ALL.carpark.build});
+    { const m=T.model();
+      ok(m.pins[1].built===true&&m.pins[1].state==='open',
+         'registering a builder turns the paid-for pin into GO ('+m.pins[1].state+')');
+      const r=T.pick(T.TABLE[1].id);
+      ok(r.ok===true,'and the pick is accepted ('+JSON.stringify(r)+')');
+      ok(_m.get(T.KEY)===T.TABLE[1].id,'and recorded where boot will find it ('+_m.get(T.KEY)+')');
+      ok(X.SAVE.picked()===T.TABLE[1].id,'which is exactly what SAVE.picked reads back'); }
+
+    // 5. BOOT INTO THE BIOME, AND BACK, WITH THE SLOTS KEEPING THEIR OWN STARS.
+    //    Both maps have the SAME page names here, which is the collision v2 could not survive.
+    X.boot({biome:T.TABLE[1].id}); X.startGame(1); tick(8); park();
+    ok(G.biome===T.TABLE[1].id,'booting into the second map lands there ('+G.biome+')');
+    { const m=T.model();
+      ok(m.here===T.TABLE[1].id&&m.pins[1].state==='current','and the brochure follows you ('+m.here+')');
+      ok(m.pins[1].stars===0,'the new map starts with no stars of its own ('+m.pins[1].stars+')');
+      ok(m.pins[0].stars===2*S.KINDS.length,
+         'while the carpark still has all six, read off the blob rather than the world ('+m.pins[0].stars+')');
+      ok(m.stars===2*S.KINDS.length,'so the career total is unchanged by travelling ('+m.stars+')');
+      ok(Object.keys(G.stars).length===0,
+         'and the live ledger is empty, because the slot that hydrated was this map own ('+
+         Object.keys(G.stars).length+' pages)'); }
+    grant(G.chapters[0],['style']); X.SAVE.write();
+    { const m=T.model();
+      ok(m.pins[1].stars===1&&m.pins[0].stars===2*S.KINDS.length,
+         'a star earned here lands here ('+m.pins[1].stars+' vs carpark '+m.pins[0].stars+')');
+      ok(m.stars===2*S.KINDS.length+1,'and the total is the sum of the maps ('+m.stars+')'); }
+    /* READ THROUGH AN ACCESSOR, and this block is the reason the rule exists. Written the obvious
+       way - blob.biomes.carpark.stars - it THREW under the sabotage that made every write start the
+       blob fresh, and a battery that dies takes every finding after it down with it: that sabotage
+       came back with zero findings and looked like a test gap. It was not. It was this block
+       reading state that only exists when the code works. Five pieces old and it still caught me. */
+    { const blob=JSON.parse(_m.get('keaSaveV1_n'));
+      const stars=id=>((blob.biomes||{})[id]||{}).stars||{};
+      const a=stars('carpark'), b=stars(T.TABLE[1].id);
+      ok(Object.keys(blob.biomes||{}).length===2,
+         'both maps are in the blob ('+Object.keys(blob.biomes||{}).join(',')+')');
+      ok(Object.keys(a).length===2&&Object.keys(b).length===1,
+         'each holding its own record ('+Object.keys(a).length+' pages of carpark vs '+Object.keys(b).length+')');
+      ok(!!Object.keys(a)[0]&&Object.keys(a)[0]===Object.keys(b)[0],
+         'and they key their pages by the SAME name, which is the collision the slots exist for ('+
+         (Object.keys(b)[0]||'nothing')+')'); }
+
+    X.boot({biome:'carpark'}); X.startGame(1); tick(8); park();
+    ok(G.biome==='carpark','and back again');
+    { const m=T.model();
+      ok(m.pins[0].stars===2*S.KINDS.length,'the carpark stars are still there after the round trip ('+m.pins[0].stars+')');
+      ok(S.rec(G.chapters[0]).style===true&&S.rec(G.chapters[1]).clean===true,
+         'in the live ledger, off the blob, page by page');
+      ok(m.pins[1].stars===1,'and the other map kept its one ('+m.pins[1].stars+')');
+      ok(m.stars===2*S.KINDS.length+1,'total unchanged ('+m.stars+')'); }
+
+    /* AND A PLAIN BOOT FOLLOWS THE PICK, which is the whole mechanism the brochure GO button uses
+       today - it records and reloads, and piece 38 replaces the reload with a flyover. This caught
+       itself while the section was being written: the migration block below booted plainly, landed
+       in the picked map rather than the carpark, and read a slot that had never been written. That
+       is the feature working, and it is now an assertion instead of a surprise. */
+    X.boot(); ok(G.biome===T.TABLE[1].id,'a plain boot follows the recorded pick ('+G.biome+')');
+    X.SAVE.pick('carpark'); X.boot();
+    ok(G.biome==='carpark','and picking the carpark brings you back to it ('+G.biome+')');
+
+    // 6. MIGRATION. A v2 blob is the carpark and nothing else, and it says where it came from.
+    { const v2={v:2, done:['wiper'], chapIdx:1, peak:1234, t:56, band:2,
+                stars:{[G.chapters[0]]:{cleared:true,style:true,clean:false}},
+                pages:{[G.chapters[0]]:{open:0,close:400,earned:400,paid:200,caged:0}},
+                hats:[null]};
+      const mg=X.SAVE.migrate(v2);
+      ok(mg.v===3,'a v2 blob migrates to v3 ('+mg.v+')');
+      ok(mg.biome==='carpark'&&!!mg.biomes.carpark,'into the carpark slot, because that is the world it described');
+      ok(mg.biomes.carpark.from==='v2','and the slot records the vintage it was retro-granted from ('+mg.biomes.carpark.from+')');
+      ok(mg.peak===1234&&mg.t===56&&mg.band===2,
+         'the career numbers stay at the top of the blob, because they are the player and not the map');
+      ok(JSON.stringify(mg.biomes.carpark.stars)===JSON.stringify(v2.stars),'every star comes across');
+      ok(JSON.stringify(mg.biomes.carpark.pages)===JSON.stringify(v2.pages),'so does every page snapshot');
+      ok(mg.biomes.carpark.done[0]==='wiper'&&mg.biomes.carpark.chapIdx===1,'so does the done list and the page you were on');
+      ok(Object.keys(mg.biomes).length===1,'and nothing is invented for a map v2 never knew about');
+      // and it HYDRATES, which is the part a player would notice
+      _m.set('keaSaveV1_n',JSON.stringify(v2));
+      X.boot(); X.startGame(1); tick(12);
+      ok(S.rec(G.chapters[0]).cleared===true&&S.rec(G.chapters[0]).style===true,
+         'a v2 save hydrates through the migration ('+S.pips(G.chapters[0])+')');
+      ok(G.chaosPeak>=1234,'and the career peak comes with it ('+G.chaosPeak+')');
+      ok(T.model().pins[1].stars===0,'while the second map is back to nothing, because v2 never had one');
+      // a v1 blob has no marker at all
+      const v1=X.SAVE.migrate({done:['wiper'],chapIdx:0});
+      ok(v1.v===3&&v1.biomes.carpark.from==='v1','a blob with no marker at all migrates as v1 ('+v1.biomes.carpark.from+')');
+      ok(X.SAVE.migrate(null)===null&&X.SAVE.migrate('rubbish')===null,'and nothing migrates to nothing rather than throwing'); }
+
+    // 7. A WIPE TAKES THE PICK WITH IT, or the next boot would keep walking into a map the player
+    //    just asked to forget.
+    X.SAVE.pick('carpark');
+    ok(!!_m.get(T.KEY),'a pick is on the wire');
+    X.SAVE.wipe();
+    ok(!_m.has(T.KEY),'and a wipe takes it, so the next boot is the default again');
+    ok(X.SAVE.picked()===null,'with nothing to read back');
+    // AND A PICK NAMING A MAP THAT IS NOT REGISTERED IS IGNORED RATHER THAN OBEYED
+    _m.set(T.KEY,'nowhere-at-all');
+    ok(X.SAVE.picked()===null,'a pick naming a map that does not exist reads as no pick ('+X.SAVE.picked()+')');
+  } finally {
+    delete B.ALL[T.TABLE[1].id];       // the registry goes back to what the chassis section asserts
+    globalThis.localStorage=realLS;
+    X.SAVE.wipe&&X.SAVE.wipe(); X.boot(); X.startGame(1); tick(6);
+  }
+  ok(Object.keys(X.BIOME.ALL).length===1,'the stub biome is out of the registry again ('+
+     Object.keys(X.BIOME.ALL).join(',')+')');
 }
 
 C.section('2 KEA VERSUS - the match scaffold, every branch of the decision driven');

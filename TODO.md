@@ -487,6 +487,39 @@ current progress to carpark. DOC-brochure level-select map: stamp badges,
 star counts, locked pins, unlock thresholds in one tunable table.
 PROOF: headless save round-trip + migration; unlock state machine;
 boot-into-biome and back. Map look: leave flagged.
+DONE session 10 (c1fcfbc6df3b2939d240f8112bb8b38a).
+SCHEMA v3: the blob keeps a slot per biome - done, chapIdx, stars, pages, hats, plus the page list
+so a pin can say n of m without loading the map - and the career numbers (peak, time, band) stay at
+the top because they are the player and not the map. Same storage key, because the key is how a
+returning player is identified. migrate() takes any vintage to v3: a v1 or v2 blob described the
+carpark, so the whole of it becomes the carpark slot and the slot records the vintage it came from.
+AND IT STILL WRITES THE v2 SHAPE ALONGSIDE, as a mirror of the map you are standing in. There are
+older copies of this file and one of them opening a v3 save has to find the carpark where it looks
+for it; the v2 assertion that promised this was not mine to break. Written, never read - every
+reader goes through migrate() to the slots, and the battery holds the mirror to being exactly the
+current slot rather than a second version of the truth.
+THE COLLISION THIS EXISTS FOR IS PROVED WITH TWO MAPS WHOSE PAGES SHARE A NAME. The stub biome in
+the proof builds the carpark, so both slots key their stars by the same area strings - which is what
+v2 would have written over. A test with two different chapter lists would not have touched it.
+THE BROCHURE IS ONE TABLE: order, copy, pin position, price. Currency is TOTAL stars across the
+tour, so a map opens by being good anywhere. FOUR PIN STATES, and they are not the same question -
+locked (not paid for), soon (paid for, no builder yet), open (go), current (here). A pin can be
+unlocked and unbuilt, and saying GO with nothing to walk into would be the lie. tourPick refuses
+with WHY and the price; boot() honours a recorded pick ahead of the default, so the GO button
+records and reloads until piece 38 replaces the reload with a flyover.
+FIVE SABOTAGES, ALL CAUGHT - but the second one caught NOTHING first time round and that is the
+entry worth reading: a write that clobbered every other map came back with zero findings because my
+own assertion read blob.biomes.carpark.stars directly, threw, and took every finding after it down.
+The session-9 guard rule, five pieces old, and it still got me. Read through an accessor and the
+same sabotage lands eight findings.
+LOOK IS FLAGGED, per the brief, and there is a frame for it: vantage 26_tour_brochure, NOT pinned.
+The pins are decoration and the rows underneath are what you click, because a pin layer that has to
+stay hit-testable at 320px stops being a drawing. At 960x540 the sixth row and the BACK button sit
+below the fold and the screen scrolls to them - whether the paper should shrink again to fit all six
+is a look call. Keyboard path checked in a real browser: M opens, ESC closes, and 1 is swallowed
+while the brochure is up so nothing starts behind the map.
+NOT BUILT, AND WORTH KNOWING: with one biome registered, GO is unreachable in the shipped game -
+every other pin is LOCKED or NOT BUILT YET. The open path is proved headless only until 39 lands.
 
 ### 38. tour-travel  (absorbs 34; inherits the Sep 1 investigation)
 Leaving via the map: flyover out; arriving: flyover in + level title

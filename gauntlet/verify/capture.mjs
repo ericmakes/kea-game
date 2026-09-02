@@ -243,4 +243,15 @@ await shotR('25_preen_follow',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=fals
   ${PIN("k.x=0;k.z=0;k.y=0;k.vy=0;k.grounded=true;k.ry="+F_RY+";k.stun=0;k.landFlare=0;"+
         "k.idleT=99;k._idleEver=true;k.idleAct={kind:'preen',t:1.60,dur:3.5,side:-1};KEAGAME.G.time=12.0;")}
   ${CAM(-Math.sin(F_RY)*F_BACK, F_H, -Math.cos(F_RY)*F_BACK, 0, 0.72, 0)}`);
+/* 26 (TODO 37): THE BROCHURE, which is the one part of that piece with a look, and the brief hands
+   the look to Eric. STAGED WITH A CAREER IN PROGRESS rather than a virgin save, because every pin
+   locked is the least informative version of this screen. Two pages fully starred puts four of the
+   five pin states on one sheet of paper: the carpark CURRENT with 6 of 24, the ski field paid for
+   but NOT BUILT YET, the campground LOCKED with its price showing, and nothing stamped.
+   The brochure is a full-screen overlay with its own background, so the running game behind it does
+   not reach the frame - which is also why this vantage needs no camera and no bird. */
+await shotR('26_tour_brochure',`const G=KEAGAME.G, S=KEAGAME.STARS;
+  for(const kind of S.KINDS){ S.rec(G.chapters[0])[kind]=true; S.rec(G.chapters[1])[kind]=true; }
+  KEAGAME.SAVE.write();
+  KEAGAME.TOUR.open(true);`);
 console.log('CAPTURE COMPLETE');

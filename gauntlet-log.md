@@ -2263,3 +2263,56 @@ Verdict: green. Option (b) of the three the brief offers, which it calls the sma
   stands within the 6-unit cage radius at (12.2, 5.9), so nothing else moved. Subjects 7/7.
 - EYEBALL: press E near the DOC ute in solo and again in co-op. The line is new on screen - it has
   never displayed before tonight - so it is worth ten seconds of reading it in place.
+
+### PIECE 37 — tour-save-and-map — CERTIFIED c1fcfbc6df3b2939d240f8112bb8b38a
+Verdict: green. The biggest piece of the run: a save schema, a migration, a level select and its
+state machine. Five sabotages, and the one that came back EMPTY is the entry worth reading.
+- SCHEMA v3 KEEPS A SLOT PER BIOME - done, chapIdx, stars, pages, hats, and the page list so a pin
+  can say n of m without loading the map. The career numbers stay at the top of the blob because
+  peak chaos, time played and band colour are the PLAYER, not the map. Same storage key: the key is
+  how a returning player is identified and bumping it would wipe every run alive.
+- MIGRATION IS RETRO-GRANTING, NOT GUESSING. A v1 or v2 blob described the carpark, so the whole of
+  it becomes the carpark slot and the slot records which vintage it came from. Nothing is dropped and
+  nothing is invented for a map that never existed - asserted both ways, including that a v2 save
+  HYDRATES through the migration rather than merely converting.
+- AND IT STILL WRITES THE v2 SHAPE ALONGSIDE. The v2 assertion said an older build reading this blob
+  still works, and there are older copies of this file; that promise was not mine to break. So the
+  top of the blob is a MIRROR of whichever map you are standing in, written and never read, and the
+  battery holds it to being exactly the current slot rather than a second version of the truth.
+- THE COLLISION THE SLOTS EXIST FOR IS PROVED WITH TWO MAPS WHOSE PAGES SHARE A NAME. The stars
+  ledger is keyed by AREA, and two maps are perfectly free to have a page called THE CARPARK. The
+  stub biome in the proof BUILDS the carpark, so both slots key by identical strings - which is
+  exactly what v2 would have written over. Two biomes with different chapter lists would have proved
+  nothing about the thing that made this schema necessary.
+- THE BROCHURE IS ONE TABLE and everything on the paper comes out of it: order, copy, pin position,
+  price. Currency is the TOTAL stars across the tour, so a map opens by being good anywhere rather
+  than by grinding the one before it.
+- FOUR PIN STATES, WHICH ARE NOT THE SAME QUESTION: locked (not paid for), soon (paid for, no builder
+  yet), open (go), current (here). A pin can be unlocked and unbuilt, and saying GO when there is
+  nothing to walk into would be the lie. tourPick refuses with a WHY and the price in the answer.
+- A PLAIN BOOT FOLLOWS A RECORDED PICK, and that assertion exists because the feature caught me while
+  I was writing the section: the migration block booted plainly, landed in the picked map instead of
+  the carpark, and read a slot nobody had written. That was the pick working. It is an assertion now
+  instead of a surprise.
+- THE SABOTAGE THAT CAUGHT NOTHING, AND WHY. A write that clobbered every other map returned ZERO
+  findings and looked like a hole in the test. It was not: my own assertion read
+  blob.biomes.carpark.stars directly, threw when the slot was gone, and took every finding after it
+  down with it. That is the session-9 guard rule - if an assertion reads state that only exists when
+  the code WORKS, read it through an accessor - and it is now five pieces old and still landing.
+  Rewritten through an accessor, the same sabotage produces eight findings. The other four:
+  a pin saying GO when unbuilt (1), the brochure counting only the current map (7), migration losing
+  the vintage marker (2), a wipe leaving the pick behind (2).
+- CAPTURE: 26 shots, 25 compared, 0 flagged, worst 0.9826 which is still 17 carrying piece 54.
+  Subjects 7/7. NEW VANTAGE 26_tour_brochure, deliberately NOT pinned - the look is flagged per the
+  brief, so it has no baseline and diff ignores it.
+- IT ALREADY EARNED ITS KEEP: the first 26 frame showed the heading cut off the top and the BACK
+  button off the bottom, because .screen centres its children inside overflow hidden and the
+  brochure is taller than 540px. That screen now scrolls from the top. Nothing else could have seen
+  it - no assertion measures a browser, which is the whole reason the vantage exists.
+- EYEBALL: gauntlet/capture/26_tour_brochure.png, and press M at the title. Six rows and six pins,
+  four states on one sheet. At 960x540 the sixth row and the BACK button are below the fold and it
+  scrolls to them - shrinking the paper again to fit all six is a look call and it is yours.
+- AND WHAT IS NOT REACHABLE YET: with one biome registered, GO cannot be clicked in the shipped game
+  - every pin but the carpark reads LOCKED or NOT BUILT YET. The open path is proved headless until
+  piece 39 builds the ski field. That is the honest state of the tour, and the brochure says so out
+  loud rather than pretending.
