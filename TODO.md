@@ -417,8 +417,13 @@ reshuffle — eyeball, then re-pin the sweep. Permanent near-zero noise after.
   shed footprint - snow banking against the hut walls is welcome. Judge
   at 10 (and 11 if flagged); leave flagged.
 
-### 34. chapter-travel-beat  — BUILT session 6 (49335b92f810540fbe5e52cfb816929a)
-SUPERSEDED-BY-38, AND THE TIMING NEEDS SAYING OUT LOUD: Eric's commission arrived in commit af9111e
+### 34. chapter-travel-beat  — REVERTED session 7 (was 49335b92f810540fbe5e52cfb816929a)
+CLOSED. Eric's verdict, TODO 50: the tour absorbs travel wholesale and under the maps design travel
+happens BETWEEN MAPS, so the within-map page-turn beat has no future. Reverted in session 7 at
+0038af8b3ce396103b14526baf162227 - the game-file and battery halves of 1c096b4 were removed by a
+script proved to reproduce that commit's parent byte-for-byte, and the four beat_*.png probe frames
+were deleted. Nothing below this line is live work; it is kept because piece 38 quotes it.
+THE ORIGINAL NOTE, KEPT FOR THE RECORD: Eric's commission arrived in commit af9111e
 while this piece was already patched, proved and gated, and the only mid-session notice I got was the
 OVERNIGHT.md half of that commit, so "do not build 34 separately" was not visible until after the
 commit landed. It is NOT reverted, because what it builds is the machinery piece 38 specifies -
@@ -492,6 +497,13 @@ resolves 40 units off) - build a per-biome anchor table instead; G.cams
 is empty under node so assert the state machine only; the blend must sit
 before the camLock line or the photographer loses determinism; skip
 needs an arm delay because page turns are input-caused.
+BUILD IT FRESH, KEYED TO BIOMES (Eric, TODO 50). Piece 34 is reverted and there is no travel code
+left in the file to re-key, so this piece starts from nothing. The BINDING EVIDENCE paragraph above
+REMAINS BINDING - it is the Sep 1 read-only investigation, not a description of 34, and every one of
+its four findings was paid for before 34 existed. What 34 proved on top of it, worth knowing rather
+than rediscovering: the anchor table can be asserted against the build sites in buildWorld so it
+cannot drift from the world, and the skip needs to remember which keys were ALREADY down at the open
+as well as arming late, because a player mid-waddle has not asked to skip anything.
 PROOF: state machine headless incl. skip + restore. Feel: flagged.
 
 ### 39. skifield-biome
@@ -554,6 +566,13 @@ is missing, renamed or silently skipped, which the current grep cannot see eithe
 PROOF: the ready-made test case is any battery with a deliberate throw in it - the gate must go red.
 
 ### 47. propAt DRAWS A ROTATION FOR EVERY PROP THAT NOTHING EVER READS
+NOT STRUCK - PLEASE RE-READ, ERIC. TODO 50 says to strike 47 and 48 as moot because they judge the
+reverted feature. Neither of them touches it: both were filed in session 6 by piece 17
+(home-positions), which is shipped and not reverted, and neither mentions the travel beat. The two
+findings the travel-beat commit itself filed were numbered 36 and 37 in its own commit message and
+were renumbered to 45 and 46 - both are DONE, and both are the gate and battery infrastructure the
+rest of the diet now stands on, so neither is moot either. Session 7 left all four alone rather than
+delete a live finding on what looks like a numbering slip. Strike them in one line if you meant it.
 Found in session 6 by piece 17. propAt sets ry:rnd(0,6) on every prop and no code path applies it to a
 prop mesh - ry is the kea and human convention (this.ry drives g.rotation.y for those), not the prop
 one. Props are built axis-aligned unless a build site rotates the mesh itself, which two do (the skis,
@@ -568,6 +587,10 @@ PROOF once built: for (a), assert every prop mesh rotation.y equals its own p.ry
 re-pin every vantage with props in it. For (b), nothing to prove but the md5 and the unchanged frames.
 
 ### 48. harness-everything BOOTS THE GAME TWICE, so half its sections run against a doubled world
+NOT STRUCK - see the note under 47. Still live, and independent of the travel beat: the double boot
+is in the snow section, which the revert did not touch, and it still doubles every registry from
+that line on. Session 7 confirmed it survives the revert - the battery is 182 lines shorter and the
+snow section reboots exactly as before.
 Found in session 6 by piece 17, which could not make a build-time assertion about props until it
 worked out why there were four skis. The snow section calls X.boot() a second time (it wants a fresh
 world for its resolver sweep), and boot() runs buildWorld() again WITHOUT clearing G.props, G.inter or

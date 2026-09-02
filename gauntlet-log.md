@@ -1433,3 +1433,54 @@ Verdict: green first pass, no staging attempts (documentation piece, no test to 
 - NO CAPTURE, NO GAME EDIT: game file untouched, md5 identical to the session 6 tip. fastgate PASS,
   gate CERTIFIED-SHIP with all nine batteries green.
 - EYEBALL: gauntlet/verify/FLAKES.md, lines 29-35. Nothing visual.
+
+### PIECE 50 — revert-travel-beat — CERTIFIED 0038af8b3ce396103b14526baf162227
+Verdict: green first pass. No assertion was staged, weakened or deleted; 182 lines of battery came
+out as one block because the feature they judge is gone.
+- WHY A SCRIPT AND NOT git revert: commit 1c096b4 also carried gauntlet-log.md, TODO.md and
+  SESSION.lock, and three shipped pieces (13, 14, 17) have landed on the game file since. Reverting
+  the commit would have deleted a session of log history and Eric numbers 45-50 along with the beat.
+  So the two halves that ARE the feature - the game file and the everything battery - were removed by
+  exact-string anchored edits, one atomic write each.
+- THE REMOVAL IS PROVED, NOT INSPECTED, and this is the part worth keeping. The same script was
+  replayed against the piece-34 build itself and reproduced 1c096b4^ BYTE-FOR-BYTE, both halves. That
+  is a stronger statement than "the diff looks right": it says the twelve edits are exactly the
+  inverse of what the commit added, with nothing left behind and nothing extra taken.
+- AND THE LATER PIECES ARE PROVED PRESERVED THE SAME WAY. The added/removed line set of
+  (piece-34 build -> HEAD) is identical to the set of (pre-34 build -> reverted build). Pieces 13, 14
+  and 17 land on the older file with the same 132 lines they landed on the newer one - purseClaim,
+  purseAdd, styleQueue, styleDrain, homesRegister, the STARS and HOMES exports, all untouched.
+- THE SEEDED-STREAM WORRY WAS MEASURED, NOT ASSUMED. Removing a battery section removes its
+  startGame calls, and since piece 45 the batteries are byte-identical run to run - so a shifted draw
+  would have shown up as a changed transcript downstream. Ran the everything battery on both builds
+  and diffed the transcripts with the travel section filtered out: identical. The only line that
+  differs in the whole run is the section header that no longer exists.
+- TWELVE EDITS: the card CSS and its keyframe, the card div, the whole beat block (anchors,
+  constants, phase/weight/start/end/fresh/update/aim), the two G fields, the page-turn trigger, the
+  win teardown, the uiCache slot, the card writer in updateUI, the camera blend plus the lookAt that
+  was refactored to feed it, the per-frame tick, the startGame reset, the harness export.
+- CAPTURE, AND A REAL FINDING IN IT: full 25-shot pass, 0 flagged, worst 0.9870. Nothing re-pinned,
+  baseline untouched. But the first pass flagged 08_readability_320 at 0.9446, and 08 is the vantage
+  session 6 called one of the three reproducible ones at 1.0000. IT WAS NOT THE REVERT. Three takes
+  on each build, all pairwise: within-mine 0.9884-0.9994, within-HEAD 0.9927-0.9979, ACROSS builds
+  0.9798-0.9994. The across-build numbers sit inside the within-build band, so the two builds are
+  indistinguishable and 0.9446 was simply a bad take. stability.mjs on 08 alone: take-to-take worst
+  0.9936 against a 0.995 threshold - unstable. Cause is in plain sight under FLAKES law 12: 08 is
+  one of the vantages that sets the bird ONCE and never uses PIN(), so something stays live through
+  the settle. Filed as TODO 51.
+- THE 47/48 STRIKE WAS NOT CARRIED OUT, deliberately, and it is flagged at the top of both items and
+  in REPORT.md. TODO 50 says to strike 47 and 48 as moot because they judge the reverted feature.
+  They do not - both were filed in session 6 by piece 17 (home-positions, shipped and not reverted),
+  one is about propAt drawing an unread rotation and the other about the battery booting twice, and
+  neither mentions the beat. The findings the travel-beat commit DID file were 36 and 37 in its own
+  message, renumbered to 45 and 46, and both are done and load-bearing. It reads as a numbering slip.
+  Deleting a live finding costs institutional memory; leaving it costs Eric one line in the morning,
+  so it was left standing with the reasoning written next to it.
+- TODO 34 marked REVERTED with the reasoning kept below the line, because piece 38 quotes it. TODO 38
+  annotated: it starts from nothing now, its BINDING EVIDENCE paragraph remains binding because that
+  is the Sep 1 investigation and not a description of 34, and the two things 34 learned on top of it
+  are written down so 38 does not rediscover them.
+- BEAT FRAMES RETIRED: beat_hold, beat_out, beat_back, beat_after deleted from gauntlet/capture.
+  There was never any committed staging for them - the shot script was ephemeral and is not in the
+  tree, so nothing else needed removing.
+- EYEBALL: nothing. The removal is invisible by construction, and the 25-frame diff says so.

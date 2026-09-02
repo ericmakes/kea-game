@@ -59,10 +59,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0c1420;font-family:
 .mi.locked{opacity:.4;filter:blur(.4px)}
 #todohint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(24,28,20,.7);padding:4px 12px;border-radius:10px;font-size:14px;z-index:10}
 #todohint.docked{left:auto;right:10px;transform:none;bottom:8px;font-size:11px;padding:3px 8px;opacity:.8}
-#travelcard{position:fixed;left:0;right:0;top:34%;z-index:11;text-align:center;pointer-events:none;display:none;
-  font-family:'Fredoka',system-ui,sans-serif;font-size:clamp(30px,6vw,64px);font-weight:700;letter-spacing:6px;
-  color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.45),0 0 26px rgba(0,0,0,.35);animation:tcin .45s ease-out}
-@keyframes tcin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 /* ---------- title / win ---------- */
 .screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:linear-gradient(180deg,var(--alp) 0%,var(--dawn) 78%,#e8b46f 100%);pointer-events:auto;text-align:center;padding:20px;overflow:hidden}
 .screen h1{font-size:clamp(38px,7vw,74px);font-weight:700;color:#2c3318;letter-spacing:1px;line-height:.95;text-shadow:0 3px 0 rgba(255,255,255,.5)}
@@ -161,7 +157,6 @@ body.photo #touchui{opacity:0;pointer-events:none}
   <div id="milist"></div>
 </div>
 <div id="todohint" style="display:none">TAB — to-do list</div>
-<div id="travelcard"></div>
 <button class="muted" id="mutebtn" style="display:none">🔊 sound</button>
 
 <div class="screen" id="title">
@@ -571,70 +566,6 @@ function pageJudge(area){ return {area,style:styleJudge(area),clean:cleanJudge(a
 function styleDrain(){ const q=G._styleQ; if(!q||!q.length)return [];
   G._styleQ=[]; const out=[]; for(const a of q){ const r=pageJudge(a); if(r)out.push(r); } return out; }
 
-/* ---------- THE CHAPTER TRAVEL BEAT (TODO 34, 2026-09-02) ----------
-   A page turn should FEEL like arriving somewhere else. On a turn the camera leaves the bird, flies
-   out to the new chapter anchor, holds while a title card names the place, then flies back. No new
-   areas and no teleports: the bird stays exactly where it is and the game keeps playing under it.
-   THE BEAT IS PURE STATE, and that is a testability decision rather than a stylistic one. updateCams
-   runs over G.cams, which is EMPTY under node (it is built after the HEADLESS return in boot), so no
-   camera transform can ever be asserted headless - but a state machine can be, every frame of it.
-   updateCams only READS this state, and it reads it BEFORE the G.camLock line, so the gauntlet
-   photographer stays authoritative and not one vantage in the capture set becomes nondeterministic.
-   WHERE AN AREA IS: the file has no such thing as an area centroid, and neither candidate source can
-   derive one - G.hints covers 4 of the 8 chapters, and props reached through mission.area miss three
-   of them and resolve THE HUT onto the spike beam. So the anchors are NAMED, measured off the build
-   sites in buildWorld, and asserted against those sites so the table cannot drift from the world. */
-const TRAVELANCHOR={
-  'THE CARPARK':{x:2,z:17},           // the carpark slab: box(40,0.14,22) at (2,17)
-  'THE CAMPSITE':{x:18,z:-12},        // between the picnic spread (15,-13) and the clothes line (19,-17)
-  'THE HUT':{x:-24,z:-9},             // buildHut(-24,-9)
-  'THE ROAD':{x:0,z:34},              // the road runs the length of z=34; the jam is at (0,34)
-  'THE SKI FIELD':{x:-40,z:-40},      // the rope-tow base and its shed
-  'THE TRAILHEAD':{x:44,z:-40},       // the big DOC sign
-  'THE PADDOCK & NEST':{x:-38,z:4},   // buildSheepPen(-38,4) - the arena for the muster and the twine
-  'TOGETHER':{x:-11,z:8}              // the campervan: the duet roof, with the trailer just up the road
-};
-/* seconds and metres. FENCED FOR PLAYTEST: every one of these is feel, the arm delay included. */
-const TRAVELBEAT={out:0.9,hold:1.5,back:0.8,arm:0.25,high:13,standoff:9,rise:3.5};
-const TRAVELSPAN=TRAVELBEAT.out+TRAVELBEAT.hold+TRAVELBEAT.back;
-function travelPhase(t){ return t<TRAVELBEAT.out?'out'
-  :t<TRAVELBEAT.out+TRAVELBEAT.hold?'hold':'back'; }
-function travelWeight(t){ const ss=u=>{ const c=clamp(u,0,1); return c*c*(3-2*c); }; // smoothstep, no overshoot
-  if(t<=0)return 0;
-  if(t<TRAVELBEAT.out)return ss(t/TRAVELBEAT.out);
-  if(t<TRAVELBEAT.out+TRAVELBEAT.hold)return 1;
-  if(t<TRAVELSPAN)return ss(1-(t-TRAVELBEAT.out-TRAVELBEAT.hold)/TRAVELBEAT.back);
-  return 0; }
-function travelStart(area){
-  if(!area||G.colossal||!G.running||G.won)return null;
-  const a=TRAVELANCHOR[area]; if(!a)return null;
-  G.travel={area,card:area,x:a.x,z:a.z,y:TRAVELBEAT.high,t:0,span:TRAVELSPAN,
-            phase:'out',w:0,cardOn:false,held0:new Set(KEYS),ended:null};
-  return G.travel; }
-function travelEnd(why){ const b=G.travel; if(!b)return null;
-  b.w=0; b.cardOn=false; b.phase='done'; b.ended=why||'expiry';
-  G.travel=null; G.travelLast=b; return b; }
-/* THE SKIP ARMS LATE ON PURPOSE. The page turn is CAUSED by input, so the key that finished the
-   mission is still in PRESSED when the beat opens, and a beat that skipped on that would never be
-   seen at all. Keys already held at the open are likewise not new input - a player mid-waddle has
-   not asked to skip anything - so the beat remembers what was down and watches only for fresh. */
-function travelFresh(){ const b=G.travel; if(!b)return false;
-  if(PRESSED.length>0)return true;
-  for(const c of KEYS)if(!b.held0.has(c))return true;
-  return false; }
-function travelUpdate(dt){ const b=G.travel; if(!b)return null;
-  b.t+=dt;
-  if(b.t>=TRAVELBEAT.arm&&travelFresh())return travelEnd('skip');
-  if(b.t>=b.span)return travelEnd('expiry');
-  b.phase=travelPhase(b.t); b.w=travelWeight(b.t); b.cardOn=b.phase==='hold';
-  return b; }
-/* the aim the camera blends toward, off the anchor and the ground under it. Pure and node-callable,
-   unlike anything touching G.cams, so the GEOMETRY is assertable even where the transform is not. */
-function travelAim(bb){ const t=bb||G.travel; if(!t)return null;
-  const gy=groundHeightAt(t.x,t.z,t.y);
-  return {x:t.x, y:Math.max(t.y,gy+TRAVELBEAT.rise), z:t.z+TRAVELBEAT.standoff,
-          lx:t.x, ly:gy, lz:t.z}; }
-
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
@@ -688,7 +619,7 @@ const G={
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
-  stars:{}, pageChaos:{}, snow:[], travel:null, travelLast:null,
+  stars:{}, pageChaos:{}, snow:[],
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -3249,8 +3180,7 @@ function missionDone(m){
       G.chapIdx++; moved=true;
     }
     if(moved){ pageOpen(curPage());
-      popup('PAGE TURNED','NOW: '+G.chapters[G.chapIdx],0,null,true); AU.ding(); flashTodo();
-      travelStart(curPage()); }   // fly out, name the place, come back
+      popup('PAGE TURNED','NOW: '+G.chapters[G.chapIdx],0,null,true); AU.ding(); flashTodo(); }
   }
   if(open.length===0&&!G.finaleOn){
     G.finaleOn=true; const f=G.missions.find(x=>x.id==='apex'); f.locked=false;
@@ -3296,7 +3226,7 @@ function checkFinale(){
   }
 }
 function winGame(){
-  if(G.won)return; G.won=true; travelEnd('won'); done('apex'); AU.fanfare(); setTimeout(()=>AU.screech(),400);
+  if(G.won)return; G.won=true; done('apex'); AU.fanfare(); setTimeout(()=>AU.screech(),400);
   const s=G.stats;
   el('winstats').innerHTML=
     'CHAOS SCORE: <b>'+G.score+'</b> · PEAK CHAOS: <b>'+Math.round(G.chaosPeak||0)+'</b> · TIME: <b>'+fmtT(G.playT||0)+'</b><br>'+
@@ -3399,7 +3329,7 @@ function hudReflow(vw){
 }
 function setTug(i,v){ TUGS[i]=v; }
 function keyName(code){ return ({Space:'SPACE',Slash:'/',Period:'.',Comma:',',KeyE:'E',KeyQ:'Q'})[code]||code.replace('Key',''); }
-let uiCache=['','',-2,-2,'','',''];
+let uiCache=['','',-2,-2,'',''];
 function updateUI(){
   if(HEADLESS)return;
   for(let i=0;i<2;i++){
@@ -3415,9 +3345,6 @@ function updateUI(){
     if(th){ const want=G.tabHintOn?'block':'none';
       if(th.style.display!==want)th.style.display=want;
       th.classList.toggle('docked',!!G.tabDocked); } }
-  { const b=G.travel, want=(b&&b.cardOn)?b.card:'';                  // the chapter title card
-    if(uiCache[6]!==want){ uiCache[6]=want; const tEl=document.getElementById('travelcard');
-      if(tEl){ tEl.textContent=want; tEl.style.display=want?'block':'none'; } } }
   const cEl=document.getElementById('combo');
   if(G.combo>=2&&G.comboT>0){ cEl.style.display='block'; cEl.textContent='×'+G.combo+' SPREE'; } else cEl.style.display='none';
 }
@@ -3508,15 +3435,10 @@ function updateCams(dt){
         if(hit){ frac=Math.max(0.22,(si-1)/10); break; } }
       if(frac<1){ tx=bx+(tx-bx)*frac; ty=by+(ty-by)*frac; tz=bz+(tz-bz)*frac; } }
     const gh=groundHeightAt(tx,tz,ty); ty=Math.max(ty,gh+1.2,1.4);
-    let lx=k.x+Math.sin(effRy)*1.6, ly=k.y+0.72*(k.size||1), lz=k.z+Math.cos(effRy)*1.6;
-    if(G.travel&&G.travel.w>0){ const w=G.travel.w, A=travelAim();   // the chapter travel beat blends the
-      tx+=(A.x-tx)*w; ty+=(A.y-ty)*w; tz+=(A.z-tz)*w;                //   TARGET, so the rig below still does the flying
-      lx+=(A.lx-lx)*w; ly+=(A.ly-ly)*w; lz+=(A.lz-lz)*w;
-      ty=Math.max(ty,groundHeightAt(tx,tz,ty)+1.2); }                // and stays above the country the whole way
     const sm=1-Math.pow(0.0018,dt);
     cam.position.x+=(tx-cam.position.x)*sm; cam.position.y+=(ty-cam.position.y)*sm; cam.position.z+=(tz-cam.position.z)*sm;
     if(G.shake>0){ const shk=G.shake*(RM?0.15:1); cam.position.x+=rnd(-1,1)*shk*0.3; cam.position.y+=rnd(-1,1)*shk*0.22; }
-    cam.lookAt(lx,ly,lz);
+    cam.lookAt(k.x+Math.sin(effRy)*1.6,k.y+0.72*(k.size||1),k.z+Math.cos(effRy)*1.6);
     if(G.camLock){ const L=G.camLock; cam.position.set(L.x,L.y,L.z); cam.lookAt(L.lx,L.ly,L.lz); } // gauntlet photographer hook (inert in play)
   }
   G.shake=Math.max(0,(G.shake||0)-dt*1.4);
@@ -3630,7 +3552,6 @@ function update(dt){
     if(lvl!==G.wanted){G.wanted=lvl;updWanted();}
     checkMisc(); checkFinale(); checkCaseFiles();
     styleDrain();       // every award for this frame has landed by now: judge the page that turned
-    travelUpdate(dt);   // before PRESSED is cleared, so the skip can see a fresh press
   } else if(!G.running){ updateFX(dt); updateSheep(dt); }
   hudReflow();
   PRESSED=[];
@@ -3639,7 +3560,7 @@ function update(dt){
 function startGame(mode,opts){
   G.mode=mode; G.running=true; AU.boot();
   G.colossal=!!(opts&&opts.colossal); G.level=1;
-  G.camYaw=0; G.camDist=1; G.travel=null; G.travelLast=null;
+  G.camYaw=0; G.camDist=1;
   G.won=false; G.finaleOn=false; G.apexArmed=false; G.apexNoted=false;
   for(const k of G.keas){ if(k.hatProp)k.doff(); if(k.held)k.drop();   // the bird leaves with nothing: what it carried stays in the world
     if(k.g&&k.g.parent)k.g.parent.remove(k.g); if(k.labelEl&&k.labelEl.remove)k.labelEl.remove(); }
@@ -3760,8 +3681,6 @@ if(typeof globalThis!=='undefined'){
            snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit,
            PARRATIO,par:pagePar,purse:purseClaim,judge:styleJudge,drain:styleDrain,queue:styleQueue,
            caged:pageCaged,judgeClean:cleanJudge,judgePage:pageJudge},
-    TRAVEL:{ANCHOR:TRAVELANCHOR,BEAT:TRAVELBEAT,SPAN:TRAVELSPAN,phase:travelPhase,weight:travelWeight,
-            start:travelStart,end:travelEnd,update:travelUpdate,fresh:travelFresh,aim:travelAim},
     HOMES:{R:HOMER,cls:homeClass,register:homesRegister,dist:homeDist,at:atHome},
     grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
