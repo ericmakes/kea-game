@@ -1747,6 +1747,10 @@ C.section('2 KEA VERSUS - the match scaffold, every branch of the decision drive
 
   // ---- roles ----
   X.startGame(2,{vs:true}); tick(4);
+  /* FLAKES law 3, applied to a rule this section is not testing: piece 23 scopes scoring to one
+     PATCH, and everything below stages awards wherever it is convenient. Turn the arena off so
+     the assertions are about the thing they name. Piece 23 has its own section for the rule. */
+  G.vs.arena=null;
   ok(!!G.vs&&G.vs.phase==='play','a match opens in play ('+(G.vs?G.vs.phase:'no match')+')');
   ok(G.vs.roles.menace!==G.vs.roles.management,'the two roles are different birds ('+
      JSON.stringify(G.vs.roles)+')');
@@ -1762,6 +1766,7 @@ C.section('2 KEA VERSUS - the match scaffold, every branch of the decision drive
   // ---- the clock is named, and the default is five minutes ----
   ok(V.LEN.short===180&&V.LEN.std===300&&V.LEN.long===480,'three lengths, 3 / 5 / 8 minutes');
   X.startGame(2,{vs:true}); tick(2);
+  G.vs.arena=null;   // law 3: this section is not testing piece 23 scoping
   ok(G.vs.len===300&&G.vs.lenKey==='std','a match with no length asked for is the five minute one ('+G.vs.len+'s)');
   X.startGame(2,{vs:true,len:'long'}); tick(2);
   ok(G.vs.len===480,'and it takes a named length ('+G.vs.len+'s)');
@@ -1777,6 +1782,10 @@ C.section('2 KEA VERSUS - the match scaffold, every branch of the decision drive
   pay(G.keas[0],90,'BEFORE THE WHISTLE');
   const pre=X.LEDGER.of(0);
   X.startGame(2,{vs:true}); tick(4);
+  /* FLAKES law 3, applied to a rule this section is not testing: piece 23 scopes scoring to one
+     PATCH, and everything below stages awards wherever it is convenient. Turn the arena off so
+     the assertions are about the thing they name. Piece 23 has its own section for the rule. */
+  G.vs.arena=null;
   ok(X.LEDGER.of(0)>=pre,'the book carries the pre-match chaos over, because books outlive a restart');
   ok(V.scores()[0]===0&&V.scores()[1]===0,'but the match starts level at nothing to nothing ('+
      JSON.stringify(V.scores())+')');
@@ -1808,6 +1817,7 @@ C.section('2 KEA VERSUS - the match scaffold, every branch of the decision drive
 
   // ---- ENDING 2: level at the horn is NOT a result, it is sudden death ----
   X.startGame(2,{vs:true}); tick(4); clear();
+  G.vs.arena=null;   // law 3: this section is not testing piece 23 scoping
   pay(G.keas[0],40,'LEVEL'); pay(G.keas[1],40,'LEVEL');
   ok(V.scores()[0]===V.scores()[1],'the two are level going into the horn ('+JSON.stringify(V.scores())+')');
   G.vs.t=G.vs.len-0.001; tick(2);
@@ -1826,6 +1836,7 @@ C.section('2 KEA VERSUS - the match scaffold, every branch of the decision drive
 
   // ---- ENDING 4: nobody blinks, and it is an honest draw ----
   X.startGame(2,{vs:true}); tick(4); clear();
+  G.vs.arena=null;   // law 3: this section is not testing piece 23 scoping
   pay(G.keas[0],40,'LEVEL'); pay(G.keas[1],40,'LEVEL');
   G.vs.t=G.vs.len-0.001; tick(2);
   ok(G.vs.phase==='sudden','level again, so sudden death again');
@@ -1838,6 +1849,7 @@ C.section('2 KEA VERSUS - the match scaffold, every branch of the decision drive
 
   // ---- FLAKES law 1: a restart takes the match with it ----
   X.startGame(2,{vs:true}); tick(4); clear();
+  G.vs.arena=null;   // law 3: this section is not testing piece 23 scoping
   ok(!!G.vs&&V.on(),'a match is running when the restart comes');
   X.startGame(1); tick(4);
   ok(G.vs===null&&!V.on(),'startGame cleared it, so no match rides into the next run');
@@ -1854,6 +1866,7 @@ C.section('THE FIX VERB - wreck it, put it back, wreck it again, and it is worth
 {
   const FIX=X.FIX, V=X.VS, P2=H.P2;
   X.startGame(2,{vs:true}); tick(6); park();
+  G.vs.arena=null;   // law 3: this section is not testing piece 23 scoping
   G.paused=false;
   const a=G.keas[0], b=G.keas[1];
   G.vs.roles={menace:0,management:1};                  // staged, because the coin is a coin
@@ -1954,6 +1967,10 @@ C.section('THE BOTCH - a restore goes back, and it goes back crooked, and it nev
 
   // ---- through a REAL restore ----
   X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  /* FLAKES law 3, applied to a rule this section is not testing: piece 23 scopes scoring to one
+     PATCH, and everything below stages awards wherever it is convenient. Turn the arena off so
+     the assertions are about the thing they name. Piece 23 has its own section for the rule. */
+  G.vs.arena=null;
   const a=G.keas[0], b=G.keas[1];
   G.vs.roles={menace:0,management:1};
   const t=G.inter.find(it=>it.kind==='tear'&&!it.done&&!it.needsBoth&&!it.needsPartner&&it.getPos&&it.mesh&&it.base);
@@ -2017,6 +2034,10 @@ C.section('THE CARRY-BACK - pick it up where it does not belong, drop it where i
 {
   const CY=X.CARRY, B=X.BOTCH, V=X.VS, P2=H.P2;
   X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  /* FLAKES law 3, applied to a rule this section is not testing: piece 23 scopes scoring to one
+     PATCH, and everything below stages awards wherever it is convenient. Turn the arena off so
+     the assertions are about the thing they name. Piece 23 has its own section for the rule. */
+  G.vs.arena=null;
   const a=G.keas[0], b=G.keas[1];
   G.vs.roles={menace:0,management:1};
   const free=k=>{ if(k.held){k.held.heldBy=null;k.held=null;} };
@@ -2122,6 +2143,10 @@ C.section('THE SOURCE - a scoffed sandwich cannot be un-eaten, so the management
 {
   const FD=X.FOOD, CY=X.CARRY, B=X.BOTCH, V=X.VS, P2=H.P2;
   X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  /* FLAKES law 3, applied to a rule this section is not testing: piece 23 scopes scoring to one
+     PATCH, and everything below stages awards wherever it is convenient. Turn the arena off so
+     the assertions are about the thing they name. Piece 23 has its own section for the rule. */
+  G.vs.arena=null;
   const a=G.keas[0], b=G.keas[1];
   G.vs.roles={menace:0,management:1};
   const free=k=>{ if(k.held){k.held.heldBy=null;k.held=null;} };
@@ -2210,6 +2235,93 @@ C.section('THE SOURCE - a scoffed sandwich cannot be un-eaten, so the management
     ok(FD.fetch(b)===null,'and an empty source hands over nothing at all');
     ok(FD.orderFor(s)===food,'while the order is still outstanding - the menace is ahead, which is the point'); }
 
+  X.startGame(1); tick(6);
+}
+
+C.section('ARENA SCOPING - a match is one patch, and the rest of the country is free');
+// TODO 23. The brief scopes on "interactables whose mission area matches the arena" and the file
+// cannot answer that for most of them: 29 of 65 carry a mission id. So every interactable is STAMPED
+// with an area derived from data that exists - its own mission area, or the area of the nearest
+// thing that has one - and the score gate reads the POSITION an award happened at, which award()
+// already carries. Forty-six call sites untouched.
+{
+  const A=X.ARENA, V=X.VS;
+  X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  const a=G.keas[0], b=G.keas[1];
+
+  // ---- the stamp covers everything, which is the whole reason it is derived ----
+  const stamped=A.stamp();
+  const all=G.inter.length, withMission=G.inter.filter(it=>!!A.of(it)).length;
+  ok(withMission<all,'most interactables carry no mission of their own ('+withMission+' of '+all+')');
+  ok(stamped===all,'but every one of them ends up with an area ('+stamped+' of '+all+')');
+  ok(G.inter.every(it=>!it.area||(G.chapters||[]).indexOf(it.area)>=0||it.area==='TO DO (AS WELL)'),
+     'and every stamp is a real area rather than an invented one');
+  /* the ones that DO carry a mission must keep their own area - the derivation is a fallback, not an
+     override, and a fallback that quietly overrode would be invisible without this. */
+  { const owned=G.inter.filter(it=>!!A.of(it));
+    ok(owned.length>0&&owned.every(it=>it.area===A.of(it)),
+       'a thing with a mission keeps ITS OWN area, the nearest-neighbour rule only fills gaps ('+owned.length+' checked)'); }
+
+  // ---- the arena is chosen at the whistle, and it is a real patch ----
+  ok(!!G.vs.arena&&(G.chapters||[]).indexOf(G.vs.arena)>=0,'a match names a patch ('+G.vs.arena+')');
+  { const seen={}; for(let i=0;i<40;i++){ const v=V.start({}); seen[v.arena]=1; }
+    ok(Object.keys(seen).length>1,'forty matches do not all pick the same one ('+
+       Object.keys(seen).length+' distinct of '+(G.chapters||[]).length+')'); }
+  { const v=V.start({arena:'THE HUT'}); ok(v.arena==='THE HUT','a named patch is honoured ('+v.arena+')');
+    const w=V.start({arena:'THE MOON'}); ok((G.chapters||[]).indexOf(w.arena)>=0,
+      'and an unknown one falls back to a real patch rather than to nothing ('+w.arena+')'); }
+  /* TOUR runs the chapter order as a series, which is the other half of the brief. */
+  { G.vsTour=0; const seq=[]; for(let i=0;i<4;i++)seq.push(V.start({tour:true}).arena);
+    ok(seq.join('|')===(G.chapters||[]).slice(0,4).join('|'),
+       'TOUR walks the chapters in order ('+seq.join(' -> ')+')'); }
+
+  // ---- IN PATCH SCORES, OUT OF PATCH DOES NOT ----
+  { const inIt=G.inter.find(it=>it.area&&A.home(it));
+    ok(!!inIt,'something to aim at with a known area ('+(inIt?inIt.area:'none')+')');
+    /* if the stamp is broken there is nothing to aim at, and every read below would throw and take
+       the findings with it. Fifth time this has come up, so it is now reflex: bail the block, keep
+       the verdict. */
+    if(!inIt){ ok(false,'no stamped interactable at all, so the scoping block cannot run'); }
+    else {
+    V.start({arena:inIt.area}); G.paused=false;
+    const here=A.home(inIt);
+    ok(A.at(here)===inIt.area,'the gate reads that spot as its own patch ('+A.at(here)+')');
+    ok(A.ok(here)===true,'and lets it score');
+
+    const outIt=G.inter.find(it=>it.area&&it.area!==inIt.area&&A.home(it));
+    ok(!!outIt,'and something in a DIFFERENT patch ('+(outIt?outIt.area:'none')+')');
+    const there=outIt?A.home(outIt):{x:here.x+80,z:here.z+80};
+    ok(!!outIt&&A.at(there)===outIt.area,'the gate reads that spot as the other patch ('+A.at(there)+')');
+    ok(A.ok(there)===false,'and refuses it');
+
+    // through award() itself, which is where it has to be true
+    G._wrongSpy=[];
+    G.combo=0; G.comboT=0; const s0=G.score;
+    X.award(40,'IN THE PATCH',{x:here.x,y:1,z:here.z},a);
+    const inPaid=G.score-s0;
+    ok(inPaid===40,'an act inside the patch pays in full ('+inPaid+')');
+    G.combo=0; G.comboT=0; const s1=G.score;
+    X.award(40,'OUT OF THE PATCH',{x:there.x,y:1,z:there.z},a);
+    const outPaid=G.score-s1;
+    ok(outPaid===0,'an act outside it pays NOTHING ('+outPaid+')');
+    ok(G._wrongSpy.length===1&&!!outIt&&G._wrongSpy[0].area===outIt.area,
+       'and says so once, naming the patch it was actually in ('+JSON.stringify(G._wrongSpy)+')');
+    ok(V.scores()[0]===40,'so the scoreboard only ever saw the in-patch one ('+JSON.stringify(V.scores())+')');
+
+    /* AN AWARD WITH NO POSITION IS NOT A PATCH ACT - a page turn, a finale - and is never gated.
+       Getting this wrong would silently stop the game paying for anything that has no location. */
+    G.combo=0; G.comboT=0; const s2=G.score;
+    X.award(25,'NO PLACE AT ALL',null,a);
+    ok(G.score-s2===25,'an award with no position is not scoped and pays in full ('+(G.score-s2)+')');
+    G._wrongSpy=null; } }
+
+  // ---- AND NONE OF IT APPLIES OUTSIDE A MATCH ----
+  { X.startGame(2); tick(4);
+    const anywhere={x:-40,y:1,z:-40};
+    ok(A.ok(anywhere)===true,'with no match running every patch is open');
+    G.combo=0; G.comboT=0; const s0=G.score;
+    X.award(30,'NO MATCH',anywhere,G.keas[0]);
+    ok(G.score-s0===30,'and an act anywhere pays in full ('+(G.score-s0)+')'); }
   X.startGame(1); tick(6);
 }
 

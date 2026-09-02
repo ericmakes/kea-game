@@ -622,6 +622,55 @@ function ledgerTotal(){ return (G.ledger||[]).reduce((a,b)=>a+(b||0),0)+(G.ledge
    THE ROLES ARE A SEEDED COIN. rnd() rather than Math.random, so a battery can predict the flip and
    a replay of the same seed gives the same match. They do nothing yet: piece 24 is what makes rex
    hunt the menace, and this piece only has to make the roles exist, be opposite, and be reported. */
+/* ---------- ARENA SCOPING (TODO 23, 2026-09-02) ----------
+   A MATCH IS ONE PATCH. Acts inside the arena score and acts outside it are free - the bird still
+   does the thing, it just does not get paid, and it is told why.
+   THE BRIEF SAYS "interactables whose mission area matches the arena" AND THE FILE CANNOT ANSWER
+   THAT FOR MOST OF THEM: 29 of 65 interactables carry a mission id, so scoping on mission area alone
+   would leave 36 of them - most of the tears, most of the props - unscoreable in every arena, which
+   is not a match, it is an empty carpark.
+   SO EVERY INTERACTABLE IS STAMPED WITH AN AREA, AND THE STAMP IS DERIVED FROM DATA THAT EXISTS: its
+   own mission area if it has one, otherwise the area of the NEAREST thing that does. No table, no
+   per-object tagging, and a tear added tomorrow beside the hut is a hut tear without anybody saying
+   so. Stamped from where a thing LIVES rather than where it currently is, so carrying a cone across
+   the map does not move the patch it belongs to.
+   AND THE SCORE GATE READS THE PLACE, NOT THE CALL SITE. award() already takes the position an act
+   happened at, so the gate asks which patch that position is in and pays nothing outside the arena -
+   one function, forty-six call sites untouched. An award with no position is not a patch act at all
+   (a page turn, a finale) and is never gated. */
+function areaOfInter(it){
+  if(!it)return null;
+  const mid=it.mission||it.missionFar||it.missionProg;
+  if(mid&&G.missions){ const m=G.missions.find(x=>x.id===mid); if(m&&m.area)return m.area; }
+  return null; }
+function interHome(it){
+  if(!it)return null;
+  if(it.kind==='prop'&&it.home)return {x:it.home.x,z:it.home.z};
+  const q=it.getPos?it.getPos():it;
+  return (q&&q.x!==undefined)?{x:q.x,z:q.z}:null; }
+function arenaStamp(){
+  const known=[];
+  for(const it of (G.inter||[])){ const a=areaOfInter(it); it.area=a||null;
+    if(a){ const h=interHome(it); if(h)known.push({a,x:h.x,z:h.z}); } }
+  for(const it of (G.inter||[])){ if(it.area)continue;
+    const h=interHome(it); if(!h)continue;
+    let bd=Infinity,ba=null;
+    for(const k of known){ const d=Math.hypot(k.x-h.x,k.z-h.z); if(d<bd){bd=d;ba=k.a;} }
+    it.area=ba; }
+  return (G.inter||[]).filter(it=>it.area).length; }
+function arenaAt(pos){
+  if(!pos||pos.x===undefined)return null;
+  let bd=Infinity,ba=null;
+  for(const it of (G.inter||[])){ if(!it.area)continue;
+    const h=interHome(it); if(!h)continue;
+    const d=Math.hypot(h.x-pos.x,h.z-pos.z); if(d<bd){bd=d;ba=it.area;} }
+  return ba; }
+function arenaOK(pos){
+  const v=G.vs;
+  if(!v||v.phase==='over'||!v.arena)return true;      // no match, no scoping
+  const a=arenaAt(pos);
+  return a===null||a===v.arena; }
+
 const VSLEN={short:180,std:300,long:480};   // seconds: 3, 5, 8 minutes. FENCED FOR PLAYTEST
 const VSSUDDEN=60;                          // sudden death runs this long, then it is an honest draw
 function vsOn(){ return !!(G.vs&&G.vs.phase!=='over'); }
@@ -633,11 +682,18 @@ function vsStart(opts){
   if(G.keas.length<2)return null;                       // a versus match needs two birds
   const key=(opts&&opts.len)||'std', len=VSLEN[key]||VSLEN.std;
   const coin=rnd(0,1)<0.5?0:1;
-  G.vs={phase:'play',t:0,len,lenKey:VSLEN[key]?key:'std',sudden:0,
+  arenaStamp();                                    // TODO 23: missions exist by now, so areas can be read
+  const patches=(G.chapters||[]).slice();
+  let arena=null;
+  if(opts&&opts.arena&&patches.indexOf(opts.arena)>=0)arena=opts.arena;
+  else if(opts&&opts.tour&&patches.length){ G.vsTour=((G.vsTour||0))%patches.length; arena=patches[G.vsTour]; G.vsTour++; }
+  else if(patches.length)arena=patches[Math.floor(rnd(0,patches.length))%patches.length];
+  G.vs={phase:'play',t:0,len,lenKey:VSLEN[key]?key:'std',sudden:0,arena,
         roles:{menace:coin,management:1-coin},
         base:[ledgerOf(0),ledgerOf(1)], tieAt:null,
         best:[null,null], result:null, why:null};
   popup('2 KEA VERSUS','KEA '+(coin+1)+' IS THE MENACE - KEA '+(2-coin)+' IS THE MANAGEMENT',0,null,true);
+  if(arena)popup('THE PATCH: '+arena,'only this patch pays',0,null,true);
   AU.honk&&AU.honk(true);
   return G.vs; }
 /* the biggest single play each side, which is the one line of a results screen anybody reads. Fed
@@ -3625,6 +3681,11 @@ function winGame(){
 /* score / combo / popups */
 function bumpCombo(){ G.comboT=5; G.combo=Math.min(5,(G.comboArmed?G.combo:0)+1); G.comboArmed=true; }
 function award(base,label,pos,who){
+  /* TODO 23: outside the arena the act still happens and pays nothing. Ahead of bumpCombo so an
+     out-of-patch act does not even build a combo for the next in-patch one. */
+  if(!arenaOK(pos)){ popup('WRONG PATCH','NO POINTS - this match is in '+(G.vs&&G.vs.arena),0,pos,true);
+    if(G._wrongSpy)G._wrongSpy.push({label,area:arenaAt(pos)});
+    return 0; }
   if(base>=45&&pos){ burst(pos,0xFFD34D,14); burst({x:pos.x,y:(pos.y||1)+0.4,z:pos.z},0xFFF3B0,8);
     if(G._fxSpy)G._fxSpy.push({why:'sparkle',pts:base}); }
   bumpCombo();
@@ -4093,6 +4154,7 @@ if(typeof globalThis!=='undefined'){
     FIX:{DECAY,can:canRestore,fixable,value:orderValue,fix:fixTear},
     BOTCH:{FIDELITY:BOTCH,BAND:BOTCHBAND,noise:botchNoise,wonk:botchWonk,apply:botchApply},
     CARRY:{value:carryValue,back:carryBack,HOMER,at:atHome,dist:homeDist},
+    ARENA:{stamp:arenaStamp,of:areaOfInter,at:arenaAt,ok:arenaOK,home:interHome},
     FOOD:{STOCK:FOODSTOCK,list:()=>G.foodSrc,near:foodSrcNear,at:foodSrcAt,
           orders:foodOrders,orderFor:foodOrderFor,fetch:foodFetch},
     VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,

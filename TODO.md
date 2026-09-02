@@ -199,7 +199,7 @@ first point wins, 60s cap then draw.
 PROOF: state machine headless — seeded random roles, timer expiry, winner
 decision incl. the tie path. Screens: leave flagged for Eric.
 
-### 23. arena-scoping
+### 23. arena-scoping  — DONE session 9 (96a83803f067232a08463219ced371ed)
 A match is one patch: only interactables whose mission area matches the
 arena score; anything else → WRONG PATCH, NO POINTS prompt. RANDOM PATCH
 picks one; TOUR runs the chapter order as a series.

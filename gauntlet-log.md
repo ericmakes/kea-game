@@ -2080,3 +2080,37 @@ are the more useful half of the piece.
 - CAPTURE: 25 shots, 0 flagged, worst 0.9904. Nothing re-pinned.
 - EYEBALL: nothing in the set. Press 4, eat the sandwich as kea 1, then walk kea 2 to the picnic
   table and back to where it was.
+
+### PIECE 23 — arena-scoping — CERTIFIED 96a83803f067232a08463219ced371ed
+Verdict: green. Two staging rounds, and the first one is a finding about the diet rather than the code.
+- THE BRIEF NAMES DATA THE FILE DOES NOT HAVE, for the fourth time this week, and this time it is
+  load bearing: "only interactables whose mission area matches the arena". TWENTY-NINE of SIXTY-FIVE
+  interactables carry a mission id. Scoping on mission area alone would leave 36 of them - most of
+  the tears, most of the props - unscoreable in EVERY arena, which is not a match, it is an empty
+  carpark.
+- SO EVERY INTERACTABLE IS STAMPED, AND THE STAMP IS DERIVED: its own mission area if it has one,
+  otherwise the area of the nearest thing that does. No table and no per-object tagging, so a tear
+  added beside the hut tomorrow is a hut tear without anybody saying so. Stamped from where a thing
+  LIVES rather than where it currently is, so carrying a cone across the map does not move the patch
+  it belongs to. The assertion that the derivation is a FALLBACK and not an override is the one that
+  matters: a thing with a mission keeps its own area, and a sabotage that takes that away fails four.
+- THE GATE READS THE PLACE, NOT THE CALL SITE. award() already carries the position an act happened
+  at, so the gate asks which patch that position is in - forty-six call sites untouched, exactly like
+  the actor stack in piece 16. An award with NO position is not a patch act at all (a page turn, a
+  finale) and is never gated, which is asserted because getting it wrong would silently stop the game
+  paying for anything without a location.
+- THE ARENA RULE IMMEDIATELY BROKE FIVE EARLIER SECTIONS, and that was the rule working. Pieces 18
+  through 22 stage awards wherever is convenient, which is now out of patch. Every one of those
+  sections now turns the arena OFF with a line saying why - FLAKES law 3 applied to a rule the
+  section is not testing - rather than being quietly moved into the arena.
+- VERIFIED ADVERSARIALLY, SIX WAYS: a gate that never refuses, every patch being the arena, scoping
+  applied with no match running, the gaps never filled, a mission-bearing thing losing its own area,
+  and every match picking the same patch. Four report findings; the no-match one CRASHES the game on
+  a null match, which the gate catches as a dead battery but which cannot be turned into a finding
+  from the test side - the guard it removes is the fix.
+- AND THE FIFTH UNGUARDED READ OF THE WEEK, mine again: with the stamp sabotaged there is nothing to
+  aim at, and every read below threw. The block now bails and keeps its verdict. This has now
+  happened in five consecutive pieces and is written up in the report as a rule rather than a lesson.
+- CAPTURE: 25 shots, 0 flagged, worst 0.9904. Nothing re-pinned.
+- EYEBALL: nothing in the set. Press 4 and read the patch popup, then go and wreck something in a
+  different chapter and watch it pay nothing.
