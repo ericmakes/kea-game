@@ -2114,3 +2114,29 @@ Verdict: green. Two staging rounds, and the first one is a finding about the die
 - CAPTURE: 25 shots, 0 flagged, worst 0.9904. Nothing re-pinned.
 - EYEBALL: nothing in the set. Press 4 and read the patch popup, then go and wreck something in a
   different chapter and watch it pay nothing.
+
+### PIECE 24 — role-aware-rex — CERTIFIED 39c2d931f488caa1679afa01fff0e697
+Verdict: green first pass. Six sabotages, one of which found a real gap in my own section.
+- THE CELL CHANGES HANDS, AND IT COST ONE LINE. Piece 15 stopped the cage clock in co-op because
+  your mate is the only way out. In a match your mate is the one who put you there, so the solo
+  rules come back - the sentence runs down, mashing works - and the latch is LOCKED. That whole
+  reversal is `coopCell()` gaining `&&!vsOn()`, which is the return on having written piece 15 as
+  ONE predicate with one place to read it. Asserted in both directions: a match is a solo cell, and
+  a plain two-player game is a co-op cell again with the latch unlocked.
+- REX PICKS A SIDE ONLY WHEN THERE IS A WARRANT. Below WANTED 3 he takes the nearest bird exactly as
+  he always did; at 3 and above, inside a match, he walks past the management standing a metre away
+  to hunt the menace nine metres off. Asserted as the ROLE and not the index by swapping the roles
+  and requiring him to swap targets, and range still applies.
+- THE CAGING BONUS HAS NO POSITION, ON PURPOSE, and the section is built to pay for that claim: the
+  arena is left ON and set to a patch the ute is not in. If the bonus were scoped it would vanish
+  whenever the ute was parked outside the arena, which is most of the time. The sabotage that gives
+  it a position fails immediately.
+- THE SABOTAGE SWEEP FOUND A HOLE IN MY OWN SECTION. Making the bonus fire for ANY caging caught
+  nothing, because the section only ever caged the menace - so the reverse is now driven too: rex
+  cages the management and nobody is paid. That is the sixth sabotage and it is the one that made
+  the piece honest.
+- VERIFIED ADVERSARIALLY, SIX WAYS, all caught: the co-op cell staying on in a match, the latch still
+  opening, rex never picking a side, rex picking one with no warrant, the bonus being patch-scoped,
+  and any caging paying.
+- CAPTURE: 25 shots, 0 flagged, worst 0.9894. Nothing re-pinned.
+- EYEBALL: nothing in the set. Press 4, get WANTED to 3 as the menace, and see who he comes for.

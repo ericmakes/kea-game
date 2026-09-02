@@ -2325,6 +2325,105 @@ C.section('ARENA SCOPING - a match is one patch, and the rest of the country is 
   X.startGame(1); tick(6);
 }
 
+C.section('ROLE-AWARE REX - the ranger picks a side, and the cell changes hands');
+// TODO 24. Piece 15 stopped the cage clock in co-op because your mate is the only way out. In a
+// match your mate is the one who put you there, so the solo rules come back and the latch is locked.
+// One predicate does the whole reversal, which is the return on having written it as one predicate.
+{
+  const V=X.VS, J=X.JAIL, RR=X.ROLEREX;
+  X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  const a=G.keas[0], b=G.keas[1];
+  G.vs.roles={menace:0,management:1};
+  const rex=G.humans.find(h=>h.key==='rex');
+  ok(!!rex,'a ranger on the board');
+
+  // ---- THE CELL IS A SOLO CELL AGAIN ----
+  ok(J.coop()===false,'inside a match the co-op cell is off, even with two birds on the board');
+  { a.caged=8; a._cagePrev=false; a.stun=0; G.squawk=null; tick(1);
+    const t0=a.caged; tick(30);
+    ok(a.caged<t0-0.4,'the sentence runs itself down again ('+t0.toFixed(2)+' -> '+a.caged.toFixed(2)+')');
+    const m0=a.caged; tap(P1.grab); const mashed=m0-a.caged; tick(1);
+    ok(mashed>0.4,'and mashing buys seconds again ('+mashed.toFixed(3)+')');
+    ok(G.squawk===null,'with no squawk, because there is nobody friendly to hear it');
+    const lt=G.inter.find(it=>it.kind==='peck'&&it.label==='PECK THE LATCH');
+    ok(!!lt,'the latch is still on the board');
+    ok(!!lt&&lt.locked()===true,'but it is LOCKED with a bird inside, which it never is outside a match');
+    a.caged=0; tick(2); }
+
+  // ---- AND IT GOES BACK when the match is over ----
+  { X.startGame(2); tick(6);
+    ok(J.coop()===true,'a plain two-player game is the co-op cell again');
+    const lt=G.inter.find(it=>it.kind==='peck'&&it.label==='PECK THE LATCH');
+    G.keas[0].caged=8; tick(2);
+    ok(!!lt&&lt.locked()===false,'and the latch unlocks again with somebody inside');
+    G.keas[0].caged=0; tick(2); }
+
+  // ---- REX PICKS A SIDE ----
+  X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  const a2=G.keas[0], b2=G.keas[1];
+  G.vs.roles={menace:0,management:1};
+  const rex2=G.humans.find(h=>h.key==='rex');
+  { rex2.x=0; rex2.z=0; rex2.stun=0;
+    b2.x=1; b2.z=0; b2.y=0.25; b2.grounded=true;      // the MANAGEMENT is right next to him
+    a2.x=9; a2.z=0; a2.y=0.25; a2.grounded=true;      // the MENACE is nine metres away
+    G.wanted=0;
+    ok(rex2.nearestKea(28)===b2,'below the warrant he takes the nearest bird, exactly as he always did');
+    G.wanted=3;
+    ok(rex2.nearestKea(28)===a2,'with a warrant out he walks past the management and hunts THE MENACE');
+    G.vs.roles={menace:1,management:0};
+    ok(rex2.nearestKea(28)===b2,'swap the roles and he swaps targets, so it is the ROLE and not the index');
+    G.vs.roles={menace:0,management:1};
+    ok(rex2.nearestKea(2)===null,'and range still applies - he does not hunt across the map ('+
+       (rex2.nearestKea(2)?'found one':'nothing in 2m')+')'); }
+
+  // ---- OUTSIDE A MATCH HE IS HIS OLD SELF ----
+  { X.startGame(2); tick(6); park();
+    const r=G.humans.find(h=>h.key==='rex'), x=G.keas[0], y=G.keas[1];
+    r.x=0; r.z=0; y.x=1; y.z=0; y.y=0.25; y.grounded=true; x.x=9; x.z=0; x.y=0.25; x.grounded=true;
+    G.wanted=3;
+    ok(r.nearestKea(28)===y,'with no match running a warrant does not make him picky'); }
+
+  // ---- A CAGING PAYS THE MANAGEMENT ----
+  X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  const a3=G.keas[0], b3=G.keas[1];
+  G.vs.roles={menace:0,management:1};
+  /* THE ARENA IS LEFT ON AND SET SOMEWHERE ELSE ON PURPOSE. The bonus is awarded with NO position
+     because a caging is a match event and not a patch act, and this is where that claim is paid for:
+     if it were scoped, the bonus would vanish whenever the ute was not in the arena. */
+  G.vs.arena=(G.chapters||[]).find(c=>c!=='THE CARPARK')||null;
+  { const rex3=G.humans.find(h=>h.key==='rex');
+    a3.caged=0; b3.caged=0; a3.stun=0; b3.stun=0;
+    if(a3.held){a3.held.heldBy=null;a3.held=null;} if(b3.held){b3.held.heldBy=null;b3.held=null;}
+    a3.x=0; a3.z=31.5; b3.x=40; b3.z=40; G.wanted=3; G.wantedT=3.4;
+    G.combo=0; G.comboT=0;
+    const before=V.scores();
+    const siege=k=>{ rex3.stun=0; rex3.launched=null; rex3.asleep=false; rex3.distracted=0;
+      rex3.state='chase'; rex3.chaseKea=k; rex3.giveUpT=0; rex3.t=0;
+      for(let i=0;i<40;i++){ G.combo=0; G.comboT=0; k.y=0.25; k.vy=0; k.grounded=true;
+        rex3.x=k.x; rex3.z=k.z-0.3; X.update(1/60);
+        if((k.caged||0)>0||rex3.state==='shoo')break; }
+      return (k.caged||0)>0; };
+    ok(siege(a3),'rex cages the menace');
+    const after=V.scores();
+    ok(after[1]-before[1]===RR.CAGE,'and the MANAGEMENT is paid the caging bonus ('+
+       (after[1]-before[1])+' against '+RR.CAGE+')');
+    ok(after[0]-before[0]===0,'while the menace is paid nothing for being caught ('+(after[0]-before[0])+')');
+    ok(!!G.vs.arena&&G.vs.arena!=='THE CARPARK','and the arena was somewhere else the whole time ('+G.vs.arena+')');
+
+    /* THE OTHER WAY ROUND PAYS NOTHING, and this is the assertion the first sabotage sweep was
+       missing: caging anybody at all would have paid the management, and nothing here would have
+       noticed, because the section only ever caged the menace. */
+    a3.caged=0; b3.caged=0; a3.stun=0; b3.stun=0; tick(4);
+    b3.x=0; b3.z=31.5; a3.x=40; a3.z=40; G.wanted=3; G.wantedT=3.4; G.combo=0; G.comboT=0;
+    const pre=V.scores();
+    ok(siege(b3),'rex cages the MANAGEMENT this time');
+    const post=V.scores();
+    ok(post[1]-pre[1]===0,'and nobody is paid a bonus for that ('+(post[1]-pre[1])+')');
+    ok(post[0]-pre[0]===0,'least of all the menace ('+(post[0]-pre[0])+')'); }
+
+  X.startGame(1); tick(6);
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

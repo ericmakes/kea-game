@@ -206,7 +206,7 @@ picks one; TOUR runs the chapter order as a series.
 PROOF: in-arena act scores; out-of-arena act scores zero and prompts;
 seeded selector; TOUR sequence asserts.
 
-### 24. role-aware-rex  (VS)
+### 24. role-aware-rex  (VS)  — DONE session 9 (39c2d931f488caa1679afa01fff0e697)
 Rex hunts THE MENACE specifically at WANTED >= 3 during VS; a caging pays
 the restorer an ORDER bonus; menace mash-out is solo (latch locked in VS).
 PROOF: staged — rex targets the menace only; bonus lands; latch locked.

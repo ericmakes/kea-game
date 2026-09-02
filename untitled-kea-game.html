@@ -2267,7 +2267,7 @@ function mkDocUte(x,z){
     G.cage={g:cg,latch};
     addPeck({label:'PECK THE LATCH',needHits:4,repeat:true,mesh:cg,range:1.5,owner:null,
       getPos:()=>{ const v=new THREE.Vector3(0.44,0.34,0); cg.localToWorld(v); return {x:v.x,y:v.y,z:v.z}; },
-      locked:()=>!jailFull(),
+      locked:()=>!jailFull()||vsOn(),   // TODO 24: in a match nobody lets you out - mash your own way
       onDone(p){ const k=jailedKea(); if(k){ k.freeCage&&k.freeCage(); award(40,'JAILBREAK',p); } this.done=false; this.hits=0; }});
   }
   // keys on the bonnet, radio on the tray — Rex's prized possessions
@@ -2981,7 +2981,12 @@ function jailFull(){ return !!jailedKea(); }
    ping speaks in the only directions a player can act on, relative to where the partner is looking.
    Read the angle off that convention and a re-mapped control scheme carries the ping with it. */
 const SQUAWK={hold:1.8,cd:0.55,say:['AHEAD','AHEAD LEFT','LEFT','BEHIND LEFT','BEHIND','BEHIND RIGHT','RIGHT','AHEAD RIGHT']};
-function coopCell(){ return G.keas.length>1; }          // one predicate, one place to read
+/* TODO 24: A VERSUS MATCH IS NOT CO-OP, and the cell knows it. Piece 15 stopped the clock in co-op
+   because your mate is the only way out; in a match your mate is the one who put you there, so the
+   solo rules come back - the sentence runs down and mashing works - and the latch is locked. One
+   predicate still, which is why reversing the whole cell is a line. */
+function coopCell(){ return G.keas.length>1&&!vsOn(); }   // one predicate, one place to read
+const VSCAGE=30;                                          // the caging bonus. FENCED FOR PLAYTEST
 function squawkDir(from,to){
   const dx=to.x-from.x, dz=to.z-from.z, d=Math.sqrt(dx*dx+dz*dz);
   let rel=Math.atan2(dx,dz)-(from.ry||0);               // same parameterisation as ry: forward is (sin,cos)
@@ -3174,6 +3179,12 @@ class Human{
     AU.clang(); RUMBLE(k.idx,420,0.9);
     this.state='return'; this.chaseKea=null; this.exMark.visible=false;
     pageCaged(curPage());   // the clean-getaway star: this page is no longer clean, TODO 14
+    /* TODO 24: in a match, putting the menace away is the management doing its job and it pays. NO
+       POSITION on purpose - a caging is a match event, not a patch act, so piece 23 must not scope
+       it to wherever the ute happens to be parked. */
+    if(vsOn()&&G.vs&&k.idx===G.vs.roles.menace){
+      const mg=G.keas.find(q=>q.idx===G.vs.roles.management);
+      if(mg)award(VSCAGE,'ORDER: MENACE CAGED',null,mg); }
     if(G._cageSpy)G._cageSpy.push({idx:k.idx});
   }
   aggro(kea,delay){ VOX.play('chase',this);
@@ -3195,7 +3206,12 @@ class Human{
     this.state='grumble'; this.t=0; VOX.play('grumble',this); }
   nearestKea(maxD){
     let best=null,bd=maxD||26;
-    for(const k of G.keas){ const d=dist2(k.x,k.z,this.x,this.z); if(d<bd){bd=d;best=k;} }
+    /* TODO 24: with a warrant out in a match, rex is not looking for the nearest bird, he is looking
+       for THE MENACE. Below the warrant he behaves exactly as he always did, so nothing outside a
+       match and nothing early in one changes. */
+    const hunt=this.key==='rex'&&vsOn()&&G.wanted>=3&&G.vs?G.keas.find(k=>k.idx===G.vs.roles.menace):null;
+    for(const k of G.keas){ if(hunt&&k!==hunt)continue;
+      const d=dist2(k.x,k.z,this.x,this.z); if(d<bd){bd=d;best=k;} }
     return best;
   }
   update(dt){
@@ -4155,6 +4171,7 @@ if(typeof globalThis!=='undefined'){
     BOTCH:{FIDELITY:BOTCH,BAND:BOTCHBAND,noise:botchNoise,wonk:botchWonk,apply:botchApply},
     CARRY:{value:carryValue,back:carryBack,HOMER,at:atHome,dist:homeDist},
     ARENA:{stamp:arenaStamp,of:areaOfInter,at:arenaAt,ok:arenaOK,home:interHome},
+    ROLEREX:{CAGE:VSCAGE},
     FOOD:{STOCK:FOODSTOCK,list:()=>G.foodSrc,near:foodSrcNear,at:foodSrcAt,
           orders:foodOrders,orderFor:foodOrderFor,fetch:foodFetch},
     VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,
