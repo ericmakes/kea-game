@@ -128,6 +128,7 @@ body.photo #touchui{opacity:0;pointer-events:none}
 
 <div class="hud" id="topbar">
   <div class="chip" id="chaos">CHAOS 0</div>
+  <div class="chip" id="vshud" style="display:none"></div>
   <div class="chip" id="wanted" title="how cross the humans are">
     <div class="feather"></div><div class="feather"></div><div class="feather"></div><div class="feather"></div><div class="feather"></div>
   </div>
@@ -3789,17 +3790,51 @@ function plateLines(html,vw){
   const perLine=Math.max(6, Math.floor(usable/(PLATE.font*PLATE.chW)));
   return Math.max(1, Math.ceil(txt.length/perLine));
 }
+/* ---------- THE VERSUS HUD (TODO 25, 2026-09-02) ----------
+   Two scores, two roles and a clock, and it has to survive the vantage-08 law: 320px is a real width
+   and the plate already reaches the TAB pill there. So this is BUILT the way piece 5 built the
+   reflow - the layout is a set of FLAGS computed from the viewport width and the match state, and
+   the DOM is left with nothing to decide. Nothing here measures an element, which is what makes it
+   assertable under node at any width without a browser.
+   THREE BANDS, and each one drops the least useful thing rather than shrinking everything: wide
+   shows role words and a labelled clock; mid drops the labels and keeps the role words; narrow keeps
+   the two numbers, the clock, and a single letter for each role, because at 320px the scoreline IS
+   the HUD and everything else is decoration. */
+const VSHUDW={wide:640, mid:420};                 // px. FENCED FOR PLAYTEST
+function vsClock(sec){ const t=Math.max(0,Math.ceil(sec));
+  return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); }
+function vsHudState(vw){
+  const w=vw||G.hudVW||1280, v=G.vs;
+  if(!v)return {on:false,band:null};
+  const band=w>=VSHUDW.wide?'wide':(w>=VSHUDW.mid?'mid':'narrow');
+  const sc=vsScores();
+  const left =v.roles.menace===0?'menace':'management';
+  const right=v.roles.menace===1?'menace':'management';
+  const nm=r=>band==='narrow'?(r==='menace'?'M':'O'):(r==='menace'?'MENACE':'MANAGEMENT');
+  const rem=v.phase==='sudden'?Math.max(0,VSSUDDEN-v.sudden):Math.max(0,v.len-v.t);
+  return {on:true, band, narrow:band==='narrow',
+          showLabels:band==='wide', showRoleWords:band!=='narrow',
+          scores:sc, roles:[left,right], names:[nm(left),nm(right)],
+          clock:vsClock(rem), sudden:v.phase==='sudden', over:v.phase==='over',
+          lead:sc[0]===sc[1]?-1:(sc[0]>sc[1]?0:1)}; }
+
 function hudReflow(vw){
   const w=vw||(typeof innerWidth==='number'&&innerWidth>0?innerWidth:1280);
   G.hudVW=w;
+  G.vsHud=vsHudState(w);                          // TODO 25: state first, DOM later
   G.hudLines=[plateLines(PROMPTS[0],w), plateLines(PROMPTS[1],w)];
   G.hudNarrow=w<PLATE.narrow;
+  /* THE VANTAGE-08 LAW NEEDS NOTHING ADDED FOR A MATCH, and I only know that because a sabotage
+     could not break the clause I had put here. The versus HUD goes narrow below 420 and the plate
+     already docks the pill below 480, so "a match is narrow" is a strict subset of "the viewport is
+     narrow" and the extra term could never change the answer. A condition that cannot fire is worse
+     than no condition: it reads like a rule and is not one. */
   G.tabDocked=!!(G.hudNarrow||G.hudLines[0]>1||G.hudLines[1]>1);
   return G.tabDocked;
 }
 function setTug(i,v){ TUGS[i]=v; }
 function keyName(code){ return ({Space:'SPACE',Slash:'/',Period:'.',Comma:',',KeyE:'E',KeyQ:'Q'})[code]||code.replace('Key',''); }
-let uiCache=['','',-2,-2,'',''];
+let uiCache=['','',-2,-2,'','',''];
 function updateUI(){
   if(HEADLESS)return;
   for(let i=0;i<2;i++){
@@ -3815,6 +3850,16 @@ function updateUI(){
     if(th){ const want=G.tabHintOn?'block':'none';
       if(th.style.display!==want)th.style.display=want;
       th.classList.toggle('docked',!!G.tabDocked); } }
+  { const v=G.vsHud, el2=document.getElementById('vshud');       // TODO 25: the versus scoreline
+    let want='';
+    if(v&&v.on&&!v.over){
+      const s=v.scores, n=v.names;
+      const side=i=>(v.showLabels?(n[i]+' '):(v.showRoleWords?n[i].slice(0,4)+' ':n[i]+' '))+
+                    '<b>'+s[i]+'</b>';
+      want=side(0)+' <span style="opacity:.6">|</span> '+side(1)+
+           ' <span style="opacity:.75">'+(v.sudden?'SUDDEN ':'')+v.clock+'</span>'; }
+    if(uiCache[6]!==want){ uiCache[6]=want;
+      if(el2){ el2.innerHTML=want; el2.style.display=want?'block':'none'; } } }
   const cEl=document.getElementById('combo');
   if(G.combo>=2&&G.comboT>0){ cEl.style.display='block'; cEl.textContent='×'+G.combo+' SPREE'; } else cEl.style.display='none';
 }
@@ -4172,6 +4217,7 @@ if(typeof globalThis!=='undefined'){
     CARRY:{value:carryValue,back:carryBack,HOMER,at:atHome,dist:homeDist},
     ARENA:{stamp:arenaStamp,of:areaOfInter,at:arenaAt,ok:arenaOK,home:interHome},
     ROLEREX:{CAGE:VSCAGE},
+    VSHUD:{W:VSHUDW,state:vsHudState,clock:vsClock},
     FOOD:{STOCK:FOODSTOCK,list:()=>G.foodSrc,near:foodSrcNear,at:foodSrcAt,
           orders:foodOrders,orderFor:foodOrderFor,fetch:foodFetch},
     VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,

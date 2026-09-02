@@ -211,7 +211,7 @@ Rex hunts THE MENACE specifically at WANTED >= 3 during VS; a caging pays
 the restorer an ORDER bonus; menace mash-out is solo (latch locked in VS).
 PROOF: staged — rex targets the menace only; bonus lands; latch locked.
 
-### 25. vs-hud-split
+### 25. vs-hud-split  — DONE session 9 (df4ae7c6cdee29c3a0bbe3aa7f514f24)
 Two scores + roles + timer, readable at 320px (the vantage 08 law). Reuse
 the reflow logic from piece 5.
 PROOF: state-driven layout flags assert at narrow widths; leave the look

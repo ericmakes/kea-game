@@ -2140,3 +2140,29 @@ Verdict: green first pass. Six sabotages, one of which found a real gap in my ow
   and any caging paying.
 - CAPTURE: 25 shots, 0 flagged, worst 0.9894. Nothing re-pinned.
 - EYEBALL: nothing in the set. Press 4, get WANTED to 3 as the menace, and see who he comes for.
+
+### PIECE 25 — vs-hud-split — CERTIFIED df4ae7c6cdee29c3a0bbe3aa7f514f24
+Verdict: green. Six sabotages, and the one that FAILED to break anything is the reason this entry is
+worth reading.
+- BUILT THE WAY PIECE 5 BUILT THE REFLOW: the layout is a set of FLAGS computed from the viewport
+  width and the match state, and the DOM is left with nothing to decide. Nothing measures an element,
+  which is exactly why the whole section runs under node at 320, 420, 500, 640 and 1280 without a
+  browser anywhere near it.
+- THREE BANDS, EACH DROPPING THE LEAST USEFUL THING rather than shrinking everything. Wide spells the
+  roles out and labels the clock; mid keeps the role words; narrow keeps two numbers, a clock and ONE
+  LETTER per role, because at 320 the scoreline IS the HUD and the rest is decoration. Both
+  breakpoints are asserted on the exact pixel either side.
+- A CONDITION THAT CANNOT FIRE IS WORSE THAN NO CONDITION. I added "or a match is on and narrow" to
+  the TAB pill docking rule, and the sabotage that removed it changed NOTHING - because the versus
+  HUD goes narrow below 420 and the plate already docks the pill below 480, so the match term is a
+  strict subset and could never change the answer. It reads like a rule and is not one. Removed, and
+  the assertion now states the real relationship: 420 sits inside 480, and the pill docks at 320 with
+  no match at all for the reason it always did.
+- VERIFIED ADVERSARIALLY, SIX WAYS: every width being the wide layout, role words that never shorten,
+  sudden death showing the match clock instead of its own cap, a clock that counts past zero into
+  negative minutes, the scoreline showing the shared total instead of the match delta, and the dead
+  docking clause - which is the one that caught nothing and was therefore the most useful.
+- CAPTURE: 25 shots, 0 flagged, worst 0.9903. Vantage 08 - the 320px HUD frame this piece had to
+  respect - reads 0.9994, because no capture runs a match and the scoreline stays hidden.
+- EYEBALL: press 4 and narrow the window. The look is FLAGGED per the brief - the bands and what
+  survives each one are the decision, and they are Eric's to move.

@@ -2424,6 +2424,87 @@ C.section('ROLE-AWARE REX - the ranger picks a side, and the cell changes hands'
   X.startGame(1); tick(6);
 }
 
+C.section('THE VERSUS HUD - two scores, two roles and a clock, down to 320px');
+// TODO 25. Built the way piece 5 built the reflow: the layout is a set of FLAGS computed from the
+// viewport width and the match state, and the DOM is left with nothing to decide. Nothing here
+// measures an element, which is exactly why this whole section runs under node at any width.
+{
+  const VH=X.VSHUD, V=X.VS;
+  ok(VH.W.wide===640&&VH.W.mid===420,'two named breakpoints ('+VH.W.wide+' / '+VH.W.mid+')');
+  ok(VH.clock(0)==='0:00'&&VH.clock(59)==='0:59'&&VH.clock(60)==='1:00'&&VH.clock(305)==='5:05',
+     'the clock formats minutes and seconds ('+[0,59,60,305].map(VH.clock).join(' ')+')');
+  ok(VH.clock(-5)==='0:00','and never counts past zero into nonsense ('+VH.clock(-5)+')');
+
+  // ---- no match, no scoreline ----
+  X.startGame(2); tick(4);
+  ok(VH.state(1280).on===false,'with no match running there is nothing to draw');
+  X.hudReflow(320);
+  ok(!!G.vsHud&&G.vsHud.on===false,'and the reflow says so at 320 too');
+
+  // ---- a match, three bands ----
+  X.startGame(2,{vs:true}); tick(4); G.vs.arena=null; G.paused=false;
+  G.vs.roles={menace:0,management:1};
+  const wide=VH.state(1280), mid=VH.state(500), narrow=VH.state(320);
+  ok(wide.on&&mid.on&&narrow.on,'a running match draws at every width');
+  ok(wide.band==='wide'&&mid.band==='mid'&&narrow.band==='narrow',
+     'three bands off the two breakpoints ('+[wide.band,mid.band,narrow.band].join(', ')+')');
+  ok(VH.state(640).band==='wide'&&VH.state(639).band==='mid','the wide breakpoint is where it says it is');
+  ok(VH.state(420).band==='mid'&&VH.state(419).band==='narrow','and so is the mid one');
+
+  /* EACH BAND DROPS THE LEAST USEFUL THING rather than shrinking everything. At 320 the scoreline IS
+     the HUD: two numbers, a clock, and one letter each. */
+  ok(wide.showLabels===true&&mid.showLabels===false&&narrow.showLabels===false,
+     'labels survive only at wide');
+  ok(wide.showRoleWords===true&&mid.showRoleWords===true&&narrow.showRoleWords===false,
+     'role words survive down to mid and not below');
+  ok(wide.names[0]==='MENACE'&&wide.names[1]==='MANAGEMENT','wide spells the roles out ('+wide.names.join(' / ')+')');
+  ok(narrow.names[0]==='M'&&narrow.names[1]==='O','narrow gives each role one letter ('+narrow.names.join(' / ')+')');
+  ok(narrow.narrow===true&&wide.narrow===false,'and the narrow flag is set for whoever reads it');
+
+  // ---- it reports the MATCH scores, not the shared total ----
+  { G.combo=0; G.comboT=0; X.award(40,'FOR THE HUD',null,G.keas[0]);
+    const st=VH.state(1280);
+    ok(st.scores[0]===V.scores()[0]&&st.scores[1]===V.scores()[1],
+       'the scoreline carries the match scores ('+JSON.stringify(st.scores)+')');
+    ok(st.scores[0]!==G.score,'which are not the shared total ('+st.scores[0]+' vs '+G.score+')');
+    ok(st.lead===0,'and it names who is ahead ('+st.lead+')');
+    G.combo=0; G.comboT=0; X.award(40,'AND FOR THEM',null,G.keas[1]);
+    ok(VH.state(1280).lead===-1,'or that nobody is ('+VH.state(1280).lead+')'); }
+
+  // ---- the clock counts the match down, and sudden death counts its own cap ----
+  { G.vs.t=G.vs.len-65; const st=VH.state(1280);
+    ok(st.clock==='1:05','the clock shows what is left of the match ('+st.clock+')');
+    ok(st.sudden===false,'and knows it is not sudden death yet');
+    G.vs.phase='sudden'; G.vs.sudden=20; G.vs.tieAt=V.scores().slice();
+    const sd=VH.state(1280);
+    ok(sd.sudden===true,'in sudden death it says so');
+    ok(sd.clock==='0:40','and counts the CAP down instead of the match ('+sd.clock+')');
+    G.vs.phase='play'; }
+
+  /* THE VANTAGE-08 LAW. Piece 5 docks the TAB pill when the plate wraps or the viewport is narrow;
+     a running match at 320 is one more reason, because the versus line owns that bottom edge. */
+  { X.setPrompt(0,''); X.setPrompt(1,'');
+    X.hudReflow(1280);
+    ok(G.tabDocked===false,'wide and quiet, the pill sits where it always did');
+    X.hudReflow(320);
+    ok(G.vsHud.narrow===true&&G.tabDocked===true,'at 320 with a match on, the pill is docked out of the way');
+    /* AND THE MATCH IS NOT WHY, which is worth asserting because the first version of this piece
+       added a match term to tabDocked and no sabotage could break it: the versus HUD goes narrow
+       below 420 and the plate docks the pill below 480, so the match condition was a strict subset
+       and could never change the answer. It was removed. */
+    ok(X.VSHUD.W.mid<480,'the versus narrow band sits inside the plate narrow band ('+X.VSHUD.W.mid+' < 480)');
+    { const wasVs=G.vs; G.vs=null; X.hudReflow(320);
+      ok(G.tabDocked===true,'so the pill docks at 320 with no match at all, for the reason it always did');
+      G.vs=wasVs; X.hudReflow(320); }
+    ok(G.hudVW===320,'and the reflow recorded the width it was asked about ('+G.hudVW+')'); }
+
+  // ---- and it stops drawing when the match is over ----
+  { V.end('time'); G.paused=false;
+    ok(VH.state(1280).over===true,'a finished match reports itself over');
+    X.startGame(1); tick(4);
+    ok(VH.state(1280).on===false,'and a fresh solo run draws nothing at all'); }
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
