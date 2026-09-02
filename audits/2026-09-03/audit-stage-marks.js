@@ -50,6 +50,23 @@ for(const block of SRC.split(/await shotR?\(/).slice(1)){
   MARKS.push({name, x:+mx[1], z:+mz[1], y:my?+my[1]:0, biome});
 }
 
+/* TWO MARKS ARE NOT LITERAL AND THEY ARE THE TWO NEAREST THE CARAVAN, so leaving them out would be
+   a hole exactly where the findings are. 15_sign stands the bird off G.signG and 12_seal_midpeel
+   stands it off the door-seal strip's own getPos() after peeling it six times, so neither can be
+   read out of the source as a number. They are transcribed here as functions of the world, WITH THE
+   SOURCE LINE ASSERTED: if capture.mjs stops saying exactly this, the row prints TRANSCRIPTION
+   STALE and no number, rather than a number about a mark that no longer exists.
+   THEY RUN LAST AND IN THEIR OWN WORLD because 12 mutates the seal to get its position, which is a
+   world change the literal rows should not inherit. */
+const COMPUTED=[
+  { name:'15_sign', biome:'carpark', src:'k.x=sg.position.x-0.6;k.z=sg.position.z+2.2;k.y=0;',
+    mark:(H)=>{ const sg=H.G.signG; return sg?{x:sg.position.x-0.6, z:sg.position.z+2.2, y:0}:null; } },
+  { name:'12_seal_midpeel', biome:'carpark', src:'k.x=p.x-0.35; k.y=p.y-0.15; k.z=p.z+0.55;',
+    mark:(H)=>{ const t=H.G.inter.find(x=>x.strip&&/DOOR SEAL/.test(x.label)); if(!t)return null;
+      for(let i=0;i<6;i++)t.onDone(t.getPos()); const p=t.getPos();
+      return {x:p.x-0.35, y:p.y-0.15, z:p.z+0.55}; } },
+];
+
 // ONE WORLD PER BIOME, built on demand and kept, because load() is a whole game instance.
 const WORLDS={};
 function world(biome){
@@ -102,6 +119,9 @@ function eject(H,m){
 const BROWSER=[{name:'20_dead_rear', x:-8.87763, z:10.0137},
                {name:'01_carpark_wide', x:2.82, z:16},
                {name:'18_rear_close', x:-9.14552, z:10.86876}];
+// and the computed pair was checked the same way: 12_seal_midpeel staged at -9.79249, 1.62, 8.68323
+// reads -9.1728, 0, 8.55761 at the shutter in the browser - the same 0.632 this file predicts, plus
+// a fall of 1.62 that a horizontal test cannot see. 15_sign does not move in either engine.
 let held=true;
 for(const b of BROWSER){
   const ctl=MARKS.find(m=>m.name===b.name);
@@ -124,6 +144,21 @@ for(const {m,got} of rows){
     `  predicted ${h.push.toFixed(3)} on ${h.axis}${Math.abs(h.push-got.d)>0.001?'  <-- PREDICTION DISAGREES':''}`:'';
   console.log(`${hot?'✗':'·'} ${m.name.padEnd(20)} ${m.biome.padEnd(9)} ${(m.x+', '+m.z).padEnd(19)} ${(got.x+', '+got.z).padEnd(21)} ${got.d.toFixed(3).padStart(6)}   ${by}`);
 }
-const worst=rows[0];
-console.log(`\nSTAGE MARKS: ${rows.length} literal marks in capture.mjs, ${rows.filter(r=>r.got.d>EJECT).length} ejected over ${EJECT} m`+
+/* the computed marks, each in a world of its own so the seal peel cannot leak into anything else */
+for(const cm of COMPUTED){
+  if(!SRC.includes(cm.src)){ console.log(`? ${cm.name.padEnd(20)} TRANSCRIPTION STALE - capture.mjs no longer says: ${cm.src}`); continue; }
+  const H=load(); H.boot(cm.biome==='carpark'?null:cm.biome); H.X.startGame(1); H.tick(6); clearTraffic(H); H.G.poseLock=true;
+  const m=cm.mark(H);
+  if(!m){ console.log(`? ${cm.name.padEnd(20)} the world handle this mark is built from is not there`); continue; }
+  m.name=cm.name; m.biome=cm.biome;
+  const got=eject(H,m);
+  const h=got.hit, hot=got.d>EJECT;
+  const by=h?`box ${r5(h.c.x)}, ${r5(h.c.z)}  ${(h.c.w*2).toFixed(2)}x${(h.c.d*2).toFixed(2)} top ${h.c.top}`+
+    `  predicted ${h.push.toFixed(3)} on ${h.axis}${Math.abs(h.push-got.d)>0.001?'  <-- PREDICTION DISAGREES':''}`:'';
+  console.log(`${hot?'✗':'·'} ${cm.name.padEnd(20)} ${cm.biome.padEnd(9)} ${(r5(m.x)+', '+r5(m.z)).padEnd(19)} ${(got.x+', '+got.z).padEnd(21)} ${got.d.toFixed(3).padStart(6)}   ${by}  (computed)`);
+  rows.push({m, got});
+}
+
+const worst=rows.slice().sort((a,b)=>b.got.d-a.got.d)[0];
+console.log(`\nSTAGE MARKS: ${rows.length} marks in capture.mjs (${COMPUTED.length} of them computed), ${rows.filter(r=>r.got.d>EJECT).length} ejected over ${EJECT} m`+
   ` (worst ${worst?worst.m.name:'-'} ${worst?worst.got.d.toFixed(3):'-'} m). Control ${held?'holds':'BROKEN'}.`);

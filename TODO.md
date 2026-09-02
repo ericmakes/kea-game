@@ -1382,13 +1382,23 @@ take three times as long for four vantages worth of benefit.
 Found in session 13 by piece 69, which needed to know where the bird actually WAS before it could
 converge a camera on it. The audit is audits/2026-09-03/audit-stage-marks.js - a report, not a
 battery, deliberately out of gate.sh for the reason audit-bevel-flanks.js states for itself.
-FOUR OF THE TWENTY-SIX LITERAL MARKS IN capture.mjs ARE INSIDE A SOLID BOX, and pushOut ejects the
+FIVE OF THE TWENTY-EIGHT MARKS IN capture.mjs ARE INSIDE A SOLID BOX, and pushOut ejects the
 bird on the FIRST frame of the settle. It is not drift and it is not a flake: the move is the same
 to five decimals every time, in node and in the browser, and it is a single step.
     01_carpark_wide     4, 16          -> 2.82, 16              1.180 m   a PARKED CAR at 4.2, 16.4
     08_readability_320  4, 16          -> 2.82, 16              1.180 m   the same mark, same car
     20_dead_rear        -9.55, 10.15   -> -8.87763, 10.0137     0.686 m   the caravan at -11, 8
     18_rear_close       -9.2, 10.6     -> -9.14552, 10.86876    0.274 m   the caravan, on z
+    12_seal_midpeel     -9.79249, 8.68323 -> -9.1728, 8.55761   0.632 m   the caravan, and see below
+AND THE FIFTH ONE IS THE INTERESTING ONE, because it is not just moved sideways. 12_seal_midpeel
+computes its mark off the door-seal strip's own getPos() and stands the bird at y 1.62 with
+grounded=false - a bird up at the seal, mid-peel, which is the act the vantage is named for. The
+first frame pushes it 0.632 m out of the caravan AND it falls: measured in the browser at the
+shutter, -9.1728, 0, 8.55761, grounded true. The photograph is a bird standing on the tarmac beside
+an open door with a half-peeled strip above it. Whether that picture is the one you want is yours -
+it reads well - but it is not the picture the stage line describes, and session 12 walked past the
+evidence while probing this exact vantage for churn: TODO 70 records "y 0, vy 0, grounded true, five
+takes out of five" and did not ask why a bird staged at 1.62 was on the ground.
 THE ESTABLISHING SHOT IS THE WORST ONE. 01_carpark_wide is the frame the set opens with, and its
 bird has been standing 1.18 m from its own stage line since the day it was written - beside a parked
 car it is meant to be near, not where the line says. 08 is the same mark through a different camera
@@ -1398,6 +1408,11 @@ them. It costs anyone who edits a mark. A small nudge to 01 or 20 does nothing a
 clears the body, so the frame does not respond to the edit and the next person reads that as the rig
 ignoring them. Piece 69 hit exactly this: the camera offset for 20 was computed from a mark the bird
 does not occupy, which is how that vantage framed a bird 0.68 off its own line for four builds.
+TWO MARKS ARE NOT LITERAL AND ARE TRANSCRIBED INTO THE AUDIT AS FUNCTIONS OF THE WORLD, with their
+source lines asserted so a row prints TRANSCRIPTION STALE rather than a stale number if capture.mjs
+changes. They are 15_sign (off G.signG, clean) and 12_seal_midpeel (off the seal strip, the fifth
+ejection). The only two vantages with no mark at all are 06_skyline and 26_tour_brochure, which
+stage no bird.
 THE FIX IS A JUDGED RE-PIN AND THEREFORE NOT MINE. Moving a mark out of its body moves the bird in
 the photograph - 1.18 m on the establishing shot is a different picture, not a nudge - so it wants
 the same sitting as the TODO 30 and 67 re-pin sweep. The honest cheap half, if you want one: leave

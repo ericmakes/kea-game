@@ -3286,3 +3286,24 @@ prose only; the stage line is not touched and no frame moves.
   batch wearing a before label - and it came back 2271, which reads perfectly plausible as a before.
   The check that caught it was counting the old anchor in the extracted file, which is the same
   assert-the-anchor-exists law the game file has had since session 3.
+
+### PIECE 71b — the two computed marks — investigation, no game change, no rig change
+Verdict: green, and it found a fifth ejection that the literal sweep could not see. Extends
+audits/2026-09-03/audit-stage-marks.js; TODO 71 updated.
+- THE HOLE WAS EXACTLY WHERE THE FINDINGS ARE. Two vantages do not name a number: 15_sign stands the
+  bird off G.signG and 12_seal_midpeel stands it off the door-seal strip own getPos() after peeling
+  it six times. Both are at the caravan end of the carpark, which is the body that ejects three of
+  the four already found. A sweep that reads literals only is a sweep that skips the neighbourhood.
+- THEY ARE TRANSCRIBED AS FUNCTIONS OF THE WORLD WITH THEIR SOURCE ASSERTED, which is the game-file
+  anchor law applied to my own tooling - the thing session 12 said it should have done and did not.
+  If capture.mjs stops saying exactly that line, the row prints TRANSCRIPTION STALE and no number.
+- 12_seal_midpeel IS EJECTED 0.632 m AND FALLS 1.62 m. The stage line stands the bird at the seal,
+  y 1.62, grounded=false - a bird mid-peel, which is the act the vantage is named for. Browser at
+  shutter: -9.1728, 0, 8.55761, grounded true. So the photograph is a bird on the tarmac beside an
+  open door with a half-peeled strip above it. It reads well and it is not what the line describes.
+- AND SESSION 12 WALKED PAST THE EVIDENCE WHILE STANDING ON IT. TODO 70 probed this exact vantage
+  for churn and recorded "y 0, vy 0, grounded true, five takes out of five" as proof the bird had
+  settled. It is the same measurement; nobody asked why a bird staged at 1.62 was on the ground.
+- 15_sign IS CLEAN in both engines, which is worth having: it is the control for the transcription
+  method, a computed mark that does not move.
+- THE CONTROL IS NOW FOUR BROWSER MEASUREMENTS. 20, 01, 18 by position, and 12 by position AND fall.
