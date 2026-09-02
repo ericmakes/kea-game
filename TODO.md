@@ -1249,7 +1249,7 @@ honest target is a changed-pixel count near zero. Fix those, re-run crossrun, an
 collapse - at which point a band means something and this item can be asked again with real teeth.
 DO NOT RE-PIN ANYTHING TO MAKE AN INSTRUMENT QUIET. That is the law-12 trap from the other end.
 
-### 69. 20_dead_rear LEAVES THE CAMERA LIVE, WHICH IS THE ONE LAW-12 CASE ALREADY WRITTEN DOWN
+### 69. 20_dead_rear LEAVES THE CAMERA LIVE, WHICH IS THE ONE LAW-12 CASE ALREADY WRITTEN DOWN  — DONE session 13 (harness-side, game md5 8232590523658dfc3f5a1fe59a916de0 unchanged). NOT RE-PINNED.
 Found in session 12 by piece 67, in an A/B that was run to check whether piece 67 had made this
 vantage worse. It had not - it made it four times better - but the A/B is what put a number on what
 is left. Its stage line sets G.cams[0].position ONCE and uses no camLock and no PIN:
@@ -1265,6 +1265,43 @@ override it. PIN the same assignment every frame instead, which is what the othe
 do, and derive the offset the way the stage line already does.
 RE-PIN: 20 only, and it is a judged frame because holding the camera still WILL land it somewhere
 slightly different from the eased position the baseline caught. Measure first, leave flagged.
+DONE session 13, and the brief was right about the shape and wrong about one word - the camera is
+not held STILL at the offset the stage line names, it is held at the FIXED POINT of the follow rig.
+  WHY NOT THE STAGE-LINE OFFSET. 1.7 behind the bird is a close-up. The ease had all but converged
+  by the 900ms shutter, so the pinned photograph IS the wide follow view - which is what piece 61
+  hit from the other side when locking to the stage line gave it a close-up and nothing like 20.
+  Measured: the direct set puts the eye at (-8.60, 1.10, 11.56) and the shutter catches it at
+  (-5.86309, 2.29643, 14.48738), 3.7 m away and 99 percent of the way to the follow target.
+  HOW IT IS DERIVED, and it is law 10 rather than a number. The stage line now runs the game OWN
+  updateCams to convergence at a fixed dt - 400 iterations of 1/60 through KEAGAME.CAMS.update - and
+  locks camLock to where the engine put the camera, with the lookAt taken off the camera own
+  quaternion as a ray. The collider march and the ground clamp are therefore done BY the follow rig,
+  not copied out of it, and the result is a property of the geometry rather than of settle length.
+  AND THE BIRD IS EJECTED BY ONE FRAME OF PHYSICS, which nobody had noticed in four builds. The mark
+  this vantage has always declared, (-9.55, 10.15), is inside a solid: ONE update(1/60) moves the
+  bird to (-8.87763, 10.0137) and it does not move again for 240 frames. So the 1.7 dead-rear offset
+  has always been computed from a mark the bird does not occupy, and the fix converges against where
+  the bird IS. The stage line takes that one update itself, at a fixed dt, before it converges.
+  PROOF, and it is the reproducibility claim rather than a battery. Probed at four settle lengths -
+  600, 900, 1200 and 4000 ms, frame counts 36, 54, 73 and 240 - the camera reads
+  -5.85379, 2.30050, 14.49733 and the quaternion -0.10585, 0.29055, 0.03236, 0.95044 at every one of
+  them, identical to five decimals. Before the change every one of those four settles gave a
+  different camera. Cross-run churn over ten pairs, same build, same machine, an hour apart:
+      before   4334 px    6, 25, 952, 958, 968, 974, 3702, 3704, 4331, 4334   an ease
+      after     991 px    0, 5, 5, 14, 976, 976, 981, 986, 986, 991           two discrete states
+  The residual 991 is the caption feed and the grass, which are TODO 67 and 30 and are parked.
+  THE FRAME MOVED AND IS LEFT FLAGGED, per the brief. The lock sits 1.4 cm from the eased position
+  the baseline caught: ssim 0.9831 against a 0.965 gate, which diff.mjs passes, and 16308 changed
+  pixels against a recorded churn of 5489, which pxdiff.mjs flags at 3.0x. PXCELLS puts the change
+  in a band across the full width at rows 3 and 4 - a sub-pixel translation of a textured horizon,
+  not a subject change. Subjects 15 checked 0 missing, boxdiff 11 compared with only the two known.
+  NOT RE-PINNED. It is Eric judgement and it is one frame: gauntlet/capture/20_dead_rear.png against
+  gauntlet/capture/baseline/20_dead_rear.png.
+  ONE NUMBER LEFT ON THE TABLE ON PURPOSE: the pxdiff CHURN entry for 20 still says 5489. Lowering
+  it to 991 is a real recalibration, but it belongs with the re-pin and with five more runs than I
+  took - session 12 law, a ceiling from five samples is a floor.
+  AND THIS UNBLOCKS TODO 61 FOR 20: the vantage has neither a subjects.mjs presence check nor a
+  boxdiff box, so nothing verifies the bird is in this photograph at all.
 
 ### 70. THE LAST OF THE CHURN IS dt-WEIGHTED LERPS, AND ONE VANTAGE IS NOT THAT
 Investigated in session 12, with the TODO 30+67 patch applied so that only the residual was left.

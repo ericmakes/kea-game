@@ -3135,3 +3135,62 @@ in gauntlet/parked/ that applies clean.
 - I DID NOT RUN stability.mjs, and that is deliberate rather than an omission: crossrun.mjs shot ten
   full sweeps in separate processes tonight, which is strictly more than the take-to-take question
   stability.mjs asks, and the numbers are in TODO 30 and 68.
+
+## SESSION 13 — 2026-09-03, overnight, the numbered queue
+Started clean at 8232590523658dfc3f5a1fe59a916de0, gate CERTIFIED-SHIP, no lock held, SESSION.lock
+taken. Eric order: the OVERNIGHT.md step-6 fix first and alone, then the numbered queue, and the
+parked deterministic-rig patch is HIS - not to be applied tonight. Eligible queue after session 12:
+69, then whatever a piece files. 30 and 67 are parked for daylight by name, 68 says in its own text
+that the next move is not more measurement, 32 is a judged look sweep, and 39b, 40b, 56, 60 and 64
+are judged or blocked art.
+
+### PROCESS — step 6 runs boxdiff and pxdiff, not diff alone — no game change, no rig change
+Verdict: green. The report has asked for this three sessions running (10, 11, 12) and every session
+has run both instruments by hand instead. A session that follows OVERNIGHT.md literally runs only
+diff.mjs, which is the one instrument that cannot see either failure the other two exist for - a
+replaced subject inside the drift budget (boxdiff, TODO 57) or a thin re-shade over the whole frame
+(pxdiff, TODO 31). Step 6 now names all three with one line each on what question each asks, and
+carries the rule that caught a bad staging fix in session 12: a re-pin that moves a subject box or a
+pixel count on a vantage you were NOT aiming at is parked, not pinned.
+
+### PIECE 69 — dead-rear-camlock — harness-side, game md5 8232590523658dfc3f5a1fe59a916de0 unchanged
+Verdict: green, frame moved on purpose, NOT RE-PINNED. gauntlet/verify/capture.mjs, one vantage.
+- THE BRIEF WAS RIGHT ABOUT THE SHAPE AND WRONG ABOUT ONE WORD. It asks for the camera to be held
+  still at the assignment the stage line makes. Held still at THAT offset is a close-up: 1.7 behind
+  the bird is where the direct set starts, and the ease is 99 percent converged by the 900ms
+  shutter, so the pinned photograph is the WIDE follow view. Piece 61 hit this from the other side
+  in session 12 and could not explain it. The fix is the FIXED POINT of the follow rig, not the
+  stage-line offset - and it is taken from the engine, by running KEAGAME.CAMS.update 400 times at a
+  fixed dt and locking camLock to where the game put the camera. The collider march and the ground
+  clamp are done by the follow rig rather than copied out of it, which is law 10 applied to a rig
+  file. The lookAt comes off the camera own quaternion as a ray, so it needs no convention at all.
+- AND THE BIRD IS EJECTED BY ONE FRAME OF PHYSICS, which is the surprise of the night. The mark this
+  vantage has declared since it was written, (-9.55, 10.15), is inside a solid. ONE update(1/60)
+  puts the bird at (-8.87763, 10.0137) and it does not move again for 240 frames. So the dead-rear
+  offset has always been computed from a mark the bird does not occupy, and every frame 20 has ever
+  taken was framed 0.68 off its own stage line. The new line takes that update itself, at fixed dt,
+  before it converges the camera - so the camera converges against where the bird IS.
+- THE PROOF IS REPRODUCIBILITY, NOT A BATTERY, because the game file was never opened. Probed at
+  four settle lengths - 600, 900, 1200, 4000 ms, frame counts 36, 54, 73, 240 - the camera reads
+  -5.85379, 2.30050, 14.49733 and the quaternion -0.10585, 0.29055, 0.03236, 0.95044 at every one,
+  identical to five decimals. Before the change all four settles gave four different cameras.
+- CROSSRUN, FIVE RUNS EACH SIDE, TEN PAIRS EACH: before 4334 px worst, samples 6, 25, 952, 958, 968,
+  974, 3702, 3704, 4331, 4334 - continuous, which is an ease. After 991 px worst, samples 0, 5, 5,
+  14, 976, 976, 981, 986, 986, 991 - two discrete clusters, which is a settle state. The residual is
+  the caption feed and the grass, TODO 67 and 30, parked for Eric by name.
+- THE FRAME MOVED AND IS LEFT FLAGGED. ssim 0.9831 against the 0.965 gate, so diff.mjs passes it;
+  16308 changed pixels against a recorded churn of 5489, so pxdiff.mjs flags it at 3.0x. That split
+  is the two instruments working exactly as written - a 1.4 cm camera translation is a sub-pixel
+  slide of a textured horizon, which SSIM averages away and a pixel count sees. PXCELLS puts every
+  hot cell in a band across the full width at rows 3 and 4. Subjects 15 checked 0 missing, boxdiff
+  11 compared with only the two known ones flagged, gate CERTIFIED-SHIP.
+- I DID NOT TOUCH THE pxdiff CHURN TABLE, on purpose. 991 is a real recalibration of a 5489 entry
+  and it belongs with the re-pin, on more than five runs - session 12 law: a ceiling from five
+  samples is a floor.
+- ONE A/B THAT LOOKED LIKE A FINDING AND IS NOT. The old stage line at a 4000ms settle reads 24133
+  px from the baseline and 20220 from the new frame, which for an hour looked like the lock landing
+  somewhere the ease never goes. It is the world, not the camera: a 4000ms settle moves the grass
+  and the caption by four seconds. The honest A/B is at equal settle, and there the old line reads
+  4692 from its own baseline (inside its 4334-to-5489 churn) and 13237 from the new frame.
+- WHAT IT UNBLOCKS: TODO 61 for vantage 20. That frame has neither a subjects.mjs presence check nor
+  a boxdiff box, so nothing in the rig verifies the bird is in this photograph at all.

@@ -165,7 +165,38 @@ await shotR('22_torch_beam',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEA
         "if(rex){rex.x=0;rex.z=8;rex.ry=0;rex.state='chase';rex.t=0;rex.patrol=null;rex.g.position.set(0,0,8);"+
         "if(rex.torch){rex.torch.g.rotation.y=0;rex.torch.spot.intensity=2.6;rex.torch.lens.visible=true;}}")}
   ${CAM(5.5,1.7,10.5,0,0.9,11)}`);
-await shotR('20_dead_rear',`const k=KEAGAME.G.keas[0];k.x=-9.55;k.z=10.15;k.y=0;k.grounded=true;k.ry=Math.atan2((-11)-(-9.55),8-10.15);KEAGAME.G.poseLock=true; const c=KEAGAME.G.cams&&KEAGAME.G.cams[0]; if(c){c.position.set(k.x-Math.sin(k.ry)*1.7, 1.1, k.z-Math.cos(k.ry)*1.7);}`);
+/* TODO 69: THE CAMERA WAS THE ONE THING LEFT LIVE HERE, AND FLAKES LAW 12 NAMES THIS EXACT CASE IN
+   ITS OWN TEXT. The stage line set G.cams[0].position ONCE, with no camLock and no PIN, and the
+   follow cam spent the whole settle easing away from it - so the photograph landed wherever the
+   machine frame count left it. Measured before: 4334 px of cross-run churn over ten pairs, the
+   samples spread continuously 6, 25, 952, 958, 968, 974, 3702, 3704, 4331, 4334, which is the
+   signature of an ease rather than of a handful of discrete settle states.
+   IT CANNOT BE camLock AT THE OFFSET THE OLD LINE REACHED FOR. 1.7 behind the bird is a close-up;
+   the pinned frame is the WIDE follow view, because the ease had all but converged by the shutter.
+   Piece 61 proved that the hard way while trying to measure a floor for this vantage.
+   SO TAKE THE FIXED POINT RATHER THAN A NUMBER: run the game OWN updateCams to convergence at a
+   fixed dt and lock the camera where the follow rig wanted to be. That is law 10 - derive from the
+   convention - with the collider march and the ground clamp done BY the engine instead of copied
+   out of it, and it is a property of the geometry rather than of how long the settle ran.
+   AND THE BIRD IS EJECTED BY ONE FRAME OF PHYSICS, which is why the update() call comes first. The
+   mark this vantage has always declared, (-9.55, 10.15), is inside a solid: the first update puts
+   the bird at (-8.87763, 10.0137) and leaves it there for 240 frames, so the camera has always been
+   framing a bird 0.68 off its own stage mark. Converge against where the bird IS.
+   MEASURED AFTER: the camera reads -5.85379, 2.30050, 14.49733 to five decimals at settles of 600,
+   900, 1200 and 4000 ms - frame counts 36 to 240 - where every one of those moved it before. That
+   lock sits 1.4 cm from the eased position the baseline caught, so the frame DOES move slightly.
+   NOT RE-PINNED: left flagged for Eric, per the brief. */
+await shotR('20_dead_rear',`const G=KEAGAME.G,k=G.keas[0];
+  k.x=-9.55;k.z=10.15;k.y=0;k.vy=0;k.grounded=true;k.stun=0;k.ry=Math.atan2((-11)-(-9.55),8-10.15);
+  G.poseLock=true;G.shake=0;
+  KEAGAME.update(1/60);                                 // the ejection, taken once and at a fixed dt
+  const _bx=k.x,_by=k.y,_bz=k.z,_bry=k.ry;
+  const c=G.cams&&G.cams[0];
+  if(c){ c.position.set(_bx-Math.sin(_bry)*1.7, 1.1, _bz-Math.cos(_bry)*1.7);
+    for(let i=0;i<400;i++)KEAGAME.CAMS.update(1/60);     // the ease the settle used to run on real dt
+    const f=new THREE.Vector3(0,0,-1).applyQuaternion(c.quaternion).multiplyScalar(10).add(c.position);
+    G.camLock={x:c.position.x,y:c.position.y,z:c.position.z,lx:f.x,ly:f.y,lz:f.z}; }
+  ${PIN('k.x=_bx;k.y=_by;k.z=_bz;k.vy=0;k.grounded=true;k.ry=_bry;k.stun=0;')}`);
 // 19 used to set cams[0].position directly, so the follow cam spent the whole settle lerping
 // away from it and the frame landed wherever the machine frame count left it (0.985 against
 // itself). camLock holds the SAME geometry the direct set was reaching for - eye at
