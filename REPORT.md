@@ -1,157 +1,116 @@
-# REPORT — overnight session 8, 2026-09-02
+# REPORT — overnight session 9, 2026-09-02
 
-Stop condition: **6 pieces certified**, taken in the order you ratified. Nothing parked as failed.
-No assertion was weakened, skipped or deleted — but **three of mine were thrown away and rewritten**
-because they were wrong, weak, or nearly flaky, and each is called out where it happened. Final build
-**74e048b26061845b4f4da8e9cccf1997**, gate CERTIFIED-SHIP, working tree clean.
+Stop condition: **6 pieces certified**, and with them **the ratified run order is finished** — 53, 51,
+52, 36, 22 and 18 last session, 19, 20, 21, 23, 24 and 25 this one. The whole VS block exists.
+Nothing parked as failed. Final build **df4ae7c6cdee29c3a0bbe3aa7f514f24**, gate CERTIFIED-SHIP,
+working tree clean, **0 of 25 vantages flagged**.
 
-**Read section 1 first: I got last night's headline diagnosis wrong, and the correction is the
-piece.**
-
-## 1. The settle was not the cause, and 900 was already the default
-
-Last night I told you `17_flight` was fixed by giving it the `{settle:900}` that 04 passes.
-`shot()` reads **`o.settle||900`**. Nine hundred **is** the default — 04 passing it explicitly is a
-no-op, the two vantages have always had the same settle, and the 0.9024 → 0.9958 that seemed to
-confirm it was a lucky three-take sweep of a completely unchanged build.
-
-It was caught by applying the "fix" and then testing it properly: five takes instead of three, twice,
-gave **0.9848** and 0.9960 — one of them under the bar your own brief sets. A fix that only passes
-when you sample it thinly is not a fix.
-
-So I stopped guessing and **measured the page**. A probe stages 17 exactly as `capture.mjs` does and
-reads state back instead of taking a photograph:
-
-    take 1 {flapPh:1.1, flapDrive:1, y:3, ry:2.2, wz:-0.29999999632943347, ... t:2.3842}
-    take 3 {flapPh:1.1, flapDrive:1, y:3, ry:2.2, wz:-0.29999999632943347, ... t:2.3841}
-    take 2 {flapPh:1.1, flapDrive:1, y:3, ry:2.2, wz:-0.29999999631482993, ... t:2.3509}
-
-The bird is identical to nine decimal places. **`G.time` is not.** The bird was never the variable —
-the ground was, and TODO 30 had measured the same thing from the other end a session ago: the grass
-shader sways on `uTime`, and 17 looks down across the tussock from three metres up. Pinning `G.time`
-is the law-12 idiom 21 and 25 already use. Seven sweeps of five takes: worst **0.9980**.
-
-The correction is written where the wrong claim was — TODO 51 lost the paragraph blaming the settle,
-TODO 53 carries it under your own words, and `capture.mjs` says it at the vantage.
-
-**The same probe found something you should know about that frame:** the `flapDrive` pin on 17 is
-**inert**. The PIN chain is registered after the game loop, so it runs after `update()` and
-`render()`, and the game zeroes `flapDrive` every frame because the flap key is not held. The probe
-reads the wing sitting at its **glide** targets. The vantage called `17_flight`, whose comment says
-the wings read mid-beat, is photographing a glide. 04 avoids it by pressing the flap key so the
-*game* sets `flapDrive`. Filed as **TODO 54** — it changes the photograph, so it is yours.
-
-## 2. Your table over-classified, and one sweep cannot classify a vantage
-
-Piece 51's first act was to disprove its own premise. Re-measured at five takes, four sweeps each,
-**before touching anything**:
-
-| vantage | before (4 sweeps) | after | verdict |
-|---|---|---|---|
-| 03 | 0.9943 0.9974 0.9974 0.9974 | **0.9998** ×3 | fixed |
-| 05 | 1.0000 0.9983 0.9947 0.9984 | **0.9998** ×3 | fixed |
-| 23 | 0.9980 0.9980 0.9980 0.9978 | **0.9997** ×3 | fixed |
-| 08 | 0.9978 0.9978 0.9978 0.9995 | 1.0000 **0.9879** 0.9983 | **reverted** |
-
-08 and 23 **passed every single time** before I touched them, and 05 came back at 1.0000 on the sweep
-right after being called unstable. Only 17 never passed, which is why it was the real one.
-
-**08 — the vantage TODO 51 is named for — refused.** The brief asks for a `PIN`; it was applied,
-measured no better and one sweep *worse*, and **reverted**. Changing a baseline frame that buys no
-measured stability is a cost with no purchase. The probe says why nothing else will help either:
-staged and pinned, five takes report the bird, **both prompt strings, the wrapped line counts, the
-docked flag, the plate height and the chaos readout all identical**, with only the frame count moving
-(140→142). Everything the rig can name is already deterministic; what is left is dt-driven
-accumulation on a 320×180 canvas. That is a deterministic frame clock — **TODO 33** — and it re-pins
-everything. Classified review-tier under law 8.
+**One housekeeping note first:** you pasted a command to launch a second Claude session against this
+tree. I did not run it — that is the two-writer collision `SESSION.lock` exists to prevent — and
+continued the run in place instead.
 
 ## Shipped
 
 | piece | md5 | one line |
 |---|---|---|
-| 53 `settle-17-flight` | *harness-side, unchanged* | not the settle — `G.time`; 0.9024 → worst-of-seven 0.9980 |
-| 51 `vantage-stability` | *harness-side, unchanged* | 03/05/23 fixed and flagged; 08 measured, reverted, classified |
-| 52 `hint-text-resolved-when-read` | `d72bec482c1ec516c985c9c35b060008` | mode-dependent hint text is a function evaluated when read |
-| 36 `tour-chassis` | `520a4d78a337a9f7f08f9b7e0967d88c` | the world is a biome now; 251 lines moved byte-identical |
-| 22 `vs-match-scaffold` | `846ee651e37429d7fa3355a49ee9329b` | a match is a window over the shared economy; four endings, all driven |
-| 18 `fix-verb` | `74e048b26061845b4f4da8e9cccf1997` | one verb, one counter, both directions: 35 → 21 → 13 → 8 |
+| 19 `botch-system` | `ed17c5d8cb9f044870769dedc59b8e83` | a restore lands crooked, measured from pristine every time, so it never gets worse |
+| 20 `carry-back-restore` | `d16cf644cfdffd8c4ca08510f288b5d9` | two questions at a drop: was it away, is it home |
+| 21 `consumable-replace` | `6b4c21db02a72392d733500958471896` | a scoffed sandwich cannot be un-eaten, so the management walks |
+| 23 `arena-scoping` | `96a83803f067232a08463219ced371ed` | a match is one patch; the gate reads the position `award()` already carries |
+| 24 `role-aware-rex` | `39c2d931f488caa1679afa01fff0e697` | rex picks a side, and the cell changes hands in one line |
+| 25 `vs-hud-split` | `df4ae7c6cdee29c3a0bbe3aa7f514f24` | two scores, two roles, a clock, down to 320px |
 
-## Three assertions of mine were thrown away, not weakened
+## The VS block came out as one machine, not six features
 
-Worth reading as a group, because they are three different ways to write a test that lies.
+Worth saying because it is the return on how 16, 18 and 19 were written:
 
-1. **One passed while broken** (52). It handed a hint a function returning a *literal* and looked for
-   those words on the plate. Concatenating a function gives you its **source**, which contains the
-   literal — so a display path that had stopped resolving still printed the words. The sabotage caught
-   it. The return value is now computed at run time, so the sentence exists nowhere in the source.
-2. **One was nearly flaky** (18). The decay sequence was checked by step *ratios* against a 0.02
-   tolerance. Measured, the ratios are 0.600, 0.619, 0.615 — rounding at small values — so two of the
-   three sat inside by a **thousandth**. It would pass today and fail on correct code the day a tear
-   award changed. Replaced with the exact form, which has no tolerance to get wrong.
-3. **One asserted a wrong expectation** (51/08 and, last session, 15). Written up where it happened.
+- **One ORDER economy.** Piece 18's decay counter serves tears, piece 20's carry-backs and piece 21's
+  replacements. There is no second scoring path anywhere.
+- **One kind of crooked.** `botchApply` is the only place a restore lands. Piece 20 needed props as
+  well as tears, so 19 was *generalised* rather than copied — a tear owns its mesh transform, but a
+  prop mesh is re-positioned from `p.x/p.y/p.z` every frame and has `rotation.x` flattened when it
+  settles, so a prop is wonked on the axes that survive.
+- **One predicate for the cell.** Piece 24 reverses piece 15's entire co-op cage — clock running,
+  mashing back, latch locked — by adding `&&!vsOn()` to `coopCell()`.
+- **One scoring gate.** Piece 23 scopes 46 award call sites by reading the position `award()` already
+  takes, the same trick piece 16 used for attribution.
 
-And a fourth thing became a rule rather than a lesson: **three separate sabotages produced zero
-findings** because the assertion read state that only exists when the code works (`G.squawk.n`,
-`result.winner`, `b.id`), threw, and took every later finding down with it. Every such read now goes
-through an accessor. A dead battery is a worse witness than a red one.
+## The brief named data the file does not have — again, and this time it was load-bearing
 
-## Parked
+Piece 23 asks to scope on *"interactables whose mission area matches the arena"*. **29 of 65
+interactables carry a mission id.** Scoping on mission area alone would have left 36 of them — most
+of the tears, most of the props — unscoreable in every arena, which is not a match, it is an empty
+carpark.
 
-- **TODO 54** (17 is photographing a glide) — changes the photograph.
-- **TODO 55** (the cage hint has no mission behind it, so nobody has ever read it) — making it live
-  puts new text on screen during play. There is a **tripwire** on it: the battery asserts exactly one
-  hint has no mission and that it is the cage one, so the day somebody makes it reachable the
-  assertion fails and says to read the copy.
-- **08**, per section 2.
-- **19–21, 23–25** — next in your order, and 18 shipping means the verbs now have a role to belong to.
+So every interactable is **stamped** with an area derived from data that exists: its own mission
+area, or the area of the nearest thing that has one, taken from where it **lives** rather than where
+it currently is. No table, no per-object tagging, and a tear added beside the hut tomorrow is a hut
+tear without anybody saying so. The assertion that matters is that the derivation is a **fallback and
+never an override**.
 
-## Frames to eyeball — four, and they are the whole visual output of the session
+## Four assertions of mine were wrong, and the sabotage sweeps found all four
 
-    gauntlet/capture/17_flight.png        vs baseline  (piece 53)
-    gauntlet/capture/03_kea_plate.png     vs baseline  (piece 51)
-    gauntlet/capture/05_tussock_ground.png vs baseline (piece 51)
-    gauntlet/capture/23_paddock_gate.png  vs baseline  (piece 51)
+This is the pattern of the session and it is worth reading as a group.
 
-**CORRECTED AFTER LOOKING AT THEM (see the note below).** I first wrote that the subject was
-unchanged in all four and only the blade phase moved. That is true of 17 and NOT true of the other
-three:
+1. **One could not fail.** Piece 25: I added *"or a match is on and narrow"* to the TAB-pill docking
+   rule, and the sabotage that removed it changed nothing — the versus narrow band (420) is a strict
+   subset of the plate narrow band (480), so the term could never change the answer. **A condition
+   that cannot fire is worse than no condition: it reads like a rule and is not one.** Removed.
+2. **One tested nothing.** Piece 24: making the caging bonus fire for *any* caging caught nothing,
+   because the section only ever caged the menace. Rex now cages the management too.
+3. **One ran too early.** Piece 21: the second-source assertion sat *before* the food was eaten, so
+   both sources answered null and it passed against a sabotage that had broken the rule outright.
+4. **One was a magic number.** Piece 21 added a seventh registry and broke my own piece-48 assertion
+   that *six* registries are cleared — a count that failed on a correct change and said nothing about
+   what was missing. It names them now.
 
-| frame | what actually changed |
-|---|---|
-| `17_flight` | bird identical, only the tussock. As described. |
-| `03_kea_plate` | **the bird has moved** - right and slightly up - and the preen pose differs |
-| `05_tussock_ground` | **the bird has moved** slightly left, pose differs |
-| `23_paddock_gate` | bird effectively unchanged, but **the sheep have shifted** |
+And a fifth thing has now happened in **five consecutive pieces**, so it is a rule rather than a
+lesson: **if an assertion reads state that only exists when the code works, read it through an
+accessor.** Sabotages kept producing *zero* findings because a test threw on `rep.banked`,
+`result.winner`, `inIt.area` and took every later finding down with it.
 
-The cause is in the fix and it is mine: for 03, 05 and 23 I did not only pin `G.time`, I also wrapped
-the staging in `PIN`, which holds the bird at the staged coordinates **every frame**. Before, the
-bird was set once and then drifted through the 900ms settle - gravity, ground snap, animation. So the
-new frames show the bird where the staging actually asks for it, held exactly, and the baselines show
-wherever it drifted to. That is arguably the more faithful photograph, but it is a **subject change**
-and wants judging as one. The sheep in 23 are ambient and still unpinned; they were never part of the
-fix, and pinning them is the same law-4 move `QUIET` already makes for humans if you want 23 tighter.
+## Frames to eyeball
 
-**Nothing was re-pinned** — the baseline is untouched on disk and in git, and these four are yours to
-accept or reject. Every other vantage matches its pinned baseline through all six pieces.
+**None.** Every piece this session is match-only behaviour, and no capture runs a match — so all
+25 vantages match their pinned baselines through all six, worst 0.9903. Nothing re-pinned.
 
-Two things have no vantage at all and need you to *play* them: the title now has a fourth button
-(**key 4**, `2 KEA VERSUS`) and there is a new results screen. The look of both is flagged.
+The two things that need *playing* rather than looking, both flagged per their briefs: the **results
+screen** (piece 22, last session) and the **versus HUD bands** (piece 25). Press **4** on the title
+and narrow the window.
 
-Final stability on the four changed frames, against the shipped build: **0.9991 / 1.0000 / 0.9999 /
-0.9991**.
+## The stability instrument, confirmed twice
+
+Full sweep on the shipped build: **24 of 25 clean**, only `12_seal_midpeel` flagged at 0.9941 on four
+takes — and then **0.9988 / 0.9980 / 0.9951** across three sweeps of five. Borderline, sitting on the
+threshold, exactly as 03/05/08/23 did before you re-pinned them.
+
+That is now **twice** a single sweep has named a vantage that repeated sweeps clear. The rule is in
+TODO 51: **nothing is unstable until three sweeps agree it is.** 12 is not fixed and should not be
+until there is a reason beyond one reading.
+
+## Still open from your own list
+
+- **Your re-pin question is unanswered.** All four frames you pinned last night are a consistent
+  ~0.991–0.998 from the attractor because they came from the tail of a stability sweep. Everything
+  passes with room; it just spends margin for no reason. One command, still yours.
+- **TODO 56** (`bird-shadow-quality`) — filed by you from a live frame, and **it collides with your
+  own blocked list**, which names *blob shadows* as an art wave requiring your eyes. I have not
+  touched it. If the block no longer applies, say so and it is a normal piece.
+- **TODO 54** (17 is photographing a glide, not a flap) and **55** (the cage hint has no mission, so
+  nobody has ever read it) — both judged, both small.
 
 ## Suggested next three picks
 
-1. **19 `botch-system`.** It is the next number, it is the reason 18 exists, and 18 gave it the seam:
-   `fixTear` is the single place a restore happens, so the wonk transform goes in one function.
-2. **54 or 33.** 54 is small and yours; 33 is the deterministic frame clock that closes 08 and the
-   whole residual band, and it re-pins everything, so it wants a session where that is the plan.
-3. **24 `role-aware-rex`.** Roles exist now and do nothing. 24 is what makes them matter, and it
-   modifies the co-op cell from piece 15 rather than inventing anything.
+1. **54 and 55 together.** Both are one-line decisions of yours with the analysis already done, and
+   55 has a tripwire in the battery that fires the day anyone makes that hint reachable.
+2. **37 `tour-save-and-map`.** The chassis (36) landed last session and 22–25 have now filled the
+   mode side; the save schema is what lets any of it persist.
+3. **33** — the deterministic frame clock. It closes 08, closes 12, and retires the whole "is this
+   vantage unstable" question that has now cost two sessions of measurement. It re-pins everything,
+   so it wants a session where that is the plan rather than a surprise.
 
 ## Housekeeping
 
-Your TODO block had not been applied to the tree, so it was run first and committed as yours before
-anything else. `SESSION.lock` taken before the first write, released as the final act. Every commit
-names its paths — no `git add -A`. Six piece commits, the log has a section each, and TODO 51 and 53
-carry the correction to last night's report.
+`SESSION.lock` taken before the first write and released as the final act. Every commit names its
+paths — no `git add -A`. Six piece commits, a log section each, and TODO 51 carries the second
+confirmation of the three-sweep rule.

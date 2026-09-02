@@ -656,6 +656,12 @@ flag, the plate height and the chaos readout are all identical, and only the fra
 to 142). Everything this rig can name is already deterministic. What is left is dt-driven per-frame
 accumulation on a 320x180 canvas, where two frames of drift is a visible number of pixels. The fix is
 a deterministic frame clock for the whole rig - TODO 33 - and it re-pins every vantage.
+SESSION 9 ADDS A SECOND CONFIRMATION AND A FIFTH NAME. The full sweep on the VS build read 24 of 25
+clean, with only 12_seal_midpeel flagged at 0.9941 on four takes - and then 0.9988, 0.9980, 0.9951
+across three sweeps of five. Borderline, sitting ON the threshold, exactly like 03/05/08/23 did
+before them. That is now twice that a single sweep has named a vantage that repeated sweeps clear, so
+the rule is not a one-off observation: NOTHING IS UNSTABLE UNTIL THREE SWEEPS AGREE IT IS. 12 is not
+fixed and should not be, until somebody has a reason beyond one reading.
 DO NOT PIN 08 FOR THE SAKE OF PINNING. Changing a baseline frame that buys no measured stability is a
 cost with no purchase, and it was measured twice.
 Found in session 7 by piece 50, which it very nearly got blamed on. 08_readability_320 flagged at
