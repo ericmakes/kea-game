@@ -565,7 +565,10 @@ the count of ALL PASS lines must equal the count of batteries. That also catches
 is missing, renamed or silently skipped, which the current grep cannot see either.
 PROOF: the ready-made test case is any battery with a deliberate throw in it - the gate must go red.
 
-### 47. propAt DRAWS A ROTATION FOR EVERY PROP THAT NOTHING EVER READS
+### 47. propAt DRAWS A ROTATION FOR EVERY PROP THAT NOTHING EVER READS  — DONE session 7 (4c29df092d4cf33cf5ee0f3b2524730b)
+Closed with option (b), the free one: the field is renamed _ryUnused and the draw is untouched, so
+the seeded world does not move - 25 vantages, 0 flagged, is the evidence. Option (a), applying it,
+remains open and remains a judged art call: every prop in the game would turn.
 NOT STRUCK - PLEASE RE-READ, ERIC. TODO 50 says to strike 47 and 48 as moot because they judge the
 reverted feature. Neither of them touches it: both were filed in session 6 by piece 17
 (home-positions), which is shipped and not reverted, and neither mentions the travel beat. The two

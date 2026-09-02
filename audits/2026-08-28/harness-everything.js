@@ -1549,6 +1549,42 @@ C.section('ONE BUILD, ONE WORLD - the second boot replaces the country, it does 
   X.startGame(1); tick(6);
 }
 
+C.section('THE PROP HEADING IS A DRAW NOBODY READS, AND IT IS NOW NAMED THAT');
+// TODO 47, option (b). propAt has always drawn a random heading per prop and nothing has ever
+// applied it to a prop mesh - ry is the kea and human convention (this.ry drives g.rotation.y) and
+// it is not the prop one. Piece 17 had to record the MESH transform to get an honest spawn rotation
+// and filed this. The draw STAYS: every later rnd() in the browser is downstream of it and removing
+// one draw repins the entire world, which is the snow-patch lesson from session 5. The name is the
+// fix, and these assertions are what stop it quietly becoming live again.
+{
+  X.boot();   // a clean world: props spawned during play are built by the same factory but land later
+  const built=G.props.slice();
+  ok(built.length>0,'props on the board to look at ('+built.length+')');
+  ok(built.every(p=>typeof p._ryUnused==='number'),'every prop still carries the draw, under its honest name');
+  ok(built.every(p=>p.ry===undefined),'and none of them carries a field called ry any more');
+  ok(built.every(p=>p._ryUnused>=0&&p._ryUnused<6),'the draw is still rnd(0,6) ('+
+     built.map(p=>p._ryUnused).reduce((a,b)=>Math.min(a,b),9).toFixed(2)+' to '+
+     built.map(p=>p._ryUnused).reduce((a,b)=>Math.max(a,b),-9).toFixed(2)+')');
+  ok(new Set(built.map(p=>p._ryUnused)).size===built.length,
+     'one draw each, all different, so the stream really is being spent ('+
+     new Set(built.map(p=>p._ryUnused)).size+' distinct of '+built.length+')');
+
+  /* THE CLAIM THAT MATTERS: nothing reads it. Stated as the thing you could see if something did -
+     a prop whose mesh had been turned by its own draw. Every prop is built axis-aligned about Y; the
+     two that a build site rotates are laid over about X (the skis, rotation.x=1.35). */
+  const turned=built.filter(p=>p.mesh&&Math.abs(p.mesh.rotation.y)>1e-9);
+  ok(turned.length===0,'not one prop mesh has been turned about Y ('+turned.length+' of '+built.length+
+     (turned.length?': '+turned.slice(0,3).map(p=>p.name).join(', '):'')+')');
+  const agree=built.filter(p=>p.mesh&&Math.abs(p.mesh.rotation.y-p._ryUnused)<1e-9);
+  ok(agree.length===0,'and not one mesh heading agrees with its own draw, which is what applying it would look like');
+  const skis=built.filter(p=>p.name==='ski');
+  ok(skis.length===2,'the two skis on the rack are the build site that DOES rotate a prop ('+skis.length+')');
+  ok(skis.every(p=>Math.abs(p.mesh.rotation.x-1.35)<1e-9),'and it lays them over about X ('+
+     skis.map(p=>p.mesh.rotation.x.toFixed(2)).join(', ')+')');
+  ok(skis.every(p=>p.mesh.rotation.y===0),'about X and never about Y, which is the axis the dead draw would have used');
+  X.startGame(1); tick(6);
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

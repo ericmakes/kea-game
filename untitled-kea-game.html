@@ -1341,11 +1341,14 @@ function buildWorld(){
    and then homesRegister() sweeps the finished world and re-reads every prop, which is the only moment
    at which the built transform is actually final. Props that spawn DURING play - bin loot, the muesli
    bar out of the pack - keep their factory home, which is their spawn point and correct for them.
-   NOTE A FIELD THAT LIES, LEFT ALONE ON PURPOSE: propAt draws ry:rnd(0,6) for every prop and nothing
-   ever applies it to a prop mesh (it is the kea and human convention, not the prop one). So the honest
-   spawn rotation is the MESH transform, never p.ry. The draw is NOT removed, because every later rnd()
-   in the browser is downstream of it and deleting one draw repins the world - the snow-patch lesson.
-   Filed as TODO 47 instead. */
+   THE FIELD THAT LIED IS NOW NAMED (TODO 47, closed session 7 with option b). propAt draws a random
+   heading for every prop and nothing has ever applied it to a prop mesh - ry is the kea and human
+   convention, where this.ry drives g.rotation.y, and it is not the prop one. So the honest spawn
+   rotation is the MESH transform, and it always was. The DRAW IS NOT REMOVED, because every later
+   rnd() in the browser is downstream of it and deleting one draw repins the whole world - the
+   snow-patch lesson from session 5, which cost a full re-pin to learn. Renaming the field costs
+   nothing and stops the next reader believing it. Applying it (option a) is a visual change to every
+   prop in the game and therefore a judged call, not an overnight one. */
 const HOMER=1.6;                    // metres. FENCED FOR PLAYTEST: the catch radius for a carry-back
 function homeClass(p){ return !p?null:(p.food?'consumable':'displaceable'); }
 function homesRegister(){ let n=0;
@@ -1423,7 +1426,8 @@ function propAt(name,x,y,z,buildFn,opts){
   const g=new THREE.Group(); g.position.set(x,y,z); buildFn(g); if(!HEADLESS)blob(g,0.2,0.26); G.scene.add(g);
   return mkProp(Object.assign({name,mesh:g,x,y:y,z,
     home:{x,y,z,rx:g.rotation.x,ry:g.rotation.y,rz:g.rotation.z},   // spawn transform, TODO 17
-    shiny:false,food:false,heavy:false,owner:null,ry:rnd(0,6)},opts||{}));
+    shiny:false,food:false,heavy:false,owner:null,
+    _ryUnused:rnd(0,6)},opts||{}));   // TODO 47: the draw stays so the seeded world does not move; the NAME is the fix
 }
 
 /* prop visual builders */

@@ -1627,3 +1627,31 @@ asked for is false on a healthy build.
 - NO BROWSER CHANGE BY CONSTRUCTION: boot() runs once in the browser, so the clear is a no-op there.
   Capture 25/25, 0 flagged, worst 0.9815, nothing re-pinned - which is the evidence, not the argument.
 - EYEBALL: nothing. This one is judged by every count assertion written from here on.
+
+### PIECE 47 — name-the-dead-prop-heading — CERTIFIED 4c29df092d4cf33cf5ee0f3b2524730b
+Verdict: green first pass. The smallest change of the night and the one with the most careful reason
+for being small.
+- OPTION (b), THE FREE ONE. propAt has always drawn a random heading per prop and nothing has ever
+  applied it to a prop mesh: ry is the kea and human convention, where this.ry drives g.rotation.y,
+  and it is not the prop one. The field is now _ryUnused. THE DRAW IS UNTOUCHED, because every later
+  rnd() in the browser is downstream of it and deleting one draw repins the whole world - the
+  snow-patch lesson from session 5, which cost a full re-pin to learn once already.
+- THE EVIDENCE THAT THE WORLD DID NOT MOVE IS THE CAPTURE: 25 vantages, 0 flagged, worst 0.9891,
+  nothing re-pinned. A rename cannot move a frame and the frames agree.
+- CHECKED BEFORE RENAMING, because a rename is only free if nothing reads it: every `<thing>.ry` in
+  the file is a kea, a human, a sheep or a collider, the one `p.ry` is inside a comment, home.ry is
+  piece 17 and is a different field, no propAt caller passes ry in its opts, and SAVE does not
+  serialise props at all.
+- THE ASSERTION THAT MATTERS IS THE ONE ABOUT WHAT YOU WOULD SEE. Not one prop mesh is turned about Y,
+  and not one mesh heading agrees with its own draw - which is exactly what applying it would look
+  like. The two skis are asserted from the other side: they ARE rotated by their build site, about X
+  at 1.35, and never about Y. So the section says both halves of the truth rather than only the
+  convenient one.
+- ONE TAUTOLOGY WAS CAUGHT AND REMOVED BEFORE IT SHIPPED. The first draft asserted
+  `some(skis rotated) || every(has a mesh)`, whose right-hand side is always true - an assertion that
+  cannot fail is worse than no assertion, because it reads like cover. Replaced with three that can.
+- VERIFIED ADVERSARIALLY: renaming the field back to ry fails four, and a propAt that starts applying
+  the draw fails two and names the props it turned.
+- OPTION (a) IS STILL OPEN AND STILL NOT MINE. Applying the heading turns every prop in the game; it
+  is a judged art call and it would re-pin every vantage with props in it.
+- EYEBALL: nothing. Frames are unchanged, which is the point.
