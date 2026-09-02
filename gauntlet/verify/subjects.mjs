@@ -60,6 +60,29 @@ const SPEC=[
     { what:'the colossal bird is in frame',            cls:'kea',     box:[0.38,0.42,0.24,0.28], min:560,  absent:109 } ]},
   { file:'17_flight', tests:[
     { what:'the bird is airborne mid-frame',           cls:'kea',     box:[0.42,0.26,0.20,0.24], min:190,  absent:60 } ]},
+  /* TODO 61: THE FOUR VANTAGES WHERE THE SUBJECT IS THE PHOTOGRAPH. boxdiff.mjs only covers a
+     vantage that carries a subject box HERE, which was 04, 07, 09, 17 and 25 - so 03 (a portrait),
+     13 (a preen), 18 (a rear close) and 20 (a dead rear) could each have had their bird replaced
+     outright inside the whole-frame drift budget and nothing would have said so.
+     THE BOXES ARE READ OFF THE FRAME BY EYE, per the brief and the boxdiff header: both automated
+     attempts are recorded there as worthless. Ten minutes of cropping and looking.
+     ABSENT IS MEASURED, NOT GUESSED, the same way the ski field floors were: a copy of capture.mjs
+     that parks the bird at (-49,-49) every frame AFTER the stage line has run, so a vantage that
+     aims its camera off the bird has already aimed it.
+     20_dead_rear IS DELIBERATELY NOT HERE, AND TODO 69 IS WHY. Parking its bird moved the CAMERA
+     with it - that vantage assigns G.cams[0].position once and the follow cam eases away from it -
+     so the parked probe is a picture of the bird at (-49,-49) and scored 135 against 200 for the
+     real thing. Locking the camera to the position its own stage line computes gives a CLOSE-UP,
+     nothing like the pinned wide frame, which scored 0 with the bird present. So the pinned 20 is
+     the EASED camera position and cannot be reproduced from its own stage line at all: there is no
+     honest floor to measure until 69 is fixed, and a guessed one would be worse than none. */
+  { file:'03_kea_plate', tests:[
+    { what:'the portrait has its bird in it',          cls:'kea',     box:[0.3531,0.4815,0.5417,0.2870], min:1600, absent:3 } ]},
+  { file:'13_idle_preen', tests:[
+    { what:'the preening bird fills the near frame',   cls:'kea',     box:[0.3375,0.4907,0.2760,0.2870], min:900,  absent:5 } ]},
+  { file:'18_rear_close', tests:[
+    { what:'the rear close has its bird in it',        cls:'kea',     box:[0.3438,0.6481,0.2865,0.2741], min:700,  absent:0 } ]},
+
   // 25_preen_follow judges the ORIGINAL complaint - that the preening bird reads headless from the
   // FOLLOW camera - which no vantage could see before. It stages the worst frame of the cycle
   // (t=1.60, side -1). `absent` here is not a guess and not an old frame: it is this same vantage

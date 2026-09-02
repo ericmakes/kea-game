@@ -1057,7 +1057,7 @@ wing rest is the one you want, and either re-pin 07 or file the pose as a bug. N
 a judged frame is Eric.
 AND THE SAME QUESTION SHOULD BE ASKED OF EVERY OTHER VANTAGE, which is exactly what TODO 61 buys.
 
-### 61. THE SUBJECT-DRIFT INSTRUMENT ONLY COVERS FIVE VANTAGES  (filed in session 10 by piece 57)
+### 61. THE SUBJECT-DRIFT INSTRUMENT ONLY COVERS FIVE VANTAGES  — DONE session 12 for 03, 13 and 18 (harness-side, game md5 unchanged); 20 blocked on TODO 69
 boxdiff.mjs uses the boxes subjects.mjs already carries, which is 04, 07, 09, 17 and 25. The
 vantages where the subject IS the photograph and there is no box are 03, 13, 18 and 20 - a portrait,
 a preen, a rear close and a dead rear, every one of which could have its bird replaced outright
