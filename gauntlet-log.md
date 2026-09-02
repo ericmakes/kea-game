@@ -1484,3 +1484,67 @@ out as one block because the feature they judge is gone.
   There was never any committed staging for them - the shot script was ephemeral and is not in the
   tree, so nothing else needed removing.
 - EYEBALL: nothing. The removal is invisible by construction, and the 25-frame diff says so.
+
+### PIECE 15 — coop-jail-hardening — CERTIFIED 3d420ba5dc1359ad6ec2c4a4071261a8
+Verdict: green. Two staging rounds, both of them because the piece was RIGHT and something else was
+leaning on the old behaviour. No assertion was weakened, skipped or deleted; two were added to the
+game side of the ledger and one existing certified assertion was left untouched and made true again
+by fixing the game rather than the test.
+- WHAT LANDED: in co-op the cage clock STOPS. The grab key buys no seconds, it SQUAWKS - a locator
+  ping on the partner plate carrying distance and a direction - and the latch peck is the only door.
+  Solo is untouched: the sentence still runs down and a mash is still worth half a second.
+- ONE PREDICATE, coopCell(), so there is exactly one place to read what mode the cell is in. It is
+  used by the caged branch, the ping, and the BEHIND BARS popup, which now tells the truth about
+  which cell you are in rather than saying mash in a mode where mashing does nothing.
+- THE PING IS STATE, AND THAT SOLVED A REAL ORDERING BUG BEFORE IT COULD BE WRITTEN. Prompts are set
+  by each kea inside its own update, so a ping fired from kea 0 is wiped by kea 1 updating after it,
+  and survives when the caged bird happens to be kea 1. Whether your mate could see you would have
+  depended on which of you got caught. squawkUpdate runs ONCE after the whole kea loop, which is the
+  only place that wins for both orders, and the line it builds is kept on the ping so the HUD and
+  anyone asking what the HUD says read the same string.
+- THE BEARING IS DERIVED FROM THE STEERING CONVENTION, NOT A COMPASS. The file has no north - I
+  looked, there is no compass anywhere in it - so inventing one would have been a convention nobody
+  else obeys. What the file does have is forward=(sin ry, cos ry) and a left key that ADDS to ry, so
+  the ping speaks in AHEAD / LEFT / BEHIND RIGHT and the test READS the convention first (hold the
+  left key, assert ry went up) before requiring the ping to agree with it. Re-map the controls and
+  the assertion follows them, which is FLAKES law 10 doing its job.
+- THE FIRST ASSERTION I WROTE WAS WRONG, AND THE GAP IT FOUND IS REAL. I asserted the prisoner plate
+  would be EMPTY. It is not: nothing writes a prompt for a caged bird, because the caged branch
+  returns before interact() and hintScan(), so the plate keeps whatever was on it when the door shut.
+  The sabotage transcript shows it verbatim - E DROP UTE KEYS, held over from the frame before the
+  arrest. In solo the stale line is usually the cage hint and happens to be true. In co-op it says
+  mash your way out, which is a lie told to the one bird that cannot act on it. So the co-op cell
+  writes its own plate, and the assertion now says what the plate should say instead of what I
+  guessed it said.
+- AND THE GATE FOUND THE SECOND ONE, WHICH IS THE PART WORTH READING. harness-systems went red on an
+  assertion nine sessions old: kea2 preens while kea1 works. It was not a flake and it was not the
+  battery being wrong - the idle section runs up to sixty thousand frames with the humans parked
+  ONCE, rex wanders back, and mid-section he cages the bird. That used to cost eight seconds and heal
+  itself. Under the co-op cell it is permanent, so everything after that line was testing a jailed
+  bird. TWO separate things were wrong and both are now fixed:
+    1. GAME: a caged bird kept its idle act. animate() owns the idle clock and the caged branch still
+       calls animate, so an act rolled the frame before the door shut sat there mid-preen inside the
+       crate. Added to handsOff rather than cleared in the caged branch - the else there already
+       knows how to stop idling, and a bird that never clocks idle time never rolls for an act, so
+       no rnd draw is spent behind bars and the seeded stream is untouched. Asserted in BOTH modes,
+       because it was never right in either; solo just healed it in eight seconds.
+    2. HARNESS: the idle section now pins the humans every frame inside its loops instead of once
+       before them. That is FLAKES law 4 word for word, applied to the section that needed it most.
+       Verified necessary, not cosmetic: with the pins reverted the hop assertion fails 200 tries out
+       of 200.
+- VERIFIED ADVERSARIALLY, EIGHT WAYS, every one of them caught: the clock never stopping (18
+  findings), co-op never detected (20), the squawk also buying seconds, the cooldown removed, the
+  bearing sign flipped, the ping outliving the door, the ping addressed to the prisoner instead of
+  the mate, and the caged bird kept preening.
+- A DEAD BATTERY IS A WORSE WITNESS THAN A RED ONE. The first sabotage run threw on G.squawk.n and
+  took every other finding with it, so every read of the ping now goes through PING() and every
+  interpolated number through nm() - the message has to survive the failure too, not just the test.
+  That is what turned 1 crash into 18 named findings.
+- CAPTURE: 25 shots, 0 flagged, worst 0.9883. Nothing re-pinned. No vantage stages a cage and the
+  piece adds no rnd draw, so the frames are unchanged by construction and the diff agrees.
+- ALSO FILED, TODO 52: the world hint at the ute still tells a co-op bird to mash its way out. Not
+  fixed here because addHint refuses to replace an existing mid and nothing clears G.hints between
+  runs, so mode-aware text set at build time is unreliable by construction - it needs a decision
+  about who owns G.hints across a restart.
+- EYEBALL: nothing in the 25. To see it: two-player, get caught, hold the grab key, and watch the
+  other plate.

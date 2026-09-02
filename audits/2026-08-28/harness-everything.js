@@ -1293,6 +1293,139 @@ C.section('HOME POSITIONS — every prop remembers the transform it was built at
     ok(G.props.every(p=>!!p.home),'homes restored after the sweep test'); }
 }
 
+C.section('THE CO-OP CELL - the clock stops, the key squawks, and the latch is the door');
+// TODO 15. Solo, the cage is a timer you mash out of. In co-op the clock STOPS: the grab key buys
+// no seconds, it SQUAWKS a locator onto the partner plate, and the latch peck is the only door.
+// BOTH HALVES ARE DRIVEN, because "solo behaviour unchanged" is the half that can regress in
+// silence - the solo section here is not scenery, it is the control the freeze is measured against.
+{
+  const J=X.JAIL, P2=H.P2;   // player two: this section is the only one that drives the second bird
+  // ---- SOLO: the control ----
+  X.startGame(1); tick(8); park();
+  const solo=G.keas[0];
+  ok(G.keas.length===1&&J.coop()===false,'one bird on the board, so this is the solo cell');
+  solo.caged=8; solo._cagePrev=false; solo.stun=0; G.squawk=null; tick(1);
+  const t0=solo.caged; tick(30);
+  ok(solo.caged<t0-0.4,'solo: the sentence runs itself down without anybody doing anything ('+
+     t0.toFixed(2)+' -> '+solo.caged.toFixed(2)+')');
+  // one tap is one edge. Measure a plain frame and a tapped frame and take the difference, so the
+  // assertion is about the MASH and not about the frame it costs.
+  const p0=solo.caged; tick(1); const plain=p0-solo.caged;
+  const m0=solo.caged; tap(P1.grab); const mashed=m0-solo.caged; tick(1);
+  ok(Math.abs(mashed-plain-0.5)<1e-9,'solo: a mash is worth half a second off the sentence ('+
+     mashed.toFixed(4)+' against '+plain.toFixed(4)+' for an idle frame)');
+  ok(G.squawk===null,'solo: nothing squawked - with nobody to hear it the mash IS the mechanic');
+  /* A BIRD IN A CRATE IS NOT ENTERTAINING ITSELF. The caged branch returns before the idle code, so
+     an act rolled the frame before the door shut used to sit there mid-preen. Solo it healed itself
+     when the sentence ran out; co-op it would have been permanent, which is how harness-systems
+     found it. Asserted in BOTH modes because it was never right in either. */
+  solo.caged=6; solo.idleAct={kind:'preen',t:0,dur:9,side:1}; solo.idleT=99; tick(1);
+  ok(!solo.idleAct&&solo.idleT===0,'solo: the crate stops the idle act and the idle clock with it');
+  solo.caged=0; tick(2);
+  solo.caged=0.4; tick(1); tap(P1.grab); tick(2);
+  ok((solo.caged||0)===0&&solo.grounded===false,'solo: mashing still opens the door, and it still throws you out of it');
+
+  // ---- CO-OP: the piece ----
+  X.startGame(2); tick(8); park();
+  const a=G.keas[0], b=G.keas[1];
+  const rex=G.humans.find(h=>h.key==='rex');
+  ok(G.keas.length===2&&J.coop()===true,'two birds on the board, so this is the co-op cell');
+  a.caged=0; b.caged=0; a.stun=0; b.stun=0; G.squawk=null;
+  if(a.held){a.held.heldBy=null;a.held=null;} if(b.held){b.held.heldBy=null;b.held=null;}
+  a.x=0; a.z=31.5; b.x=4; b.z=31.5; G.wanted=3; G.wantedT=3.4;
+  // through the real chase collision, the same way the one-cell section does it, so the cage popup
+  // and the ping reset in cageKea are on the path too rather than staged around.
+  const siege=k=>{ rex.stun=0; rex.launched=null; rex.asleep=false; rex.distracted=0;
+    rex.state='chase'; rex.chaseKea=k; rex.giveUpT=0; rex.t=0;
+    for(let i=0;i<40;i++){ k.y=0.25; k.vy=0; k.grounded=true; rex.x=k.x; rex.z=k.z-0.3;
+      X.update(1/60); if((k.caged||0)>0||rex.state==='shoo')break; }
+    return (k.caged||0)>0; };
+  ok(siege(a),'rex puts the first bird in the cell through the real chase collision');
+  const sentence=a.caged;
+
+  // THE ASSERTION THE PIECE EXISTS FOR, and it is deliberately longer than the whole solo sentence.
+  tick(600);
+  ok(a.caged===sentence,'co-op: ten seconds pass and the sentence has not moved one frame ('+
+     sentence.toFixed(2)+'s, still '+a.caged.toFixed(2)+'s)');
+  ok((a.caged||0)>0&&X.jailedKea()===a,'which is longer than the eight-second solo sentence, and the bird is still in there');
+
+  a.idleAct={kind:'preen',t:0,dur:9,side:1}; a.idleT=99; tick(1);
+  ok(!a.idleAct&&a.idleT===0,'co-op: same in the cell that never opens by itself, where it would otherwise be forever');
+
+  // the key that used to buy seconds now calls for help
+  a._cagePrev=false; tick(1); G.squawk=null;
+  const c0=a.caged; tap(P1.grab); tick(1);
+  ok(a.caged===c0,'co-op: mashing buys not one second ('+c0.toFixed(3)+' -> '+a.caged.toFixed(3)+')');
+  const PING=()=>G.squawk||{};   // a missing ping must FAIL an assertion, never throw past the rest
+  const nm=v=>v===undefined||v===null?'none':(+v).toFixed(2);   // the MESSAGE must survive it too
+  ok(!!G.squawk&&PING().idx===a.idx,'it squawks instead, and the ping names who is inside (kea '+
+     (G.squawk?PING().idx:'none')+')');
+  ok(PING().n===1,'one press, one ping ('+PING().n+')');
+
+  // ---- the ping is a LOCATOR, and it speaks in directions the partner can act on ----
+  b.x=a.x; b.z=a.z-10; b.ry=0; b.stun=0; tick(1);
+  const S=PING();
+  ok(S.to===b.idx,'the ping lands on the partner and not on the prisoner (kea '+S.to+')');
+  ok(S.dist!==undefined&&Math.abs(S.dist-10)<0.6,'and it carries how far away the cell is ('+nm(S.dist)+'m of a staged 10)');
+  ok(S.say==='AHEAD','standing off the cell and facing it, the cell reads AHEAD ('+S.say+')');
+  ok(G.hudLines[b.idx]>0,'the line reaches the partner plate rather than living only in the state ('+
+     G.hudLines[b.idx]+' wrapped lines)');
+  ok(!!S.text&&S.text.indexOf('PECK THE LATCH')>=0,'and it says what to do about it');
+  ok(!!S.text&&X.PROMPTS[b.idx]===S.text,'the partner plate carries the line verbatim, not a second copy of it');
+  /* THE ASSERTION FOUND A REAL GAP, and it is written here rather than quietly dropped. Nothing
+     writes a prompt for a caged bird - the caged branch returns before interact() and hintScan() -
+     so the plate keeps whatever was on it when the door shut, which near the ute is the cage hint:
+     "a mate pecks the latch, or mash your way out". In solo that stale line is true. In co-op it is
+     a lie told to the one bird that cannot act on it, so the co-op cell writes its own plate. */
+  ok(String(X.PROMPTS[a.idx]).indexOf('SQUAWK')>=0,'and the prisoner plate says what the key does now instead of a stale line ('+
+     String(X.PROMPTS[a.idx]).replace(/<[^>]*>/g,'')+')');
+  ok(String(X.PROMPTS[a.idx]).indexOf('mash')<0,'with no mash instruction left on it, because mashing no longer does that');
+
+  /* THE BEARING IS DERIVED FROM THE STEERING CONVENTION, NEVER RESTATED (FLAKES law 10). The file
+     has no compass. What it has is a left key that ADDS to ry, so the test reads that first and
+     then requires the ping to agree with it: turn the way the left key turns you and a thing that
+     was AHEAD has to become RIGHT. Re-map the controls and this assertion follows them. */
+  const ry0=b.ry; hold(P2.left); tick(6); un(P2.left); tick(1);
+  ok(b.ry>ry0,'the left key adds to ry ('+ry0.toFixed(3)+' -> '+b.ry.toFixed(3)+')');
+  b.ry=ry0+Math.PI/2; tick(1);
+  ok(PING().say==='RIGHT','turn a quarter turn the way the left key turns you and the cell is RIGHT ('+PING().say+')');
+  b.ry=ry0-Math.PI/2; tick(1);
+  ok(PING().say==='LEFT','the other way and it is LEFT ('+PING().say+')');
+  b.ry=ry0+Math.PI; tick(1);
+  ok(PING().say==='BEHIND','turn your back on it and it is BEHIND ('+PING().say+')');
+  b.ry=ry0; tick(1);
+
+  // ---- the cooldown is an ear, not a mute ----
+  const n1=PING().n;
+  a._cagePrev=false; tick(1); tap(P1.grab); tick(1);
+  ok(PING().n===n1,'a second press inside the cooldown does not re-ping ('+PING().n+')');
+  tick(40); a._cagePrev=false; tick(1); tap(P1.grab); tick(1);
+  ok(PING().n===n1+1,'and it pings again once the cooldown is out ('+PING().n+')');
+  ok((a.caged||0)>0,'through every one of those presses the bird never got a second off ('+a.caged.toFixed(2)+'s)');
+
+  // ---- the latch IS the door ----
+  const lt=G.inter.find(it=>it.kind==='peck'&&it.label==='PECK THE LATCH');
+  ok(!!lt&&lt.locked()===false,'the latch is unlocked while the cell is occupied');
+  const q=lt.getPos();
+  const perch2=(x,z,y)=>{ const p=Math.max(0.25,y||0.25,X.groundHeightAt(x,z,3)+0.02);
+    for(let i=0;i<3;i++){ b.x=x; b.z=z; b.y=p; b.vy=0; b.grounded=true; X.update(1/60); } return p; };
+  const yy=perch2(q.x,q.z,Math.max(0.25,q.y-0.3));
+  const sc0=G.score;
+  for(let n=0;n<(lt.needHits||1)+1;n++){
+    for(let i=0;i<2;i++){ b.x=q.x; b.z=q.z; b.y=yy; b.vy=0; b.grounded=true; X.update(1/60); }
+    tap(P2.grab); tick(2); }
+  ok((a.caged||0)===0,'the latch is the door: the partner pecks it open and the prisoner is out');
+  ok(!X.jailFull()&&X.jailedKea()===null,'the cell reads empty again');
+  ok(G.score>sc0,'and the jailbreak paid ('+(G.score-sc0)+' chaos)');
+  ok(G.squawk===null,'the ping went with the door - a locator pointing at an empty cage is worse than none');
+
+  // ---- FLAKES law 1: the world persists across startGame, so a live ping would ride into the next run
+  { a.caged=8; a._cagePrev=false; G.squawk=null; tick(1); tap(P1.grab); tick(1);
+    ok(!!G.squawk,'a ping is live when the restart comes');
+    X.startGame(2); tick(4);
+    ok(G.squawk===null,'startGame cleared it, and nothing is left pointing at the old cell'); }
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

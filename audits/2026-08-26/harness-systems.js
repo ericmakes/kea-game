@@ -413,9 +413,10 @@ C.section('idle life: the bird entertains itself, but never on the clock');
 H.X.startGame(2); tick(3);
 const ki=G.keas[0], kj=G.keas[1];
 ki.x=-30; ki.z=18; ki.y=0; ki.grounded=true; kj.x=30; kj.z=18; kj.y=0; kj.grounded=true;
-G.humans.forEach(h=>{h.x=45;h.z=45;h.home={x:45,z:45};});
+const parkH=()=>{ G.humans.forEach(h=>{h.x=45;h.z=45;h.home={x:45,z:45};h.patrol=null;}); };
+parkH();
 G.trafT.a=999; G.trafT.b=999; tick(2);
-for(let i=0;i<60*12;i++){ ki.x=-30; ki.z=18; if(!ki.grounded){/* hop in flight */} X.update(1/60); }
+for(let i=0;i<60*12;i++){ parkH(); ki.x=-30; ki.z=18; if(!ki.grounded){/* hop in flight */} X.update(1/60); }
 ok(ki.idleT>1||ki._idleEver,'left alone, the kea clocks idle time ('+(ki.idleT||0).toFixed(1)+'s, ever='+!!ki._idleEver+')');
 ok(!!ki._idleEver,'an idle behavior fired within 12s');
 // input cancels instantly
@@ -425,20 +426,20 @@ ok(!ki.idleAct&&ki.idleT===0,'player input wipes the act and the clock');
 // tug immunity
 { const tt=G.inter.find(t=>t.kind==='tear'&&!t.done&&!t.needsBoth&&!t.needsPartner);
   const tp=tt.getPos(); ki.idleT=99; ki.x=tp.x; ki.z=tp.z; ki.y=tp.y; ki.vy=0; tick(1);
-  hold(P1.grab); let st=0; while(!ki.tug&&st<120){ ki.x=tp.x; ki.z=tp.z; ki.y=tp.y; ki.vy=0; X.update(1/60); st++; }
+  hold(P1.grab); let st=0; while(!ki.tug&&st<120){ parkH(); ki.x=tp.x; ki.z=tp.z; ki.y=tp.y; ki.vy=0; X.update(1/60); st++; }
   ok(!!ki.tug,'latched a real tear for the immunity test');
-  for(let i=0;i<30;i++){ ki.y=tp.y; ki.vy=0; X.update(1/60); }
+  for(let i=0;i<30;i++){ parkH(); ki.y=tp.y; ki.vy=0; X.update(1/60); }
   ok(ki.idleT===0&&!ki.idleAct,'tugging is never idle [idleT='+ki.idleT.toFixed(2)+']');
   un(P1.grab); tick(2); }
 // hop is real physics: force acquisitions until a hop rolls
 let hopped=false, guard=0;
 while(!hopped&&guard<200){ ki.idleAct=null; ki.idleT=99; ki.grounded=true; ki.y=0; ki.vy=0;
-  let st=0; while(!ki.idleAct&&st<300){ X.update(1/60); st++; }
+  let st=0; while(!ki.idleAct&&st<300){ parkH(); X.update(1/60); st++; }
   if(ki.idleAct&&ki.idleAct.kind==='hop'){ hopped=ki.vy>0.5||!ki.grounded; } guard++; }
 ok(hopped,'a hop eventually rolls and leaves the ground (tries='+guard+')');
 // 2P independence: kj idles while ki is driven
 kj.idleT=99; kj.idleAct=null; ki.idleAct=null; ki.idleT=0;
-hold(P1.fwd); let st2=0; while(!kj.idleAct&&st2<600){ X.update(1/60); st2++; } un(P1.fwd);
+hold(P1.fwd); let st2=0; while(!kj.idleAct&&st2<600){ parkH(); X.update(1/60); st2++; } un(P1.fwd);
 ok(!!kj.idleAct&&!ki.idleAct,'kea2 preens while kea1 works');
 // poseLock outranks idle
 G.poseLock=true; kj.idleT=99; kj.idleAct=null; tick(60);

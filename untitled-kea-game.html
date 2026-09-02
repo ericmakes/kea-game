@@ -619,7 +619,7 @@ const G={
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
-  stars:{}, pageChaos:{}, snow:[],
+  stars:{}, pageChaos:{}, snow:[], squawk:null,
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -2073,10 +2073,14 @@ class Kea{
     const inp=G.running&&!G.paused&&this.stun<=0?this.input():{f:0,b:0,l:0,r:0};
     if(this.stun>((this._stunPrev||0)+0.1)){ RUMBLE(this.idx,220,0.85); if(G._rumbleSpy)G._rumbleSpy.push({i:this.idx,why:'stun'}); }
     this._stunPrev=this.stun;
-    if((this.caged||0)>0){ this.caged-=dt;
+    if((this.caged||0)>0){ const coop=coopCell();
+      if(!coop)this.caged-=dt;                                       // co-op: the sentence does not run itself down
       const wp=new THREE.Vector3(0,1.7,-1.1); if(G.uteG)G.uteG.localToWorld(wp);
       this.x=wp.x; this.y=wp.y-0.28; this.z=wp.z; this.vy=0; this.grounded=true; this.stun=0;
-      const gp=KEYS.has(this.map.grab); if(gp&&!this._cagePrev){ this.caged-=0.5; AU.pop&&AU.pop(); } this._cagePrev=gp;
+      if(coop)setPrompt(this.idx,'<b>'+keyName(this.map.grab)+'</b> SQUAWK - only a mate can peck you out');
+      const gp=KEYS.has(this.map.grab);
+      if(gp&&!this._cagePrev){ if(coop)squawkFire(this); else { this.caged-=0.5; AU.pop&&AU.pop(); } }
+      this._cagePrev=gp;
       if(this.caged<=0)this.freeCage();
       this.animate(dt,false); return; }
     this.stun=Math.max(0,this.stun-dt); this.screamCd=Math.max(0,this.screamCd-dt); this.screamT+=dt;
@@ -2381,8 +2385,16 @@ class Kea{
   }
   animate(dt,spd,inp){
     // idle life: preen, scan, hop, stretch, ruffle, ground-peck when the player's hands are off
+    /* A BIRD IN A CRATE IS NOT ENTERTAINING ITSELF (TODO 15). The caged branch returns before the
+       movement code but it still calls animate, and animate is where the idle clock lives - so an
+       act rolled the frame before the door shut used to sit there mid-preen inside the crate. Solo
+       it healed itself when the sentence ran out; under the co-op cell the sentence never runs out,
+       so it would have been forever, and harness-systems is what found it. Added to handsOff rather
+       than cleared in the caged branch, because the else below already knows how to stop idling and
+       a caged bird that never clocks idle time never rolls for an act either. */
     const handsOff=this.grounded&&!this.tug&&(this.recoilT||0)<=0&&(this.eatT||0)<=0&&Math.abs(spd)<0.05
-      &&!(inp&&(inp.flap||inp.flapHeld||inp.grabHeld||inp.grab||inp.scream))&&(this.stun||0)<=0&&!G.poseLock;
+      &&!(inp&&(inp.flap||inp.flapHeld||inp.grabHeld||inp.grab||inp.scream))&&(this.stun||0)<=0&&!G.poseLock
+      &&(this.caged||0)<=0;
     if(handsOff){ this.idleT=(this.idleT||0)+dt;
       if(this.idleAct){ this.idleAct.t+=dt; if(this.idleAct.t>=this.idleAct.dur)this.idleAct=null; }
       else if(this.idleT>2.2&&rnd(0,1)<dt*0.6){
@@ -2544,7 +2556,7 @@ class Kea{
     }
   }
   freeCage(){
-    this.caged=0; this.vy=3.2; this.grounded=false;
+    this.caged=0; this.vy=3.2; this.grounded=false; G.squawk=null;
     const p={x:this.x,y:this.y+0.3,z:this.z};
     burst(p,0xFFD34D,10); popup('JAILBROKEN','',0,p,true); AU.rip&&AU.rip();
   }
@@ -2568,6 +2580,48 @@ let idxTint=false;
    so every reader asks the same question here instead of testing its own kea. */
 function jailedKea(){ return G.keas.find(k=>(k.caged||0)>0)||null; }
 function jailFull(){ return !!jailedKea(); }
+/* THE CO-OP CELL (TODO 15, 2026-09-02). Solo, the cage is a timer you mash your way out of, and the
+   latch peck is a courtesy. In co-op that shape is wrong twice over: it makes the cell a solo
+   minigame the partner can only watch, and it makes the latch - the only piece of two-bird
+   choreography the jail owns - a shortcut nobody needs. So in co-op the CLOCK STOPS. The grab key
+   buys no seconds; it SQUAWKS, and the latch is the door. Solo is untouched, and the branch that
+   decides is one predicate so there is exactly one place to read.
+   THE SQUAWK IS STATE, AND THAT IS A TESTABILITY DECISION AS MUCH AS A DESIGN ONE. It lands on the
+   partner as a prompt, and prompts are written by each kea inside its own update - so a ping fired
+   by kea 0 would be wiped when kea 1 updates after it, and would survive when the caged bird happens
+   to be kea 1. Whether your mate can see you would depend on which of you got caught. squawkUpdate
+   runs ONCE after the whole kea loop instead, which is the only place that wins for both orders.
+   THE BEARING IS DERIVED, NEVER RESTATED (FLAKES law 10). The file has no compass and no north; what
+   it has is a steering convention - forward is (sin ry, cos ry) and the left key ADDS to ry - so the
+   ping speaks in the only directions a player can act on, relative to where the partner is looking.
+   Read the angle off that convention and a re-mapped control scheme carries the ping with it. */
+const SQUAWK={hold:1.8,cd:0.55,say:['AHEAD','AHEAD LEFT','LEFT','BEHIND LEFT','BEHIND','BEHIND RIGHT','RIGHT','AHEAD RIGHT']};
+function coopCell(){ return G.keas.length>1; }          // one predicate, one place to read
+function squawkDir(from,to){
+  const dx=to.x-from.x, dz=to.z-from.z, d=Math.sqrt(dx*dx+dz*dz);
+  let rel=Math.atan2(dx,dz)-(from.ry||0);               // same parameterisation as ry: forward is (sin,cos)
+  while(rel>Math.PI)rel-=Math.PI*2; while(rel<-Math.PI)rel+=Math.PI*2;
+  const oct=Math.round(rel/(Math.PI/4)), i=((oct%8)+8)%8;
+  return {d,rel,say:SQUAWK.say[i]}; }
+function squawkFire(k){
+  if(!coopCell())return null;
+  const s=G.squawk; if(s&&s.cd>0)return null;           // a held key repeats no faster than the ear takes it
+  G.squawk={idx:k.idx,x:k.x,y:k.y,z:k.z,t:SQUAWK.hold,cd:SQUAWK.cd,n:((s&&s.n)||0)+1};
+  const other=G.keas.find(o=>o!==k);
+  AU.screech&&AU.screech(1.2); if(other)RUMBLE(other.idx,180,0.5);
+  popup('SQUAWK!','your mate can hear you',0,{x:k.x,y:k.y+1.4,z:k.z},true);
+  return G.squawk; }
+function squawkUpdate(dt){
+  const s=G.squawk; if(!s)return null;
+  s.t=Math.max(0,s.t-dt); s.cd=Math.max(0,s.cd-dt);
+  if(s.t>0&&coopCell()){ const other=G.keas.find(o=>o.idx!==s.idx);
+    /* the line is BUILT ONCE and kept on the ping, so the HUD and anyone asking what the HUD says
+       are reading the same string rather than two that have to be kept in step. */
+    if(other){ const b=squawkDir(other,s);
+      s.to=other.idx; s.dist=b.d; s.say=b.say;
+      s.text='<b>SQUAWK!</b> your mate is CAGED - '+Math.round(b.d)+'m '+b.say+' - <b>PECK THE LATCH</b>';
+      setPrompt(other.idx,s.text); } }
+  return s; }
 function onVanRoof(k){ const v=G.vanTop; return v&&Math.abs(k.x-v.x)<v.w+0.4&&Math.abs(k.z-v.z)<v.d+0.4&&k.y>v.top-0.6; }
 
 /* ---------- fx ---------- */
@@ -2729,7 +2783,9 @@ class Human{
   cageKea(k){
     k.caged=8; k._cagePrev=true;
     if(k.held){k.held.heldBy=null;k.held=null;}
-    popup('BEHIND BARS','mash '+keyName(k.map.grab)+' — or a mate pecks the latch',0,{x:k.x,y:k.y+1.4,z:k.z},true);
+    popup('BEHIND BARS',coopCell()?('SQUAWK with '+keyName(k.map.grab)+' — only a mate can peck you out')
+                                   :('mash '+keyName(k.map.grab)+' — or a mate pecks the latch'),0,{x:k.x,y:k.y+1.4,z:k.z},true);
+    G.squawk=null;
     AU.clang(); RUMBLE(k.idx,420,0.9);
     this.state='return'; this.chaseKea=null; this.exMark.visible=false;
     pageCaged(curPage());   // the clean-getaway star: this page is no longer clean, TODO 14
@@ -3515,6 +3571,7 @@ function update(dt){
   G.time+=dt; G.frames=(G.frames||0)+1;
   if(G.running&&!G.paused&&!G.won){
     for(const k of G.keas)k.update(dt);
+    squawkUpdate(dt);   // after the loop: a prompt written inside it belongs to whoever updates last
     for(const h of [...G.humans])h.update(dt);
     updateTraffic(dt); updateSheep(dt); updateFX(dt);
     // props physics
@@ -3560,7 +3617,7 @@ function update(dt){
 function startGame(mode,opts){
   G.mode=mode; G.running=true; AU.boot();
   G.colossal=!!(opts&&opts.colossal); G.level=1;
-  G.camYaw=0; G.camDist=1;
+  G.camYaw=0; G.camDist=1; G.squawk=null;
   G.won=false; G.finaleOn=false; G.apexArmed=false; G.apexNoted=false;
   for(const k of G.keas){ if(k.hatProp)k.doff(); if(k.held)k.drop();   // the bird leaves with nothing: what it carried stays in the world
     if(k.g&&k.g.parent)k.g.parent.remove(k.g); if(k.labelEl&&k.labelEl.remove)k.labelEl.remove(); }
@@ -3682,7 +3739,8 @@ if(typeof globalThis!=='undefined'){
            PARRATIO,par:pagePar,purse:purseClaim,judge:styleJudge,drain:styleDrain,queue:styleQueue,
            caged:pageCaged,judgeClean:cleanJudge,judgePage:pageJudge},
     HOMES:{R:HOMER,cls:homeClass,register:homesRegister,dist:homeDist,at:atHome},
-    grassBlade,plateLines,hudReflow,setPrompt,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
+    JAIL:{SQUAWK,coop:coopCell,dir:squawkDir,fire:squawkFire,ping:squawkUpdate},
+    grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

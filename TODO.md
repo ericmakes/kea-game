@@ -143,7 +143,7 @@ Zero cagings while the page was open (either bird counts in co-op). Cage
 spy pattern.
 PROOF: clean page grants; a caging mid-page voids.
 
-### 15. coop-jail-hardening
+### 15. coop-jail-hardening  — DONE session 7 (3d420ba5dc1359ad6ec2c4a4071261a8)
 Co-op only: the caged timer freezes, mash becomes a SQUAWK ping (locator
 on the partner's screen, no time reduction), latch-peck JAILBREAK is the
 only fast exit. Solo behaviour unchanged.
@@ -650,3 +650,18 @@ Then confirm with stability.mjs, which is the instrument that can answer this an
 PROOF: stability.mjs 08 at TAKES=5 comes back above 0.995; diff unchanged or re-pinned once with the
 reason recorded. Game md5 unchanged - say so in the commit message.
 NOTE FOR TODO 5 (hud-tab-reflow), which re-pins 08: land this first or the re-pin pins a coin toss.
+
+### 52. THE CAGE HINT STILL TELLS A CO-OP BIRD TO MASH ITS WAY OUT
+Found in session 7 by piece 15, and deliberately not fixed there because it is a world hint rather
+than the cell. startGame adds hint 'cage' at the ute with the text 'the night ranger cages
+troublemakers - a mate pecks the latch, or mash your way out'. Under the co-op cell the second half
+of that is false: mashing squawks and buys nothing. A caged bird no longer reads it (the co-op cell
+writes the prisoner plate itself) but a FREE bird standing near the ute still does, and it is being
+told something untrue about how to help its mate.
+NOT A ONE-LINE FIX, WHICH IS WHY IT IS FILED. addHint returns early when a hint with that mid already
+exists, and nothing clears G.hints between runs - so a solo run followed by a co-op run keeps the solo
+wording, and mode-aware text set at build time is unreliable by construction. The honest options are
+(a) clear or re-text the hint in startGame, which means deciding who owns G.hints across a restart, or
+(b) give the hint a function for text the way the prompts have, evaluated when it is read.
+PROOF once built: solo run then co-op restart, assert the hint the free bird reads matches the mode
+it is actually in - which is the assertion that fails today.
