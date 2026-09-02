@@ -279,6 +279,20 @@ await shotR('27_travel_card',`const k=KEAGAME.G.keas[0];
    The bird is PINNED in all three (law 7 and law 12): two of them stand it on a structure, where
    gravity and the roof logic would otherwise have it somewhere else by the time the shutter opens,
    and the third stands it on the corduroy where the idle animation would turn it around. */
+/* MEASURED BEFORE ANYBODY PINS THEM (session 11). A first pin has no baseline, so diff.mjs cannot
+   watch it and nothing in the set can say whether it reshoots the same twice - which is the FLAKES
+   law 12 question and the reason 22_torch_beam sat in the set for four builds as known-noisy. All
+   three were measured with stability.mjs the way session 8 established: three sweeps of five takes,
+   then a fourth of four at the shipped build.
+     28_skifield_base   0.9991  0.9994  0.9992  0.9997
+     29_lodge_deck      0.9997  1.0000  1.0000  0.9990
+     30_groomed_band    1.0000  0.9997  0.9997  0.9997
+   Against a bar of 0.995, and for comparison the carpark twitchy set on the same machine the same
+   night reads 0.9979 / 0.9996 / 0.9960 / 0.9991. So all three are pinnable and the only open
+   question about them is the LOOK, which is Eric.
+   WHY THEY ARE STABLE, since it is not luck: every one pins the bird every frame (law 7), freezes
+   G.time so the grass shader cannot sway under them (law 12, TODO 30), and stands on a map with no
+   cast at all - so law 4, the ambient AI walking a human back into shot, cannot reach them. */
 const SKI={biome:'skifield'};
 /* 28: the bottom station - engine shed, bull wheel, the queue pad, drifts banked against the shed.
    THE BIRD IS NOT ON THE SHED ROOF ANY MORE, and TODO 40 is why: k_shed pays for standing up there,
