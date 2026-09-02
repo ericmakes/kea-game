@@ -694,3 +694,16 @@ wording, and mode-aware text set at build time is unreliable by construction. Th
 (b) give the hint a function for text the way the prompts have, evaluated when it is read.
 PROOF once built: solo run then co-op restart, assert the hint the free bird reads matches the mode
 it is actually in - which is the assertion that fails today.
+
+### 53. settle-17-flight  (one line + a flag)
+Session 7 measured it: 17_flight passes the pinned diff by luck (0.9882)
+while reshooting at 0.9024 take-to-take; 04 stages identically but passes
+settle:900. Apply the same settle to 17. Do NOT touch the four mildly
+unstable vantages (08, 23, 05, 03) - they belong to piece 51's table.
+PROOF: take-to-take stability >= 0.995 across repeated reshoots.
+RE-PIN: none - leave the new 17 flagged for Eric's weekend judging.
+
+## RUN ORDER (ratified by Eric, 2026-09-02)
+53 -> 51 -> 52 -> 36 (tour-chassis) -> 22 (vs-match-scaffold) -> 18-21
+(restore verbs) -> 23-25. Rationale: instruments first, then the maps
+foundation, then the stage before the actors.
