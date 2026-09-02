@@ -3398,3 +3398,47 @@ Verdict: green, and it does what session 12 said it would do, to the fourth deci
   says WHY - and it is exactly the failure boxdiff was built for after piece 54.
 - SUBJECTS STAYS 16 CHECKED 0 MISSING, which is the load-bearing check for a change this wide: the
   clock pin and the feed park moved eleven photographs and did not lose a single bird.
+
+## SESSION 13c — 2026-09-03, Eric order: RE-PIN EVERYTHING THE PATCH CHANGED, BANDS FROM THE SAME SWEEP
+Lock retaken. One atomic commit: 26 re-pinned baselines, the recalibrated pxdiff CHURN table,
+BASELINE.md and the TODO entries. Game file never opened, md5 unchanged, gate CERTIFIED-SHIP.
+
+### PIECE: repin-deterministic-set — TODO 30 and 67 closed
+Verdict: green, and it took three corrections to get there - two of them mine, caught by the
+instruments rather than by argument.
+- THE SET IS 26 OF 28. 07_jam (TODO 60) and 17_flight (TODO 57) keep their pre-patch baselines by
+  order and stay loud: 18171 px at 790x band and 10142 at 46x, boxdiff 0.9426 and 0.6359. Everything
+  else was re-pinned on the deterministic rig, including the fifteen sub-threshold movers that diff
+  had passed all along - 01_carpark_wide alone sat 18484 px from its baseline while reading 0.99 ssim.
+- THE TABLE IS THE MAX OF EVERY BATCH TAKEN TONIGHT, with the provenance in the file: five runs (10
+  pairs), ten runs (45 pairs), a warm four-run re-test of six vantages, and fifteen runs of the two
+  that needed it. 06_skyline 8791 -> 184. 13_idle_preen 6932 -> 347. 19_roof_follow 4168 -> 15.
+  18_rear_close 3909 -> 14. Two at zero.
+- ONE ROW EXCLUDES A SAMPLE AND THE FILE SAYS SO. 07_jam read 5717 over ten runs, and the pair matrix
+  says that is ONE sweep standing 5714 px from the other nine while the nine agree within 23. Four
+  warm sweeps read 22 and four single-vantage runs read 7 to 24. Absorbing it would have set the 07
+  band to 11434 - ABOVE that vantage own open drift of 18171 - and silently retired TODO 60. That is
+  the 18_rear_close 16317 precedent this file already carries, applied a second time.
+- AND I PINNED TWO FRAMES FROM AN OUTLIER SWEEP, which is the finding of the sitting and is now TODO
+  73. After the first re-pin, a fresh sweep read 23_paddock_gate 1165 px and 28_skifield_base 3581 px
+  from baselines pinned minutes earlier. Fifteen runs of those two - 105 pairwise distances - churn
+  129 and 5. So the pin source was a state the next fifteen sweeps never visited. Re-pinned from the
+  consensus run and verified. THE ONLY REASON THIS WAS CAUGHT is that the verification sweep was a
+  FRESH one rather than the sweep the pins came from, which is now written into BASELINE.md as the
+  protocol.
+- THE TIGHTER THE RIG, THE MORE A MIS-PIN COSTS. 28 churns five pixels over 105 pairs now; a sweep
+  3581 px out is three orders of magnitude clear of its own noise. Last week that would have been
+  indistinguishable from ordinary churn.
+- 03_kea_plate SURVIVES AS THE CONTROL IN THE ONLY WAY THAT SURVIVES BEING RE-PINNED, and it is the
+  cleanest evidence in the sweep. It already pinned G.time locally, so the clock half is a no-op
+  there - measured, its 3108 px sits ENTIRELY in cells cx 5..10 cy 0, the caption strip, and nowhere
+  else. The clock moved the vantages that did not pin it; the caption moved everything.
+- 13_idle_preen IS THE ONLY FRAME WHERE THE BIRD CHANGED and Eric accepted the pose. Measured before
+  pinning rather than asserted: idleAct.t reads 1.5999, 1.6, 1.5999, 1.5999 over four runs with the
+  head identical to five decimals, and the clock pin's only effect on the bird is the TAIL, -0.0698
+  pinned against +0.0557..+0.0596 live. The preen phase is a dt accumulator that was never
+  reproducible before and is now.
+- VERIFIED ON A FRESH SWEEP, TWICE: diff 28 compared 0 flagged, pxdiff 2 over band and both of them
+  the held-open drifts, boxdiff 12 compared 2 changed and the same two, subjects 16 checked 0
+  missing, gate CERTIFIED-SHIP, three selftests ALL PASS.
+- NOT DONE, BY ORDER: the 12.0 sweep. Shipped as-is.

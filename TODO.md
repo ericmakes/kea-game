@@ -266,7 +266,7 @@ actual contract, since the defect is variance, not a wrong-looking frame.
 RE-PIN: 19, 21, 22 after the staging is stable. Expect a one-time move; leave flagged for Eric.
 NOTE: measured spread before the fix — 19 sits 0.956-0.961, 22 sits 0.944-0.950 across runs.
 
-### 30. pin-G-time-set-wide  (harness-side only — game file untouched)  — APPLIED session 13b on Eric order. NOT RE-PINNED: 11 frames flagged and waiting on his look.
+### 30. pin-G-time-set-wide  (harness-side only — game file untouched)  — APPLIED and RE-PINNED session 13c on Eric order. CLOSED.
 MEASURED AND BUILT IN SESSION 12, THEN PARKED FOR YOUR JUDGEMENT, exactly as this item asked - judge
 before pinning, leave flagged. The patch is gauntlet/parked/todo30-and-67-deterministic-rig.patch and
 it carries BOTH this and TODO 67, because they want ONE re-pin sweep between them rather than two.
@@ -1189,7 +1189,7 @@ journey.mjs.
 
 ## FOUND IN SESSION 12 (appended 2026-09-02 by the overnight run)
 
-### 67. QUIET DOES NOT PARK THE POPUP FEED, SO EVERY VANTAGE IS SHOT OVER A FADING CAPTION  — APPLIED session 13b inside the combined patch. NOT RE-PINNED.
+### 67. QUIET DOES NOT PARK THE POPUP FEED, SO EVERY VANTAGE IS SHOT OVER A FADING CAPTION  — APPLIED and RE-PINNED session 13c inside the combined patch. CLOSED.
 Found in session 12 by piece 31, from the cell map on its first run. MEASURED AND BUILT IN SESSION
 12, THEN PARKED FOR YOUR JUDGEMENT - the patch is gauntlet/parked/todo67-park-the-feed.patch and it
 applies clean. Everything below is measured on 8232590523658dfc3f5a1fe59a916de0.
@@ -1448,4 +1448,27 @@ with the samples 14, 250, 265, 464, 608, 742, 1105, 1249, 1810, 3678, 5046, 5515
 The patch takes 28 from 5844 to 1291. The 453 in the table is a ceiling from a sample that never saw
 the wheel in its far states - the third session in a row that a recorded ceiling has turned out to
 be a floor, and this time it is the calibration table itself.
+
+### 73. A SWEEP CAN LAND IN A STATE THE NEXT FIFTEEN DO NOT VISIT, AND PINNING FROM IT MIS-PINS
+Found in session 13c, twice in one sitting, while re-pinning the set onto the deterministic rig.
+It is not the churn this repo has spent three sessions measuring. It is the SAMPLE a pin is taken
+from, and it makes a ceiling wrong in both directions.
+    07_jam       the ten-run batch read 5717 px. The pair matrix says ONE sweep of the ten stood
+                 5714 from the other nine while those nine agreed within 23. It did not come back:
+                 a warm four-run batch read 22, four single-vantage runs read 7 to 24.
+    23, 28       both were first pinned from a sweep that a fresh sweep then read 1165 and 3581 px
+                 away from - while 15 runs of the same two vantages, 105 pairwise distances, churn
+                 129 and 5. Pinned from an outlier, verified against consensus, caught by pxdiff.
+WHY IT MATTERS MORE NOW THAN IT DID LAST WEEK: while the rig churned thousands of pixels an outlier
+sweep was indistinguishable from ordinary churn. On the deterministic rig 28_skifield_base churns
+FIVE pixels over 105 pairs, so a sweep 3581 px out is three orders of magnitude clear of the noise
+and there is no excuse for pinning it. The tighter the rig, the more a mis-pin costs.
+THE FIX IS A PROTOCOL AND crossrun ALREADY HAS THE DATA FOR IT. It computes every pairwise distance;
+it should also print WHICH RUN is the odd one out - a run whose median distance to the others is far
+above the rest - and a re-pin should be taken from a consensus run rather than from whatever sweep
+happened to be on disk. Suggested: `CROSSKEEP=1` plus a printed "pin from run N" line, or a
+`crossrun --pin` that copies the consensus run into baseline itself.
+UNTIL THEN, THE MANUAL PROTOCOL IS: re-pin, then reshoot and diff against what you just pinned. Both
+mis-pins here were caught that way and would have been invisible without it. That check is now the
+last line of the session-13c re-pin note in BASELINE.md.
 

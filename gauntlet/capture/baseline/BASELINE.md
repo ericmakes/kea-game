@@ -150,3 +150,39 @@ absent:0 is a measured frame rather than a guess. The cere was tried first and r
 sliver of it shows even when the head is fully buried.
 G.time is pinned in this vantage. The grass shader sways on uTime, so it reshot at 0.9949 until
 time was frozen, then 0.9998 - filed as TODO 30, because the same residual is on every grass frame.
+
+## FULL RE-PIN 2026-09-03 (build 8232590523658dfc3f5a1fe59a916de0 — GAME FILE UNCHANGED)
+THE DETERMINISTIC RIG, TODO 30 + 67. The game did not change; capture.mjs did. QUIET now pins
+G.time=12.0 every frame and empties the popup feed every frame, so the grass, the tussock sway, the
+camp fire, a dozen idle animations and the startGame caption stop depending on how many animation
+frames the 900ms settle got through. 26 of 28 vantages re-pinned on this rig.
+TWO ARE DELIBERATELY NOT RE-PINNED and stay flagged: 07_jam (TODO 60) and 17_flight (TODO 57), the
+two known subject drifts held open for Eric judgement. They read 18171 and 10142 px from their
+baselines and boxdiff 0.9426 and 0.6359. That is a re-pin that has not happened, not churn, and
+retiring it by pinning would be exactly the law-12 trap from the other end.
+WHAT IT BOUGHT, ten runs per vantage and forty-five pairwise distances each:
+    06_skyline      8791 ->  184     the worst vantage in the set before tonight
+    13_idle_preen   6932 ->  347     20_dead_rear   5489 ->   82
+    10_skifield     5822 -> 1785     19_roof_follow 4168 ->   15
+    01_carpark_wide 3996 ->  104     18_rear_close  3909 ->   14
+    29_lodge_deck    229 ->    0     30_groomed_band 1597 ->   0
+The full table with its provenance columns is in gauntlet/verify/pxdiff.mjs.
+JUDGED BEFORE PINNING: Eric accepted the 13_idle_preen pose, which is the only frame in the sweep
+where the BIRD changed rather than the landscape - a pinned clock freezes poses as well as grass, so
+the preen is caught at a different moment of its cycle. Measured before pinning: the pose is now
+reproducible (idleAct.t 1.5999, 1.6, 1.5999, 1.5999 over four runs, head rotation identical to five
+decimals), so this pins a repeatable pose rather than one sample of a moving one. subjects reads 16
+checked 0 missing across every moved frame - eleven photographs moved and not one bird was lost.
+03_kea_plate IS THE CONTROL AND IT STILL IS, in the only way that survives being re-pinned. It
+already pinned G.time locally, so the clock half of the patch is a no-op there - measured, its 3108
+px of movement sits ENTIRELY in the top-centre caption strip, cells cx 5..10 cy 0, and nowhere else.
+That is the cleanest evidence in the sweep that the two halves do what they claim: the clock moved
+the vantages that did not pin it, and the caption moved everything.
+AND TWO FRAMES WERE PINNED TWICE, WHICH IS THE PROCESS FINDING. 23_paddock_gate and 28_skifield_base
+were first pinned from a sweep that turned out to be an OUTLIER: a fresh sweep read 1165 and 3581 px
+from them, while 15 runs of those two vantages - 105 pairwise distances - churn 129 and 5. A sweep
+can land in a state the next fifteen do not visit, and pinning from it mis-pins the vantage
+silently. Both were re-pinned from the consensus run and verified. Filed as TODO 73.
+VERIFIED ON A FRESH SWEEP, not on the one the pins came from: diff 28 compared 0 flagged, pxdiff 2
+over band and both of them the held-open drifts, boxdiff 12 compared 2 changed and the same two,
+subjects 16 checked 0 missing, gate CERTIFIED-SHIP, three selftests ALL PASS.

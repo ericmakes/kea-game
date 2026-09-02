@@ -82,21 +82,56 @@ const CAP=path.resolve(HERE,'..','capture'), BASE=path.join(CAP,'baseline');
 const GREY=+(process.env.PXGREY||8);
 const SCALE=+(process.env.PXBAND||1);
 
-// MEASURED 2026-09-02 on build 8232590523658dfc3f5a1fe59a916de0: the worst distance seen between
-// any two capture sweeps of that build, over two batches of five. A vantage with no row here gets
-// DEFAULT, which is deliberately loud, and the selftest goes red if a pinned vantage has no row.
+// RECALIBRATED 2026-09-03 ON THE DETERMINISTIC RIG (TODO 30 + 67 applied). Every number below fell
+// by one to two orders of magnitude because the RIG changed, not because a threshold was shopped -
+// the `was` column is the pre-patch value each row replaces, so the size of that is auditable from
+// this file rather than from a report. Each row is the WORST distance seen between any two sweeps
+// across every batch taken that night: five runs (10 pairs), ten runs (45 pairs), and a four-run
+// re-test of six vantages, all on one machine. The columns record all three. A vantage with no row
+// here gets DEFAULT, which is deliberately loud, and the selftest goes red if a pinned vantage has
+// no row.
+// ONE ROW EXCLUDES A SAMPLE AND SAYS SO, WHICH IS THE SECOND TIME THIS FILE HAS HAD TO. 07_jam read
+// 5717 in the ten-run batch, and the pair matrix says that is ONE SWEEP standing 5714 px from the
+// other nine while those nine agree within 23. It did not come back: four more sweeps in a warm
+// batch read 22, and four single-vantage runs read 7 to 24. That is the 18_rear_close 16317 case
+// again - FLAKES law 9, a moody renderer, not a state - and absorbing it would set the 07 band to
+// 11434, which is ABOVE that vantage own open drift of ~18000 px (TODO 60) and would silently
+// retire the finding this instrument exists to hold. The row is 23 and the excursion is written
+// here instead. If it comes back, the resolution on 07 is gone and crossrun is where it will show.
+// THE TWO HELD-OPEN DRIFTS ARE MEANT TO BE LOUD. 07_jam (TODO 60) and 17_flight (TODO 57) keep
+// their pre-patch baselines by Eric judgement, so their distance from baseline is a re-pin that has
+// not happened rather than churn, and both flag here until it does. Every other pinned vantage was
+// re-pinned on the deterministic rig in the same commit that wrote these numbers.
 const DEFAULT=200;
 const CHURN={
-  '01_carpark_wide'    :3996, '02_hut_snow'      :2575, '03_kea_plate'     :3033,
-  '04_flight_underwing':3086, '05_tussock_ground':2775, '06_skyline'       :8791,
-  '07_jam'             :2865, '08_readability_320':1480,'09_colossal'      :2233,
-  '10_skifield'        :5822, '11_trailhead'     :4446, '12_seal_midpeel'  :3123,
-  '13_idle_preen'      :6932, '14_player_view'   :3872, '15_sign'          :1924,
-  '16_trish'           :1700, '17_flight'        :1951, '18_rear_close'    :3909,
-  '19_roof_follow'     :4168, '20_dead_rear'     :5489, '21_night_camp'    :2399,
-  '22_torch_beam'      :5308, '23_paddock_gate'  :1252, '24_verge_paddle'  :1922,
-  '25_preen_follow'    :2801, '28_skifield_base' : 453, '29_lodge_deck'    : 229,
-  '30_groomed_band'    :1597,
+  '01_carpark_wide'     :  104,   // was 3996   5run 104   10run 91    warm -
+  '02_hut_snow'         :    6,   // was 2575   5run 6     10run 6     warm -
+  '03_kea_plate'        :  285,   // was 3033   5run 164   10run 164   warm 285
+  '04_flight_underwing' :   69,   // was 3086   5run 40    10run 69    warm -
+  '05_tussock_ground'   :   24,   // was 2775   5run 8     10run 24    warm -
+  '06_skyline'          :  184,   // was 8791   5run 129   10run 184   warm 170
+  '07_jam'              :   23,   // was 2865   5run 20    10run 5717  warm 22
+  '08_readability_320'  :   15,   // was 1480   5run 15    10run 15    warm -
+  '09_colossal'         : 3090,   // was 2233   5run 825   10run 3090  warm 814
+  '10_skifield'         : 1785,   // was 5822   5run 73    10run 1785  warm 72
+  '11_trailhead'        :   13,   // was 4446   5run 7     10run 13    warm -
+  '12_seal_midpeel'     :  963,   // was 3123   5run 454   10run 963   warm -
+  '13_idle_preen'       :  347,   // was 6932   5run 347   10run 100   warm -
+  '14_player_view'      :    5,   // was 3872   5run 5     10run 5     warm -
+  '15_sign'             :    2,   // was 1924   5run 2     10run 2     warm -
+  '16_trish'            :   15,   // was 1700   5run 15    10run 14    warm -
+  '17_flight'           :  219,   // was 1951   5run 94    10run 219   warm 89
+  '18_rear_close'       :   14,   // was 3909   5run 10    10run 14    warm -
+  '19_roof_follow'      :   15,   // was 4168   5run 6     10run 15    warm -
+  '20_dead_rear'        :   82,   // was 5489   5run 22    10run 82    warm -
+  '21_night_camp'       :   32,   // was 2399   5run 20    10run 32    warm -
+  '22_torch_beam'       : 1299,   // was 5308   5run 969   10run 1299  warm -
+  '23_paddock_gate'     :  328,   // was 1252   5run 328   10run 274   warm -
+  '24_verge_paddle'     :    3,   // was 1922   5run 3     10run 3     warm -
+  '25_preen_follow'     :   27,   // was 2801   5run 15    10run 27    warm -
+  '28_skifield_base'    : 1291,   // was 453    5run 1291  10run 235   warm -
+  '29_lodge_deck'       :    0,   // was 229    5run 0     10run 0     warm -
+  '30_groomed_band'     :    0,   // was 1597   5run 0     10run 0     warm -
 };
 export const churnOf=id=>(id in CHURN?CHURN[id]:DEFAULT)*SCALE;
 export const bandOf=id=>Math.max(400*SCALE, churnOf(id)*2);
