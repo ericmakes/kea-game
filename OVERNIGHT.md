@@ -16,9 +16,19 @@ TODO.md if Eric has added one. One piece = one commit. Never bundle.
    audits/2026-08-28/harness-everything.js in its house style.
 5. `bash gauntlet/verify/gate.sh` must print CERTIFIED-SHIP. Red = fix or park.
 6. If puppeteer is installed: reshoot affected vantages
-   (`SHOTS=<ids> node gauntlet/verify/capture.mjs`), run
-   `node gauntlet/verify/diff.mjs`, and re-pin ONLY intentional changes
-   (`cp gauntlet/capture/<v>.png gauntlet/capture/baseline/`).
+   (`SHOTS=<ids> node gauntlet/verify/capture.mjs`), then run ALL THREE
+   instruments over the pass - they ask three different questions and the
+   first two sessions to skip the latter two each missed something:
+   - `node gauntlet/verify/diff.mjs`    frame SSIM. Owns the go/no-go.
+   - `node gauntlet/verify/boxdiff.mjs` subject-box SSIM. A whole-frame SSIM
+     is a landscape metric; the bird can be replaced outright inside it.
+   - `node gauntlet/verify/pxdiff.mjs`  changed-pixel count. All the SSIM
+     instruments are blind to a thin re-shade spread over a wide area.
+     `PXCELLS=1` tells you where.
+   Re-pin ONLY intentional changes
+   (`cp gauntlet/capture/<v>.png gauntlet/capture/baseline/`), and a re-pin
+   that moves a subject box or a pixel count on a vantage you were not
+   aiming at is not a staging fix - park it.
 7. Commit on branch `gauntlet`: `PIECE: <name> — certified <md5>`.
 8. Append to gauntlet-log.md: piece, verdict, md5, what to eyeball, surprises.
 
