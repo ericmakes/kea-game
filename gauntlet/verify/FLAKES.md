@@ -46,3 +46,24 @@ Institutional memory: every class of headless nondeterminism met so far, and the
       - the follow cam lerped away from a directly-assigned camera position (only camLock holds),
       - the camp fire is four sines on G.time plus a Math.random spit, so freeze G.time and hold
         _fireSpit above zero to take the deterministic branch and never roll the random at all.
+14. AN ASSERTION THAT READS STATE ONLY PRESENT WHEN THE CODE WORKS IS NOT AN ASSERTION, IT IS A FUSE.
+    `ok(thing().field===x, ...)` throws when thing() is undefined, and a battery that throws prints a
+    stack trace and NO verdict - so the sabotage you were checking for comes back with zero findings
+    and reads as a gap in the test. Session 9 met this four times and wrote it in the log as a guard
+    rule; session 10 met it FOUR MORE TIMES in one night - in a save blob slot, a travel beat held-key
+    map, and three separate reads of one hint - so it is law now. Idiom: read through an accessor that
+    cannot throw, and put the value in the message.
+      const cageF=k=>(cage()||{})[k];          const heldOf=c=>((G.travel||{}).held||{})[c];
+      const stars=id=>((blob.biomes||{})[id]||{}).stars||{};
+    The tell is that a sabotage returns NOTHING. Zero findings from a sabotage that obviously breaks
+    the feature is not proof the test is thin - check for a stack trace FIRST. In every one of the
+    eight cases the test was fine and one read was a fuse.
+15. ANY SECTION THAT BUILDS A WORLD MOVES THE SEEDED STREAM FOR EVERY SECTION AFTER IT. propAt keeps
+    a deliberate rnd draw per prop (TODO 47, _ryUnused) precisely so the country does not move when a
+    name changes - which means adding or removing a section that boots shifts which prop a LATER
+    section picks up. A bound that happens to hold for one prop is a time bomb: piece 38 added two
+    boots and a four-build-old assertion in the carry-back section failed, because it asked for
+    hypot <= BAND.off while botchWonk draws x and z INDEPENDENTLY (the corner of the band is off times
+    root two). Law 10 already says read the convention; this is what it costs when one assertion in
+    four does not. Idiom: derive the bound from how the value is CONSTRUCTED, per axis if it is drawn
+    per axis, and never from the number one prop happened to produce.
