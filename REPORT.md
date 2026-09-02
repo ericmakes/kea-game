@@ -89,8 +89,8 @@ so is a ceiling from five.** Three sweeps said 07_jam churns 20 px; five said 18
 
     gauntlet/capture/baseline/20_dead_rear.png   the caption, top-centre — the thing TODO 67 removes,
                                                  and the frame that cannot be reproduced (TODO 69)
-    gauntlet/capture/baseline/09_colossal.png    the popup fanout, which is why 67 freezes rather
-                                                 than clears for this one vantage
+    gauntlet/capture/baseline/09_colossal.png    the popup fanout, which is why 67 clears the feed
+                                                 for everything and lets THIS vantage opt out
     gauntlet/capture/baseline/03_kea_plate.png   the first of piece 61's three new subject boxes
     gauntlet/capture/baseline/18_rear_close.png  the vantage the pixel tripwire was proved on
 
