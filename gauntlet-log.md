@@ -2166,3 +2166,33 @@ worth reading.
   respect - reads 0.9994, because no capture runs a match and the scoreline stays hidden.
 - EYEBALL: press 4 and narrow the window. The look is FLAGGED per the brief - the bands and what
   survives each one are the decision, and they are Eric's to move.
+
+## SESSION END — 2026-09-02, session 9, six pieces and the run order is finished
+Stop condition on the 6-piece rule. Tip df4ae7c6cdee29c3a0bbe3aa7f514f24, gate CERTIFIED-SHIP, 25
+vantages 0 flagged, working tree clean, SESSION.lock released.
+    19 botch-system          ed17c5d8cb9f044870769dedc59b8e83
+    20 carry-back-restore    d16cf644cfdffd8c4ca08510f288b5d9
+    21 consumable-replace    6b4c21db02a72392d733500958471896
+    23 arena-scoping         96a83803f067232a08463219ced371ed
+    24 role-aware-rex        39c2d931f488caa1679afa01fff0e697
+    25 vs-hud-split          df4ae7c6cdee29c3a0bbe3aa7f514f24
+- THE BLOCK CAME OUT AS ONE MACHINE, which is the return on how 16, 18 and 19 were written: one ORDER
+  economy serving tears, carry-backs and replacements; one botchApply that every restore lands
+  through; one predicate that reverses the whole cage for a match; one gate that scopes forty-six
+  award call sites by reading the position award() already carries.
+- FOUR OF MY OWN ASSERTIONS WERE WRONG AND SABOTAGE FOUND ALL FOUR. One could not fail (a docking
+  clause whose condition was a strict subset of one already there), one tested nothing (a bonus rule
+  never driven in reverse), one ran before the state it asked about existed, and one was a magic
+  count that broke on a correct change. All four are written up where they happened.
+- AND THE GUARD RULE IS NOW FIVE PIECES OLD: if an assertion reads state that only exists when the
+  code WORKS, read it through an accessor. Sabotages kept returning zero findings because a test threw
+  on rep.banked, result.winner and inIt.area and took every later finding with it.
+- THE STABILITY INSTRUMENT IS CONFIRMED TWICE. A four-take sweep flagged 12_seal_midpeel at 0.9941;
+  three five-take sweeps read 0.9988, 0.9980, 0.9951. That is the second time a single sweep has named
+  a vantage repeated sweeps clear, so TODO 51 now carries it as a rule: nothing is unstable until
+  three sweeps agree.
+- ERIC PASTED A COMMAND TO LAUNCH A SECOND CLAUDE SESSION AGAINST THIS TREE. Not run - that is the
+  two-writer collision the lock exists to prevent - and the run was continued in place. Worth a line
+  because the next agent will see the same paste in the transcript and should make the same call.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md, then the three things still waiting on Eric - the
+  re-pin question from session 8, TODO 56 (which collides with his own blocked list), and 54/55.
