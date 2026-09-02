@@ -2569,3 +2569,64 @@ the graduation is not here and nothing in the carpark moved - 25 pinned vantages
 - EYEBALL: gauntlet/capture/28_skifield_base.png, 29_lodge_deck.png, 30_groomed_band.png - three
   first pins, nothing pinned, all yours. Also worth doing rather than looking at: press M in a run
   with six stars and click GO on the ski field.
+
+### PIECE 40 — skifield-missions — CERTIFIED 1ba30ea41fe5df6e624f3919ad4cfad9
+Verdict: green. THE LIE 39 LEFT STANDING IS GONE: the ski field had the CARPARK to-do list on it, and
+now it has its own. Eight jobs and a finale on two pages, every one of them answerable by the diorama
+39 built - no cast, no new verb, nothing that needs a human to walk into shot.
+- TAB SHOWS THE PAGE, and that is a browser fact rather than a claim: journey.mjs opens the list
+  after the arrival and reads THE ROPE TOW with three empty stars, its four rows, the second page
+  hidden as ??? and the finale as ???. renderTodo returns immediately under HEADLESS, so the list a
+  player actually reads had no headless proof available to it at all.
+- THE LIST: page one THE ROPE TOW - redistribute all three poles, perch the spinning bull wheel,
+  supervise the tow from the roof of its own engine shed, leave somebody ski out on the groomed band.
+  Page two THE DAY LODGE - take the goggles and wear them, stand on the lodge roof, lose one ski boot
+  thoroughly, furnish the nest with three pieces of other people kit. Two-bird runs get a coop row -
+  BOTH beaks on the lodge roof at once, which one bird cannot do, and the assertion says so. Finale:
+  THE SUMMIT, perch the top station.
+- THREE THINGS IN THE ENGINE HAD THE CARPARK WRITTEN INTO THEM, and each was a throw or a dead end
+  rather than a matter of taste:
+  missionDone unlocked the mission whose id is literally apex and set a property on it WITH NO GUARD,
+    in the one code path a player reaches once - so the first map to declare a list without an apex
+    would have thrown on finishing its last job. Every reader goes through the finale FLAG now.
+  checkFinale WAS the carpark sentence in engine code - four humans in pursuit, then home to the nest
+    - which a map with nobody on it can never satisfy. arm() and check() are declared with the
+    mission; a finale with no arm() is live the moment the list closes, which is the honest reading
+    for a map where nothing has to happen first. The carpark finale reads exactly as it always did,
+    now written down where it belongs.
+  checkMisc was a run of carpark detectors behind a carpark guard, so a second map could not add one
+    without editing carpark code. A mission may carry check(), called for as long as it is unlocked
+    and undone. The four ski field jobs that are about PLACE use it.
+- AND THE PROOF THAT MATTERS MOST IS THE NEGATIVE ONE: no mission id appears on both maps, asserted
+  against the carpark list itself rather than against ids typed into a test, and every mission id on
+  every ski field PROP is held to being one this map declares. That last one replaced 39 assertion
+  that no prop claimed anything - the claim got stronger rather than weaker.
+- STARS LAND ON THIS MAP PAGES, which is the collision the save slots were built for and which could
+  only be tested with two maps sharing one page list until tonight. The skifield slot lists THE ROPE
+  TOW and THE DAY LODGE and keys its stars by them; the carpark slot is not written at all by a run
+  that never went there; and the brochure reads the ski field denominator - 6 - off its own page count.
+- ELEVEN SABOTAGES, ALL CAUGHT, and one of them found my own broken sabotage first: an undefined||
+  edit that was a no-op rather than a change, which reported zero findings and was NOT the test being
+  thin. Replaced with a real one - free:true on the summit hint - which the gate caught immediately.
+  The carpark list handed to the ski field lands 28 findings.
+- THE HINTS ARE THE PIECE 55 GATE EARNING ITS KEEP. Four hints on the hill, one per job that is about
+  a place rather than a thing lying there, and the SUMMIT hint says nothing at all until the finale
+  unlocks - so the end of the map is not spoiled by walking past it. Driven: silent at the top
+  station while locked, speaking the moment the list is done.
+- A FINDING THAT WAS MY OWN TEST, worth the line because it is FLAKES law 1 with the save on top: the
+  hint block booted a map whose save had just been written FINISHED, so every job hydrated as done
+  and every hint went quiet. The gate was working perfectly. The wipe is now part of the block and
+  the hydration is an assertion.
+- A PLAIN X.boot() DOES NOT GO HOME. buildWorld falls back to G.biome before the default, so the
+  finally of a section that ends on the mountain has to NAME the carpark or every section after it
+  runs up there. Cost one finding; written into the section.
+- CAPTURE: 25 compared, 0 flagged. 28 RE-STAGED because of this piece: the bird was pinned on the
+  engine shed roof, which now PAYS, so it completed a mission during the settle and the tick popup
+  sat across the top of the photograph - a live thing whose presence depends on how many frames the
+  settle got through, which is what law 12 forbids. It stands at the rack instead, which reads bigger
+  and carries its own GRAB SKI GOGGLES prompt. Presence floor re-measured: 142 kea pixels against 0.
+- AND TWO OF THE THREE NEW FRAMES NOW TEACH. 28 carries the wheel hint and 30 carries the ski hint,
+  both deterministic because the bird is pinned inside the radius every frame.
+- EYEBALL: gauntlet/capture/28_skifield_base.png and 30_groomed_band.png (both changed, both still
+  first pins, nothing pinned), and gauntlet/capture/probe_todo_skifield.png - the to-do list on the
+  mountain, which is the whole piece in one picture.

@@ -624,6 +624,34 @@ groomed band (new chaos verb), rope-tow ride, goggle heist, deck lunch
 raids (VS consumable sources), buried-lunchbox digs. Star page wired;
 coop badges where a mission wants two birds.
 PROOF: mission batteries; star grants both sides; TAB shows the page.
+DONE session 11 (1ba30ea41fe5df6e624f3919ad4cfad9) - THE LIST AND THE SEAM. Eight jobs and a finale on
+two pages (THE ROPE TOW, THE DAY LODGE), a coop row for two-bird runs, star page wired, and TAB
+proved in a real browser because renderTodo returns immediately under HEADLESS.
+THE SEAM IS THE PART THAT WILL MATTER FOR 41-44: the list is declared beside the builder, and three
+things in the engine had the carpark written into them - missionDone unlocked the mission whose id is
+literally apex WITH NO GUARD (a throw for any map without one), checkFinale WAS the carpark sentence
+(four in pursuit, then the nest, which a map with nobody on it can never satisfy, so arm() and
+check() are declared with the mission), and checkMisc was carpark detectors behind a carpark guard
+(a mission may carry its own check() now).
+NOT ONE ID APPEARS ON BOTH MAPS, asserted against the carpark list itself, and every mission id on
+every ski field prop is held to being one this map declares.
+THE GRADUATES ARE NOT HERE, because they are 39b and judged: nothing was moved off the carpark.
+THE SIGNATURE ACTS ARE NOT HERE EITHER, and that is 40b below.
+
+### 40b. skifield-signature-acts  (the verbs, filed session 11 by piece 40)
+What the 40 brief names that a list of eight place-and-prop jobs could not honestly cover:
+- THE TRAY-SLIDE down the groomed band. A NEW CHAOS VERB, which is the biggest single item: the roof
+  luge already exists (colliders with slide:true, G.slideV on the kea) and the piste is a 20x74 band
+  at y 0.1 with no collider at all, so the verb needs either a slide-zone collider kind that is not a
+  roof or a ground-level slide state. Judge the feel; it is the signature act of the whole map.
+- THE TOW RIDE. Grab the rope at the bottom and be carried up. Needs a carry state on the kea that is
+  not the perch idiom and a rope path to follow - the spans are already a table (SKITOW).
+- THE DECK LUNCH RAIDS, which need a CAST to steal from (the ski field declares none by design) and
+  food props, which shadow a counted economy if they are put out carelessly (FLAKES law 6) and are
+  the VS consumable sources, so this one lands on top of piece 21 work.
+- THE BURIED LUNCHBOX DIGS. A dig verb against the drifts, which are registered records with a
+  radius and a slid distance already - G.snow up here is inspectable, unlike the carpark patches.
+One piece each, and none of them is a diorama change: 39 built the furniture they all need.
 
 ### 41-44. RESERVED: campground, village, river, station
 One biome briefed at a time, only after its predecessor ships and its

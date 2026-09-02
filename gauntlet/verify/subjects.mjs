@@ -85,7 +85,10 @@ const SPEC=[
      that box can honestly answer. */
   { file:'28_skifield_base', tests:[
     { what:'the bull wheel is at the bottom station',  cls:'scarlet', box:[0.48,0.33,0.16,0.22], min:1500, absent:440 },
-    { what:'and the bird is up on the engine shed',    cls:'kea',     box:[0.42,0.42,0.10,0.10], min:25,   absent:0 } ]},
+    // TODO 40 moved this bird off the shed roof - standing up there PAYS now, and the tick popup
+    // it fired during the settle was a live thing in the frame. It stands at the rack instead, which
+    // is a bigger read and its own prompt: 142 kea pixels against 0 with the bird parked away.
+    { what:'and the bird is at the rack in the foreground', cls:'kea',  box:[0.31,0.79,0.12,0.14], min:70,   absent:0 } ]},
   { file:'29_lodge_deck', tests:[
     { what:'the day lodge is in frame',                cls:'hutgreen',box:[0.36,0.36,0.40,0.20], min:8000, absent:5 },
     { what:'and the bird is on the trestle table',     cls:'kea',     box:[0.53,0.45,0.08,0.09], min:12,   absent:1 } ]},

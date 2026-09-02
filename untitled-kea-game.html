@@ -994,7 +994,7 @@ function applySave(){ const blob=SAVE.migrate(SAVE.load());
     const open=G.missions.filter(x=>!x.finale&&!x.bonus&&!x.done);
     if(open.length===0&&!G.finaleOn){ G.finaleOn=true; const f=G.missions.find(x=>x.finale); if(f)f.locked=false;
       for(const x of G.missions)if(x.bonus&&x.locked)x.locked=false;
-      popup('THE FINALE UNLOCKS','APEX MENACE — four in pursuit, then home to the nest',0,null,true); AU.fanfare&&AU.fanfare(); }
+      popup('THE FINALE UNLOCKS',(f&&f.label)||'',0,null,true); AU.fanfare&&AU.fanfare(); }
   }
   starsInit(b,blob.v);
   rewear(b.hats);
@@ -1771,7 +1771,7 @@ function castCarpark(){
     rex.torch={g:tg,spot,lens,beam};
   }
 }
-defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark,cast:castCarpark,
+defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark,cast:castCarpark,missions:missionsCarpark,
   anchor:{x:7,y:26,z:34, lx:7,ly:1,lz:-11},
   traffic:{up:32.2,down:35.8,x:115}});      // the two lanes of the road along z 34, where they have always been
 
@@ -1902,10 +1902,13 @@ function buildSkifield(){
       box(2.4,0.07,0.1,PAL.woodD,0,0.3,0.12,g); }
     for(const [px,pz] of [[-16.9,19.1],[-16.4,19.1],[-15.5,19.1],[-27.6,19.1],[-28.6,19.1]]){
       const s=propAt('ski',px,0.95,pz,PB.ski,{heavy:true}); s.mesh.rotation.x=1.35; }
-    for(const [px,pz] of [[-15.0,19.2],[-14.7,19.2],[-27.0,19.2]]) propAt('ski pole',px,0.7,pz,PB.skipole,{});
-    propAt('ski goggles',-17.4,0.2,19.9,PB.goggles,{wearable:true});
-    propAt('ski goggles',SKITOW.x+2.6,0.2,SKITOW.base+2.6,PB.goggles,{wearable:true});
-    propAt('ski boot',-13.2,0.2,17.7,PB.boot,{});
+    /* TODO 40: the gear carries THIS MAP missions. It carried none at all the night the diorama
+       shipped, because a prop up here answering a CARPARK mission is the lie 55 was sent to fix -
+       and the battery still holds every id on every prop to the list this map declares. */
+    for(const [px,pz] of [[-15.0,19.2],[-14.7,19.2],[-27.0,19.2]]) propAt('ski pole',px,0.7,pz,PB.skipole,{missionProg:'k_poles'});
+    propAt('ski goggles',-17.4,0.2,19.9,PB.goggles,{wearable:true,mission:'k_goggles'});
+    propAt('ski goggles',SKITOW.x+2.6,0.2,SKITOW.base+2.6,PB.goggles,{wearable:true,mission:'k_goggles'});
+    propAt('ski boot',-13.2,0.2,17.7,PB.boot,{missionFar:'k_boot',farR:12});
     propAt('rubbish',SKITOW.x+1.4,0.2,SKITOW.base+3.2,PB.rubbish,{}); }
 
   /* DRIFTS BANKED AGAINST THE STRUCTURES, and the unbury verdict is the law they obey. TODO 28 said
@@ -1943,6 +1946,14 @@ function buildSkifield(){
         wedge.scale.set(1.15,0.42,1.15); s.wedge=wedge; } } }
 
   buildNest(G.nestPos.x,G.nestPos.z);
+  /* THE TEACHING BELONGS TO THIS MAP (TODO 58, applied by TODO 40). Four hints, one per job that is
+     about a PLACE rather than a thing you can see lying there - and every one of them is silent
+     until its own mission is both declared and unlocked, which is the piece 55 gate doing the work.
+     The summit hint therefore says nothing at all until the list is finished. */
+  addHint('k_wheel',SKITOW.x,2.5,SKITOW.base-2.0,5,'that wheel has been turning since dawn - something could ride it');
+  addHint('k_ski',(SKIPISTE.x0+SKIPISTE.x1)/2,0.8,20,7,'skis belong out on the snow, surely, and not on a rack');
+  addHint('k_stash',SKINEST.x,1.2,SKINEST.z,5,'a nest is somewhere to keep things that were never yours');
+  addHint('k_summit',SKITOW.x,3.0,SKITOW.top+1.2,8,'the top station: the whole field is below it');
 
   /* THE COUNTRY. This is the carpark own mountain construction with ski field radii and a snowline
      dropped to where a club field actually sits - deliberately NOT a new silhouette language, which
@@ -1998,7 +2009,7 @@ function castSkifield(){
    the way the road is the carpark one. Held to the world it names by the same assertion the carpark
    anchor is: the look-at sits on the built prop centroid, above the ground at its own feet, pointing
    down the way in rather than up out of it. */
-defineBiome('skifield',{label:'THE CLUB SKI FIELD',build:buildSkifield,cast:castSkifield,
+defineBiome('skifield',{label:'THE CLUB SKI FIELD',build:buildSkifield,cast:castSkifield,missions:missionsSkifield,
   anchor:{x:-2,y:28,z:52, lx:-4,ly:1.5,lz:14}, snow:SKISNOW});
 
 /* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
@@ -4119,6 +4130,22 @@ function defineMissions(mode,opts){
     ];
     G.chapters=null; G.needHydrate=true; renderTodo(); return;
   }
+  /* THE TO-DO LIST BELONGS TO THE MAP (TODO 40). This function was one hardcoded carpark list, and
+     TODO 39 shipped a second map that therefore opened with the CARPARK to-do list on it - eight
+     pages of jobs about a campervan, a hut and a road, none of which are on the mountain and none of
+     which can be finished there. The same class of lie as the cage hint in 55 and the carpark
+     teaching in 58, and the same fix a third time: an owner. The list is declared beside the builder,
+     and a biome that declares none gets the carpark one, which is what every stub in the batteries
+     expects and what the colossal branch above has always been.
+     THE FINALE IS PART OF THE DECLARATION, and it had to be: missionDone reached for the mission
+     whose id is literally apex and unlocked it with no guard, so the first map to declare a list
+     without one would have thrown on completing its last job. Every reader goes through the finale
+     FLAG now, and the finale carries its own arming check - because four humans in pursuit is a
+     carpark sentence and there is nobody at all on the ski field. */
+  (biomeOf(G.biome).missions||missionsCarpark)(mode);
+  renderTodo();
+}
+function missionsCarpark(mode){
   // v5 (2026-08-26): to-do list rewritten in the Untitled-Goose grammar — grouped by area,
   // imperative, specific, and rude. Same ids, same detectors; six new tasks appended.
   const A={cp:'THE CARPARK',hut:'THE HUT',camp:'THE CAMPSITE',road:'THE ROAD',ski:'THE SKI FIELD',tr:'THE TRAILHEAD',pad:'THE PADDOCK & NEST',co:'TOGETHER'};
@@ -4177,8 +4204,61 @@ function defineMissions(mode,opts){
     {id:'b_body',  area:AW,bonus:true,locked:true,label:'Stop the traffic using only your body'},
     {id:'b_five',  area:AW,bonus:true,locked:true,label:'Stash five shinies in one nest'}
   );
-  G.missions.push({id:'apex',label:'APEX MENACE — four humans in pursuit, then home to the nest',finale:true,locked:true});
-  renderTodo();
+  /* THE CARPARK FINALE CARRIES ITS OWN ARMING, which is where checkFinale used to keep it: four
+     humans in pursuit, and then home to the nest. Written here so the map that needs a cast to
+     finish says so itself. */
+  G.missions.push({id:'apex',label:'APEX MENACE — four humans in pursuit, then home to the nest',finale:true,locked:true,
+    arm:()=>G.humans.filter(h=>h.state==='chase').length>=4,
+    armText:{t:'FULL PURSUIT!',s:'NOW — TO THE NEST!'},
+    check:()=>G.keas.some(k=>dist2(k.x,k.z,G.nestPos.x,G.nestPos.z)<2.6&&Math.abs(k.y-G.nestY)<1.4)});
+}
+/* ---------- THE CLUB FIELD TO-DO LIST (TODO 40) ----------
+   EIGHT JOBS AND A FINALE, on two pages, and every one of them is answerable by the diorama TODO 39
+   built - no cast, no new verb, nothing that needs a human to walk into shot. The signature acts the
+   brief names are NOT here and the reason is written into TODO 40b: the tray-slide down the groomed
+   band is a new chaos verb, the tow ride is a second one, and the deck lunch raids and buried
+   lunchboxes need both a cast to steal from and food props, which shadow a counted economy if they
+   are put out carelessly (FLAKES law 6). Those are content pieces with their own proofs.
+   WHAT IS HERE IS DETECTABLE AND FINISHABLE, which is the bar for shipping a list at all: three
+   poles and a pair of goggles carry their missions the way the carpark props do, the boot is a
+   missionFar relocation, and the four that are about PLACE carry their own check(). Nothing up here
+   answers a carpark mission and nothing in the carpark answers one of these. */
+function missionsSkifield(mode){
+  const A={tow:'THE ROPE TOW', lodge:'THE DAY LODGE'};
+  G.chapters=[A.tow,A.lodge]; G.chapIdx=0; G.needHydrate=true;
+  const anyKea=fn=>()=>G.keas.some(fn);
+  const settled=k=>Math.abs(k.vy||0)<0.7;                  // standing on it, not falling past it
+  const onPiste=p=>p.x>=SKIPISTE.x0&&p.x<=SKIPISTE.x1&&p.z>=SKIPISTE.z0&&p.z<=SKIPISTE.z1;
+  G.missions=[
+    {id:'k_poles', area:A.tow, label:'Redistribute all three ski poles',need:3,n:0},
+    {id:'k_wheel', area:A.tow, label:'Perch the spinning bull wheel',
+      check:anyKea(k=>!!G.towWheel&&Math.abs(k.x-G.towWheel.position.x)<1.1&&
+        Math.abs(k.z-G.towWheel.position.z)<1.1&&Math.abs(k.y-G.towWheel.position.y)<0.85)},
+    {id:'k_shed',  area:A.tow, label:'Supervise the tow from the roof of its own engine shed',
+      check:anyKea(k=>Math.abs(k.x-SKITOW.x)<1.7&&Math.abs(k.z-SKITOW.base)<1.3&&k.y>=2.0&&settled(k))},
+    {id:'k_ski',   area:A.tow, label:'Leave somebody ski out on the groomed band',
+      check:()=>G.props.some(p=>p.name==='ski'&&!p.heldBy&&!p.banked&&onPiste(p))},
+    {id:'k_goggles',area:A.lodge,label:'Help yourself to the ski goggles, and wear them'},
+    {id:'k_roof',  area:A.lodge,label:'Stand on the day lodge roof like you own the place',
+      check:anyKea(k=>Math.abs(k.x-SKILODGE.x)<SKILODGE.w/2&&Math.abs(k.z-SKILODGE.z)<SKILODGE.d/2&&
+        k.y>SKILODGE.h&&settled(k))},
+    {id:'k_boot',  area:A.lodge,label:'Lose one ski boot, thoroughly'},
+    {id:'k_stash', area:A.lodge,label:'Furnish the nest with three pieces of other people kit',
+      check:()=>G.props.filter(p=>p.banked).length>=3},
+  ];
+  /* THE COOP BADGE, and it is a coop badge because it cannot be done alone: both birds on the roof
+     at once, which one bird cannot be. */
+  if(mode===2)G.missions.push({id:'k_duet',area:A.lodge,coop:true,
+    label:'Get BOTH beaks up on the lodge roof at once',
+    check:()=>G.keas.length>1&&G.keas.every(k=>Math.abs(k.x-SKILODGE.x)<SKILODGE.w/2&&
+      Math.abs(k.z-SKILODGE.z)<SKILODGE.d/2&&k.y>SKILODGE.h)});
+  /* THE FINALE NEEDS NO ARMING, which is the honest reading of a map with nobody on it: there is
+     nothing that has to happen first, so it is live the moment the list is done. The top station is
+     the far end of the tow and the highest thing a bird can perch up there. */
+  G.missions.push({id:'k_summit',finale:true,locked:true,
+    label:'THE SUMMIT — perch the top station and look at what you have done',
+    armText:{t:'ONE THING LEFT',s:'THE TOP STATION — ALL THE WAY UP'},
+    check:()=>G.keas.some(k=>Math.hypot(k.x-SKITOW.x,k.z-SKITOW.top)<1.9&&k.y>2.6)});
 }
 function markMission(id){
   const m=G.missions.find(m=>m.id===id); if(!m||m.done)return;
@@ -4214,7 +4294,10 @@ function missionDone(m){
       popup('PAGE TURNED','NOW: '+G.chapters[G.chapIdx],0,null,true); AU.ding(); flashTodo(); }
   }
   if(open.length===0&&!G.finaleOn){
-    G.finaleOn=true; const f=G.missions.find(x=>x.id==='apex'); f.locked=false;
+    /* THE FLAG, NOT THE ID (TODO 40). This read G.missions.find(x=>x.id==='apex') and then set a
+       property on it with no guard, so the first map to declare a list without a mission called apex
+       threw on finishing its last job - in the one code path a player only reaches once. */
+    G.finaleOn=true; const f=G.missions.find(x=>x.finale); if(f)f.locked=false;
     let aw=0; for(const x of G.missions)if(x.bonus&&x.locked){x.locked=false;aw++;}
     renderTodo();
     popup('THE LIST IS DONE','ONE THING LEFT…',0,null,true); AU.fanfare();
@@ -4223,6 +4306,15 @@ function missionDone(m){
 }
 function checkMisc(){
   if(G.missions.length===0)return;
+  /* A DETECTOR CAN BELONG TO ITS MISSION (TODO 40), and this loop is the seam that let the ski field
+     have a to-do list at all. Everything below this point is a CARPARK detector behind a carpark
+     guard - the chimney, the tow wheel, the sheep on the road, the cleared picnic table - and a
+     second map could not add one without editing another map code. A mission may carry check(),
+     which is called for exactly as long as it is unlocked and undone. The finale is skipped here
+     because checkFinale owns it: it has to be armed first. */
+  for(const m of G.missions){ if(m.finale||m.done||!m.check)continue;
+    const lk=(typeof m.locked==='function')?m.locked():m.locked; if(lk)continue;
+    if(m.check())markMission(m.id); }
   if(!G.missions.find(m=>m.id==='grumble3'||m.id==='paddock'))return;
   let gr=0;
   for(const h of G.humans){ if(h.state==='grumble')gr++;
@@ -4244,20 +4336,25 @@ function checkMisc(){
     if(fleeing>=G.humans.length)done('c_fleeall');
   }
 }
+/* THE FINALE IS THE MAP FINALE (TODO 40). All of this used to be the carpark sentence written out in
+   engine code - four humans in pursuit, then home to the nest - so a map with nobody on it could
+   never have finished, and the ski field has nobody on it by declaration. The two halves are
+   declared beside the mission now: arm() is what has to become true before the last act is possible,
+   check() is the last act. A finale with no arm() is armed the moment the list is done, which is the
+   honest reading for a map where nothing has to happen first. */
 function checkFinale(){
   if(G.colossal)return; // colossal has its own summit
   if(!G.finaleOn||G.won)return;
-  const chasing=G.humans.filter(h=>h.state==='chase').length;
-  if(chasing>=4)G.apexArmed=true;
-  if(G.apexArmed&&!G.apexNoted){ G.apexNoted=true; popup('FULL PURSUIT!','NOW — TO THE NEST!',0,null,true); AU.fanfare(); }
-  if(G.apexArmed){
-    for(const k of G.keas){
-      if(dist2(k.x,k.z,G.nestPos.x,G.nestPos.z)<2.6&&Math.abs(k.y-G.nestY)<1.4){ winGame(); break; }
-    }
-  }
+  const f=(G.missions||[]).find(m=>m.finale); if(!f)return;
+  if(!G.apexArmed&&(!f.arm||f.arm()))G.apexArmed=true;
+  if(G.apexArmed&&!G.apexNoted){ G.apexNoted=true;
+    const t=f.armText||{t:'THE LAST ONE',s:''}; popup(t.t,t.s,0,null,true); AU.fanfare(); }
+  if(G.apexArmed&&f.check&&f.check())winGame();
 }
 function winGame(){
-  if(G.won)return; G.won=true; done('apex'); AU.fanfare(); setTimeout(()=>AU.screech(),400);
+  if(G.won)return; G.won=true;
+  { const f=(G.missions||[]).find(m=>m.finale); if(f)done(f.id); }   // TODO 40: whichever map you finished
+  AU.fanfare(); setTimeout(()=>AU.screech(),400);
   const s=G.stats;
   el('winstats').innerHTML=
     'CHAOS SCORE: <b>'+G.score+'</b> · PEAK CHAOS: <b>'+Math.round(G.chaosPeak||0)+'</b> · TIME: <b>'+fmtT(G.playT||0)+'</b><br>'+

@@ -280,9 +280,15 @@ await shotR('27_travel_card',`const k=KEAGAME.G.keas[0];
    gravity and the roof logic would otherwise have it somewhere else by the time the shutter opens,
    and the third stands it on the corduroy where the idle animation would turn it around. */
 const SKI={biome:'skifield'};
-// 28: the bottom station - engine shed, bull wheel, the queue pad, drifts banked against the shed.
+/* 28: the bottom station - engine shed, bull wheel, the queue pad, drifts banked against the shed.
+   THE BIRD IS NOT ON THE SHED ROOF ANY MORE, and TODO 40 is why: k_shed pays for standing up there,
+   so the pinned pose completed a mission during the settle and the tick popup sat across the top of
+   the photograph - a live thing in the frame whose presence depends on how many animation frames the
+   settle got through, which is exactly what law 12 forbids. On the snow at the foot of the shed it
+   finishes nothing. The hint plate at the bottom IS deterministic - the bird is pinned inside the
+   k_wheel radius every frame - and it stays, because a map that teaches is worth photographing. */
 await shotR('28_skifield_base',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
-  ${PIN('k.x=4.0;k.z=24.0;k.y=2.2;k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${PIN('k.x=6.2;k.z=27.2;k.y=0;k.vy=0;k.grounded=true;k.ry=2.35;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
   ${CAM(11.5,4.6,29.5, 4.0,2.0,23.0)}`,SKI);
 // 29: the day lodge from downhill - the deck, the racks, and the drift banked along the wall.
 // the deck floor put the bird behind its own railing at this distance, so it stands on the near

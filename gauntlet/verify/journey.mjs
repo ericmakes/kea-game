@@ -53,6 +53,17 @@ console.log('just after GO  ',JSON.stringify(await st()));
 await nav; await sleep(1400);
 console.log('after the load ',JSON.stringify(await st()));
 await page.screenshot({path:path.join(ROOT,'gauntlet/capture/probe_arrival.png')});
+/* TODO 40 asks for one thing only a browser can answer: TAB SHOWS THE PAGE. renderTodo returns
+   immediately under HEADLESS, so the list a player actually reads has no headless proof at all - and
+   the whole point of the piece is that the list on this map is not the carpark one. */
+{ const todo=await page.evaluate(()=>{ const t=document.getElementById('todo');
+    t.classList.add('open');
+    return {heads:[...document.querySelectorAll('#milist .miarea')].map(h=>h.textContent),
+            rows:[...document.querySelectorAll('#milist .mi')].map(r=>r.textContent.trim().slice(0,52))}; });
+  console.log('to-do heads   ',JSON.stringify(todo.heads));
+  console.log('to-do rows    ',JSON.stringify(todo.rows));
+  await page.screenshot({path:path.join(ROOT,'gauntlet/capture/probe_todo_skifield.png')});
+  await page.evaluate(()=>document.getElementById('todo').classList.remove('open')); }
 await page.keyboard.press('Space'); await sleep(200);
 console.log('space (fresh)  ',JSON.stringify(await st()));
 await sleep(2200);

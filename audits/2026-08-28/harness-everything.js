@@ -3151,18 +3151,23 @@ C.section('THE CLUB SKI FIELD - the second map boots, and it is a map and not a 
       ok(X.groundHeightAt(S.LODGE.x,S.LODGE.z,4.4)>S.LODGE.h,
          'and so is the lodge roof, because a kea will ('+X.groundHeightAt(S.LODGE.x,S.LODGE.z,4.4)+')'); }
 
-    /* 6. THE GEAR ON THE RACKS, AND NOT ONE MISSION ID ON ANY OF IT. The missions are TODO 40; a
-       prop up here that answered a CARPARK mission would be the lie TODO 55 was sent to fix. The
-       ski boot is called a SKI BOOT for the same reason - a prop NAME is a detector in this engine,
-       and anything called boot scores the carpark bonus the moment it is carried far enough. */
+    /* 6. THE GEAR ON THE RACKS, AND EVERY MISSION ID ON IT BELONGS TO THIS MAP. It carried no ids at
+       all the night the diorama shipped and TODO 40 gave it this map own list, so the claim got
+       stronger rather than weaker: whatever a prop up here asks for has to be something the ski
+       field DECLARES. A prop answering a carpark mission is the lie TODO 55 was sent to fix. The ski
+       boot is called a SKI BOOT for the same reason - a prop NAME is a detector in this engine, and
+       anything called boot scores the carpark bonus the moment it is carried far enough. */
     { const n=nm=>G.props.filter(p=>p.name===nm).length;
       ok(n('ski')===5&&n('ski pole')===3&&n('ski goggles')===2&&n('ski boot')===1&&n('rubbish')===1,
          'the racks hold five skis, three poles, two goggles, a boot and a bit of litter ('+
          G.props.map(p=>p.name).join(', ')+')');
       ok(G.props.length===12,'twelve props and nothing else ('+G.props.length+')');
-      ok(G.props.every(p=>!p.mission&&!p.missionFar&&!p.missionProg),
-         'and not one of them claims a mission ('+G.props.filter(p=>p.mission||p.missionFar||p.missionProg)
-         .map(p=>p.name).join(',')+')');
+      { const claimed=p=>[p.mission,p.missionFar,p.missionProg].filter(Boolean);
+        const stray=G.props.filter(p=>claimed(p).some(id=>!G.missions.some(m=>m.id===id)));
+        ok(stray.length===0,'every mission a prop claims is one this map declares ('+
+           (stray.length?stray.map(p=>p.name+'->'+claimed(p).join('/')).join(', '):'no strays')+')');
+        ok(G.props.some(p=>claimed(p).length),'and some of them do claim one, which is TODO 40 ('+
+           G.props.filter(p=>claimed(p).length).length+' of '+G.props.length+')'); }
       ok(G.props.every(p=>p.name!=='boot'),'nothing up here is called boot, which is a detector and not a name');
       ok(G.props.every(p=>!p.food&&!p.shiny),'nothing is food or shiny, so no counted economy is shadowed');
       ok(G.inter.length===G.props.length&&G.inter.every(it=>it.kind==='prop'),
@@ -3261,6 +3266,163 @@ C.section('THE CLUB SKI FIELD - the second map boots, and it is a map and not a 
   }
   ok(Object.keys(X.BIOME.ALL).length===2,'the section leaves the two real maps registered ('+
      Object.keys(X.BIOME.ALL).join(',')+')');
+}
+
+C.section('THE CLUB FIELD TO-DO LIST - the second map stops handing out carpark jobs');
+/* TODO 40. TODO 39 shipped a map and left one lie standing on it, said out loud in that log entry:
+   defineMissions was one hardcoded carpark list, so the ski field opened with eight pages about a
+   campervan, a hut and a road - none of them on the mountain, none of them finishable there. Same
+   class as the cage hint in 55 and the carpark teaching in 58, and the same fix a third time: the
+   list is declared beside the builder.
+   THREE THINGS IN THE ENGINE HAD THE CARPARK WRITTEN INTO THEM, and each one is a throw or a dead
+   end for the second list rather than a matter of taste:
+     missionDone unlocked the mission whose id is literally apex, with no guard, in the one code path
+       a player reaches once - so the first map without an apex would have thrown on its last job;
+     checkFinale WAS the carpark sentence - four humans in pursuit, then home to the nest - which a
+       map with nobody on it can never satisfy, so arm() and check() are declared with the mission;
+     checkMisc was a run of carpark detectors behind a carpark guard, so a mission may now carry its
+       own check() and the ski field four are all about PLACE.
+   AND THE PROOF THAT MATTERS MOST IS THE NEGATIVE ONE: not one job on either map can be finished on
+   the other. */
+{
+  const B=X.BIOME, S=X.SKI, ST=X.STARS;
+  const M2=id=>(G.missions||[]).find(m=>m.id===id)||{};      // law 14: never read .done off a find
+  const hold=(x,z,y,n)=>{ const k=kq(); for(let i=0;i<(n||6);i++){ k.x=x;k.z=z;k.y=y;k.vy=0;k.grounded=true; X.update(1/60); } };
+  try{
+    X.SAVE.wipe&&X.SAVE.wipe();
+    X.boot({biome:'skifield'}); X.startGame(1); tick(8); park();
+
+    // 1. THE LIST IS THIS MAP LIST, and the pages are its own.
+    ok(JSON.stringify(G.chapters)==='["THE ROPE TOW","THE DAY LODGE"]',
+       'the ski field opens on its own two pages ('+JSON.stringify(G.chapters)+')');
+    ok(G.missions.length===9,'nine jobs including the finale ('+G.missions.length+')');
+    ok(ST.rows(G.chapters[0]).length===4&&ST.rows(G.chapters[1]).length===4,
+       'four rows on each page ('+ST.rows(G.chapters[0]).length+' and '+ST.rows(G.chapters[1]).length+')');
+    ok(G.missions.filter(m=>m.finale).length===1,'exactly one finale ('+
+       G.missions.filter(m=>m.finale).map(m=>m.id).join(',')+')');
+    ok(!G.missions.some(m=>m.bonus),'and no bonus page, because this map has not earned one yet');
+
+    /* 2. NOT ONE CARPARK JOB IS ON THE HILL, which is the lie this piece exists to remove. Read
+       against the carpark list itself rather than against a list of ids typed in here, so a mission
+       added to either map tomorrow is covered by the same assertion. */
+    const skiIds=G.missions.map(m=>m.id);
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+    const cpIds=G.missions.map(m=>m.id);
+    const overlap=skiIds.filter(id=>cpIds.indexOf(id)>=0);
+    ok(overlap.length===0,'no id appears on both maps ('+(overlap.join(',')||'none')+')');
+    ok(cpIds.indexOf('s_ski')>=0&&skiIds.indexOf('s_ski')<0,
+       'the carpark keeps its own ski corner jobs and the ski field is not handed them ('+
+       cpIds.filter(i=>i.charAt(0)==='s'&&i.charAt(1)==='_').join(',')+')');
+    ok(cpIds.length===43&&G.chapters.length===8,
+       'and the carpark list is exactly what it always was ('+cpIds.length+' jobs, '+G.chapters.length+' pages)');
+
+    // 3. EVERY JOB ON THE HILL IS DRIVEN, by the verbs a player has.
+    X.boot({biome:'skifield'}); X.startGame(1); tick(8); park();
+    { for(let i=0;i<3;i++){ const p=takeProp('ski pole');
+        if(p)dropAt(kq().x+1.2+i,0.3,kq().z+1.2); tick(2); }
+      ok(M2('k_poles').done===true,'three poles redistributed ('+(M2('k_poles').n||0)+' of 3)'); }
+    { const g=takeProp('ski goggles');
+      ok(!!g&&M2('k_goggles').done===true,'the goggles are taken and WORN, which is what the row asks ('+
+         (g?g.name:'none')+')'); }
+    { const b=G.props.find(p=>p.name==='ski boot');
+      if(b){ perchAt(b.x,b.z,0.3); tap(P1.grab); tick(2);
+        dropAt(b.home.x+16,0.3,b.home.z+2); tick(4); }
+      ok(M2('k_boot').done===true,'the boot is lost, thoroughly ('+
+         (b?Math.hypot(b.x-b.home.x,b.z-b.home.z).toFixed(1):'none')+' from home, needs 12)'); }
+    { hold(G.towWheel.position.x,G.towWheel.position.z,G.towWheel.position.y,8);
+      ok(M2('k_wheel').done===true,'the bull wheel is perched'); }
+    { hold(S.TOW.x,S.TOW.base,2.2,8);
+      ok(M2('k_shed').done===true,'the engine shed roof is supervised from'); }
+    { hold(S.LODGE.x,S.LODGE.z,3.6,8);
+      ok(M2('k_roof').done===true,'and the lodge roof is stood on'); }
+    { const p=G.props.find(pp=>pp.name==='ski'&&!pp.heldBy&&!pp.banked);
+      if(p){ perchAt(p.x,p.z,Math.max(0.3,p.y)); tap(P1.grab); tick(2);
+        dropAt((S.PISTE.x0+S.PISTE.x1)/2,0.3,10); tick(4); }
+      ok(M2('k_ski').done===true,'and a ski is out on the groomed band ('+
+         (p?p.x.toFixed(1)+','+p.z.toFixed(1):'none')+')'); }
+    { let n=0;
+      for(const nm of ['ski pole','ski goggles','ski']){
+        for(let i=0;i<2&&n<3;i++){ const p=takeProp(nm); if(!p)break;
+          dropAt(G.nestPos.x,G.nestY+0.1,G.nestPos.z); tick(6);
+          if(p.banked)n++; } }
+      ok(M2('k_stash').done===true,'and the nest is furnished with three pieces of other people kit ('+
+         G.props.filter(p=>p.banked).length+' banked)'); }
+
+    /* 4. THE FINALE. It is locked while the list is open, live the moment it closes - this map
+       declares no arming, because there is nobody on it to make anything happen first - and it is
+       won at the top station and nowhere else. */
+    ok(G.finaleOn===true,'the list closed, so the finale is on');
+    ok(M2('k_summit').locked===false,'and the summit is unlocked ('+M2('k_summit').locked+')');
+    ok(G.won===false,'nothing is won yet, because nobody has been up there');
+    hold(S.TOW.x,S.TOW.base,2.2,4);
+    ok(G.won===false,'and standing at the BOTTOM station is not the top one');
+    hold(S.TOW.x,S.TOW.top,3.2,10);
+    ok(G.won===true,'perching the top station wins the map');
+    ok(M2('k_summit').done===true,'and the finale row is ticked, by flag and not by the name apex');
+
+    /* 5. THE STARS LAND ON THIS MAP PAGES, which is the collision the save slots were built for -
+       and until tonight it could only be tested with two maps sharing one page list. */
+    ok(ST.rec(G.chapters[0]).cleared===true&&ST.rec(G.chapters[1]).cleared===true,
+       'both ski field pages are cleared ('+ST.pips(G.chapters[0])+' and '+ST.pips(G.chapters[1])+')');
+    X.SAVE.write();
+    { const blob=X.SAVE.migrate(X.SAVE.load())||{biomes:{}};
+      const slot=(blob.biomes||{}).skifield||{};
+      const areas=slot.areas||[];
+      ok(areas.length===2&&areas[0]==='THE ROPE TOW',
+         'the save slot for this map lists ITS pages ('+areas.join(' | ')+')');
+      ok(!!(slot.stars||{})['THE ROPE TOW'],'and its stars are keyed by them');
+      ok(!((blob.biomes||{}).carpark),'while the carpark slot is untouched, because nothing happened there ('+
+         Object.keys(blob.biomes||{}).join(',')+')'); }
+    { const m=X.TOUR.model();
+      ok(m.pins[1].pages===2&&m.pins[1].of===2*ST.KINDS.length,
+         'and the brochure reads the ski field denominator off its own page count ('+
+         m.pins[1].stars+' of '+m.pins[1].of+')'); }
+
+    /* 6. THE TEACHING IS GATED THE WAY PIECE 55 GATED IT. Four hints, and the summit one says
+       nothing at all until the finale unlocks - which is the mission gate doing exactly what it was
+       kept for, on a hint that would otherwise spoil the end of the map. */
+    { const mids=(G.hints||[]).map(h=>h.mid);
+      ok(mids.length===4&&mids.indexOf('k_wheel')>=0&&mids.indexOf('k_summit')>=0,
+         'the ski field puts four hints on the board ('+mids.join(',')+')');
+      ok(mids.every(id=>G.missions.some(m=>m.id===id)),'every one of them names a job this map has');
+      /* THE SAVE HAS TO GO FIRST, and this cost a finding before it was an assertion: the write
+         above banked a FINISHED map, so the next boot hydrated every job as done and every hint went
+         quiet - which is the mission gate working exactly as designed and my own test reading it as
+         a failure. FLAKES law 1 with the save on top of it. */
+      X.SAVE.wipe&&X.SAVE.wipe();
+      X.boot({biome:'skifield'}); X.startGame(1); tick(8); park();
+      ok(G.missions.every(m=>!m.done),'a wiped save opens the list unfinished again ('+
+         G.missions.filter(m=>m.done).length+' done)');
+      const k=kq();
+      X.setPrompt(0,''); hold(S.TOW.x,S.TOW.top+1.2,0.3,4); X.HINTS.scan(k);
+      ok(G.hintNow[0]===null,'standing at the top station teaches nothing while the summit is locked ('+
+         G.hintNow[0]+')');
+      X.setPrompt(0,''); hold(G.towWheel.position.x,G.towWheel.position.z+2,0.3,4); X.HINTS.scan(k);
+      ok(G.hintNow[0]==='k_wheel','while the wheel hint speaks, because that job is open ('+G.hintNow[0]+')');
+      for(const m of G.missions)if(!m.finale&&!m.done)X.done(m.id);
+      tick(4);
+      X.setPrompt(0,''); hold(S.TOW.x,S.TOW.top+1.2,0.3,4); X.HINTS.scan(k);
+      ok(G.hintNow[0]==='k_summit','and the summit hint speaks the moment the list is done ('+G.hintNow[0]+')'); }
+
+    /* 7. THE COOP BADGE IS A COOP BADGE, and the assertion is that one bird cannot do it: the roof
+       is the same roof, and it takes two. */
+    X.boot({biome:'skifield'}); X.startGame(2); tick(8); park();
+    { ok(M2('k_duet').coop===true,'two-bird runs get a coop row on the lodge page ('+M2('k_duet').label+')');
+      const a=G.keas[0], b=G.keas[1];
+      for(let i=0;i<8;i++){ a.x=S.LODGE.x; a.z=S.LODGE.z; a.y=3.6; a.vy=0;
+        b.x=-49; b.z=-49; b.y=0; X.update(1/60); }
+      ok(M2('k_duet').done!==true,'one bird on the roof is not a duet');
+      for(let i=0;i<8;i++){ for(const kk of [a,b]){ kk.x=S.LODGE.x+(kk===a?-1:1); kk.z=S.LODGE.z; kk.y=3.6; kk.vy=0; } X.update(1/60); }
+      ok(M2('k_duet').done===true,'both beaks up there is'); }
+  } finally {
+    /* NAME THE BIOME ON THE WAY OUT. A plain X.boot() does NOT go home: buildWorld falls back to
+       G.biome before the default, so a bare boot after this section stays on the mountain and every
+       section after it would have run up there. */
+    X.SAVE.wipe&&X.SAVE.wipe();
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+  }
+  ok(G.biome==='carpark'&&G.chapters.length===8,'the section hands the carpark back its own list ('+
+     G.biome+', '+G.chapters.length+' pages)');
 }
 
 C.section('PERF FLOOR');
