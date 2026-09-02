@@ -2967,3 +2967,50 @@ patch is gauntlet/parked/todo67-park-the-feed.patch and applies clean to capture
   discrete states, which is what an easing camera looks like.
 - EYEBALL, if you want to judge it before applying: the caption is the top-centre strip of any
   pinned frame - gauntlet/capture/baseline/20_dead_rear.png is the clearest.
+
+### PIECE 61 — subject-boxes-03-13-18 — harness-side, game md5 8232590523658dfc3f5a1fe59a916de0
+Verdict: green for three of the four; the fourth is blocked on TODO 69 and the probe is what proved
+it. Coverage goes from 8 subjects to 11.
+- BOXES BY EYE, per the brief and the boxdiff header, which records both automated attempts as
+  worthless and says reading them off the frame is ten minutes and correct. It was.
+- ABSENT MEASURED THE SKI-FIELD WAY: a copy of capture.mjs that parks the bird at (-49,-49) every
+  frame AFTER the stage line, so a vantage that aims its camera off the bird has already aimed it.
+  03 2464 kea px present against 3 away, 13 1424 against 5, 18 1101 against 0. Floors 1600/900/700.
+- PROVED BOTH WAYS BECAUSE THE BRIEF ASKED FOR BOTH. Unchanged reshoot in the box: 1.0000, 0.9992,
+  0.9998. Subject re-posed from each vantage own stage line - 03 turned to ry 3.4, 13 to the far side
+  of the preen cycle at t 2.2 side -1, 18 turned to ry 4.4 - and the box reads 0.7503, 0.7278, 0.5139
+  against a 0.98 bar.
+- AND HERE IS THE GAP IN ONE LINE: those same three re-posed frames read 0.9517, 0.9672 and 0.9621
+  WHOLE. Two of the three pass diff.mjs 0.965 threshold with a completely different bird in them.
+- 20_dead_rear IS BLOCKED, AND THE PROBE PROVED IT RATHER THAN GUESSING. Parking its bird moved the
+  CAMERA with it - it assigns G.cams[0].position once and the follow cam eases off it - so the parked
+  probe photographs the bird at (-49,-49) and scored 135 against 200 for the real thing. Then locking
+  the camera to the position its own stage line COMPUTES gives a close-up nothing like the pinned
+  wide frame, and scored 0 with the bird present. So the pinned 20 is the eased position and cannot
+  be reproduced from its own stage line at all. No honest floor exists until TODO 69 is fixed, and a
+  guessed one is worse than none, so it is written into subjects.mjs with the numbers and left out.
+- CAPTURE: diff 28 compared 0 flagged, subjects 15 checked 0 missing, boxdiff 11 compared with only
+  the two known ones (07 at 0.9580, 17 at 0.6358) flagged. Nothing re-pinned.
+
+### TODO 30 — pin-G-time-set-wide — MEASURED, BUILT, PARKED (no piece, no commit to the rig)
+Verdict: parked for judgement, per its own brief. The patch carries BOTH 30 and 67 because they want
+ONE re-pin sweep between them: gauntlet/parked/todo30-and-67-deterministic-rig.patch.
+- THE TARGET TODO 33 NAMED IS REACHED. Five sweeps with both patches in: nineteen of twenty-eight
+  vantages under 100 px of cross-run churn and FOUR AT EXACTLY ZERO, from a set whose worst was
+  8791. 19_roof_follow 4168 -> 0, 01_carpark_wide 3996 -> 11, 06_skyline 8791 -> 130, 11_trailhead
+  4446 -> 7, 10_skifield 5822 -> 72, 13_idle_preen 6932 -> 229, 22_torch_beam 5308 -> 395. The full
+  table is in TODO 30.
+- THE GAME FILE ALREADY EXPECTED THE PIN, which is the nicest thing found tonight: the purse keys on
+  G.frames rather than G.time and says why in a comment - "the photographer pins G.time in QUIET and
+  a pinned clock would collapse every frame into one purse". Somebody wrote the defensive half a
+  session before the pin existed.
+- WHAT IS LEFT IS NAMED, not residual: 20_dead_rear 2114 (TODO 69, the easing camera), 09_colossal
+  820 (its own popups, kept on purpose by the __keaFeedKeep exception), and 12_seal_midpeel 703,
+  which is the only number tonight I cannot attribute.
+- AND THE SESSION-3 NOTE UNDERSTATED THE COST. It said every frame moves slightly. Pinning the clock
+  freezes POSES, not just the sway, because the idle animations are sines on G.time: diff.mjs goes to
+  11 flagged, worst 13_idle_preen at 0.8467, then 14_player_view 0.8884 and 16_trish 0.9166.
+  subjects.mjs still reads 15 checked 0 missing - every bird is still there, in a different phase of
+  its idle - so this is a look call and a 28-frame re-pin, which is why it is parked and not shipped.
+- 12.0 IS A FREE PARAMETER. Any value freezes the poses somewhere and 12.0 is only what the four
+  existing local pins use. Worth a sweep before the re-pin if you want the set disturbed less.

@@ -267,34 +267,49 @@ RE-PIN: 19, 21, 22 after the staging is stable. Expect a one-time move; leave fl
 NOTE: measured spread before the fix — 19 sits 0.956-0.961, 22 sits 0.944-0.950 across runs.
 
 ### 30. pin-G-time-set-wide  (harness-side only — game file untouched)
-Found in session 3 while stabilising vantage 25. The grass shader sways on uTime, so EVERY
-grass-filled frame varies with how many animation frames the settle got through. Measured: 25
-sat at 0.9949 take-to-take until G.time was pinned, then 0.9998. The same effect is the residual
-~0.002-0.003 on every grass vantage (05 at 0.9969, 03 at 0.9972, 14 at 0.9978).
-FIX: pin G.time in QUIET so all time-based animation freezes for every vantage at once, the way
-21 and 25 already do locally. Expect the whole set to land near 0.999 take-to-take.
-RE-PIN: all of them, ONCE — the sway phase freezes at whatever G.time is chosen, so every frame
-moves slightly. Judge before pinning; leave flagged for Eric.
-WHY IT WAS NOT DONE IN SESSION 3: it is a one-line change with a 25-frame re-pin behind it, and
-that sweep deserves its own piece rather than riding along inside another one.
-CORRECTION, MEASURED IN SESSION 4 — THE SCOPE IS WIDER THAN THE SSIM NUMBERS SAY, AND SO IS THE
-LIST. The session-3 sweep recorded 01_carpark_wide at 1.0000 take-to-take and filed it under
-"clean as found". That figure is wrong. Reshot twice in session 4 against nothing but itself,
-baseline out of the picture: 755 pixels differ by more than 8 grey levels, spread across the FULL
-frame width (bbox x 5..959, y 145..267 - the tussock band at the horizon), hottest 60px cells at
-x 780, 600, 660, 540, 0 and 840, all at y 180. So 01 sways exactly like the frames already on the
-list; it merely hides it better. The reason SSIM missed it is amplitude, not area: max delta is
-only 33 levels, and a low-amplitude change spread thin over a wide band moves SSIM less than the
-fourth decimal place on a 960x540 frame.
-THAT IS THE SAME BLIND SPOT AS ITEM 31, FROM THE OTHER END. 31 is a large change nobody can see
-because SSIM averages it away over the whole frame; this is a small change nobody can see for the
-same reason. Any instrument built for 31 should be pointed at this too, and a changed-pixel count
-would have caught both - it is what caught this one.
-CONSEQUENCES FOR THIS ITEM: (a) do not trust the session-3 "clean as found" column to say which
-vantages the G.time pin will move - it under-reports, so re-measure with a pixel count rather than
-SSIM before deciding what the re-pin sweep covers; (b) "expect the whole set to land near 0.999"
-is optimistic phrasing, since several frames already READ as 0.999+ while still churning
-hundreds of pixels - the honest target is a changed-pixel count near zero, not an SSIM near one.
+MEASURED AND BUILT IN SESSION 12, THEN PARKED FOR YOUR JUDGEMENT, exactly as this item asked - judge
+before pinning, leave flagged. The patch is gauntlet/parked/todo30-and-67-deterministic-rig.patch and
+it carries BOTH this and TODO 67, because they want ONE re-pin sweep between them rather than two.
+It applies clean and fastgate passes with it in.
+THE ORIGINAL COMPLAINT WAS RIGHT AND UNDERSTATED. The grass shader takes uTime straight off G.time,
+the tussock sway is sin(G.time*1.6+phase), the camp fire is four sines on it, and a dozen idle
+animations ride it - so every grass-filled frame varies with how many animation frames the settle
+got through. Four vantages already pin it locally (03, 28, 29, 30) and the patch is that same line
+applied once in QUIET at the same value, 12.0.
+AND THE GAME FILE ALREADY EXPECTED IT. The purse keys on G.frames rather than G.time, with the
+comment "the photographer pins G.time in QUIET and a pinned clock would collapse every frame into
+one purse" - so the defensive work was done a session before the pin existed. nightT is a separate
+driver, so the night vantages are unaffected.
+WHAT IT BUYS, MEASURED WITH crossrun.mjs OVER FIVE SWEEPS, both patches in, cross-run churn per
+vantage before -> after:
+    19_roof_follow  4168 ->    0     28_skifield_base  453 ->   0
+    29_lodge_deck    229 ->    0     30_groomed_band  1597 ->   0
+    24_verge_paddle 1922 ->    1     15_sign          1924 ->   2
+    14_player_view  3872 ->    5     08_readability   1480 ->   5
+    02_hut_snow     2575 ->    6     11_trailhead     4446 ->   7
+    05_tussock_grnd 2775 ->    8     01_carpark_wide  3996 ->  11
+    18_rear_close   3909 ->   13     04_flight_undwng 3086 ->  14
+    16_trish        1700 ->   15     25_preen_follow  2801 ->  15
+    21_night_camp   2399 ->   21     07_jam           2865 ->  24
+    03_kea_plate    3033 ->   37     10_skifield      5822 ->  72
+    17_flight       1951 ->   92     06_skyline       8791 -> 130
+    23_paddock_gate 1252 ->  181     13_idle_preen    6932 -> 229
+    22_torch_beam   5308 ->  395     12_seal_midpeel  3123 -> 703
+    09_colossal     2233 ->  820     20_dead_rear     5489 -> 2114
+NINETEEN OF TWENTY-EIGHT UNDER 100 PIXELS AND FOUR AT EXACTLY ZERO, from a set whose worst was 8791.
+That is the target TODO 33 named - a changed-pixel count near zero - reached. What is left is named:
+20_dead_rear is TODO 69 (its camera is live and eases), 09_colossal keeps its own popups by design
+(the __keaFeedKeep exception), and 12_seal_midpeel at 703 is the only one still unexplained.
+WHAT IT COSTS, AND WHY IT IS YOURS. diff.mjs goes to 11 flagged, worst 0.8467. The session-3 note
+said "every frame moves slightly" and slightly is wrong: pinning the clock freezes POSES, not just
+the sway, because the idle animations are sines on G.time. 13_idle_preen 0.8467, 14_player_view
+0.8884, 16_trish 0.9166, 19_roof_follow 0.9491, 12_seal_midpeel 0.9617, 20_dead_rear 0.9623 and five
+more under the bar. subjects.mjs still reads 15 checked 0 missing, so nothing has lost its subject -
+the birds are all there, in different phases of their idles.
+12.0 IS A FREE PARAMETER AND YOU MAY WANT TO CHOOSE IT. Any value freezes the poses somewhere; 12.0
+is only the value the four existing local pins use. If you would rather disturb the pinned set less,
+the value is one number in the patch and worth a sweep before the re-pin.
+RE-PIN: all 28, ONCE, judged, in daylight, together with TODO 67 out of the same patch.
 
 ### 31. a-tripwire-that-can-see-shading  (harness-side only)
 Found in session 3 by piece 9. The facet-normal smoothing changed the shading of EVERY curved hull
