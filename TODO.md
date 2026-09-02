@@ -344,7 +344,7 @@ track. THE WARNING BAND SHOULD THEREFORE BE PER-VANTAGE, not global: a threshold
 
 ## FOUND IN SESSION 4 (appended 2026-09-01 by the overnight run)
 
-### 32. rbox-bevel-swallows-wall-detail
+### 32. rbox-bevel-swallows-wall-detail  (AUDITED session 12 — the fix is still a judged look sweep)
 Found by piece 10, which nearly shipped a door sealed inside the caravan. rbox is an
 ExtrudeGeometry and three expands the shape by bevelSize (r*0.92) on the two SHAPE axes while
 leaving the EXTRUDE axis EXACT. So rbox(w,h,d,r) really measures (w + 1.84r) x (h + 1.84r) x d.
@@ -367,6 +367,28 @@ PROOF once built: the piece-10 scanline is the ready-made instrument - cut every
 body by the plane y=Y, cut that segment at the detail z, take the biggest x - so assert every
 registered flank detail has its outer face proud of the skin at its own height.
 RE-PIN: 12, 18, 20 and any caravan or ute vantage. Leave flagged for Eric.
+AUDITED IN SESSION 12, and the answer to the question this item asked - is it caravan-only - is NO.
+audits/2026-08-28/audit-bevel-flanks.js reports it; BEVELALL=1 prints every row. It is deliberately
+not a gate battery, because 32 is unfixed and an assertion here would be red by design.
+    NINE extruded bodies carry detail. 161 buried thin faces: 88 on x, 52 on y, 21 on the extrude
+    axis z - so the shape axes carry SEVEN TIMES the burial of the exact one, which is the control as
+    much as the finding. 52 panels are PROVABLY wrong rather than heuristically: they stand proud of
+    the skin on z and inside it on x or y, so one authored margin works on the exact axis and fails
+    on the bevelled ones, and the intent is on the record in the geometry.
+    THE CARAVAN reproduces this item own numbers exactly - shell 2.952 x 2.652 x 5.600, skin x 1.476,
+    with 42 buried faces on x including 1.282, 1.278, 1.257 and 1.245, which is the window frame,
+    pane, awning rail and trim list above measured from the other direction.
+    THE HUT IS THE CLEAN WITNESS, and it is one object rather than a list. rbox(7,2.6,5.4,0.1) really
+    measures 7.184 wide, and the five weatherboard lines are box(7.02,0.02,5.42): their x faces sit
+    at 3.510 against a skin of 3.592 - BURIED 0.082 - while their z faces sit at 2.710 against 2.700,
+    PROUD 0.010. The same mesh, one +0.02 margin, visible on two walls of the hut and sealed inside
+    the other two. Nobody has ever seen the grooves on the long walls.
+    THE SKI FIELD BUILDINGS ARE IN IT TOO (no brief asked; the audit walks the scene rather than a
+    handle list), as are the four parked cars, whose buried faces are mostly on y and mostly bumpers.
+WHAT IS STILL YOURS: the fix. Every one of these is a reposition onto the measured skin and a look on
+every frame it touches, which is what this item said from the start. The audit only means nobody has
+to guess the scope any more: 52 provable panels across nine bodies, not one caravan door.
+
 
 ### 33. session-to-session frame instability  (harness-side only — game file untouched)
 Found in session 4 by the piece-10 full sweep, and it is a THIRD instability class, not a restatement
