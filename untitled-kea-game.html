@@ -1459,6 +1459,37 @@ function snowSpot(x,z,r,env){
    of them - invisible under node, two maps worth of snow in the browser. A drift is a fact about one
    map. */
 const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow'];
+/* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
+   sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
+   thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
+   scene that had been thrown away, and the ski field ran with the CARPARK tow wheel on G. The
+   transcript that found it: with G.towWheel=wheel deleted from the ski field builder, the battery
+   reported the wheel at -37.9,-40 from inside the ski field - the carpark one, still being spun by
+   update every frame, and still able to answer a proximity detector at coordinates in a country
+   that was not loaded.
+   IT IS ALSO HOW THE CAST BUG HID FOR TWO SESSIONS. A stale G.ladder made a hutless boot look
+   perfectly safe in every battery, because Dave found the last map ladder and used it.
+   THE AUDIT MATTERS AS MUCH AS THE SWEEP, and it was done reader by reader before this line was
+   written: every handle below is either read behind a truthiness guard (fire, pen, vanTop, towWheel,
+   uteG, grassSh, chimneyRef, snowCap in the two places that run every frame) or read only from
+   inside an interactable that its OWN builder registered, which a map without the builder never has.
+   Nothing here needed a new guard.
+   THREE THINGS ARE DELIBERATELY NOT IN THE SWEEP, and each for its own reason:
+     G.nestPos, because it has unguarded readers BY DESIGN - the finale and the bank check read it
+       every frame - and every map declares one, so nulling it would trade a stale value for a throw;
+     G.nestStash, G.spikeStash and G.nailStash, because they count what the PLAYER has done rather
+       than what a build put out;
+     the lists below are emptied rather than nulled, because a reader that counts them should read
+       nothing rather than throw.
+   THE LATCHES GO TOO. _chCol caches a collider computed off the old chimney mesh, _qtDone latches a
+   table cleared in a country that no longer exists, the paddle flags belong to the paddle that was
+   just discarded, and the kea gym is a mesh in the thrown-away scene - a run put it there, but a
+   build is what invalidated it. */
+const WORLDHANDLES=['towWheel','ladder','signG','nestG','uteG','paddle','snowCap','chimneyRef',
+  'chilly','chillyLidG','bin','fire','tarp','pen','penGate','vanTop','vanDoor','cage','skiGround',
+  'gym','_chCol'];
+const WORLDLISTS=['gravel','stones','wear'];
+const WORLDFLAGS={nestY:0,gymOut:false,paddleFlipped:false,paddleDone:false,paddleFlips:0,_qtDone:0};
 
 /* ---------- THE BIOME REGISTRY (TODO 36, the tour chassis) ----------
    The tour turns this game into separate maps, one diorama per biome. Nothing about that can start
@@ -1479,6 +1510,9 @@ function buildWorld(biome){
   const b=biomeOf(biome||G.biome||BIOME_DEFAULT);
   G.biome=b.id;
   for(const r of WORLDREGS)if(Array.isArray(G[r]))G[r].length=0;
+  for(const h of WORLDHANDLES)G[h]=null;                 // TODO 62: and the handles, above the biome
+  for(const l of WORLDLISTS)G[l]=[];
+  for(const k in WORLDFLAGS)G[k]=WORLDFLAGS[k];
   b.build();
 }
 function buildCarpark(){
@@ -4910,7 +4944,7 @@ if(typeof globalThis!=='undefined'){
     JAIL:{SQUAWK,coop:coopCell,dir:squawkDir,fire:squawkFire,ping:squawkUpdate},
     LEDGER:{actorOf,add:ledgerAdd,of:ledgerOf,total:ledgerTotal},
     HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
-    WORLDREGS,
+    WORLDREGS,WORLDHANDLES,WORLDLISTS,WORLDFLAGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
     SKI:{SNOW:SKISNOW,TOW:SKITOW,PISTE:SKIPISTE,LODGE:SKILODGE,NEST:SKINEST},
     TRAFFIC:{of:biomeTraffic,spawn:spawnTraffic},

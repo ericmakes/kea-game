@@ -2630,3 +2630,45 @@ now it has its own. Eight jobs and a finale on two pages, every one of them answ
 - EYEBALL: gauntlet/capture/28_skifield_base.png and 30_groomed_band.png (both changed, both still
   first pins, nothing pinned), and gauntlet/capture/probe_todo_skifield.png - the to-do list on the
   mountain, which is the whole piece in one picture.
+
+### PIECE 62 — build-handles-swept — CERTIFIED 789c9056e7c0e0d96007888e4aa22389
+Verdict: green. The last thing a build put on the board that the dispatcher never took back off it -
+filed by piece 39 the same night, fixed here, and the only reason it is worth its own commit is the
+reader audit rather than the sweep.
+- WORLDREGS covered every LIST a build fills. It did not cover the HANDLES - one object per thing a
+  map has exactly one of - so after a carpark boot all twenty-one of them still pointed at meshes in
+  a scene that had already been thrown away.
+- THE TRANSCRIPT THAT FOUND IT, kept in the section because it is better than any description: with
+  G.towWheel=wheel deleted from the ski field builder, the battery reported the wheel at -37.9,-40
+  FROM INSIDE THE SKI FIELD. The carpark one, still spun by update every frame, and still able to
+  answer a proximity detector at coordinates in a country that was not loaded.
+- AND IT IS HOW THE CAST BUG HID FOR TWO SESSIONS: a stale G.ladder made a hutless boot look
+  perfectly safe in every battery, because Dave found the LAST map ladder and climbed that.
+- THE AUDIT IS HALF THE PIECE, and it is the half that decided the shape. Every handle was read
+  reader by reader BEFORE the sweep was written: fire, pen, vanTop, towWheel, uteG, grassSh,
+  chimneyRef and the two per-frame snowCap reads are already behind truthiness guards, and every
+  other reader lives inside an interactable that its own builder registered - which a map without
+  that builder never has. So the sweep needed NO new guards, and the soak is what proves that claim
+  rather than my reading of it: thirty seconds of a solo run plus fifteen of a two-bird run with a
+  match on it, on bare ground with no fire, no bin, no ute, no hut and no cast, night driver going
+  and the traffic timer wound to zero. Nothing throws.
+- THREE CLASSES, THREE TREATMENTS, and the exceptions are asserted so they are decisions rather than
+  oversights: handles go to NULL (21 of them), the three data lists are EMPTIED rather than nulled so
+  anything counting them reads nothing instead of throwing, and six latches go back to their own
+  defaults - nestY, gymOut, the three paddle flags and _qtDone.
+- G.nestPos IS DELIBERATELY NOT SWEPT, and the sabotage that adds it lands five findings including a
+  throw: the finale and the bank check read it every frame with no guard BY DESIGN, and every map
+  declares one, so nulling it trades a stale value for a crash. The stash counters are left alone
+  too - they count what the player has done, not what a build put out.
+- TWO STALE THINGS THIS QUIETLY FIXED that nobody had filed. G._qtDone latches the cleared picnic
+  table, so once q_table was done in a process, a rebuilt carpark could never pay for it again; and
+  G.gymOut kept the kea gym deployed, so the ranger would never put a fresh decoy out in the next
+  map while the old one sat in a discarded scene.
+- FIVE SABOTAGES: four caught by findings, and the fifth - running the sweep AFTER the build instead
+  of before it - caught by the GATE rather than by an assertion, because it kills the game outright.
+  Trace attributed rather than shrugged at, per law 14: castCarpark reading G.ladder.x at the first
+  startGame in the file, which is game code dying and not a fuse in a test. TODO 46 is why that is
+  a red gate instead of a pass.
+- CAPTURE: 25 compared, 0 flagged. No frame could move - the sweep draws no randoms and the carpark
+  refills every handle it had - and it is asserted rather than assumed: coming back rebuilds exactly
+  the handles it had, by name.

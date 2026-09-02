@@ -1078,3 +1078,14 @@ PROOF: the dispatcher nulls a declared list of handles; a biome that does not se
 rather than the last map value; and the ONE BUILD ONE WORLD section grows a handle sweep beside its
 registry sweep. Watch for readers that are NOT guarded once the value can be undefined - that sweep
 is the risky half, and vantage 15 reads G.signG from the rig.
+DONE session 11 (789c9056e7c0e0d96007888e4aa22389). Twenty-one handles nulled, three data lists
+emptied rather than nulled, six latches back to their defaults - all in the dispatcher, above the
+biome, so a biome author cannot forget it.
+THE RISKY HALF TURNED OUT TO BE ALREADY SAFE, and that was established by reading every reader before
+writing the sweep: the cross-map ones are all behind truthiness guards, and the rest live inside
+interactables their own builder registered. No new guards. The soak is the proof - thirty seconds
+solo plus fifteen two-bird with a match, on bare ground, night on, traffic timer at zero.
+G.nestPos IS NOT SWEPT ON PURPOSE (unguarded readers by design, every map declares one), nor are the
+stash counters (the player, not the map). Both asserted, so they read as decisions.
+AND IT QUIETLY FIXED TWO STALE LATCHES nobody had filed: G._qtDone meant a rebuilt carpark could
+never pay for the picnic table again, and G.gymOut kept the kea gym deployed into the next map.

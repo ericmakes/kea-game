@@ -3107,7 +3107,10 @@ C.section('THE CLUB SKI FIELD - the second map boots, and it is a map and not a 
       let st=null;
       try{ X.boot({biome:'skifield'}); X.startGame(1); tick(8); }catch(e){ st=e&&e.message||String(e); }
       ok(!st,'while the ski field boots with no ladder in the world at all ('+(st||'no throw')+')');
-      ok(G.ladder===undefined,'and it never invented one ('+String(G.ladder)+')'); }
+      /* NULL RATHER THAN undefined SINCE TODO 62, and that is the stronger answer: the dispatcher
+         actively clears it on the way in, so the ski field is not merely a map that never set a
+         ladder, it is a map that could not inherit one. */
+      ok(!G.ladder,'and it never inherited one either ('+String(G.ladder)+')'); }
 
     // 4. THE NEST IS THIS MAP NEST, and the carpark one is where it always was afterwards.
     ok(!!G.nestPos&&G.nestPos.x===S.NEST.x&&G.nestPos.z===S.NEST.z,
@@ -3423,6 +3426,100 @@ C.section('THE CLUB FIELD TO-DO LIST - the second map stops handing out carpark 
   }
   ok(G.biome==='carpark'&&G.chapters.length===8,'the section hands the carpark back its own list ('+
      G.biome+', '+G.chapters.length+' pages)');
+}
+
+C.section('A BUILD TAKES ITS HANDLES BACK OFF THE BOARD - the last thing the dispatcher missed');
+/* TODO 62, found in session 11 by the piece 39 sabotage sweep rather than by a brief. WORLDREGS
+   covered every LIST a build fills; it did not cover the HANDLES - one object per thing a map has
+   exactly one of - so after a carpark boot every one of them still pointed at a mesh in a scene that
+   had already been thrown away, and the ski field ran with the CARPARK tow wheel on G.
+   THE TRANSCRIPT THAT FOUND IT is the one worth keeping: with G.towWheel=wheel deleted from the ski
+   field builder, this battery reported the wheel at -37.9,-40 FROM INSIDE THE SKI FIELD. That is the
+   carpark wheel, still being spun by update every frame, and still able to answer a proximity
+   detector at coordinates in a country that was not loaded.
+   IT IS ALSO HOW THE CAST BUG HID FOR TWO SESSIONS: a stale G.ladder made a hutless boot look
+   perfectly safe in every battery, because Dave found the LAST map ladder and climbed that.
+   THE AUDIT IS THE OTHER HALF OF THE PIECE. Every handle was read reader by reader first, and every
+   cross-map reader was already behind a truthiness guard or inside an interactable its own builder
+   registered - so the sweep needed no new guards, and the soak below is what proves that claim
+   rather than the reading of it. */
+{
+  const B=X.BIOME, HS=X.WORLDHANDLES, LS=X.WORLDLISTS, FL=X.WORLDFLAGS;
+  try{
+    // 1. THE CARPARK FILLS THEM, which is what makes the sweep worth doing at all.
+    X.boot({biome:'carpark'}); X.startGame(1); tick(8); park();
+    const filled=HS.filter(h=>!!G[h]);
+    ok(filled.length>=12,'a carpark build hangs a dozen handles on G ('+filled.length+' of '+HS.length+': '+
+       filled.join(',')+')');
+    ok(LS.every(l=>Array.isArray(G[l])&&G[l].length>0),'and fills its three lists ('+
+       LS.map(l=>l+':'+(G[l]||[]).length).join(' ')+')');
+    ok(!!G.towWheel&&Math.abs(G.towWheel.position.x-(-37.9))<0.2,
+       'including the carpark tow wheel, at the ski corner where it is built ('+
+       (G.towWheel?G.towWheel.position.x.toFixed(1)+','+G.towWheel.position.z.toFixed(1):'none')+')');
+
+    /* 2. AND A BIOME THAT DOES NOT BUILD A THING DOES NOT HAVE IT. The bare-ground biome is the
+       sharpest form of the question - not a map missing one hut, a map with nothing at all - and it
+       is the same stand-in TODO 58 used for the hints. */
+    B.define('bareground',{label:'BARE GROUND',build:()=>{}});
+    X.boot({biome:'bareground'});
+    const kept=HS.filter(h=>!!G[h]);
+    ok(kept.length===0,'a build with nothing in it leaves not one handle standing ('+
+       (kept.join(',')||'none')+')');
+    ok(LS.every(l=>Array.isArray(G[l])&&G[l].length===0),
+       'the lists are EMPTIED rather than nulled, so anything counting them reads nothing ('+
+       LS.map(l=>l+':'+JSON.stringify(G[l])).join(' ')+')');
+    for(const k in FL)ok(G[k]===FL[k],'and the latch G.'+k+' is back to its own default ('+G[k]+')');
+
+    /* 3. THE ONES DELIBERATELY LEFT ALONE, asserted so that the exceptions are a decision rather
+       than an oversight. G.nestPos has unguarded readers by design - the finale and the bank check
+       read it every frame - so nulling it would trade a stale value for a throw. */
+    ok(!!G.nestPos&&typeof G.nestPos.x==='number',
+       'G.nestPos survives the sweep on purpose, because every map declares one ('+
+       JSON.stringify(G.nestPos)+')');
+    ok(HS.indexOf('nestPos')<0&&LS.indexOf('nestPos')<0,'and it is not on either list');
+    ok(HS.indexOf('nestStash')<0,'nor is the stash count, which is the player and not the map');
+
+    /* 4. NOTHING THROWS FOR THE WANT OF ANY OF THEM, which is the claim the reader audit makes and
+       this is the test of it: a whole minute of a real run, in both modes, with the night driver
+       going and the traffic timer wound to zero, on a map with no fire, no bin, no ute, no hut and
+       no cast. */
+    { let threw=null;
+      try{ X.startGame(1); for(let i=0;i<1800;i++){ if(i===600){G.night=true;G.nightManual=true;}
+             if(i===1200){G.trafT.a=0;G.trafT.b=0;} X.update(1/60); } }
+      catch(e){ threw=(e&&e.message||String(e))+' @ '+String(e&&e.stack).split('\n')[1]; }
+      ok(!threw,'thirty seconds of a solo run on bare ground throws nothing ('+(threw||'no throw')+')');
+      let threw2=null;
+      try{ X.startGame(2); for(let i=0;i<900;i++)X.update(1/60);
+           X.VS.start({len:'short'}); for(let i=0;i<900;i++)X.update(1/60); }
+      catch(e){ threw2=(e&&e.message||String(e))+' @ '+String(e&&e.stack).split('\n')[1]; }
+      ok(!threw2,'and a two-bird run with a match on it throws nothing either ('+(threw2||'no throw')+')'); }
+
+    // 5. THE SKI FIELD BRINGS ITS OWN, and the wheel is the one that proves the point.
+    X.boot({biome:'skifield'}); X.startGame(1); tick(8);
+    ok(!!G.towWheel&&Math.abs(G.towWheel.position.x-X.SKI.TOW.x)<0.01,
+       'the ski field wheel is the ski field one ('+
+       (G.towWheel?G.towWheel.position.x.toFixed(1)+','+G.towWheel.position.z.toFixed(1):'none')+')');
+    ok(!G.ladder&&!G.fire&&!G.bin&&!G.uteG&&!G.snowCap,
+       'and it has no ladder, fire, bin, ute or roof snow, because it builds none of them ('+
+       ['ladder','fire','bin','uteG','snowCap'].filter(h=>!!G[h]).join(',')+' present)');
+    ok((G.gravel||[]).length===0&&(G.stones||[]).length===0&&(G.wear||[]).length===0,
+       'the carpark grit, stones and desire paths did not come up the hill with us');
+
+    // 6. AND THE CARPARK GETS ALL OF IT BACK, because a sweep that loses something is worse.
+    X.boot({biome:'carpark'}); X.startGame(1); tick(8);
+    const back=HS.filter(h=>!!G[h]);
+    ok(back.length===filled.length&&back.join(',')===filled.join(','),
+       'coming back rebuilds exactly the handles it had ('+back.length+' vs '+filled.length+')');
+    ok(!!G.towWheel&&Math.abs(G.towWheel.position.x-(-37.9))<0.2,
+       'the wheel is the carpark one again ('+(G.towWheel?G.towWheel.position.x.toFixed(1):'none')+')');
+    ok(LS.every(l=>(G[l]||[]).length>0),'and its three lists are full again ('+
+       LS.map(l=>l+':'+(G[l]||[]).length).join(' ')+')');
+  } finally {
+    delete B.ALL.bareground;
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+  }
+  ok(Object.keys(X.BIOME.ALL).length===2,'and the stand-in is out of the registry ('+
+     Object.keys(X.BIOME.ALL).join(',')+')');
 }
 
 C.section('PERF FLOOR');
