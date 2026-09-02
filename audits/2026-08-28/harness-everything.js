@@ -1426,6 +1426,84 @@ C.section('THE CO-OP CELL - the clock stops, the key squawks, and the latch is t
     ok(G.squawk===null,'startGame cleared it, and nothing is left pointing at the old cell'); }
 }
 
+C.section('SCORE ATTRIBUTION - every point lands on exactly one book, and they add up');
+// TODO 16. The brief asked for the acting kea to be THREADED through award(). It is derived
+// instead: the loop over G.keas names the bird whose frame it is, award() reads that, and the three
+// awards that fire outside the loop pass the bird by hand. The invariant below is what makes the
+// split worth anything - score is the sum of the books at every instant, so no VS scoreboard built
+// on them can disagree with the number on the HUD.
+{
+  const L=X.LEDGER, P2=H.P2;
+  const books=()=>[L.of(0),L.of(1),G.ledgerLoose||0];
+  ok(G.score===L.total(),'the books already add up to the score on arrival ('+G.score+' vs '+L.total()+')');
+
+  X.startGame(2); tick(8); park();
+  const a=G.keas[0], b=G.keas[1];
+  ok(G.score===L.total(),'and a restart does not break that, because the ledgers outlive it exactly as the score does ('+
+     G.score+' vs '+L.total()+')');
+
+  // ---- TWO BIRDS, TWO BOOKS, THROUGH REAL INTERACTABLES ----
+  // FLAKES law 3: isolate. Both birds are on the board, so the one not acting is parked far away
+  // where it cannot reach the target and take the award off the bird under test.
+  /* THE TARGETS ARE NAMED, NOT TAKEN OFF THE TOP OF THE LIST. The first pass took whatever came
+     first and drew FLIP THE ROADWORKS PADDLE, whose award sits behind a one-shot G.paddleDone that
+     an earlier section had already spent - so the bird pecked a real target, completed it, and
+     earned nothing. These two pay unconditionally every time they are opened, and they are at
+     opposite ends of the carpark. Label fragments are the house idiom here; peckL uses the same. */
+  const pk=f=>G.inter.find(it=>it.kind==='peck'&&!it.done&&it.label&&it.label.indexOf(f)>=0&&
+                               !(it.locked&&it.locked())&&it.getPos);
+  const pecks=[pk('HANDBAG'),pk('BACKPACK')];
+  ok(!!pecks[0]&&!!pecks[1],'both named peck targets are still open ('+
+     pecks.map(p=>p?p.label:'MISSING').join(', ')+')');
+  const peckWith=(k,map,it)=>{ const q=it.getPos();
+    const yy=Math.max(0.25,q.y-0.3,X.groundHeightAt(q.x,q.z,3)+0.02);
+    for(let n=0;n<(it.needHits||1)+1;n++){
+      for(let i=0;i<2;i++){ k.x=q.x; k.z=q.z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); }
+      tap(map.grab); tick(2); } };
+  const far=k=>{ k.x=46; k.z=46; k.y=0.25; k.vy=0; k.grounded=true; };
+
+  far(b); const s0=G.score, k0=books();
+  peckWith(a,P1,pecks[0]);
+  const dS=G.score-s0, d0=L.of(0)-k0[0], d1=L.of(1)-k0[1], dL=(G.ledgerLoose||0)-k0[2];
+  ok(dS>0,'bird one earned something real off a peck target ('+dS+' chaos)');
+  ok(d0===dS,'and every point of it went on bird one book ('+d0+' of '+dS+')');
+  ok(d1===0&&dL===0,'with nothing on the partner book and nothing loose ('+d1+', '+dL+')');
+
+  far(a); const s1=G.score, k1=books();
+  peckWith(b,P2,pecks[1]);
+  const eS=G.score-s1, e0=L.of(0)-k1[0], e1=L.of(1)-k1[1];
+  ok(eS>0,'bird two earns off its own target ('+eS+' chaos)');
+  ok(e1===eS&&e0===0,'and it lands on bird two book, not on the one that went first ('+e1+' vs '+e0+')');
+  ok(L.of(0)>0&&L.of(1)>0&&L.of(0)!==L.of(1),'the two books are separately populated and not the same number ('+
+     L.of(0)+' / '+L.of(1)+')');
+  ok(G.score===L.total(),'and the shared total is still exactly the sum of them ('+G.score+' vs '+L.total()+')');
+
+  // ---- WHAT THE STACK CANNOT SEE GOES LOOSE, NOT ONTO A BIRD ----
+  // an award raised from outside any kea frame - which is what the traffic jam does - is counted
+  // but not credited. The alternative is worse: crediting whichever bird updated last.
+  { const k2=books(), s2=G.score;
+    ok(G.actor===null,'no bird owns the frame between updates');
+    X.award(30,'STAGED: NOBODY DID THIS',{x:0,y:1,z:0});
+    ok(G.score-s2>0,'the points still reach the shared score ('+(G.score-s2)+')');
+    ok(L.of(0)===k2[0]&&L.of(1)===k2[1],'but neither book moved');
+    ok((G.ledgerLoose||0)-k2[2]===G.score-s2,'they went loose, all of them ('+((G.ledgerLoose||0)-k2[2])+')');
+    ok(G.score===L.total(),'and loose still counts toward the sum, so the invariant holds'); }
+
+  // ---- AN EXPLICIT ACTOR BEATS THE STACK, which is what the three hand-passed sites rely on ----
+  { const k3=books();
+    G.actor=a; X.award(10,'STAGED: CREDITED ELSEWHERE',{x:0,y:1,z:0},b); G.actor=null;
+    ok(L.of(1)-k3[1]>0&&L.of(0)-k3[0]===0,'the bird named at the call site is credited, not the bird holding the frame');
+    ok(L.actorOf(0)===0,'an index names a bird, and index zero is a bird rather than a falsy nothing');
+    ok(L.actorOf(undefined)===-1&&L.actorOf(null)===-1,'and nothing named with no frame open is nobody, which is what loose means'); }
+
+  // ---- A RESTART DOES NOT REWRITE HISTORY ----
+  { const t0=L.total(), sc=G.score;
+    X.startGame(2); tick(4);
+    ok(L.total()===t0&&G.score===sc,'startGame leaves both the score and the books where they were ('+
+       L.total()+' vs '+t0+')');
+    ok(G.score===L.total(),'so they still add up after it'); }
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

@@ -566,6 +566,38 @@ function pageJudge(area){ return {area,style:styleJudge(area),clean:cleanJudge(a
 function styleDrain(){ const q=G._styleQ; if(!q||!q.length)return [];
   G._styleQ=[]; const out=[]; for(const a of q){ const r=pageJudge(a); if(r)out.push(r); } return out; }
 
+/* ---------- SCORE ATTRIBUTION (TODO 16, 2026-09-02) ----------
+   THE BRIEF SAYS THREAD THE ACTING KEA THROUGH award(). It does not have to be threaded, and
+   threading it would have meant touching forty-six call sites to carry a fact the call stack
+   already knows. award() is called from exactly one place at a time, and for the overwhelming
+   majority of those calls the frame underneath it is a kea updating itself: an interactable
+   onDone runs inside interact(), which runs inside Kea.update, which runs inside the loop over
+   G.keas. So the loop NAMES the bird it is updating and award() reads it. One assignment, and the
+   attribution is derived from the structure rather than restated at every site - which also means
+   a new award added tomorrow is attributed correctly without its author knowing this exists.
+   WHAT THE STACK CANNOT SEE, THREE THINGS, AND THEY ARE PASSED BY HAND. A car honking at a bird on
+   its roof, a ranger losing his cap to a bird, and a snowfall landing on a human several seconds
+   after the bird kicked it - all three run outside the kea loop, and all three have the bird in
+   hand at the point of the award. The fourth kind is the traffic jam, which genuinely has no single
+   author, and it goes where it belongs: LOOSE, counted but not credited.
+   THE INVARIANT IS THE POINT. Every point that reaches G.score reaches exactly one of the ledgers,
+   so score equals the sum of the books at every instant. That is what makes the split trustworthy
+   later - a VS scoreboard built on books that do not add up is worse than no scoreboard.
+   AND THAT IS WHY A RESTART DOES NOT CLEAR THEM. G.score is never assigned anywhere in this file,
+   only added to, so it survives startGame the way the rest of the world does. Books that reset
+   under a total that does not would stop adding up at the first restart, which costs more than it
+   buys. A VS match wanting per-match figures takes a SNAPSHOT at the whistle and subtracts - the
+   same shape pageSnap already uses for a page. */
+function actorOf(who){
+  if(who===undefined||who===null)who=G.actor;
+  if(typeof who==='number')return who>=0?who:-1;
+  return who&&typeof who.idx==='number'?who.idx:-1; }
+function ledgerAdd(pts,who){ const i=actorOf(who);
+  if(i<0){ G.ledgerLoose=(G.ledgerLoose||0)+pts; return -1; }
+  G.ledger=G.ledger||[]; G.ledger[i]=(G.ledger[i]||0)+pts; return i; }
+function ledgerOf(i){ return (G.ledger&&G.ledger[i])||0; }
+function ledgerTotal(){ return (G.ledger||[]).reduce((a,b)=>a+(b||0),0)+(G.ledgerLoose||0); }
+
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
@@ -619,7 +651,7 @@ const G={
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
-  stars:{}, pageChaos:{}, snow:[], squawk:null,
+  stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0,
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -2303,7 +2335,7 @@ class Kea{
     const sc=G.snowCap; sc.loaded=false; sc.reloadT=14; sc.mesh.visible=false; this.peckAnim=0.2;
     // falling snow blob
     const blob=sph(0.55,PAL.snow,hx,3.0,hz+2.55,null,8); blob.scale.y=0.5;
-    G.fx.push({mesh:blob,vy:0,t:0,kind:'snow',hx,hz});
+    G.fx.push({mesh:blob,vy:0,t:0,kind:'snow',hx,hz,by:this.idx});   // TODO 16: it lands seconds later, outside the loop
     AU.whoosh();
   }
   take(prop){
@@ -2684,7 +2716,7 @@ function updateFX(dt){
         if(!HEADLESS){ const sp=cyl(0.4,0.5,0.05,PAL.snow,hitPos.x,0.1,hitPos.z,null,12);
           TW.add(1.6,u=>{ sp.scale.x=sp.scale.z=1+u*0.9; sp.position.y=0.1-u*0.04; },()=>G.scene.remove(sp)); }
         if(hit){ AU.splat(); hit.snowed(); G.stats.snow++;
-          award(60,'SNOW BUSINESS — DIRECT HIT',hitPos); done('snow'); burst(hitPos,0xF4F7FA,12); G.shake=Math.max(G.shake,0.18);
+          award(60,'SNOW BUSINESS — DIRECT HIT',hitPos,f.by); done('snow'); burst(hitPos,0xF4F7FA,12); G.shake=Math.max(G.shake,0.18);
         } else { AU.splat(); burst(hitPos,0xF4F7FA,8); popup('SNOW DUMPED… nobody under it','wait for a human at the door',0,hitPos,true); }
       }
     }
@@ -2774,7 +2806,7 @@ class Human{
       const dx=this.x-kea.x,dz=this.z-kea.z,dl=Math.max(0.3,Math.hypot(dx,dz));
       this.launch(dx/dl*2.2,3.6,dz/dl*2.2,7);
       spawnLoose("ranger's cap",PB.rangercap,{x:this.x+rnd(-0.3,0.3),y:2.0,z:this.z+rnd(-0.3,0.3)},{wearable:true,owner:'rex',mission:'b_cap'});
-      popup('THE CAP! CLEAN OFF!','',0,{x:this.x,y:2.3,z:this.z},true); award(20,'DECAPPED',{x:this.x,y:2,z:this.z});
+      popup('THE CAP! CLEAN OFF!','',0,{x:this.x,y:2.3,z:this.z},true); award(20,'DECAPPED',{x:this.x,y:2,z:this.z},kea);
     }
     if(d<10&&this.state!=='chase'&&this.stun<=0){
       this.state='investigate'; this.target={x:kea.x,z:kea.z}; this.distracted=2.6; this.t=0; this.exMark.visible=true;
@@ -3038,7 +3070,7 @@ function updateTraffic(dt){
       c.honkT-=dt;
       if(c.honkT<=0){ AU.honk(c.stopT>5); c.honkT=rnd(1.8,4); if(c.stopT>2)heat(0.6);
         for(const kk of G.keas){ if(Math.hypot(kk.x-c.x,kk.z-c.z)<6){ RUMBLE(kk.idx,130,0.5); if(G._rumbleSpy)G._rumbleSpy.push({i:kk.idx,why:'honk'}); } }
-        for(const k of G.keas){ if(Math.abs(k.x-c.x)<1.35&&Math.abs(k.z-c.z)<2.4&&k.y>1.1){ done('roofhonk'); if(!G._rhk){G._rhk=1;award(20,'HONKED AT. UNMOVED.',k.pos());} }
+        for(const k of G.keas){ if(Math.abs(k.x-c.x)<1.35&&Math.abs(k.z-c.z)<2.4&&k.y>1.1){ done('roofhonk'); if(!G._rhk){G._rhk=1;award(20,'HONKED AT. UNMOVED.',k.pos(),k);} }
           if(k.grounded&&Math.abs(k.z-34)<2&&k.y<0.5&&Math.abs(k.x-c.x)<8)done('q_median'); }
         if(c.bodyG){const bg=c.bodyG; TW.add(0.4,u=>{bg.position.y=Math.sin(u*Math.PI*3)*0.05*(1-u); bg.rotation.x=Math.sin(u*Math.PI*2)*0.02*(1-u);});} }
       if(c.stopT>6&&!c.driverOut&&G.humans.filter(h=>h.driverCar).length<2&&(ob==='cone'||ob==='kea')){
@@ -3295,7 +3327,7 @@ function winGame(){
 
 /* score / combo / popups */
 function bumpCombo(){ G.comboT=5; G.combo=Math.min(5,(G.comboArmed?G.combo:0)+1); G.comboArmed=true; }
-function award(base,label,pos){
+function award(base,label,pos,who){
   if(base>=45&&pos){ burst(pos,0xFFD34D,14); burst({x:pos.x,y:(pos.y||1)+0.4,z:pos.z},0xFFF3B0,8);
     if(G._fxSpy)G._fxSpy.push({why:'sparkle',pts:base}); }
   bumpCombo();
@@ -3303,6 +3335,7 @@ function award(base,label,pos){
   const pts=Math.round(base*mult);
   G.score+=pts;
   purseAdd(pts);                    // the page keeps its own books: TODO 13
+  ledgerAdd(pts,who);               // and so does each bird: TODO 16
   popup(label,'+'+pts+(mult>1?'  ×'+mult:''),pts,pos);
   if(G.colossal){ while(G.level<MAXLVL&&G.score>=lvlThresh(G.level))levelUp();
     el('chaos').textContent='CHAOS '+G.score+' · LV'+G.level+(G.level<MAXLVL?' ('+lvlThresh(G.level)+' next)':' MAX'); }
@@ -3570,7 +3603,8 @@ function update(dt){
   if(G.needHydrate){ G.needHydrate=false; applySave(); }
   G.time+=dt; G.frames=(G.frames||0)+1;
   if(G.running&&!G.paused&&!G.won){
-    for(const k of G.keas)k.update(dt);
+    for(const k of G.keas){ G.actor=k; k.update(dt); }   // TODO 16: award() reads whose frame this is
+    G.actor=null;                                        // nothing outside the loop gets to be a bird by accident
     squawkUpdate(dt);   // after the loop: a prompt written inside it belongs to whoever updates last
     for(const h of [...G.humans])h.update(dt);
     updateTraffic(dt); updateSheep(dt); updateFX(dt);
@@ -3617,7 +3651,7 @@ function update(dt){
 function startGame(mode,opts){
   G.mode=mode; G.running=true; AU.boot();
   G.colossal=!!(opts&&opts.colossal); G.level=1;
-  G.camYaw=0; G.camDist=1; G.squawk=null;
+  G.camYaw=0; G.camDist=1; G.squawk=null; G.actor=null;   // the ledgers are NOT cleared: see the note at ledgerAdd
   G.won=false; G.finaleOn=false; G.apexArmed=false; G.apexNoted=false;
   for(const k of G.keas){ if(k.hatProp)k.doff(); if(k.held)k.drop();   // the bird leaves with nothing: what it carried stays in the world
     if(k.g&&k.g.parent)k.g.parent.remove(k.g); if(k.labelEl&&k.labelEl.remove)k.labelEl.remove(); }
@@ -3740,6 +3774,7 @@ if(typeof globalThis!=='undefined'){
            caged:pageCaged,judgeClean:cleanJudge,judgePage:pageJudge},
     HOMES:{R:HOMER,cls:homeClass,register:homesRegister,dist:homeDist,at:atHome},
     JAIL:{SQUAWK,coop:coopCell,dir:squawkDir,fire:squawkFire,ping:squawkUpdate},
+    LEDGER:{actorOf,add:ledgerAdd,of:ledgerOf,total:ledgerTotal},
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();

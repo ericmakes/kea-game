@@ -150,7 +150,7 @@ only fast exit. Solo behaviour unchanged.
 PROOF: co-op stage — caged persists without partner action, frees on latch
 onDone; solo stage — mash-out still works.
 
-### 16. score-attribution
+### 16. score-attribution  — DONE session 7 (f08f3364e9d513a03c0a6ff8c100bdc4)
 Thread the acting kea's idx through award() into per-kea ledgers alongside
 the shared score. Outside VS nothing visible changes.
 PROOF: two keas award separately; ledgers split; shared total unchanged.

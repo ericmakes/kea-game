@@ -1548,3 +1548,41 @@ by fixing the game rather than the test.
   about who owns G.hints across a restart.
 - EYEBALL: nothing in the 25. To see it: two-player, get caught, hold the grab key, and watch the
   other plate.
+
+### PIECE 16 — score-attribution — CERTIFIED f08f3364e9d513a03c0a6ff8c100bdc4
+Verdict: green. One staging round, and it was the test that was wrong rather than the piece.
+- THE BRIEF SAID THREAD IT. IT DOES NOT NEED THREADING, and session 6 was right to warn that
+  threading it was bigger than two lines: there are FORTY-SIX award() call sites. But award() is
+  called from one place at a time, and for nearly all of them the frame underneath is a kea updating
+  itself - an interactable onDone runs inside interact(), which runs inside Kea.update, which runs
+  inside the loop over G.keas. So the loop names the bird it is updating and award() reads it. One
+  assignment plus one clear. The attribution is DERIVED from the structure, which also means an
+  award added tomorrow is attributed correctly by an author who has never heard of this.
+- THREE SITES THE STACK CANNOT SEE, AND THEY PASS THE BIRD BY HAND: a car honking at a bird on its
+  roof (the honk loop has k), a ranger losing his cap (Human.update has kea), and a snowfall landing
+  on somebody several seconds after the kick - that one now records by:this.idx on the fx when it is
+  thrown, because by the time it lands the thrower is long out of frame. The fourth kind, the traffic
+  jam, has no single author and goes LOOSE: counted, not credited. Crediting whichever bird happened
+  to update last would have been worse than not crediting at all.
+- THE INVARIANT IS THE PIECE. Score is the sum of the books at EVERY instant - the battery asserts it
+  on arrival (11585 against 11585, accumulated by every section before it), after each staged award,
+  after a loose one, and after a restart. A VS scoreboard built on books that do not add up would be
+  worse than no scoreboard.
+- AND THAT IS WHY A RESTART DOES NOT CLEAR THEM, which is the one design call in the piece. G.score
+  is never ASSIGNED anywhere in this file - grep it, there are zero writes and only += - so it
+  survives startGame the way the rest of the world does (FLAKES law 1, again). Books that reset under
+  a total that does not would stop adding up at the first restart. A VS match wanting per-match
+  figures snapshots at the whistle and subtracts, which is the shape pageSnap already uses for a page
+  and is piece 22 work, not this piece.
+- THE TEST PICKED A TARGET THAT PAYS NOTHING, and the failure was worth having. Taking the first
+  unlocked peck off the list drew FLIP THE ROADWORKS PADDLE, whose award sits behind a one-shot
+  G.paddleDone that an earlier section had already spent: the bird pecked a real target, completed
+  it, and earned zero. The targets are now NAMED - handbag and backpack, both unconditional, at
+  opposite ends of the carpark - and the assertion that they are still open fails loudly if a future
+  section takes them first.
+- VERIFIED ADVERSARIALLY, SIX WAYS, all caught: the loop never naming the bird, the actor left set
+  after the loop (which is how you would silently credit the last bird for the jam), the explicit
+  actor ignored, index zero read as a falsy nothing, no books kept at all, and a restart wiping them.
+- NOTHING VISIBLE CHANGES, which is what the brief asked for outside VS: no HUD, no save field, no
+  popup, no rnd draw. Capture 25/25, 0 flagged, worst 0.9845, nothing re-pinned.
+- EYEBALL: nothing. This one is judged by the VS pieces that spend it.
