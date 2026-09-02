@@ -112,10 +112,27 @@ through an accessor. A dead battery is a worse witness than a red one.
     gauntlet/capture/05_tussock_ground.png vs baseline (piece 51)
     gauntlet/capture/23_paddock_gate.png  vs baseline  (piece 51)
 
-All four are the same intentional change: **the grass sway is frozen** so the frame is reproducible.
-The subject should be unchanged in each; only the blade phase moves. **Nothing was re-pinned** — the
-baseline is untouched on disk and in git, and these four are yours to accept or reject. Every other
-vantage matches its pinned baseline through all six pieces.
+**CORRECTED AFTER LOOKING AT THEM (see the note below).** I first wrote that the subject was
+unchanged in all four and only the blade phase moved. That is true of 17 and NOT true of the other
+three:
+
+| frame | what actually changed |
+|---|---|
+| `17_flight` | bird identical, only the tussock. As described. |
+| `03_kea_plate` | **the bird has moved** - right and slightly up - and the preen pose differs |
+| `05_tussock_ground` | **the bird has moved** slightly left, pose differs |
+| `23_paddock_gate` | bird effectively unchanged, but **the sheep have shifted** |
+
+The cause is in the fix and it is mine: for 03, 05 and 23 I did not only pin `G.time`, I also wrapped
+the staging in `PIN`, which holds the bird at the staged coordinates **every frame**. Before, the
+bird was set once and then drifted through the 900ms settle - gravity, ground snap, animation. So the
+new frames show the bird where the staging actually asks for it, held exactly, and the baselines show
+wherever it drifted to. That is arguably the more faithful photograph, but it is a **subject change**
+and wants judging as one. The sheep in 23 are ambient and still unpinned; they were never part of the
+fix, and pinning them is the same law-4 move `QUIET` already makes for humans if you want 23 tighter.
+
+**Nothing was re-pinned** — the baseline is untouched on disk and in git, and these four are yours to
+accept or reject. Every other vantage matches its pinned baseline through all six pieces.
 
 Two things have no vantage at all and need you to *play* them: the title now has a fourth button
 (**key 4**, `2 KEA VERSUS`) and there is a new results screen. The look of both is flagged.

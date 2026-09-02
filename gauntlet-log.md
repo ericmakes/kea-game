@@ -1950,3 +1950,29 @@ gate CERTIFIED-SHIP, working tree clean, SESSION.lock released.
 - FOUR FRAMES ARE FLAGGED AND NOTHING WAS RE-PINNED. 03, 05, 17 and 23 all carry the same intentional
   change - the grass sway frozen so the frame is reproducible - and the baseline is untouched on disk
   and in git. Final stability on those four against the shipped build: 0.9991, 1.0000, 0.9999, 0.9991.
+
+### CORRECTION — the four flagged frames, after actually looking at them (2026-09-02, session 8)
+Eric opened the four flagged frames and I built baseline-vs-new composites to check my own claim
+about them. THE CLAIM WAS WRONG for three of the four, and it was wrong in the way that matters:
+I described them from MECHANISM rather than from looking. What the report said was "the subject
+should be unchanged in each; only the blade phase moves". What is actually true:
+    17_flight            bird identical, only the tussock. The claim holds here.
+    03_kea_plate         THE BIRD HAS MOVED, right and slightly up, and the preen pose differs
+    05_tussock_ground    THE BIRD HAS MOVED slightly left, pose differs
+    23_paddock_gate      bird effectively unchanged, but THE SHEEP HAVE SHIFTED
+- THE CAUSE IS IN MY OWN FIX. For 03, 05 and 23 I did not only pin G.time - I also wrapped the
+  staging in PIN, which holds the bird at the staged coordinates EVERY frame. Before, the bird was
+  set once and then drifted through the 900ms settle under gravity, ground snap and animation. So the
+  new frames show the bird where the staging actually asks for it and the baselines show where it
+  drifted to. That is arguably the more faithful photograph - it is the position the staging names -
+  but it is a SUBJECT change and Eric has to judge it as one, not as a grass-phase change.
+- WHY IT MATTERS BEYOND THIS FRAME: a stability fix that moves the subject is a different proposition
+  from one that only freezes the background, and the difference decides whether a re-pin is routine
+  or a judgement. Piece 53 (17) was the routine kind. Piece 51 (03, 05, 23) is not, and I filed it as
+  though it were.
+- THE LESSON, WHICH IS THE SAME ONE AS THE SETTLE: I described a photograph without looking at it,
+  on the strength of knowing what the code did. Composite the baseline against the new frame and LOOK
+  before writing the eyeball note - it costs one ffmpeg hstack per frame.
+- THE SHEEP IN 23 ARE STILL UNPINNED and are ambient, so they are a residual source in that frame
+  that this piece did not address. Pinning them is the same FLAKES law 4 move QUIET already makes for
+  humans. Not done, because it moves the subject again and 23 already measures 0.9991 to 0.9997.
