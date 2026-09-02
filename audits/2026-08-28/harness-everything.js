@@ -1608,10 +1608,15 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody ca
 {
   const HI=X.HINTS;
   const cage=()=>(G.hints||[]).find(h=>h.mid==='cage');
+  /* READ THROUGH AN ACCESSOR. The guard rule, and by the end of this session it had cost four
+     sabotages: cage() is undefined the moment anything stops the hint being added, and cage().text
+     is then a throw that takes every finding in this section with it. The sabotage that removed the
+     hint from the ute came back with ZERO findings until this existed. */
+  const cageF=k=>(cage()||{})[k];
 
   X.startGame(1); tick(6);
   ok(!!cage(),'the cage hint is on the board');
-  ok(typeof cage().text==='function','and it carries a function, not a baked line');
+  ok(typeof cageF('text')==='function','and it carries a function, not a baked line ('+typeof cageF('text')+')');
   const solo=HI.text(cage());
   ok(solo.indexOf('mash your way out')>=0,'solo: it still tells you to mash, because solo still lets you ('+solo+')');
 
@@ -1644,7 +1649,7 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody ca
   const orphan=mids.filter(m=>!G.missions.find(x=>x.id===m));
   ok(orphan.length===1&&orphan[0]==='cage',
      'exactly one hint has no mission behind it and it is still the cage one ('+JSON.stringify(orphan)+')');
-  ok(cage().free===true,'and it is missionless ON PURPOSE - free is declared at the call site');
+  ok(cageF('free')===true,'and it is missionless ON PURPOSE - free is declared at the call site ('+cageF('free')+')');
   ok((G.hints||[]).filter(h=>h.free).length===1,
      'exactly one hint in the game is free, so the opt-out did not spread ('+
      (G.hints||[]).filter(h=>h.free).map(h=>h.mid).join(',')+')');
@@ -1677,7 +1682,7 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody ca
   /* THE PROOF TODO 55 ASKS FOR: stand a bird in the radius in BOTH modes and read the plate. The
      spot is the hint centre plus three on x - the centre itself is inside grab range of the ute
      keys, and a verb prompt beats a hint by design, which is the assertion after these two. */
-  { const CX=()=>cage().x+3, CZ=()=>cage().z;
+  { const CX=()=>cageF('x')+3, CZ=()=>cageF('z');   // accessor: see the note at cageF
     const standAt=(k,x,z)=>{ X.setPrompt(k.idx,'');
       const y=Math.max(0.25,X.groundHeightAt(x,z,3)+0.02);
       for(let i=0;i<4;i++){ k.x=x; k.z=z; k.y=y; k.vy=0; k.grounded=true; X.update(1/60); }
@@ -1706,7 +1711,7 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody ca
        prompt is what a player sees there - the hint is still the one in range, and still silent. */
     X.startGame(1); tick(6); park();
     { const k=G.keas[0]; if(k.held){k.held.heldBy=null;k.held=null;}
-      const plate=standAt(k,cage().x,cage().z);
+      const plate=standAt(k,cageF('x'),cageF('z'));
       ok((G.hintNow||[])[k.idx]==='cage','at the centre the cage hint is the one in range');
       ok(plate.indexOf('GRAB')>=0&&plate.indexOf('night ranger')<0,
          'but a verb in reach owns the plate and the hint stays quiet ('+
@@ -2173,6 +2178,60 @@ C.section('TRAVEL - leaving a map, arriving at one, and a skip that knows what w
   ok(Object.keys(X.BIOME.ALL).length===1,'the travel section leaves one biome registered ('+
      Object.keys(X.BIOME.ALL).join(',')+')');
   ok(!X.TRAVEL.busy(),'and no beat running');
+}
+
+C.section('A HINT BELONGS TO THE MAP THAT CAN ANSWER IT - and startGame no longer needs a ute');
+/* TODO 58, found by piece 55 and a blocker on the first real second map. The cage hint was added in
+   startGame off G.uteG.localToWorld with NO guard, and G.uteG is set by the carpark builder: the day
+   a biome without a ute booted, startGame threw, in every mode, before the hint even mattered.
+   THE FIX IS AN OWNER, NOT A GUARD. The hint moved into mkDocUte, which is the thing that builds the
+   cage. A map with no ute never calls it, so it never has the hint, and no if anywhere has to
+   remember that. And G.hints joined the world registries, because it was the one thing a build put
+   on the board that the dispatcher never took back off - invisible with one map, and the day there
+   are two it means the carpark teaching follows you to the ski field and points at props in a
+   country that is not there.
+   AND MOVING CODE EARLIER IN THE FRAME CHANGED WHAT IT MEANT, which is the entry worth reading:
+   localToWorld in r128 multiplies by matrixWorld and does not compute it. At build time nothing had,
+   so the hint landed at its LOCAL offset - 1.1 metres behind the world origin, firing in the middle
+   of the carpark - and this battery caught it on the first run. The site now calls
+   updateMatrixWorld first and the hint is back at exactly the coordinates it had in startGame. */
+{
+  const B=X.BIOME;
+  const cageOf=()=>(G.hints||[]).find(h=>h.mid==='cage')||null;
+  try{
+    X.boot(); X.startGame(1); tick(8);
+    const before=cageOf();
+    ok(!!before,'the carpark still has its cage hint');
+    ok(!!before&&Math.abs(before.x-12.16)<0.01&&Math.abs(before.z-5.91)<0.01,
+       'at the same world coordinates it had when startGame placed it ('+
+       (before?before.x.toFixed(2)+', '+before.z.toFixed(2):'none')+')');
+    const nHints=(G.hints||[]).length;
+    ok(nHints===9,'and the carpark puts nine hints on the board ('+nHints+')');
+
+    /* A MAP WITH NOTHING IN IT AT ALL is the sharpest version of the question - not just no ute, no
+       anything - and it is the shape TODO 39 will boot before its diorama is finished. */
+    B.define('bareground',{label:'BARE GROUND',build:()=>{}});
+    let threw=null;
+    try{ X.boot({biome:'bareground'}); X.startGame(1); tick(8); }
+    catch(e){ threw=e&&e.message||String(e); }
+    ok(!threw,'a biome with no ute - with nothing at all - boots and starts without throwing ('+
+       (threw||'no throw')+')');
+    ok(G.biome==='bareground','and it is really that biome, not a fallback ('+G.biome+')');
+    ok(cageOf()===null,'the cage hint is simply absent there, with no guard anywhere saying so');
+    ok((G.hints||[]).length===0,'and none of the carpark teaching came with us ('+
+       (G.hints||[]).map(h=>h.mid).join(',')+')');
+
+    X.boot({biome:'carpark'}); X.startGame(1); tick(8);
+    const after=cageOf();
+    ok(!!after&&(G.hints||[]).length===nHints,'coming back rebuilds every hint the carpark owns ('+
+       (G.hints||[]).length+')');
+    ok(!!after&&Math.abs(after.x-(before?before.x:0))<1e-9&&Math.abs(after.z-(before?before.z:0))<1e-9,
+       'the cage one at the identical coordinates, twice ('+(after?after.x.toFixed(4):'none')+')');
+    ok(!!after&&after.free===true&&typeof after.text==='function',
+       'still free and still resolved when read, so piece 52 and piece 55 are untouched by the move');
+  } finally { delete B.ALL.bareground; X.boot(); X.startGame(1); tick(6); }
+  ok(Object.keys(X.BIOME.ALL).length===1,'the bare-ground biome is out of the registry again ('+
+     Object.keys(X.BIOME.ALL).join(',')+')');
 }
 
 C.section('2 KEA VERSUS - the match scaffold, every branch of the decision driven');

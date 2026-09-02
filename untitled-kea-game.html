@@ -1445,7 +1445,11 @@ function snowSpot(x,z,r){
    whichever duplicate came first. Emptied in buildWorld rather than in boot() so that the guarantee
    belongs to the function that fills them, however it is called - and it stays in the DISPATCHER
    below, above the biome, so a biome author cannot forget it and cannot opt out of it. */
-const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc'];
+/* TODO 58 adds hints. They were the one thing a build put on the board that the dispatcher did not
+   take back off it, which was invisible while there was one map: build a second biome and the
+   carpark teaching came with you, pointing at props forty units away in a country that no longer
+   existed. A hint belongs to the map that can answer it. */
+const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints'];
 
 /* ---------- THE BIOME REGISTRY (TODO 36, the tour chassis) ----------
    The tour turns this game into separate maps, one diorama per biome. Nothing about that can start
@@ -2514,6 +2518,28 @@ function mkCampervan(x,z){
 
 function mkDocUte(x,z){
   const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=-0.15; G.scene.add(g); G.uteG=g;
+  /* THE CAGE HINT BELONGS TO THE THING THAT OWNS THE CAGE (TODO 58). It used to be added in
+     startGame, off G.uteG.localToWorld with no guard - which was fine while every world had a ute
+     and a throw in every mode the day one did not. There is no guard here and there does not need
+     to be one: a map with no ute never calls this, so it never has the hint, and no if has to
+     remember that. */
+  /* updateMatrixWorld FIRST, and this is not defensive - it is the whole difference between the old
+     site and this one. localToWorld in r128 just multiplies by matrixWorld and does not compute it,
+     and nothing has computed this group matrix yet at build time (in startGame the renderer had
+     been through several frames). Without this line the hint lands at the LOCAL offset, which is
+     1.1 metres behind the world origin - and the battery caught it, because the cage teaching
+     started firing in the middle of the carpark. */
+  { g.updateMatrixWorld(true);
+    const up=new THREE.Vector3(0,1.2,-1.1); g.localToWorld(up);
+    /* TODO 52: co-op took the mash away (piece 15), so the old single line became a lie in one of
+       the two modes. A function, because the mode is not known until somebody reads it. */
+    /* TODO 55: free, because what this teaches is a MECHANIC and there is no mission called cage to
+       retire it. It is live while the bird is out and near the ute - a caged bird never reaches
+       hintScan at all, the caged branch of update returns before it. */
+    addHint('cage',up.x,up.y,up.z,6,()=>coopCell()
+      ? 'the night ranger cages troublemakers - only a mate can peck the latch open'
+      : 'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out',
+      {free:true}); }
   const shell=rbox(2.0,0.55,4.4,0.16,PAL.ranger,0,0.56,0,g); hull(shell,0.03);
   rbox(1.76,0.68,1.6,0.22,PAL.ranger,0,1.1,-0.9,g);
   pane(1.66,0.46,1.5,0.16,PAL.glass,0,1.16,-0.9,g);
@@ -4406,16 +4432,7 @@ function startGame(mode,opts){
       new THREE.MeshBasicMaterial({color:0xFFE0A6,transparent:true,opacity:0.08,side:THREE.FrontSide,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
     beam.rotation.x=Math.PI/2-0.078; beam.position.set(0,-0.16,3.5); beam.visible=false; tg.add(beam);
     rex.torch={g:tg,spot,lens,beam};
-    { const up=new THREE.Vector3(0,1.2,-1.1); G.uteG.localToWorld(up);
-      /* TODO 52: co-op took the mash away (piece 15), so the old single line became a lie in one of
-         the two modes. A function, because the mode is not known until somebody reads it. */
-      /* TODO 55: free, because what this teaches is a MECHANIC and there is no mission called
-         cage to retire it. It is live while the bird is out and near the ute - a caged bird never
-         reaches hintScan at all, the caged branch of update returns before it. */
-      addHint('cage',up.x,up.y,up.z,6,()=>coopCell()
-        ? 'the night ranger cages troublemakers - only a mate can peck the latch open'
-        : 'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out',
-        {free:true}); } }
+  }
   if(!HEADLESS){
     document.getElementById('title').style.display='none';
     tourOpen(false);                                        // the brochure never survives into play

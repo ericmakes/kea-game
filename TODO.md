@@ -921,6 +921,27 @@ it wants moving into the carpark build beside the ute rather than sitting in sta
 one. Then a biome with no cage has no cage hint and needs no if.
 PROOF: boot a biome with no ute and assert startGame completes and the cage hint is absent; carpark
 unchanged, hint present, and the 55 assertions still green.
+DONE session 10 (5c955bb4e7741eaea477606db3d228ac), and taken AHEAD of 39 because it blocks it: the
+first real second map cannot boot at all while startGame reaches into G.uteG.
+THE FIX IS THE OWNER, AS THIS BRIEF GUESSED. The hint moved into mkDocUte, which is the thing that
+builds the cage. A map with no ute never calls it, so it never has the hint, and no if anywhere has
+to remember that.
+AND G.hints JOINED THE WORLD REGISTRIES, which was the second half of the same bug and not in this
+brief. It was the one thing a build put on the board that the dispatcher never took back off:
+invisible with one map, and with two it means the carpark teaching follows you to the ski field and
+points at props in a country that is not there. Proved by booting a biome with NOTHING in it and
+asserting the board is empty.
+MOVING CODE EARLIER IN THE FRAME CHANGED WHAT IT MEANT, and the battery caught it on the first run.
+localToWorld in r128 multiplies by matrixWorld and does not compute it; at build time nothing had,
+so the hint landed at its LOCAL offset, 1.1 metres behind the world origin, and started firing in
+the middle of the carpark. updateMatrixWorld first, and it is back at 12.16, 5.91 - the exact
+coordinates startGame gave it, asserted to nine decimal places across two builds.
+AND A BIOME WITH NOTHING IN IT BOOTS AND STARTS, which is worth knowing before 39: startGame needs
+nothing else from the carpark. That assertion is now standing.
+THREE SABOTAGES. The third caught NOTHING twice before it landed, because three separate reads in
+the hint section went straight at cage() - cage().text, cage().free, and cage().x - and each one
+threw the moment the hint was gone, taking every finding with it. Fixed through an accessor and the
+same sabotage lands 21 findings. That is the FOURTH time in this session, so it is now FLAKES law 14.
 
 ### 59. A BOTCH ASSERTION HAD THE WRONG BOUND AND PASSED FOR FOUR BUILDS  — DONE session 10 (harness-side)
 Found by piece 38, which added world builds and so moved the seeded rng stream, which handed the

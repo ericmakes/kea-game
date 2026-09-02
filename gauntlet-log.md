@@ -2368,3 +2368,33 @@ four findings of the Sep 1 investigation honoured rather than rediscovered.
   GO is disabled on every pin but the one you are standing on, so nothing in this piece can be
   triggered by a player until 39 builds the ski field. The journey instrument is the stand-in until
   then, and it is committed for exactly that reason.
+
+### PIECE 58 — hint-belongs-to-its-map — CERTIFIED 5c955bb4e7741eaea477606db3d228ac
+Verdict: green. Taken AHEAD of 39 in the queue because it blocks it - the first real second map
+cannot boot at all while startGame reaches into G.uteG with no guard.
+- THE FIX IS AN OWNER, NOT A GUARD, which is what the brief guessed and it was right. The cage hint
+  moved into mkDocUte, the thing that builds the cage. A map with no ute never calls it, so it never
+  has the hint, and nothing anywhere has to remember that.
+- AND G.hints JOINED THE WORLD REGISTRIES, which was the other half of the same bug and was not in
+  the brief. It was the one thing a build put on the board that the dispatcher never took back off -
+  invisible while there was one map, and with two it means the carpark teaching follows you to the ski
+  field and points at props in a country that is not there.
+- MOVING CODE EARLIER IN THE FRAME CHANGED WHAT IT MEANT. localToWorld in r128 multiplies by
+  matrixWorld and does not compute it. In startGame the renderer had been through several frames; at
+  build time nothing had, so the hint landed at its LOCAL offset - 1.1m behind the world origin - and
+  the cage teaching started firing in the middle of the carpark. The battery caught it on the first
+  run. updateMatrixWorld first, and it is back at 12.16, 5.91: the exact coordinates the old site
+  produced, asserted to nine decimal places across two builds of the same world.
+- A BIOME WITH NOTHING IN IT BOOTS AND STARTS, and that assertion is worth more than this piece. It
+  says startGame needs nothing else from the carpark, which is the thing 39 would otherwise discover
+  the hard way, one throw at a time.
+- THREE SABOTAGES, and the third caught NOTHING TWICE before it landed. Three separate reads in the
+  hint section went straight at cage() - .text, .free and .x - and each threw the moment the hint was
+  gone. Two of those reads were mine from tonight and one was from piece 52. Through an accessor the
+  same sabotage lands 21 findings.
+- FOUR TIMES IN ONE SESSION IS NOT A HABIT, IT IS A LAW. Written into FLAKES as law 14 in its own
+  commit, because the next agent should read it before writing a test rather than after burning two
+  sabotages on it.
+- CAPTURE: 27 shots, 25 compared, 0 flagged, worst 0.9823 which is 17 from piece 54. Subjects 7/7.
+  Nothing moved, which is the expected result: no mesh and no rnd draw changed hands.
+- EYEBALL: nothing new. Stand by the DOC ute in solo and in co-op and the line is where it was.
