@@ -3014,3 +3014,124 @@ ONE re-pin sweep between them: gauntlet/parked/todo30-and-67-deterministic-rig.p
   its idle - so this is a look call and a 28-frame re-pin, which is why it is parked and not shipped.
 - 12.0 IS A FREE PARAMETER. Any value freezes the poses somewhere and 12.0 is only what the four
   existing local pins use. Worth a sweep before the re-pin if you want the set disturbed less.
+
+### PIECE 32-AUDIT — bevel-flank-audit — harness-side, game md5 8232590523658dfc3f5a1fe59a916de0
+Verdict: green. audits/2026-08-28/audit-bevel-flanks.js. TODO 32 asked a question before it asked
+for a fix - is it caravan-only - and the answer is no. The FIX is untouched and still a judged sweep.
+- DELIBERATELY NOT A GATE BATTERY. TODO 32 is unfixed, so an assertion here would be red by design,
+  and a red battery that is MEANT to be red teaches the gate to lie. It prints and exits zero.
+- NINE EXTRUDED BODIES CARRY DETAIL, and it walks the scene rather than a handle list - only the
+  caravan door has a G handle - so the ski field buildings and the four parked cars are in the report
+  as well, which no brief asked for.
+- THE ASYMMETRY IS THE CONTROL AS MUCH AS THE FINDING: 161 buried thin faces, 88 on x, 52 on y and
+  21 on the extrude axis z. If z came back as buried as x, the model - rbox(w,h,d,r) really measures
+  (w+1.84r) x (h+1.84r) x d - would be wrong and this would be measuring something else.
+- 52 PANELS PROVE THEIR OWN INTENT, and that section is the one to read. A panel standing PROUD of
+  the skin on z and INSIDE it on x or y had ONE authored margin; it works on the exact axis and fails
+  on the bevelled ones. No thinness window, no distance window, nothing to argue with.
+- THE CARAVAN REPRODUCES THE BRIEF FROM THE OTHER DIRECTION: shell 2.952 x 2.652 x 5.600, skin 1.476,
+  42 buried faces on x including 1.282, 1.278, 1.257, 1.245 - the window frame, pane, awning rail and
+  trim the brief listed by nominal offset.
+- THE HUT IS THE CLEAN WITNESS AND IT IS ONE OBJECT. rbox(7,2.6,5.4,0.1) really measures 7.184 wide;
+  the five weatherboard lines are box(7.02,0.02,5.42), so their x faces sit at 3.510 against a skin
+  of 3.592 - BURIED 0.082 - and their z faces at 2.710 against 2.700 - PROUD 0.010. One mesh, one
+  +0.02 margin, visible on two walls of the hut and sealed inside the other two. Nobody has ever
+  seen the grooves on the long walls.
+- AND THE PANEL RULE WAS WRONG THE FIRST TIME, in a way that mattered: it required thinness on the
+  axis UNDER TEST, which excluded the weatherboards, because 7.02 is not thin. The audit was blind to
+  exactly the detail it exists for. A panel is thin on SOME axis, not on the one being asked about.
+- PLUS A REAL BUG THE SIGNATURE SECTION EXPOSED AND THE HEURISTIC LIST HAD BEEN HIDING: comparing a
+  left-wall trim against the RIGHT-hand skin, which is true and meaningless, and it put a burial of
+  7.023 in my first output. The heuristic list was immune only because its 0.30 window threw those
+  rows away. Every test picks the NEAR side now, off the sign of the offset from the shell centre.
+- TWO SABOTAGES, both caught by the numbers: dropping the near-side rule loses 61 real cases
+  (161 -> 100), and dropping the panel rule floods 30 non-panels in (161 -> 191).
+
+### PIECE 70 — name-the-last-churn — investigation, no game change, no rig change
+Verdict: the one number I could not attribute in the TODO 30 measurement now has a cause.
+- WITH THE 30+67 PATCH APPLIED so only the residual was left, the set churns under 130 px everywhere
+  except four vantages. 12_seal_midpeel at 704 is the clean case and IT IS THE WINGS.
+- MY FIRST HYPOTHESIS WAS WRONG AND ONE PROBE KILLED IT. 12 sets the bird grounded=false with no PIN,
+  so I expected a bird still falling through the settle. Measured at shutter: y 0, vy 0, grounded
+  true, on all five takes, frame count 142 every time. Reading the state beat reasoning about the
+  stage line, which is the whole lesson of the piece.
+- WHAT DIFFERS IS THE WINGS: body, head and tail identical to five decimals, the four freed seal
+  segments identical to four, the changed pixels one blob at x420..540 y360..420 which is the bird.
+  Wing rz reads 0.45017, 0.45034, 0.47679 - and the third take shares the FIRST take flapPh, so it
+  is not the flap phase. Wing rest is lerp(current, target, dt*k): it depends on the SEQUENCE of real
+  dt values and on no clock that can be pinned.
+- PROVED BY LETTING IT CONVERGE rather than by argument: settle 900ms -> 4000ms takes 12_seal_midpeel
+  704 -> 106 and 13_idle_preen 89 -> 28.
+- THE CLASS WAS ALREADY GUESSED AT IN SESSION 8, in the 08_readability_320 comment - dt-driven
+  per-frame accumulation, fix is a deterministic frame clock. This is that guess, measured on two
+  more vantages.
+
+### PIECE 22 — name-the-torch-churn — investigation, no game change, no rig change
+Verdict: it corrects the piece before it, one commit later. TODO 70 filed 22_torch_beam as NOT this
+class on the strength of a single convergence test. It IS this class for the component that matters.
+- THE TORCH IS INNOCENT, which is where the vantage name sends you first, and torch.g.rotation.y is
+  itself a dt lerp (line 4017) so it was the obvious culprit. Probed across four takes: rotation.y 0
+  every time, spot.intensity 2.6, beam opacity 0.13. The 22 PIN holds all three.
+- IT IS REX LEFT ARM, line 4046, the same shape as the 12 wings. With G.time pinned the angry target
+  is a constant -2.8957, and watched over ONE run the arm walks to it monotonically: -2.73089,
+  -2.83549, -2.87691, -2.88915, -2.89364, -2.89543. At the 900ms shutter it has not arrived, and
+  across takes it read -2.75284, -2.75286, -2.73091, -2.73060.
+- THE LEGS ARE INNOCENT FOR A NICE REASON, and it is worth writing down because they are the obvious
+  suspect. walkPh is a pure dt accumulator with nothing that can pin it - measured advancing 8.3165
+  to 13.8659 in one run with everything else frozen - but sw is "moving ? 0.55 : 0" and a vantage
+  that pins Rex in place makes moving false. legL and legR sit at exactly 0. A non-converging
+  accumulator that nothing reads is not a flake.
+- ABOUT 300 PX ARE STILL UNNAMED AND SAID TO BE. At a 4000ms settle the arm is converged and the legs
+  are static and 22 still churns 297, so the irreducible part is neither. Likeliest is the spotlight
+  shadow map on a night frame - a law 9 renderer cause rather than a staging one - and that is
+  labelled a guess. Time-boxed under law 8 after six probes: a named unknown of known size beats the
+  wrong name it had an hour earlier.
+
+## SESSION END — 2026-09-02, session 12, six pieces and the rig can be made deterministic
+Stop condition on the 6-piece rule. Tip 8232590523658dfc3f5a1fe59a916de0 - THE GAME FILE WAS NEVER
+OPENED - gate CERTIFIED-SHIP, 28 pinned vantages 0 flagged, subjects 15 checked 0 missing, boxdiff 11
+compared with only the two known ones flagged, three selftests ALL PASS, working tree clean,
+SESSION.lock released. Nothing was re-pinned.
+    31  changed-pixel-tripwire     pxdiff.mjs + selftest
+    33  cross-run-churn            crossrun.mjs + selftest
+    61  subject-boxes-03-13-18     coverage 8 -> 11 subjects
+    32  bevel-flank-audit          audit-bevel-flanks.js
+    70  name-the-last-churn        investigation
+    22  name-the-torch-churn       investigation
+Plus two commits that are not pieces: the MEASURE records for TODO 67 and TODO 30, each with a patch
+in gauntlet/parked/ that applies clean.
+- THE QUEUE WAS THE INSTRUMENTS, AND THEY TURNED OUT TO BE ONE PIECE OF WORK. 31 built a unit, 33
+  built the sampler, and between them they answered 30, 67, 69, 70 and half of 32. Taking 31 first
+  because 30 and 33 said in their own briefs that they needed it was the right read.
+- THE HEADLINE FOR ERIC IS ONE PATCH AND ONE RE-PIN. Park the caption, pin the clock, and nineteen of
+  twenty-eight vantages fall under 100 px of cross-run churn with FOUR AT EXACTLY ZERO, from a set
+  whose worst was 8791. That is the target TODO 33 named in session 4 and nobody could measure until
+  tonight. It costs 11 flagged frames and a look call, so it is parked, measured, and his.
+- I SHIPPED A WRONG TABLE AND THE NEXT PIECE CAUGHT IT, WHICH IS THE MOST USEFUL HOUR OF THE NIGHT.
+  Piece 31 filed four drift findings off five capture sweeps, including 09_colossal at seventy-one
+  times its own churn with session 6 measuring that same pair at 0 px. Five more sweeps an hour later
+  and 09 churned 2233 by itself; all four collapsed. Only 07_jam and 17_flight survive ten sweeps and
+  both were already known. Corrected in the same commit that found it - table, header and TODO 68.
+- THE LESSON UNDERNEATH IT: a ceiling from three samples is a floor, and so is a ceiling from five.
+  Three sweeps said 07_jam churns 20 px; five said 1881; ten said 2865. The table now says that about
+  itself rather than pretending to be a ceiling.
+- FLAKES 14 FROM ITS OTHER SIDE, TWICE IN ONE PIECE, exactly as the session 11 log warned. Two of
+  piece 33 sabotages were NO-OPS: my sed anchor ended )}; where the file says )}); so nothing was
+  edited, and one of them reported ALL PASS on an unmodified file while the other "found" something
+  only because an unrelated real flake fired in the same run. Assert the anchor exists first - it is
+  the law for the game file and it should have been the law for my own tooling.
+- AND THREE OF MY OWN ASSERTIONS WERE FLAKES, all found by running them, not by thinking about them:
+  a claim that the re-shade PASSES the diff threshold (0.9868, 0.9863, 0.9863, then 0.9580 on one run
+  in six); a ratio against a control whose denominator churns; and two assertions that passed on the
+  NULL fixture because ordinary churn moves 49 levels and warms 12 cells. Amplitude does not
+  discriminate a re-shade at all - measured, the re-shade peaks LOWER than the churn does.
+- THE INSTRUMENT STOPPED ME SHIPPING SOMETHING ON ITS FIRST DAY. My first TODO 67 fix froze each
+  popup at a fixed phase, which reads beautifully and requires clone-replacing the wrapper to survive
+  its own pending remove() - making the caption PERMANENT and opaque in all 28 frames and dropping
+  08_readability_320 to ssim 0.8711. pxdiff and diff caught it before it was committed.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md and the two patches in gauntlet/parked/, then
+  TODO 69 (20_dead_rear cannot be reproduced from its own stage line at all, which piece 61 proved
+  while trying to measure a floor for it), then FLAKES 14 before writing a single assertion.
+- I DID NOT RUN stability.mjs, and that is deliberate rather than an omission: crossrun.mjs shot ten
+  full sweeps in separate processes tonight, which is strictly more than the take-to-take question
+  stability.mjs asks, and the numbers are in TODO 30 and 68.
