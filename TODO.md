@@ -1089,3 +1089,29 @@ G.nestPos IS NOT SWEPT ON PURPOSE (unguarded readers by design, every map declar
 stash counters (the player, not the map). Both asserted, so they read as decisions.
 AND IT QUIETLY FIXED TWO STALE LATCHES nobody had filed: G._qtDone meant a rebuilt carpark could
 never pay for the picnic table again, and G.gymOut kept the kea gym deployed into the next map.
+
+### 63. PROPS REST WHERE PLACED  (OPPORTUNITIES Tier 3 item 2)  — DONE session 11 (b541758aae2631001ea2a397106fbffc)
+No rail, rack or line held anything: twelve of the carpark twenty-two props were on the ground inside
+three seconds, including all three clothes pegs off the line and both ski poles standing half sunk in
+the dirt. The prop physics already consults colliders - the sandwich rests on the picnic table because
+that table has one - so the fix is the collider pass the item asks for. railTop declares a rest
+surface (never solid), six of them, and the props on one are placed at their resting height.
+IT COST TWO REAL REGRESSIONS, both in the log: the ski at rack height beat the CHEW THE BINDING tear
+by 15mm at the beak and broke s_binding plus the whole fix-verb section, and the snow section had an
+assertion that conflated a slender upright with its surroundings.
+FOUND, NOT FIXED: the beanie (TODO 64).
+
+### 64. THE BEANIE RESTS ON A HEAD, AND A HEAD IS NOT A SURFACE  (found in session 11 by piece 63)
+propAt puts the tramper beanie at head height beside the sleeping Tom and it falls into the dirt,
+which it has done since the day it was added - while the row says steal the beanie off the sleeping
+tramper HEAD. The rail pass (63) cannot help: there is nothing under it to rest on, and a human is
+not a collider.
+IT IS A DIFFERENT MECHANIC. A prop that RIDES a thing that moves is not a prop that rests on a thing
+that does not: Tom wakes, gets up and walks, and the beanie should go with him until it is taken.
+THE DESIGN ANSWER IS YOURS: either the beanie is parented to his hatG until stolen (which is close to
+what srcHatG already implies - the prop exists so that his own hat mesh can be hidden), or the wearer
+carries a rest-on-me anchor that any prop can sit in.
+PROOF when it is built: the beanie stays at head height for a minute of run; it moves when he does;
+b_beanie still completes through the sleepGuard; and the prop is still takeable at his head rather
+than at his feet.
+

@@ -1131,6 +1131,15 @@ function buildSky(){
 
 /* ---------- collider helpers ---------- */
 function addBoxCollider(x,z,w,d,top,solid,ry){ G.colliders.push({kind:'box',x,z,w:w/2,d:d/2,top,solid:solid!==false,ry:ry||0}); }
+/* A RAIL IS A SURFACE (TODO 63). The three of them - ski rack, boot rail, clothesline - held nothing
+   because a mesh is not a collider, and the prop physics only knows about colliders. railTop declares
+   the top of a thing you can REST something on: never solid, because a rail is something a kea perches
+   and walks over rather than something that stops it, and generous in depth, because a builder placing
+   a ski on a rack aims for the rail rather than for a 6cm strip down the middle of it.
+   THE PROPS THAT SIT ON ONE ARE PLACED AT THEIR RESTING HEIGHT - top plus the 8cm the physics allows
+   every prop - so that nothing pops upward on the first frame. That is the difference between a prop
+   that rests where it was placed and a prop that is merely caught by something. */
+function railTop(x,z,w,d,top,ry){ addBoxCollider(x,z,w,d,top,false,ry); return top+0.08; }
 function groundHeightAt(x,z,curY){
   let h=0;
   for(const c of G.colliders){
@@ -1607,10 +1616,21 @@ function buildCarpark(){
     wheel.rotation.x=Math.PI/2; wheel.position.set(bx+2.1,2.2,bz); G.scene.add(wheel); G.towWheel=wheel;
     cyl(0.09,0.09,2.2,PAL.metal,bx+2.1,1.1,bz,null,8);
     box(1.8,0.08,0.12,PAL.woodD,bx-0.4,0.9,bz+1.9); cyl(0.05,0.05,0.9,PAL.woodD,bx-1.2,0.45,bz+1.9,null,6); cyl(0.05,0.05,0.9,PAL.woodD,bx+0.4,0.45,bz+1.9,null,6);
-    const sk1=propAt('ski',bx-0.9,0.95,bz+1.95,PB.ski,{heavy:true,missionFar:'s_ski',farR:18}); sk1.mesh.rotation.x=1.35;
-    const sk2=propAt('ski',bx-0.5,0.95,bz+1.95,PB.ski,{heavy:true}); sk2.mesh.rotation.x=1.35;
-    propAt('ski pole',bx+0.1,0.7,bz+1.95,PB.skipole,{mission:'s_pole'});
-    propAt('ski pole',bx+0.3,0.7,bz+1.95,PB.skipole,{});
+    const rackY=railTop(bx-0.4,bz+1.9,1.8,0.34,0.94);      // TODO 63: the rack now holds what is put on it
+    /* THE BINDING NEEDS ELBOW ROOM NOW THAT THE SKIS ARE ACTUALLY ON THE RACK. The two of them sat
+       0.4 apart with the CHEW THE BINDING tear between them, which was fine while they were lying in
+       the dirt 0.9 metres below it: interact() measures from the beak - y plus 0.4 - so raising them
+       to the rail put a ski 0.395 from the beak against the tear 0.41, and holding the key at the
+       binding picked up a ski instead. Measured, not guessed, and the drive that found it is the
+       piece 18 fix-verb section, which works on the first solo tear in the world and this is it.
+       Half a ski width each way and the tear is the nearest thing again. */
+    const sk1=propAt('ski',bx-1.0,rackY,bz+1.95,PB.ski,{heavy:true,missionFar:'s_ski',farR:18}); sk1.mesh.rotation.x=1.35;
+    const sk2=propAt('ski',bx-0.4,rackY,bz+1.95,PB.ski,{heavy:true}); sk2.mesh.rotation.x=1.35;
+    /* AND THE POLES WERE STANDING IN THE GROUND. Placed upright at 0.7 with a 1.15 shaft, they fell
+       to 0.08 and spent every frame of every session half sunk in the dirt. They lie across the rack
+       like the skis do now, which is where a pole in a rack is. */
+    propAt('ski pole',bx+0.1,rackY,bz+1.95,PB.skipole,{mission:'s_pole'}).mesh.rotation.x=1.35;
+    propAt('ski pole',bx+0.3,rackY,bz+1.95,PB.skipole,{}).mesh.rotation.x=1.35;
     propAt('ski goggles',bx-1.2,0.2,bz+2.25,PB.goggles,{wearable:true,mission:'s_goggles'}); // dropped at the rack, as they always are
     addTear({label:'CHEW THE BINDING',need:1.6,range:1.2,air:true,keepMesh:true,getPos:()=>({x:bx-0.7,y:0.95,z:bz+1.95}),
       onDone(p){ award(35,'BINDING: CHEWED',p); done('s_binding'); AU.pop(); burst(p,PAL.dark,8); }});
@@ -1632,17 +1652,22 @@ function buildCarpark(){
       onDone(p){ award(35,'PACK: OPENED',p); done('t_pack');
         const mb=spawnLoose('muesli bar',PB.muesli,{x:tx-2.4,y:1.1,z:tz+1.4},{food:true}); mb.snack='t_bar'; mb.vy=1.4; mb.vx=0.6; AU.pop(); }});
     box(1.6,0.06,0.1,PAL.woodD,tx+2.2,0.75,tz+1.0); cyl(0.05,0.05,0.75,PAL.woodD,tx+1.5,0.37,tz+1.0,null,6); cyl(0.05,0.05,0.75,PAL.woodD,tx+2.9,0.37,tz+1.0,null,6);
-    propAt('walking pole',tx+1.8,0.55,tz+1.1,PB.walkpole,{missionProg:'t_pole2'});
-    propAt('walking pole',tx+2.5,0.55,tz+1.1,PB.walkpole,{missionProg:'t_pole2'});
+    const railY=railTop(tx+2.2,tz+1.0,1.6,0.34,0.78);      // TODO 63: the boot rail is a rail again
+    propAt('walking pole',tx+1.8,railY,tz+1.1,PB.walkpole,{missionProg:'t_pole2'}).mesh.rotation.x=1.35;
+    propAt('walking pole',tx+2.5,railY,tz+1.1,PB.walkpole,{missionProg:'t_pole2'}).mesh.rotation.x=1.35;
     propAt('woollen sock',tx+2.15,0.2,tz+1.45,PB.sock,{mission:'t_sock'});  // it blew off the rail hours ago
   }
   // campsite clothes line: three pegs, all crimes
   { const cx=19,cz=-17;
     cyl(0.05,0.06,1.5,PAL.woodD,cx-1.5,0.75,cz,null,6); cyl(0.05,0.06,1.5,PAL.woodD,cx+1.5,0.75,cz,null,6);
     box(3.0,0.02,0.02,0xD8D2C4,cx,1.42,cz,null,{noshadow:true});
-    propAt('clothes peg',cx-0.8,1.38,cz,PB.peg,{missionProg:'q_pegs'});
-    propAt('clothes peg',cx,1.38,cz,PB.peg,{missionProg:'q_pegs'});
-    propAt('clothes peg',cx+0.8,1.38,cz,PB.peg,{missionProg:'q_pegs'});
+    /* THE PEGS WERE ON THE GROUND UNDER THE LINE, all three of them, in every frame ever shot of
+       that corner - and the mission says steal all three clothes PEGS, which reads differently when
+       they are lying in the dirt. The line holds them now. */
+    const lineY=railTop(cx,cz,3.0,0.24,1.43);
+    propAt('clothes peg',cx-0.8,lineY,cz,PB.peg,{missionProg:'q_pegs'});
+    propAt('clothes peg',cx,lineY,cz,PB.peg,{missionProg:'q_pegs'});
+    propAt('clothes peg',cx+0.8,lineY,cz,PB.peg,{missionProg:'q_pegs'});
   }
   // dark beech skirts where the slopes meet the flats
   for(let i=0;i<12;i++){ const a=i/12*Math.PI*2+rnd(-0.15,0.15), r=rnd(88,100);
@@ -1920,6 +1945,8 @@ function buildSkifield(){
     box(L.w,0.08,0.08,PAL.wood,x,1.6,dz+L.deck/2,null,{noshadow:true});
     for(const s of [-1,1]) box(0.08,0.08,L.deck,PAL.wood,x+s*(L.w/2-0.04),1.6,dz,null,{noshadow:true});
     for(const tx of [-2.6,2.6]){ rbox(2.2,0.09,0.8,0.03,PAL.wood,x+tx,1.44,dz-0.4,null);
+      railTop(x+tx,dz-0.4,2.2,0.8,1.485);                  // a table a kea can actually stand on
+
       for(const lx of [-0.9,0.9])for(const lz of [-0.3,0.3]) cyl(0.05,0.05,0.7,PAL.woodD,x+tx+lx,1.05,dz-0.4+lz,null,6);
       rbox(2.0,0.07,0.3,0.02,PAL.wood,x+tx,1.16,dz+0.55,null); }       // the bench everybody straddles
     for(let i=0;i<3;i++) box(1.6,0.08,0.34,PAL.wood,x-L.w/2+1.2,0.5-i*0.17,dz+L.deck/2+0.25+i*0.34,null); }
@@ -1929,18 +1956,28 @@ function buildSkifield(){
      be the same class of lie TODO 55 was sent to fix. The ski boot is called a SKI BOOT for the same
      reason - a prop NAME is a detector in this engine, and anything called boot scores the carpark
      bonus the moment it is carried twenty-two metres from where it was built. */
-  { for(const [rx,rz,ry] of [[-16,18.5,0.2],[-28,18.5,-0.15],[SKITOW.x+3.4,SKITOW.base+1.8,0.6]]){
+  { const RACKS=[[-16,18.5,0.2],[-28,18.5,-0.15],[SKITOW.x+3.4,SKITOW.base+1.8,0.6]];
+    for(const [rx,rz,ry] of RACKS){
       const g=new THREE.Group(); g.position.set(rx,0,rz); g.rotation.y=ry; G.scene.add(g);
       box(2.4,0.09,0.14,PAL.woodD,0,0.95,0,g);
       cyl(0.06,0.07,0.95,PAL.woodD,-1.1,0.47,0,g,6); cyl(0.06,0.07,0.95,PAL.woodD,1.1,0.47,0,g,6);
-      box(2.4,0.07,0.1,PAL.woodD,0,0.3,0.12,g); }
-    for(const [px,pz] of [[-16.9,19.1],[-16.4,19.1],[-15.5,19.1],[-27.6,19.1],[-28.6,19.1]]){
-      const s=propAt('ski',px,0.95,pz,PB.ski,{heavy:true}); s.mesh.rotation.x=1.35; }
+      box(2.4,0.07,0.1,PAL.woodD,0,0.3,0.12,g);
+      railTop(rx,rz,2.4,0.4,0.995,ry); }                   // TODO 63, and rotated with its own rack
+    /* THE GEAR IS PLACED IN THE RACK OWN FRAME (TODO 63). It was world coordinates guessed off the
+       rack position, which put every ski 0.6 metres in FRONT of a rotated rail - so the new rail
+       collider held nothing at all and the whole lot was in the snow inside three seconds, exactly
+       as before. Same arithmetic the rack is drawn with, so a rail that moves takes its skis. */
+    const onRack=(i,px,pz)=>{ const [rx,rz,ry]=RACKS[i], cs=Math.cos(ry), sn=Math.sin(ry);
+      return {x:rx+px*cs+pz*sn, z:rz-px*sn+pz*cs, ry}; };
+    const RACKY=1.075;
+    for(const [i,px] of [[0,-0.9],[0,-0.35],[0,0.4],[1,-0.5],[1,0.55]]){ const q=onRack(i,px,0.06);
+      propAt('ski',q.x,RACKY,q.z,PB.ski,{heavy:true}).mesh.rotation.set(1.35,q.ry,0); }
     /* TODO 40: the gear carries THIS MAP missions. It carried none at all the night the diorama
        shipped, because a prop up here answering a CARPARK mission is the lie 55 was sent to fix -
        and the battery still holds every id on every prop to the list this map declares. */
-    for(const [px,pz] of [[-15.0,19.2],[-14.7,19.2],[-27.0,19.2]]) propAt('ski pole',px,0.7,pz,PB.skipole,{missionProg:'k_poles'});
-    propAt('ski goggles',-17.4,0.2,19.9,PB.goggles,{wearable:true,mission:'k_goggles'});
+    for(const [i,px] of [[0,0.95],[1,-1.05],[2,-0.4]]){ const q=onRack(i,px,0.09);
+      propAt('ski pole',q.x,RACKY,q.z,PB.skipole,{missionProg:'k_poles'}).mesh.rotation.set(1.35,q.ry,0); }
+    propAt('ski goggles',-17.4,0.2,20.2,PB.goggles,{wearable:true,mission:'k_goggles'});
     propAt('ski goggles',SKITOW.x+2.6,0.2,SKITOW.base+2.6,PB.goggles,{wearable:true,mission:'k_goggles'});
     propAt('ski boot',-13.2,0.2,17.7,PB.boot,{missionFar:'k_boot',farR:12});
     propAt('rubbish',SKITOW.x+1.4,0.2,SKITOW.base+3.2,PB.rubbish,{}); }
@@ -4762,7 +4799,12 @@ function update(dt){
     vsUpdate(dt);       // the match clock, after everything that could have paid a point this frame
     for(const h of [...G.humans])h.update(dt);
     updateTraffic(dt); updateSheep(dt); updateFX(dt);
-    // props physics
+    /* PROPS PHYSICS. A prop falls until groundHeightAt gives it something to stand on, and it has
+       ALWAYS consulted the colliders - the sandwich has rested on the picnic table for weeks because
+       that table has one. Nothing on a RAIL did: the ski rack, the boot rail and the clothesline are
+       meshes and nothing else, so every ski, pole and peg dropped to the dirt inside three seconds
+       and the racks were decoration. OPPORTUNITIES Tier 3 item 2, and it says it bit that pass
+       twice. The fix is the collider pass it asks for - see railTop below - and not a new rule here. */
     for(const p of G.props){
       if(p.heldBy||p.banked)continue;
       p.vy=(p.vy||0)-9*dt; 

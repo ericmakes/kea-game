@@ -2672,3 +2672,63 @@ reader audit rather than the sweep.
 - CAPTURE: 25 compared, 0 flagged. No frame could move - the sweep draws no randoms and the carpark
   refills every handle it had - and it is asserted rather than assumed: coming back rebuilds exactly
   the handles it had, by name.
+
+### PIECE 63 — props-rest-on-rails — CERTIFIED b541758aae2631001ea2a397106fbffc
+Verdict: green. OPPORTUNITIES Tier 3 item 2, which says in as many words that it bit that pass
+TWICE: props rest where placed, no rail or rack or line holds anything.
+- MEASURED BEFORE THE FIX: twelve of the carpark twenty-two props were on the ground inside three
+  seconds. Two skis and two poles off the ski rack, both walking poles off the boot rail, ALL THREE
+  CLOTHES PEGS off the line, plus the goggles, the sock and the beanie. The pegs are the sharpest -
+  the row says steal all three clothes PEGS and every one of them was lying in the dirt - and the
+  poles were the funniest: placed upright at 0.7 with a 1.15 shaft, they fell to 0.08 and spent every
+  frame of every session half sunk in the ground.
+- THE ANSWER WAS ALREADY IN THE PHYSICS, which is why this is a collider pass and not a new rule. A
+  prop falls until groundHeightAt gives it something to stand on, and it has consulted the colliders
+  since the day it was written: the sandwich has rested on the picnic table for weeks because that
+  table HAS a collider. The rails did not. railTop declares the top of a thing you can rest something
+  on - never solid, because a rail is perched and walked over rather than bumped into - and the props
+  that sit on one are placed AT their resting height, so nothing pops upward on the first frame.
+- SIX SURFACES: the carpark ski rack, the trailhead boot rail, the clothesline, and the ski field
+  three racks, plus the two deck tables so the bird in vantage 29 is standing on something real
+  rather than being pinned in the air.
+- THE SKI FIELD RACKS ARE ROTATED, and the first version of this piece got it wrong in the most
+  instructive way: the gear was placed in WORLD coordinates guessed off the rack position, which put
+  every ski 0.6 metres in FRONT of a rotated rail - so the new collider held nothing and all twelve
+  props were in the snow exactly as before. The gear is placed in each rack own frame now, with the
+  same arithmetic the rack is drawn with, and the collider carries the rack yaw.
+- A REGRESSION I CAUSED, FOUND BY SOMEBODY ELSE TEST, AND MEASURED RATHER THAN GUESSED. Raising the
+  skis onto the rack broke s_binding and the whole piece-18 fix-verb section: interact() measures
+  from the beak - y plus 0.4 - so a ski at rack height sat 0.395 from the beak against the CHEW THE
+  BINDING tear at 0.410, and holding the key at the binding picked up a ski. Half a ski width each
+  way and the tear is nearest again. The sabotage that puts them back lands 18 findings.
+- AND A CONFLATED ASSERTION IN THE SNOW SECTION, which had to get MORE precise rather than more
+  forgiving. It said: a disc centred on any slender upright in the band stays put. True of the only
+  slender uprights the band had - tree trunks in the open - and quietly assuming no other kind could
+  exist. Two of the three new rails stand within arm reach of a building (the ski rack rail is 1.9m
+  off the tow shed), so a disc centred there slides, and it SHOULD. The claim is split into the two
+  things it was conflating: a slender upright in the open holds its ground, and one beside a building
+  slides because of the BUILDING.
+- PLUS A BOUND READ OFF THE ENGINE AT LAST (law 10, third time tonight): that section filtered the
+  band with hand-picked constants -53 and -17, generous around SNOWFIELD, and generous was wrong the
+  moment a slender upright landed at z -17 - the clothesline sits INSIDE that window and OUTSIDE the
+  real envelope, so a disc centred on it starts off-map, slides 3.2 to get on-map, and read as a
+  trunk that failed to hold. The window is X.SNOWFIELD now.
+- SIX SABOTAGES, all caught: no rack collider (3 findings), no line collider (2), a SOLID rail (4,
+  including the bird being shoved sideways), a rail declared too thin for what it holds (2), the ski
+  field racks losing their yaw (2), and the skis crowding the binding again (18).
+- AND MY OWN FINDER WAS THE LAW-14 SHAPE IN ITS OTHER FORM: the rail was found with
+  find(...&&!c.solid), so the solid-rail sabotage returned nothing, the guard skipped every
+  behavioural assertion, and the finding read as a missing collider rather than as a wall in the
+  middle of the ski corner. It is found by WHERE IT IS now, and the same sabotage lands four.
+- FOUND, NOT FIXED: THE BEANIE. It is placed at head height on the sleeping tramper and a person is
+  not a surface, so it falls into the dirt beside him while the row says steal the beanie off the
+  sleeping tramper HEAD. Excluded by name in the assertion with the reason written next to it, and
+  filed as TODO 64 - a prop that RIDES a thing that moves is a different mechanic from one that rests
+  on a thing that does not, and it wants a design answer rather than a collider.
+- CAPTURE: 25 compared, 0 flagged. 10_skifield came back 0.9909 - the skis and poles now standing in
+  the rack rather than lying in the tussock - which is under the 0.965 threshold and would therefore
+  have sat in the set as a permanent 1% drift, which is the FLAKES law 12 trap. RE-PINNED, because it
+  is exactly the intentional change this piece is: eyeball it and revert the pin if you disagree.
+  11_trailhead moved 0.0004 and was left alone.
+- EYEBALL: gauntlet/capture/10_skifield.png (RE-PINNED - the skis are in the rack) and
+  gauntlet/capture/29_lodge_deck.png (three skis standing in the near rack, first pin, unpinned).

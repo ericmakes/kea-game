@@ -925,7 +925,12 @@ C.section('THE STAR LEDGER — three stars a page, and no cleared page is ever l
   } finally { globalThis.localStorage=realLS; }
 }
 
-const SNOWZ0=-53, SNOWZ1=-17;
+/* THE BAND IS THE ENVELOPE, READ OFF THE ENGINE (TODO 63, law 10 again). These were -53 and -17,
+   hand-picked to be generous around SNOWFIELD when the section was written, and generous was wrong
+   in a way nothing noticed until the rail pass put a slender upright at z -17: the clothesline sits
+   INSIDE this window and OUTSIDE the actual envelope, so a disc centred on it starts off-map, slides
+   3.2 to get on-map, and read as a trunk that failed to hold its ground. */
+const SNOWZ0=X.SNOWFIELD.z0, SNOWZ1=X.SNOWFIELD.z1;
 C.section('SNOW LIES ON THE COUNTRY — the shed no longer stands in a white saucer');
 // TODO 28, verdict from Eric 2026-09-01: unbury, slide clear of the shed footprint, banking against
 // the walls is welcome. The snow patches were the only ground decal in the file that never asked
@@ -964,11 +969,29 @@ C.section('SNOW LIES ON THE COUNTRY — the shed no longer stands in a white sau
 
   // 4. A TRUNK IS BANKED AGAINST, NOT SLID OFF. Snow round the foot of a tree is right; it is a
   //    BROAD footprint that turns a disc into a saucer. Set off the measured band: trunks 0.35-0.44.
+  /* TODO 63 CHANGED WHAT THIS SET CONTAINS, and the assertion had to get more precise rather than
+     more forgiving. It read: a disc centred on any slender upright in the band stays put. That was
+     true of the only slender uprights the band had - tree trunks, standing in the open - and it
+     quietly assumed no other kind could exist. The rail pass added three, and two of them stand
+     within arm reach of a BUILDING: the ski rack rail is 1.9 metres off the tow shed. A disc centred
+     there slides, and it should, because the shed is broad and the shed is why. So the claim is split
+     into the two things it was conflating - the slender thing never blocks, and a broad neighbour
+     always does. */
   { const trunks=G.colliders.filter(c=>c.kind==='box'&&c.top>0.2&&Math.min(c.w,c.d)<X.SNOWBULK
                                        &&c.z>=SNOWZ0&&c.z<=SNOWZ1);
     ok(trunks.length>=3,'the snow band has slender uprights in it ('+trunks.length+')');
-    let held=0; for(const c of trunks){ const q=X.snowSpot(c.x,c.z,2.0); if(q.slid===0)held++; }
-    ok(held===trunks.length,'and a disc centred on every one of them stays put ('+held+'/'+trunks.length+')'); }
+    const broadNear=(c,r)=>G.colliders.some(o=>o!==c&&o.kind==='box'&&o.top>0.2&&
+      Math.min(o.w,o.d)>=X.SNOWBULK&&
+      Math.hypot(Math.max(0,Math.abs(c.x-o.x)-o.w),Math.max(0,Math.abs(c.z-o.z)-o.d))<r);
+    const open=trunks.filter(c=>!broadNear(c,2.0)), crowded=trunks.filter(c=>broadNear(c,2.0));
+    ok(open.length>=3,'and at least three of them stand in the open ('+open.length+' of '+trunks.length+')');
+    let held=0; for(const c of open){ const q=X.snowSpot(c.x,c.z,2.0); if(q.slid===0)held++; }
+    ok(held===open.length,'a disc centred on a slender upright in the open stays exactly put ('+
+       held+'/'+open.length+')');
+    let why=0; for(const c of crowded){ const b=X.snowBlocked(c.x,c.z,2.0);
+      if(b&&Math.min(b.w,b.d)>=X.SNOWBULK)why++; }
+    ok(why===crowded.length,'and the ones beside a building slide because of the BUILDING ('+
+       why+'/'+crowded.length+')'); }
 
   // 5. TOTALITY — the assertion that makes the browser-only loop safe. Every candidate the generator
   //    could possibly draw resolves to a spot no building is under. Proven over the envelope rather
@@ -3520,6 +3543,131 @@ C.section('A BUILD TAKES ITS HANDLES BACK OFF THE BOARD - the last thing the dis
   }
   ok(Object.keys(X.BIOME.ALL).length===2,'and the stand-in is out of the registry ('+
      Object.keys(X.BIOME.ALL).join(',')+')');
+}
+
+C.section('A RAIL IS A SURFACE - the rack, the boot rail and the clothesline hold what is put on them');
+/* TODO 63, and it is OPPORTUNITIES Tier 3 item 2, which says in as many words that it bit that pass
+   twice: PROPS REST WHERE PLACED, no rail or rack or line holds anything, props fall every time.
+   MEASURED BEFORE THE FIX: twelve of the carpark twenty-two props were on the ground inside three
+   seconds - two skis and two poles off the rack, both walking poles off the boot rail, all three
+   clothes pegs off the line, the goggles, the sock, the beanie. The pegs are the sharpest: the
+   mission says steal all three clothes PEGS and every one of them was lying in the dirt.
+   THE ANSWER WAS ALREADY IN THE PHYSICS. A prop falls until groundHeightAt gives it something to
+   stand on, and it has consulted the colliders since the day it was written - the sandwich has
+   rested on the picnic table for weeks because that table has a collider. The rails did not. So this
+   is a collider pass and not a new rule: railTop declares the top of a thing you can rest something
+   on, never solid, because a rail is something a kea perches and walks over rather than something
+   that stops it.
+   AND THE PROPS THAT SIT ON ONE ARE PLACED AT THEIR RESTING HEIGHT, so nothing pops upward on the
+   first frame - which is the difference between resting where it was placed and merely being caught. */
+{
+  const restY=p=>X.groundHeightAt(p.x,p.z,p.y+0.3)+0.08;   // what the physics will settle it at
+  const settle=n=>{ for(let i=0;i<(n||180);i++)X.update(1/60); };
+  try{
+    X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+    const at1=G.props.map(p=>({name:p.name,y:p.y,home:p.home.y}));
+    settle(180);
+
+    /* 1. NOTHING MOVES, which is the whole claim. A prop is allowed to be ON THE GROUND by design -
+       the goggles are dropped at the rack, the sock blew off the rail hours ago - so the assertion
+       is about props that were placed ABOVE the ground, and it names the ones that fall. */
+    /* THE BEANIE IS EXCLUDED BY NAME, AND IT IS A FINDING RATHER THAN AN EXEMPTION (TODO 64). It is
+       placed at head height on the sleeping tramper, and a person is not a surface: there is nothing
+       under it to rest on, so it falls into the dirt beside him while the row says steal the beanie
+       off the sleeping tramper HEAD. Fixing it means a prop that rides a thing that moves, which is
+       a different mechanic from a prop that rests on a thing that does not, and it needs a design
+       answer rather than a collider. */
+    { const high=G.props.filter((p,i)=>at1[i].home>0.5&&!p.heldBy&&!p.banked&&p.name.indexOf('beanie')<0);
+      const fell=high.filter(p=>p.y<p.home.y-0.05);
+      ok(high.length>=9,'the carpark places at least nine props up on something ('+high.length+': '+
+         [...new Set(high.map(p=>p.name))].join(', ')+')');
+      ok(fell.length===0,'and after three seconds not one of them has fallen off it ('+
+         (fell.map(p=>p.name+' '+p.home.y.toFixed(2)+'->'+p.y.toFixed(2)).join(', ')||'none')+')'); }
+
+    /* 2. AND THEY REST WHERE THEY WERE PLACED, not merely somewhere above the dirt: the settled
+       height is what the physics resolves under them, to the centimetre. */
+    { const off=G.props.filter(p=>!p.heldBy&&!p.banked&&Math.abs(p.y-restY(p))>0.02);
+      ok(off.length===0,'every prop sits exactly where the ground under it puts it ('+
+         (off.map(p=>p.name+' '+p.y.toFixed(2)+' vs '+restY(p).toFixed(2)).join(', ')||'none')+')'); }
+
+    // 3. THE THREE SURFACES, ONE AT A TIME, held to the props they were built to hold.
+    { const pegs=G.props.filter(p=>p.name==='clothes peg');
+      ok(pegs.length===3&&pegs.every(p=>p.y>1.4),'all three pegs are up on the line ('+
+         pegs.map(p=>p.y.toFixed(2)).join(',')+')');
+      const skis=G.props.filter(p=>p.name==='ski');
+      ok(skis.length===2&&skis.every(p=>p.y>0.9),'both skis are up on the rack ('+
+         skis.map(p=>p.y.toFixed(2)).join(',')+')');
+      const wp=G.props.filter(p=>p.name==='walking pole');
+      ok(wp.length===2&&wp.every(p=>p.y>0.7),'both walking poles are up on the boot rail ('+
+         wp.map(p=>p.y.toFixed(2)).join(',')+')'); }
+
+    /* 4. A RAIL IS NOT A WALL. It is not solid, so a bird at ground level walks straight under it
+       and is never pushed sideways by it, and it does not step UP onto it from the ground either -
+       groundHeightAt only offers a top to something already within reach of it. */
+    /* THE RAIL IS FOUND BY WHERE IT IS, not by the property under test. Written the other way -
+       find(...&&!c.solid) - a sabotage that made rails solid returned nothing, the guard below
+       skipped every behavioural assertion, and the finding read as a missing collider rather than a
+       wall in the middle of the ski corner. Law 14 in its other form: do not let the thing being
+       asserted decide whether the assertion runs. */
+    { const k=kq(); const rail=G.colliders.find(c=>c.kind==='box'&&c.top>0.9&&c.top<1.0&&
+        Math.abs(c.x+40.4)<0.2&&Math.abs(c.z+38.1)<0.2);
+      ok(!!rail,'the ski rack rail is a collider now ('+
+         (rail?rail.w+' x '+rail.d+' top '+rail.top:'none')+')');
+      ok(!!rail&&rail.solid===false,'and not a solid one, because a rail is perched and not bumped into ('+
+         (rail?String(rail.solid):'no rail')+')');
+      if(rail){
+        k.x=rail.x; k.z=rail.z; k.y=0; k.vy=0; k.grounded=true; tick(4);
+        ok(Math.abs(k.x-rail.x)<0.02&&Math.abs(k.z-rail.z)<0.02,
+           'a bird on the ground stands under it without being shoved ('+k.x.toFixed(2)+','+k.z.toFixed(2)+')');
+        /* AND IT LIFTS A BIRD THAT WALKS INTO IT, which is the engine step-up rule and not a defect
+           of this piece: groundHeightAt offers any top within 0.55 of what is asking, the bird asks
+           with its beak at y plus 0.4, and every low surface in the game already behaves this way -
+           the picnic table at 0.85 is the same class. A kea that hops onto a ski rack is right. */
+        ok(Math.abs(k.y-rail.top)<0.01,'and a bird that walks into it steps up onto it, the way it does onto the picnic table ('+
+           k.y.toFixed(2)+' vs top '+rail.top+')');
+        ok(rail.top<0.4+0.55,'which is the step-up rule and not a special case ('+rail.top+' under 0.95)');
+        ok(Math.abs(X.groundHeightAt(rail.x,rail.z,rail.top+0.2)-rail.top)<0.001,
+           'while a bird already up at rail height is offered the rail to stand on ('+
+           X.groundHeightAt(rail.x,rail.z,rail.top+0.2)+')'); } }
+
+    /* 5. THE REGRESSION THIS PIECE CAUSED AND FIXED, pinned so it cannot come back. interact()
+       measures from the beak - y plus 0.4 - so raising the skis onto the rail put one 0.395 from the
+       beak against the CHEW THE BINDING tear at 0.41, and holding the key at the binding picked up a
+       ski instead. The skis moved half a ski width apart. A single tap at the tear must not put
+       anything in the beak. */
+    { const t=G.inter.find(it=>it.kind==='tear'&&!it.done&&it.label&&it.label.includes('BINDING'));
+      ok(!!t,'the binding tear is still there');
+      if(t){ const q=t.getPos(), k=kq();
+        if(k.held){k.held.heldBy=null;k.held=null;}
+        const yy=Math.max(q.y,X.groundHeightAt(q.x,q.z,3)+0.02);
+        for(let i=0;i<3;i++){ k.x=q.x;k.z=q.z;k.y=yy;k.vy=0;k.grounded=true; X.update(1/60); }
+        /* HELD, NOT TAPPED: a tear takes a hold, and its progress decays the moment nothing is
+           tugging it - so a tap would read zero on a tear that is working perfectly. */
+        hold(P1.grab);
+        for(let i=0;i<8;i++){ k.x=q.x;k.z=q.z;k.y=yy;k.vy=0;k.grounded=true; X.update(1/60); }
+        const prog=t.progress, heldName=k.held?k.held.name:null;
+        un(P1.grab); tick(2);
+        ok(!heldName,'standing at the binding, the grab goes to the tear and not to a ski ('+
+           (heldName||'nothing held')+')');
+        ok(prog>0,'and the tug lands on it ('+prog.toFixed(2)+')'); } }
+
+    /* 6. THE SKI FIELD RACKS ARE ROTATED, and that is the part a collider gets wrong quietly. Each
+       rack has its own yaw, the gear is placed in the rack OWN frame, and the collider carries the
+       same yaw - so if the sign convention were wrong the rail would be somewhere else and every ski
+       would be in the snow, which is exactly what the first version of this piece did. */
+    X.boot({biome:'skifield'}); X.startGame(1); tick(4); park();
+    { const placed=G.props.filter(p=>p.home.y>0.5);
+      settle(180);
+      const fell=placed.filter(p=>p.y<p.home.y-0.05);
+      ok(placed.length===8,'the ski field puts eight pieces of gear up on its three racks ('+placed.length+')');
+      ok(fell.length===0,'and every one of them is still there three seconds later ('+
+         (fell.map(p=>p.name).join(',')||'none')+')');
+      const yaws=[...new Set(G.colliders.filter(c=>!c.solid&&c.top>0.9&&c.top<1.1).map(c=>c.ry))];
+      ok(yaws.length>=3&&yaws.some(v=>v!==0),'the rack rails carry their own yaw, not a flat guess ('+
+         yaws.map(v=>v.toFixed(2)).join(',')+')'); }
+  } finally {
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+  }
 }
 
 C.section('PERF FLOOR');
