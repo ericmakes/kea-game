@@ -1,5 +1,63 @@
 # REPORT — overnight session 13, 2026-09-03
 
+## ADDENDUM — session 13b: YOU SAID APPLY THE RIG PATCH, AND IT IS IN
+
+`gauntlet/parked/todo30-and-67-deterministic-rig.patch` applied clean onto tonight's six pieces.
+capture.mjs only — **the game file is still unopened**, md5 `8232590523658dfc3f5a1fe59a916de0`, gate
+CERTIFIED-SHIP, tree clean. **NOT RE-PINNED and NOT RECALIBRATED**: both are your look, and the
+eleven flagged frames are sitting in `gauntlet/capture/pair_<vantage>_todo30.png`, baseline on the
+left and the new frame on the right.
+
+**IT DOES EXACTLY WHAT SESSION 12 SAID IT WOULD.** They predicted 11 flagged frames worst 0.8467.
+Measured: **11 flagged, worst `13_idle_preen` 0.8468**, then `14_player_view` 0.8884 and `16_trish`
+0.9166 — their whole table, a build and a machine later. The eleven are 02, 06, 08, 10, 11, 12, 13,
+14, 16, 19, 20.
+
+**AND THE PRIZE IS REAL.** Full set, five sweeps, ten pairs each:
+
+    nineteen of twenty-eight vantages under 100 px of cross-run churn
+    two at exactly zero          29_lodge_deck, 30_groomed_band
+    06_skyline    8791 -> 129    the worst vantage in the set, before tonight
+    20_dead_rear  4353 ->  22    piece 69 and this patch, stacking as intended
+    the three that do not collapse: 28_skifield_base 1291, 22_torch_beam 969, 09_colossal 825
+
+`09_colossal` is **by design** — it is the popup fanout and it sets `__keaFeedKeep`. `22_torch_beam`
+is the Rex arm lerp TODO 70 named. `28_skifield_base` is new, and it is the one thing worth your
+attention below.
+
+### The crossrun red on 28 is not the patch, and the bull wheel is
+
+`crossrun` goes red on `28_skifield_base`: 1291 px against a recorded ceiling of 453. **I stashed the
+patch and measured the same vantage on the same machine the same night** — six runs, fifteen pairs:
+**5844 px worst**, samples 14 250 265 464 608 742 1105 1249 1810 3678 5046 5515 5655 5756 5844. So
+the patch takes 28 from **5844 to 1291** and the recorded 453 was always too low. That is the third
+time in three sessions that a ceiling from a sample has turned out to be a floor, and the first time
+it has been the calibration table itself rather than a claim in a report.
+
+**The residual is named: the bull wheel.** Line 3720, `if(G.towWheel)G.towWheel.rotation.z+=dt*2.4;`
+— a pure `dt` accumulator that no clock pin can reach, which is why it survived a patch that took
+06_skyline from 8791 to 129. Two runs cropped side by side are the same red disc with its bolt-head
+at a different angle, and the hot cells are cx 7..9, cy 3..4, which is where it sits. **The fix is
+one line in the 28 PIN** and it is the law-12 idiom every other vantage already uses — filed as
+**TODO 72**, not taken, because choosing the angle moves that frame.
+
+### Two things I did not do, both because they are judgements
+
+1. **THE RE-PIN.** Eleven frames. Start with `pair_13_idle_preen_todo30.png`: the caption is gone
+   (that is 67 working) and **the preen is caught at a different moment of its cycle**, because a
+   pinned clock freezes poses as well as grass. That is the one real question in the sweep — every
+   bird is still present, subjects reads **16 checked, 0 missing** across all eleven. boxdiff also
+   flags `13_idle_preen` at 0.8891, which is that same pose change seen from the instrument built
+   for it after piece 54.
+2. **THE CHURN RECALIBRATION.** Every ceiling in the `pxdiff` table is now 20-50x too loose, so the
+   instrument can no longer see a regression. The paste-ready table is in the crossrun output and it
+   should be taken at **ten runs, not five** — tonight proved that on my own claim and again on 28.
+   It belongs in the same sitting as the re-pin, because pxdiff reads fresh against baseline.
+
+**And `12.0` is still a free parameter.** Nothing tonight swept it. If you want the value that
+disturbs the pinned set least, that measurement is an hour and I have not spent it.
+
+
 Stop condition: **6 pieces certified**. Your order was the step-6 fix first and alone, then the
 numbered queue, and the parked deterministic-rig patch untouched. That is what ran. **The game file
 was never opened.** Final build **8232590523658dfc3f5a1fe59a916de0**, unchanged from the tip you
