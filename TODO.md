@@ -1285,10 +1285,25 @@ first, so it is not the flap phase. Wing rest is a lerp(current, target, dt*k), 
 on the SEQUENCE of real dt values and not on the frame count or on any pinnable clock.
 PROVED BY LETTING IT CONVERGE. With the settle raised from 900ms to 4000ms: 12_seal_midpeel
 704 -> 106 and 13_idle_preen 89 -> 28. That is a converging accumulator, measured, not argued.
-22_torch_beam DOES NOT CONVERGE: 364 -> 297 over the same test, so it is something else. Its churn
-sits at x660..720 y180..300, which is Rex and the torch. Rex is pinned to state 'chase' every frame
-by that vantage and a chase walk cycle may never settle. NOT INVESTIGATED FURTHER - time-boxed under
-FLAKES law 8 after three probes on 12, and filed rather than guessed at.
+22_torch_beam WAS INVESTIGATED AFTER ALL, and the first sentence of this item was wrong about it.
+It IS this class for the part that matters, and the correction is worth more than the guess was:
+    THE TORCH IS INNOCENT. Probed at shutter across four takes: torch.g.rotation.y 0 every time,
+    spot.intensity 2.6, beam opacity 0.13. The 22 PIN holds all three.
+    IT IS REX LEFT ARM, line 4046, the same lerp shape as the 12 wings:
+    lerp(armL.rotation.x, angry ? -2.6+sin(G.time*14)*0.3 : ..., dt*8). With G.time pinned the
+    target is a constant -2.8957, and watched over one run the arm walks to it monotonically:
+    -2.73089, -2.83549, -2.87691, -2.88915, -2.89364, -2.89543. At 900ms it is not there yet, and
+    where it has got to depends on the dt sequence. Across takes it read -2.75284, -2.75286,
+    -2.73091, -2.73060.
+    THE LEGS ARE NOT IT, which is worth writing down because they look like the obvious suspect.
+    walkPh does keep advancing on pure dt with nothing to pin it - measured 8.3165 to 13.8659 in
+    one run - but sw is "moving ? 0.55 : 0" and a vantage that pins Rex in place makes moving false,
+    so legL and legR sit at exactly 0 and walkPh drives nothing.
+    WHAT IS LEFT IS ABOUT 300 PX AND I DID NOT NAME IT. With a 4000ms settle the arm is converged
+    and the legs are static, and 22 still churns 297. So the irreducible part is neither, and the
+    most likely candidate is the spotlight shadow map on a night frame, which would be a renderer
+    cause of the FLAKES law 9 family rather than a staging one. TIME-BOXED under law 8 after six
+    probes and left as a named unknown of known size.
 THE TWO WAYS OUT, and both re-pin, so both are yours:
   (a) A FIXED dt FOR THE RIG - the deterministic frame clock the 08_readability_320 comment already
       named and attributed to TODO 33. It fixes the class outright and every frame moves.
