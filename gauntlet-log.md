@@ -3318,3 +3318,46 @@ photograph. capture.mjs comments only - four notes, outside every template liter
 - PROVED IT CHANGED NOTHING rather than asserting it: 01 and 12 reshot at 1564 and 1017 changed
   pixels against churns of 3996 and 3123, ssim 0.9989 and 0.9993. Comments outside a template
   literal cannot move a frame, and now there is a measurement saying so.
+
+## SESSION END — 2026-09-03, session 13, six pieces and five marks inside a solid
+Stop condition on the 6-piece rule. Tip 8232590523658dfc3f5a1fe59a916de0 - THE GAME FILE WAS NEVER
+OPENED - gate CERTIFIED-SHIP, full sweep at the end reading 28 pinned vantages 0 flagged, subjects 16
+checked 0 missing, boxdiff 12 compared with only the two known ones changed, pxdiff 3 over band
+(07_jam, 17_flight and tonight's 20), three selftests ALL PASS, working tree clean, SESSION.lock
+released. ONE FRAME MOVED AND IS NOT RE-PINNED: 20_dead_rear.
+    --   step-6-fix                boxdiff and pxdiff into OVERNIGHT.md, three reports late
+    69   dead-rear-camlock         the last live camera in the set
+    61   subject-box-20            closes TODO 61, and it is the piece-69 dividend
+    71   stage-mark-ejection       the audit, and four marks inside a solid
+    69c  correct-the-20-churn-claim my own five-run number, corrected at 45 pairs
+    71b  computed-stage-marks      the two non-literal marks, and the fifth ejection
+    71c  annotate-ejected-marks    the cheap half of 71, comments only
+- THE QUEUE RAN OUT AFTER TWO AND THE NIGHT DID NOT. Eligible after session 12 was 69 and whatever it
+  filed; 30, 67 and the re-pin are Eric by name, 68 says in its own text that the next move is not
+  more measurement, and 32, 39b, 40b, 56, 60 and 64 are judged, design-blocked or blocked art. Four
+  of the six pieces are findings that piece 69 turned up on its way past, which is the same shape
+  session 12 had - the instrument answers a question and the answer is the next three pieces.
+- THE BRIEF FOR 69 WAS ONE WORD OUT AND THAT WORD WAS THE WHOLE PIECE. Held STILL at the offset the
+  stage line assigns, 20 is a close-up: the ease had all but converged by the shutter, so the pinned
+  frame is the wide follow view. The answer is to stop nominating a position and take the FIXED
+  POINT from the engine - 400 iterations of the game own updateCams at a fixed dt, then lock. Law 10
+  applied to a rig file: the collider march and the ground clamp are done BY the follow rig.
+- FIVE STAGE MARKS ARE INSIDE A SOLID and the establishing shot is the worst of them. 01_carpark_wide
+  photographs its bird 1.18 m from its own line, inside a parked car; 12_seal_midpeel stands the bird
+  at the seal at y 1.62 and photographs it on the tarmac 0.63 out and 1.62 down. Not a flake - one
+  step, identical in both engines - so it costs nobody a frame and costs everybody who edits a mark.
+- I MADE THE SESSION-12 MISTAKE MYSELF AND CAUGHT IT THE SAME NIGHT. A 4334 -> 991 churn claim off
+  five runs a side is 4353 -> 3185 at forty-five pairs, and the "continuous versus discrete" shape I
+  read off ten pairs is not there at forty-five. Third session running that a ceiling from five
+  samples turned out to be a floor, first time it was my own. What survives is the state probe: the
+  camera is identical to five decimals at four settle lengths, which is not a sample.
+- AND IT ANSWERED THE QUESTION I HAD LEFT OPEN, THE OTHER WAY. Piece 69 declined to lower the pxdiff
+  churn entry for 20 from 5489 to 991 for want of a bigger sample. Lowering it would have gone red on
+  the very next batch of ten. The entry stays and now has a measurement beside it.
+- THE WRONG CONVENTION PRODUCES A FINDING WITH NO CAUSE, which is its tell. Reading the ejectors with
+  the camera march test instead of pushOut gave 18_rear_close a 0.274 m move and no collider. With
+  pushOut own radius and shallower-axis resolve, the predicted overlap equals the measured move on
+  all five rows.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md, then TODO 71 and the audit it names, then TODO 69
+  including its correction, and FLAKES 14 before writing a single assertion. The two parked patches
+  in gauntlet/parked/ are untouched and still apply clean.
