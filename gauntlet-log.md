@@ -2228,3 +2228,38 @@ Verdict: green. One line of staging, and the brief own proof had to be thrown ou
 - EYEBALL: gauntlet/capture/17_flight.png against gauntlet/capture/baseline/17_flight.png. The wings
   were at the glide spread and are now mid-downstroke. The decision is whether 17 and 04 should read
   differently at all, given 04 is the underwing shot - the brief asks that out loud and it is yours.
+
+### PIECE 55 — cage-hint-alive — CERTIFIED 4c7fd986c7a3762b4e556a62ae9942e2
+Verdict: green. Option (b) of the three the brief offers, which it calls the smallest honest change.
+- THE MISSION GATE GETS AN EXPLICIT OPT-OUT. addHint takes an options bag; hintScan skips the mission
+  lookup for a hint carrying free:true; the cage hint declares it at the call site with the reason
+  written beside it. Nine hints on the board, one of them free.
+- THE GATE WAS NEVER REALLY ABOUT MISSIONS, IT WAS ABOUT TYPOS, and that is the part that must not be
+  traded away for one line of teaching. So it is driven now instead of assumed: the battery adds a
+  hint whose mid no mission has, without the flag, stands the bird in its radius, asserts the plate
+  stays empty, then splices it back out - because nothing clears G.hints between runs (FLAKES law 1)
+  and the counts above it are asserted again on the next pass through the file.
+- THE TRIPWIRE FIRED, WHICH IS WHAT IT WAS BUILT FOR, AND IT WAS RE-AIMED RATHER THAN DELETED. It now
+  asserts strictly more: still exactly one missionless hint, still the cage one, missionless ON
+  PURPOSE, the opt-out has not spread to a second hint, and the typo safety still holds. This is the
+  distinction the no-weakening law turns on - the old assertion stated a fact that piece 55 was
+  commissioned to change, and the new one states what is true after it, plus the safety underneath.
+- SABOTAGED THREE WAYS AND ALL THREE CAUGHT BY NAME: dropping the free flag from the call site (9
+  findings, including both modes going silent), making hintScan gate nothing (2 findings, and it is
+  the typo hint that catches it, not the cage one), and making addHint default to free (4 findings,
+  and the spread assertion names all nine hints in its message).
+- A VERB BEATS A HINT, and that is the answer to the judged part of the brief - whether this puts new
+  noise on screen during play. hintScan only writes to an EMPTY plate, so standing at the hint centre,
+  inside grab range of the ute keys, a player reads GRAB UTE KEYS and the hint says nothing. Asserted
+  both ways: the hint is the one in range there, and it is silent there.
+- BOTH MODES READ THEIR OWN LINE, which is the proof the brief asks for: solo gets the mash sentence,
+  co-op gets the latch one and no mash anywhere in it, from the same hint object, off the resolver
+  piece 52 built.
+- TWO THINGS LEFT FOR ERIC, NEITHER BUILT. Caging needs G.wanted >= 3 and an empty cell, so the copy
+  teaches a mechanic that cannot fire below WANTED 3 - gating the hint on the warrant would teach it
+  the moment it becomes true, and that is a copy call. And the hint is placed off G.uteG.localToWorld
+  inside startGame with no guard, which the second biome walks straight into: TODO 58.
+- CAPTURE: full pass, 25 compared, 0 flagged, worst 0.9823 which is 17 carrying piece 54. No vantage
+  stands within the 6-unit cage radius at (12.2, 5.9), so nothing else moved. Subjects 7/7.
+- EYEBALL: press E near the DOC ute in solo and again in co-op. The line is new on screen - it has
+  never displayed before tonight - so it is worth ten seconds of reading it in place.

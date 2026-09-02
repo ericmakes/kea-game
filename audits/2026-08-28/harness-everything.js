@@ -1589,7 +1589,7 @@ C.section('THE PROP HEADING IS A DRAW NOBODY READS, AND IT IS NOW NAMED THAT');
   X.startGame(1); tick(6);
 }
 
-C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and it turns out nobody could read it anyway');
+C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody can actually read it');
 // TODO 52. Piece 15 took the mash away in co-op, which made the one line this hint carries false in
 // one of the two modes: "a mate pecks the latch, or mash your way out". addHint refuses to replace a
 // mid it already has and nothing clears G.hints between runs, so a line baked in at build time is
@@ -1622,19 +1622,86 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and it turns out nobody could
   { const str=(G.hints||[]).find(h=>typeof h.text==='string');
     ok(!!str&&HI.text(str)===str.text,'a string hint still resolves to itself ('+(str?str.mid:'none')+')'); }
 
-  /* AND THE FINDING THIS PIECE TRIPPED OVER, which is bigger than the lie it was sent to fix:
-     NOBODY HAS EVER BEEN ABLE TO READ THIS HINT. hintScan drops any hint whose mid is not an open
-     mission - `const m=G.missions.find(m=>m.id===h.mid); if(!m||m.done||locked)continue;` - and
-     there is no mission with the id 'cage'. Every other hint mid has one. So the line has been
-     unreachable for its whole life, in both modes, and the lie was invisible.
-     THIS ASSERTION IS A TRIPWIRE, NOT AN ENDORSEMENT. It states today's truth, and it FAILS the day
-     somebody gives 'cage' a mission - which is exactly the day a human should read the copy above
-     and decide whether it should be on screen at all. Filed as TODO 55. */
+  /* AND THE FINDING THIS PIECE TRIPPED OVER, which was bigger than the lie it was sent to fix:
+     NOBODY HAD EVER BEEN ABLE TO READ THIS HINT. hintScan drops any hint whose mid is not an open
+     mission, and there is no mission with the id 'cage'. Every other hint mid has one. So the line
+     was unreachable for its whole life, in both modes, and the lie was invisible while it lasted.
+     THE TRIPWIRE THAT SAID SO HAS NOW FIRED, WHICH IS WHAT IT WAS FOR. TODO 55 answered its
+     question - option b, the mission gate gets an explicit opt-out - so the assertion is re-aimed
+     at the new invariant rather than deleted. It is strictly more than it was: the cage hint is
+     still the only missionless one, it is missionless ON PURPOSE, the opt-out has not spread, and
+     the typo safety the gate was really there for is proved to still work. */
   const mids=(G.hints||[]).map(h=>h.mid);
   const orphan=mids.filter(m=>!G.missions.find(x=>x.id===m));
   ok(orphan.length===1&&orphan[0]==='cage',
-     'exactly one hint has no mission behind it and it is the cage one, so it cannot display today ('+
-     JSON.stringify(orphan)+') - if this fails, somebody made it reachable: read the copy and see TODO 55');
+     'exactly one hint has no mission behind it and it is still the cage one ('+JSON.stringify(orphan)+')');
+  ok(cage().free===true,'and it is missionless ON PURPOSE - free is declared at the call site');
+  ok((G.hints||[]).filter(h=>h.free).length===1,
+     'exactly one hint in the game is free, so the opt-out did not spread ('+
+     (G.hints||[]).filter(h=>h.free).map(h=>h.mid).join(',')+')');
+
+  /* THE SAFETY THE MISSION GATE WAS REALLY THERE FOR IS A TYPO IN A MID, and trading that away to
+     make one hint live would be a bad deal. So drive it: a hint with a mid no mission has, which
+     does NOT declare itself free, must still be invisible. Driven at a clean patch of ground with
+     no other hint and no interactable in reach, and spliced back out afterwards, because nothing
+     clears G.hints between runs (FLAKES law 1) and the counts above are asserted again on the next
+     pass through this file. */
+  { X.startGame(1); tick(6); park();
+    const k=G.keas[0]; if(k.held){k.held.heldBy=null;k.held=null;}
+    const TX=30, TZ=-30;
+    X.HINTS.add('nosuchmission',TX,0.5,TZ,6,'THIS LINE MUST NEVER REACH A PLATE');
+    const bogus=(G.hints||[]).find(h=>h.mid==='nosuchmission');
+    ok(!!bogus&&!bogus.free,'a hint with a mid no mission has, and no free flag, is on the board');
+    X.setPrompt(k.idx,'');
+    const ty=Math.max(0.25,X.groundHeightAt(TX,TZ,3)+0.02);
+    for(let i=0;i<4;i++){ k.x=TX; k.z=TZ; k.y=ty; k.vy=0; k.grounded=true; X.update(1/60); }
+    ok((G.hintNow||[])[k.idx]!==('nosuchmission'),
+       'and standing in it displays NOTHING, so the typo safety survived the opt-out ('+
+       ((G.hintNow||[])[k.idx]||'nothing')+')');
+    ok(String(X.PROMPTS[k.idx]).indexOf('MUST NEVER REACH A PLATE')<0,
+       'the plate never carried its line ('+String(X.PROMPTS[k.idx]).replace(/<[^>]*>/g,'').slice(0,40)+')');
+    const bi=(G.hints||[]).indexOf(bogus); if(bi>=0)G.hints.splice(bi,1);
+    ok(!(G.hints||[]).some(h=>h.mid==='nosuchmission'),'and the bogus hint is off the board again');
+    ok((G.hints||[]).map(h=>h.mid).filter(m=>!G.missions.find(x=>x.id===m)).length===1,
+       'so the missionless count is back to one'); }
+
+  /* THE PROOF TODO 55 ASKS FOR: stand a bird in the radius in BOTH modes and read the plate. The
+     spot is the hint centre plus three on x - the centre itself is inside grab range of the ute
+     keys, and a verb prompt beats a hint by design, which is the assertion after these two. */
+  { const CX=()=>cage().x+3, CZ=()=>cage().z;
+    const standAt=(k,x,z)=>{ X.setPrompt(k.idx,'');
+      const y=Math.max(0.25,X.groundHeightAt(x,z,3)+0.02);
+      for(let i=0;i<4;i++){ k.x=x; k.z=z; k.y=y; k.vy=0; k.grounded=true; X.update(1/60); }
+      return String(X.PROMPTS[k.idx]); };
+
+    X.startGame(1); tick(6); park();
+    { const k=G.keas[0]; if(k.held){k.held.heldBy=null;k.held=null;}
+      const plate=standAt(k,CX(),CZ());
+      ok((G.hintNow||[])[k.idx]==='cage','solo: the bird in the cage radius is reading the cage hint ('+
+         ((G.hintNow||[])[k.idx]||'nothing')+')');
+      ok(plate.indexOf(HI.text(cage()))>=0,'and the plate carries the resolved solo line');
+      ok(plate.indexOf('mash your way out')>=0,'which is the one that mentions mashing ('+
+         plate.replace(/<[^>]*>/g,'').slice(0,72)+')'); }
+
+    X.startGame(2); tick(6); park();
+    { const k=G.keas[0]; if(k.held){k.held.heldBy=null;k.held=null;}
+      const plate=standAt(k,CX(),CZ());
+      ok((G.hintNow||[])[k.idx]==='cage','co-op: the same spot reads the same hint');
+      ok(plate.indexOf(HI.text(cage()))>=0,'and the plate carries the resolved CO-OP line');
+      ok(plate.indexOf('mash')<0,'with no mashing in it, because co-op does not let you ('+
+         plate.replace(/<[^>]*>/g,'').slice(0,72)+')');
+      ok(plate.indexOf('latch')>=0,'and it names the thing that does work'); }
+
+    /* A VERB BEATS A HINT, and that is what keeps this from being noise on the plate: hintScan only
+       writes when the plate is empty. At the hint centre the ute keys are in reach, so the grab
+       prompt is what a player sees there - the hint is still the one in range, and still silent. */
+    X.startGame(1); tick(6); park();
+    { const k=G.keas[0]; if(k.held){k.held.heldBy=null;k.held=null;}
+      const plate=standAt(k,cage().x,cage().z);
+      ok((G.hintNow||[])[k.idx]==='cage','at the centre the cage hint is the one in range');
+      ok(plate.indexOf('GRAB')>=0&&plate.indexOf('night ranger')<0,
+         'but a verb in reach owns the plate and the hint stays quiet ('+
+         plate.replace(/<[^>]*>/g,'').slice(0,40)+')'); } }
 
   // THE RESOLVER IS ON THE DISPLAY PATH, proved through a hint that CAN fire rather than by trusting
   // the export. Pick an open-mission hint, stand the bird in it with an empty plate, and read the HUD.

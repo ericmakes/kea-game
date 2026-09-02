@@ -3751,7 +3751,15 @@ function popup(label,pts,val,pos,small,big){
 }
 /* prompts + tug bars (cached to avoid DOM churn) */
 const PROMPTS=['',''],TUGS=[-1,-1],HOLDS=['',''];
-function addHint(mid,x,y,z,r,text){ if(G.hints&&G.hints.some(h=>h.mid===mid))return;  (G.hints=G.hints||[]).push({mid,x,y,z,r,text}); }
+function addHint(mid,x,y,z,r,text,o){ if(G.hints&&G.hints.some(h=>h.mid===mid))return;  (G.hints=G.hints||[]).push(Object.assign({},o||{},{mid,x,y,z,r,text})); }
+/* A HINT WITH NO MISSION BEHIND IT IS A DELIBERATE THING NOW, NOT AN ACCIDENT (TODO 55, 2026-09-02).
+   hintScan gates every hint on an OPEN mission with its mid, which is the right default: it is what
+   retires a hint when its job is done, and it is what silently drops a hint whose mid is a typo. But
+   it also meant the cage hint - the only one whose subject is a mechanic rather than a mission - had
+   been unreachable for its whole life, in both modes, and the lie piece 52 was sent out of it was
+   invisible while it lasted. free:true opts a hint out of the mission gate and says so at the call
+   site. The typo safety is untouched: a hint that does NOT declare itself free and has no mission is
+   still dropped, exactly as before. */
 /* HINT TEXT IS RESOLVED WHEN IT IS READ, NOT WHEN IT IS ADDED (TODO 52, 2026-09-02). addHint refuses
    to replace a mid it already has and nothing clears G.hints between runs, so a line baked in at
    build time is the line the player gets for the rest of the process - including after a restart
@@ -3761,10 +3769,11 @@ function addHint(mid,x,y,z,r,text){ if(G.hints&&G.hints.some(h=>h.mid===mid))ret
 function hintText(h){ return h&&typeof h.text==='function'?h.text():(h?h.text:''); }
 function hintScan(k){
   G.hintNow=G.hintNow||[null,null];
-  if(!G.hints||!G.missions){ G.hintNow[k.idx]=null; return; }
+  if(!G.hints){ G.hintNow[k.idx]=null; return; }
   for(const h of G.hints){
-    const m=G.missions.find(m=>m.id===h.mid);
-    if(!m||m.done||(typeof m.locked==='function'?m.locked():m.locked))continue;
+    if(!h.free){                            // the mission gate, and the default for every hint
+      const m=(G.missions||[]).find(m=>m.id===h.mid);
+      if(!m||m.done||(typeof m.locked==='function'?m.locked():m.locked))continue; }
     if(Math.hypot(k.x-h.x,k.z-h.z)<h.r&&Math.abs(k.y-h.y)<3.5){
       G.hintNow[k.idx]=h.mid; if(!PROMPTS[k.idx])setPrompt(k.idx,'<span style="opacity:.78">✎ '+hintText(h)+'</span>'); return; }
   }
@@ -4112,9 +4121,13 @@ function startGame(mode,opts){
     { const up=new THREE.Vector3(0,1.2,-1.1); G.uteG.localToWorld(up);
       /* TODO 52: co-op took the mash away (piece 15), so the old single line became a lie in one of
          the two modes. A function, because the mode is not known until somebody reads it. */
+      /* TODO 55: free, because what this teaches is a MECHANIC and there is no mission called
+         cage to retire it. It is live while the bird is out and near the ute - a caged bird never
+         reaches hintScan at all, the caged branch of update returns before it. */
       addHint('cage',up.x,up.y,up.z,6,()=>coopCell()
         ? 'the night ranger cages troublemakers - only a mate can peck the latch open'
-        : 'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out'); } }
+        : 'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out',
+        {free:true}); } }
   if(!HEADLESS){
     document.getElementById('title').style.display='none';
     G.tabHintOn=true;
@@ -4209,7 +4222,7 @@ if(typeof globalThis!=='undefined'){
     HOMES:{R:HOMER,cls:homeClass,register:homesRegister,dist:homeDist,at:atHome},
     JAIL:{SQUAWK,coop:coopCell,dir:squawkDir,fire:squawkFire,ping:squawkUpdate},
     LEDGER:{actorOf,add:ledgerAdd,of:ledgerOf,total:ledgerTotal},
-    HINTS:{text:hintText,scan:hintScan},
+    HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
     WORLDREGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
     FIX:{DECAY,can:canRestore,fixable,value:orderValue,fix:fixTear},

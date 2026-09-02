@@ -793,6 +793,25 @@ mission and that it is the cage one. The day somebody makes it reachable, that a
 says so - which is exactly when a human should read the copy and decide.
 PROOF once built: stand a bird in the hint radius in both modes and assert the plate carries the
 resolved line for the mode it is in. The resolver and its display path are already proved by 52.
+DONE session 10 (4c7fd986c7a3762b4e556a62ae9942e2), OPTION (b) - the brief calls it the smallest
+honest change and it is. addHint takes an options bag and hintScan skips the mission gate for a hint
+that declares free:true; the cage hint declares it at the call site, with the reason written there.
+THE TYPO SAFETY IS WHAT THE MISSION GATE WAS REALLY FOR and it is not traded away: a hint with a mid
+no mission has, that does NOT declare itself free, is still dropped. That is now driven rather than
+assumed - the battery adds one, stands the bird in it, asserts the plate stays empty, and splices it
+back out (FLAKES law 1: nothing clears G.hints).
+THE TRIPWIRE FIRED AND WAS RE-AIMED, NOT DELETED. It now asserts more than it did: still exactly one
+missionless hint, still the cage one, missionless ON PURPOSE, the opt-out has not spread to a second
+hint, and the typo safety still works. Sabotaged three ways and all three were caught by name -
+dropping the free flag (9 findings), gating nothing in hintScan (2), and making addHint default to
+free (4).
+A VERB STILL BEATS A HINT, which is what keeps this from being noise: hintScan only writes to an
+empty plate, so at the hint centre - inside grab range of the ute keys - a player sees GRAB UTE KEYS
+and the hint stays quiet. Asserted, because it is the answer to the judged part of this item.
+TWO THINGS FOR ERIC, NEITHER BUILT. (1) Caging needs G.wanted >= 3 and an empty cell, so the copy
+now teaches a mechanic that cannot fire below WANTED 3. Gating the hint on the warrant instead of on
+proximity would teach it at the moment it becomes true - a copy and timing call, and yours. (2) The
+hint is added from G.uteG.localToWorld in startGame with no guard, so it is now filed as TODO 58.
 
 ### 56. bird-shadow-quality  (spotted in a live frame, 2026-09-02)
 The kea's cast shadow reads as a hard-edged flat duplicate of the mesh -
@@ -817,3 +836,17 @@ nothing measures the subject box for drift. subjects.mjs asks whether the bird i
 asks whether the FRAME moved; between them there is no instrument that asks whether the bird moved.
 PROOF once built: crop both frames to the box and SSIM that, with a tighter threshold than the frame
 one; prove it by feeding it the 54 pair, where the frame passes and the box must fail.
+
+### 58. THE CAGE HINT IS BUILT OFF G.uteG WITH NO GUARD, WHICH THE SECOND BIOME WALKS INTO
+Found in session 10 by piece 55. startGame does `const up=new THREE.Vector3(0,1.2,-1.1);
+G.uteG.localToWorld(up);` to place the cage hint, and G.uteG is set by mkDocUte inside buildCarpark.
+Nothing in the biome chassis promises a ute: the day a second biome builds, startGame throws on the
+line before the hint, and it throws for every mode. Same shape for the rest of the rex torch block
+around it, which reaches into G.uteG the same way.
+PREDATES PIECE 55 - the throw is on the localToWorld, not on the hint - and only the tour makes it
+reachable, which is why it was not fixed inside a piece about hint reachability.
+THE FIX IS PROBABLY NOT A GUARD BUT AN OWNER: the cage hint belongs to whatever builds the cage, so
+it wants moving into the carpark build beside the ute rather than sitting in startGame testing for
+one. Then a biome with no cage has no cage hint and needs no if.
+PROOF: boot a biome with no ute and assert startGame completes and the cage hint is absent; carpark
+unchanged, hint present, and the 55 assertions still green.
