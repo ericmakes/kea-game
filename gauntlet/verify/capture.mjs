@@ -9,10 +9,13 @@ const HTML='file://'+path.join(ROOT,'untitled-kea-game.html');
 // SEEDED WORLD (2026-08-28): the game seeds nothing, so every load builds a different country.
 // three draws 12 randoms per mesh from the same stream, so a global Math.random seed alone lets any
 // added object reshuffle the whole world. Seed the game rng at its own boot instead.
+// TODO 36: the rig photographs a NAMED biome. Default carpark, so every existing baseline is a
+// carpark baseline and nothing about the pinned set changes until somebody asks for another map.
+const BIOME=(process.env.BIOME||'carpark').replace(/[^a-z0-9_]/gi,'');
 const GAMESRC=(()=>{ const raw=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
   const anchor='if(!HEADLESS)boot();';
   if(raw.split(anchor).length!==2) throw new Error('capture: boot anchor missing from the game file');
-  return raw.replace(anchor,'if(!HEADLESS){setSeed(20260828);boot();}'); })();
+  return raw.replace(anchor,"if(!HEADLESS){setSeed(20260828);boot({biome:'"+BIOME+"'});}"); })();
 const SEEDEDTMP=path.join(os.tmpdir(),'kea-seeded-capture.html'); fs.writeFileSync(SEEDEDTMP,GAMESRC);
 const SEEDEDHTML='file://'+SEEDEDTMP; // a real navigation, so evaluateOnNewDocument still fires
 const ONLY=(process.env.SHOTS||'').split(',').filter(Boolean);

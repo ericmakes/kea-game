@@ -473,7 +473,7 @@ VS integration: arena = the loaded map; RANDOM picks any unlocked map,
 TOUR runs them in order. Piece 34 (chapter-travel-beat) is SUPERSEDED by
 piece 38 - do not build 34 separately.
 
-### 36. tour-chassis  (invisible surgery - first tour piece)
+### 36. tour-chassis  (invisible surgery - first tour piece)  — DONE session 8 (520a4d78a337a9f7f08f9b7e0967d88c)
 World build becomes a biome registry, current world = biome "carpark",
 boot-selectable; batteries and capture rig gain a biome parameter
 defaulting to carpark. No content changes.

@@ -651,7 +651,7 @@ const G={
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
-  stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0,
+  stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0, biome:null,
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -1067,11 +1067,33 @@ function snowSpot(x,z,r){
    (the extra three are the sheep pecks, one per sheep, registered for six sheep the second time).
    Nothing asserted before today depended on a count, which is the only reason it never bit, but
    every count written from here would have been silently wrong and every find() would have got
-   whichever duplicate came first. Emptied HERE rather than in boot() so that the guarantee belongs
-   to the function that fills them, however it is called. */
+   whichever duplicate came first. Emptied in buildWorld rather than in boot() so that the guarantee
+   belongs to the function that fills them, however it is called - and it stays in the DISPATCHER
+   below, above the biome, so a biome author cannot forget it and cannot opt out of it. */
 const WORLDREGS=['props','inter','colliders','cars','sheep','strips'];
-function buildWorld(){
+
+/* ---------- THE BIOME REGISTRY (TODO 36, the tour chassis) ----------
+   The tour turns this game into separate maps, one diorama per biome. Nothing about that can start
+   until there is a seam to put the second map through, and this is it: the world is no longer THE
+   world, it is a biome that happens to be the only one registered. What used to be the body of
+   buildWorld is now buildCarpark, moved without a single line reordered inside it, because every
+   rnd() draw in the browser is downstream of every earlier one and the smallest reshuffle repins
+   the country - the snow-patch lesson, and the reason this piece has a zero-observable-change proof
+   contract rather than a feature.
+   THE DISPATCHER KEEPS THE TWO THINGS THAT MUST BE TRUE OF EVERY BIOME: the registries are emptied
+   before the build (TODO 48), and G.biome names what was actually built, so nothing downstream has
+   to guess. An unknown id falls back to the default rather than throwing, because a save or a URL
+   naming a biome that no longer exists should land you somewhere real. */
+const BIOMES={}, BIOME_DEFAULT='carpark';
+function defineBiome(id,o){ BIOMES[id]=Object.assign({id},o); return BIOMES[id]; }
+function biomeOf(id){ return BIOMES[id]||BIOMES[BIOME_DEFAULT]; }
+function buildWorld(biome){
+  const b=biomeOf(biome||G.biome||BIOME_DEFAULT);
+  G.biome=b.id;
   for(const r of WORLDREGS)if(Array.isArray(G[r]))G[r].length=0;
+  b.build();
+}
+function buildCarpark(){
   // terrain
   const gg=new THREE.PlaneGeometry(240,240,48,48);
   const pos=gg.attributes.position;
@@ -1326,6 +1348,7 @@ function buildWorld(){
       const rk=sph(rnd(0.5,1.6),i%2?PAL.rock:PAL.rockD,Math.cos(a)*r,0.2,Math.sin(a)*r,null,6); rk.scale.y=0.6; }
   }
 }
+defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark});
 
 /* ---------- HOME POSITIONS (TODO 17, 2026-09-02) ----------
    Every displaceable and consumable prop remembers the transform it was BUILT at, so a later piece
@@ -3757,8 +3780,8 @@ const TOUCH={on:false,_st:{f:0,b:0,l:0,r:0},
     addEventListener('touchend',e=>{ if(e.touches.length<2)pinchD=0;
       for(const t of e.changedTouches){ if(t.identifier===lid)lid=null; } },{passive:true});
   } };
-function boot(){
-  initScene(); buildWorld(); registerSheepPecks(); homesRegister();   // TODO 17: after the build, so site rotations count
+function boot(opts){
+  initScene(); buildWorld(opts&&opts.biome); registerSheepPecks(); homesRegister();   // TODO 17: after the build, so site rotations count
   { const w1=mat(0x9FB8C4,GLASSX), w2=mat(PAL.sun);
     for(const m of [w1,w2]){ m.emissive=new THREE.Color(0xFFB35C).convertSRGBToLinear(); m.emissiveIntensity=0; }
     G.warmMats=[w1,w2]; }
@@ -3804,6 +3827,7 @@ if(typeof globalThis!=='undefined'){
     LEDGER:{actorOf,add:ledgerAdd,of:ledgerOf,total:ledgerTotal},
     HINTS:{text:hintText,scan:hintScan},
     WORLDREGS,
+    BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();

@@ -45,6 +45,9 @@ function load(){
     tick:(n,dt)=>{for(let i=0;i<(n||1);i++)X.update(dt||1/60);},
     hold:c=>X.press(c), un:c=>X.release(c),
     tap:c=>{X.press(c);X.update(1/60);X.release(c);},
+    /* TODO 36: a battery can now boot a named biome. X.boot() still means the default, so not one
+       existing call site changes - which is the whole proof contract of the chassis piece. */
+    boot:biome=>X.boot(biome?{biome}:undefined),
     P1:X.P1MAP,P2:X.P2MAP};
   return H;
 }

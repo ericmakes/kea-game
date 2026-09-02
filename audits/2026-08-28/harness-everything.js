@@ -1669,6 +1669,58 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and it turns out nobody could
   X.startGame(1); tick(6);
 }
 
+C.section('THE TOUR CHASSIS - the world is now a biome, and it is the only one registered');
+// TODO 36. The proof contract is ZERO OBSERVABLE CHANGE, so most of the evidence for this piece is
+// not in this section at all: it is the nine batteries passing without a touched assertion, the
+// capture set flagging nothing new, and the carpark builder being byte-identical to the buildWorld
+// body it was lifted out of. What IS asserted here is the seam itself - that there is one, that it
+// names what it built, that the guarantees survive it, and that it cannot drop you nowhere.
+{
+  const B=X.BIOME;
+  ok(!!B&&!!B.ALL,'there is a biome registry');
+  ok(B.DEFAULT==='carpark','and the default is the world that already existed ('+B.DEFAULT+')');
+  ok(Object.keys(B.ALL).length===1&&!!B.ALL.carpark,
+     'exactly one biome is registered today, which is the honest state of the tour ('+
+     Object.keys(B.ALL).join(', ')+')');
+  ok(typeof B.ALL.carpark.build==='function','the carpark carries its builder');
+  ok(B.ALL.carpark.label==='THE CARPARK','and a label to put on a map pin later ('+B.ALL.carpark.label+')');
+
+  // BOOTING NAMES WHAT IT BUILT, which is what everything downstream will read instead of guessing.
+  X.boot();
+  ok(G.biome==='carpark','a plain boot builds the carpark and says so ('+G.biome+')');
+  const counts=Object.fromEntries(X.WORLDREGS.map(r=>[r,(G[r]||[]).length]));
+  X.boot({biome:'carpark'});
+  ok(G.biome==='carpark','naming it explicitly does the same thing');
+  for(const r of X.WORLDREGS)
+    ok((G[r]||[]).length===counts[r],'and builds the same G.'+r+' either way ('+(G[r]||[]).length+')');
+
+  /* AN UNKNOWN ID LANDS YOU SOMEWHERE REAL. A save or a link naming a biome that has not shipped
+     yet - or has been renamed - must not throw and must not leave an empty world. It falls back to
+     the default, and G.biome reports where you ACTUALLY are rather than where you asked to be. */
+  /* the boot is WRAPPED because the failure mode here is a throw, not a wrong value - biomeOf
+     returning undefined kills the battery on the next property access and takes every finding
+     after it down too. A dead battery is a worse witness than a red one. */
+  let threw=null; try{ X.boot({biome:'skifield'}); }catch(e){ threw=e&&e.message||String(e); }
+  ok(!threw,'an unregistered biome does not throw on the way in ('+(threw||'no throw')+')');
+  ok(G.biome==='carpark','and it falls back to the default rather than nowhere ('+G.biome+')');
+  ok(G.props.length===counts.props,'and the fallback is a real world, not an empty one ('+G.props.length+' props)');
+  ok(B.of('skifield')===B.ALL.carpark,'the resolver says the same thing on its own');
+  ok(B.of('carpark')===B.ALL.carpark&&B.of()===B.ALL.carpark,'and a missing id is the default too');
+
+  // THE TODO 48 GUARANTEE LIVES IN THE DISPATCHER, ABOVE THE BIOME, so a biome author cannot forget
+  // it. Two boots in a row through the new seam still leave exactly one world.
+  X.boot(); X.boot();
+  for(const r of X.WORLDREGS)
+    ok((G[r]||[]).length===counts[r],'two boots through the dispatcher still leave one world in G.'+r+
+       ' ('+(G[r]||[]).length+')');
+
+  // AND THE RIG DOOR THE BATTERIES WILL USE. H.boot(name) exists and H.boot() means the default, so
+  // no existing call site had to change - which is the whole reason this piece is invisible.
+  H.boot(); ok(G.biome==='carpark','the rig boots the default with no argument');
+  H.boot('carpark'); ok(G.biome==='carpark','and takes a name when it is given one');
+  X.startGame(1); tick(6);
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

@@ -1807,3 +1807,38 @@ than the code being wrong, and the second one is the more instructive.
   Eric - and NO NEW ONES, which is the claim for this piece: the cage hint cannot display, so no
   frame can contain it. Nothing re-pinned.
 - EYEBALL: nothing new. The four already-flagged frames are the ones to judge.
+
+### PIECE 36 — tour-chassis — CERTIFIED 520a4d78a337a9f7f08f9b7e0967d88c
+Verdict: green first pass. The proof contract is ZERO OBSERVABLE CHANGE, so most of the evidence is
+not assertions at all - it is three comparisons that either match or do not.
+- WHAT LANDED: buildWorld is now a DISPATCHER. It resolves a biome, records which one it built in
+  G.biome, empties the registries, and calls that biome builder. What used to be its body is
+  buildCarpark, registered as the only biome there is.
+- THE BODY MOVED WITHOUT A LINE CHANGING, and that is checked mechanically rather than eyeballed: a
+  script lifts the old buildWorld body out of HEAD and the new buildCarpark body out of the working
+  file and compares them - 251 lines, BYTE-IDENTICAL. That matters more here than tidiness, because
+  every rnd() draw in the browser is downstream of every earlier one and the smallest reshuffle
+  repins the whole country. The snow-patch lesson, applied to a refactor instead of a feature.
+- THE SECOND COMPARISON: nine battery transcripts, before and after. Seven byte-identical. Smoke
+  differs only in the file size it prints and its own process id. The everything battery differs by
+  exactly one line - the name of the new section. That is what "no touched assertions" looks like
+  when it is measured instead of asserted.
+- THE THIRD: the capture set. Four flagged, and they are the SAME four already awaiting Eric from
+  pieces 53 and 51 - 03, 05, 17, 23. No new ones, and the 21 untouched vantages match their pinned
+  baselines exactly, which is the clause the brief actually asks for.
+- WHAT THE SECTION DOES ASSERT is the seam: that there is a registry, that the default is the world
+  that already existed, that exactly ONE biome is registered today (which is the honest state of the
+  tour and will fail loudly and correctly when the ski field lands), that a boot names what it built,
+  and that an unregistered id lands you somewhere REAL rather than throwing or leaving an empty
+  world. A save or a link naming a biome that has not shipped yet must not be a crash.
+- THE TODO 48 GUARANTEE MOVED UP, ON PURPOSE. The registry clear now lives in the dispatcher, ABOVE
+  the biome call, so a biome author cannot forget it and cannot opt out of it. Asserted by booting
+  twice through the new seam and requiring one world.
+- THE RIG DOOR IS ADDITIVE: H.boot(name) exists, H.boot() and X.boot() still mean the default, so not
+  one existing call site changed. capture.mjs takes BIOME from the environment and defaults to
+  carpark, so every pinned baseline is a carpark baseline by construction.
+- VERIFIED ADVERSARIALLY, THREE WAYS: a dispatcher that stops clearing the registries fails piece 48
+  assertions (61 orphans of 105); one that stops naming what it built fails five; and a resolver
+  without its fallback fails three - after being guarded, because the first run of that sabotage
+  KILLED the battery on `b.id` and took every later finding with it. The boot is wrapped now.
+- EYEBALL: nothing new. The four flagged frames are still the ones from 53 and 51.
