@@ -3307,3 +3307,14 @@ audits/2026-09-03/audit-stage-marks.js; TODO 71 updated.
 - 15_sign IS CLEAN in both engines, which is worth having: it is the control for the transcription
   method, a computed mark that does not move.
 - THE CONTROL IS NOW FOUR BROWSER MEASUREMENTS. 20, 01, 18 by position, and 12 by position AND fall.
+
+### PIECE 71c — annotate the ejected marks — comments only, no frame moves
+Verdict: green. The cheap half TODO 71 offers: leave every mark where it is and write the truth
+beside it, so nobody has to run the audit to find out that a stage line is not describing its own
+photograph. capture.mjs comments only - four notes, outside every template literal.
+- 01 gets the long note because it is the establishing frame and the worst case, 08 gets a pointer
+  to it because it shares the mark, 18 gets one line, and 12 gets the one that matters most: THE
+  BIRD IS NOT AT THE SEAL. 20 already carries it inside the piece-69 block.
+- PROVED IT CHANGED NOTHING rather than asserting it: 01 and 12 reshot at 1564 and 1017 changed
+  pixels against churns of 3996 and 3123, ssim 0.9989 and 0.9993. Comments outside a template
+  literal cannot move a frame, and now there is a measurement saying so.

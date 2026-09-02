@@ -86,6 +86,12 @@ const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getEle
   KEAGAME.G.trafT.a=999;KEAGAME.G.trafT.b=999;
   for(let i=KEAGAME.G.cars.length-1;i>=0;i--){const c=KEAGAME.G.cars[i];if(c.traffic){KEAGAME.G.scene.remove(c.g);const ci=KEAGAME.G.colliders.indexOf(c.collider);if(ci>=0)KEAGAME.G.colliders.splice(ci,1);for(let q=KEAGAME.G.inter.length-1;q>=0;q--)if(KEAGAME.G.inter[q].car===c)KEAGAME.G.inter.splice(q,1);KEAGAME.G.cars.splice(i,1);}}`;
 
+/* TODO 71: THIS MARK IS INSIDE A PARKED CAR, and it is the frame the set opens with. (4, 16) sits
+   in the collider at 4.2, 16.4 (2.20 x 4.30, top 1.35), so pushOut puts the bird at 2.82, 16 on the
+   FIRST frame of the settle - 1.18 m away, identically every take, in node and in the browser.
+   Nothing here churns because of it. What it costs is the next person to edit this line: a small
+   nudge does nothing at all until the mark clears the car. Moving it is a different photograph and
+   therefore a judged re-pin, so it is filed rather than fixed. audits/2026-09-03/audit-stage-marks.js */
 await shotR('01_carpark_wide',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.4; ${CAM(11,4.2,25,3.5,0.8,15.5)}`);
 await shotR('02_hut_snow',`const k=KEAGAME.G.keas[0];k.x=-24;k.z=-2.5;k.y=0;k.grounded=true;k.ry=Math.PI; ${CAM(-16,4.5,3,-24,2.6,-8)}`);
 await shotR('03_kea_plate',`const k=KEAGAME.G.keas[0];k.preenT=99;k.idleT=0;KEAGAME.G.poseLock=true;
@@ -144,6 +150,8 @@ await shotR('07_jam',`const G=KEAGAME.G;
    deterministic frame clock for the whole rig, which is TODO 33 and re-pins every vantage.
    Classified review-tier under FLAKES law 8 rather than pinned for the sake of pinning: changing a
    baseline frame that buys no measured stability is a cost with no purchase. */
+// TODO 71: the same mark as 01, so the same ejection - the bird is photographed at 2.82, 16, 1.18 m
+// from where this line says. See the note on 01_carpark_wide.
 await shotR('08_readability_320',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.6; ${CAM(8,3.4,22,2,0.8,14)}`,{w:320,h:180});
 // the colossal bird wandered during the settle - colossal stomps and bunts fire on contact and
 // the score pump had already put it in a mood. Pin it, and bring the camera in so LV10 reads
@@ -216,6 +224,8 @@ await shotR('20_dead_rear',`const G=KEAGAME.G,k=G.keas[0];
 await shotR('19_roof_follow',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=-24;k.z=-7.4;k.y=5.2;k.vy=0;k.grounded=true;k.ry=2.6;k.stun=0;')}
   ${CAM(-24-Math.sin(2.6)*4.2, 7.2, -7.4-Math.cos(2.6)*4.2, -24+Math.sin(2.6)*1.6, 5.92, -7.4+Math.cos(2.6)*1.6)}`);
+// TODO 71: (-9.2, 10.6) is inside the caravan by 0.274 on the collider own z, so the bird is
+// photographed at -9.14552, 10.86876. Small, deterministic, and it is why this mark resists nudging.
 await shotR('18_rear_close',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;k.x=-9.2;k.z=10.6;k.y=0;k.grounded=true;k.ry=5.8;k.stun=0;k.idleT=0;k.idleAct=null; ${CAM(-8.6,1.5,12.4,-9.6,0.5,9.4)}`);
 // same escape as 04. flapPh 1.1 sits just past the top of the stroke so the wings read
 // mid-beat rather than pinned at a limit.
@@ -268,6 +278,12 @@ const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
 await shotR('14_player_view',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=true; ${CAM(-4.38,2.3,3.18,0,0.9,0)}`);
 await shotR('15_sign',`const k=KEAGAME.G.keas[0];const sg=KEAGAME.G.signG; k.x=sg.position.x-0.6;k.z=sg.position.z+2.2;k.y=0;k.grounded=true;k.ry=2.9;KEAGAME.G.poseLock=true; ${CAM('sg.position.x','2.0','sg.position.z+3.4','sg.position.x','1.8','sg.position.z')}`);
 await shotR('13_idle_preen',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=false;k.idleT=99;k.idleAct={kind:'preen',t:0.7,dur:3.5,side:1};k._idleEver=true; ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
+/* TODO 71: THE BIRD IS NOT AT THE SEAL. This line stands it at the strip own getPos(), y 1.62,
+   grounded=false - a bird mid-peel, which is the act the vantage is named for. The mark is inside
+   the caravan: the first frame pushes it 0.632 m out and it falls, and the browser reads
+   -9.1728, 0, 8.55761, grounded true, at the shutter. The photograph is a bird on the tarmac beside
+   an open door with a half-peeled strip above it. It reads well. It is not what this line says, and
+   fixing it moves the frame, so it is TODO 71 and Eric. */
 await shotR('12_seal_midpeel',`{const t=KEAGAME.G.inter.find(x=>x.strip&&/DOOR SEAL/.test(x.label)); for(let i=0;i<6;i++)t.onDone(t.getPos());
 const k=KEAGAME.G.keas[0], p=t.getPos(); k.x=p.x-0.35; k.y=p.y-0.15; k.z=p.z+0.55; k.grounded=false; k.vy=0; k.ry=2.4;} ${CAM(-6.6,1.9,11.2,-9.7,1.3,8.4)}`);
 await shotR('23_paddock_gate',`const k=KEAGAME.G.keas[0];
