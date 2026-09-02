@@ -685,6 +685,41 @@ function vsScreen(r){
   if(sc)sc.style.display='flex';
   return r; }
 
+/* ---------- THE FIX VERB (TODO 18, 2026-09-02) ----------
+   THE MANAGEMENT gets one generic verb and no special cases: hold the grab key on anything that has
+   been wrecked and it goes back. Every tear in the game is restorable by the same code, because the
+   tear already records what it looked like before - addTear snapshots base position and rotation so
+   the wreck animation can lean from it, and the restore just puts the snapshot back.
+   WHAT AN ACT IS WORTH IS LEARNED, NOT TABULATED, which is piece 13 again: a tear does not carry a
+   points field, every value lives inside the award() call in its own onDone, and scraping those
+   pairs only ever half works. So the FIRST wreck measures what actually landed and that becomes the
+   object pristine value. Change any award in the file and this follows it.
+   ONE COUNTER, BOTH DIRECTIONS, which is what the mode constants ask for: every completed act on an
+   object - wreck or fix - advances the same cycle count, and what it pays is the pristine value
+   times DECAY to that count. So a first wreck pays full, putting it back pays 0.6, wrecking it again
+   pays 0.36, and an object that gets fought over is worth less to both sides every time. The
+   decay reaches the WRECK side through one hook in award(), scoped to the onDone call, because a
+   tear award is written inside its own handler and cannot be reached any other way.
+   VS ONLY. Outside a match there is no management, nothing is restorable, no cycle is counted and no
+   award is scaled - the hook reads G._decay and G._decay is only ever set inside a match. */
+const DECAY=0.60;                    // per object, per cycle, both directions. FENCED FOR PLAYTEST
+function canRestore(k){ return !!(k&&vsOn()&&vsRoleOf(k.idx)==='management'); }
+function fixable(it,k){ return !!(it&&it.kind==='tear'&&it.done&&canRestore(k)); }
+function orderValue(it){ return Math.round((it&&it.paid||0)*Math.pow(DECAY,(it&&it.cycles)||0)); }
+function fixTear(it,by){
+  if(!it||!it.done)return null;
+  const pts=orderValue(it);
+  it.done=false; it.progress=0; it.fixProgress=0; it.hits=0;
+  if(it.mesh){ it.mesh.visible=true;
+    if(it.base){ it.mesh.position.set(it.base.px,it.base.py,it.base.pz); it.mesh.rotation.x=it.base.rx||0; }
+    it.mesh.rotation.z=it.baseRz||0; }
+  it.cycles=((it.cycles||0)+1);
+  const p=it.getPos?it.getPos():null;
+  if(pts>0)award(pts,'ORDER: '+String(it.label||'PUT BACK').toUpperCase(),p,by);
+  AU.tug&&AU.tug();
+  if(it.tuggers)it.tuggers.forEach(k=>{k.tug=null;});
+  return {pts,cycles:it.cycles}; }
+
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
@@ -2367,7 +2402,7 @@ class Kea{
     // find target
     let best=null,bd=99;
     for(const it of G.inter){
-      if(it.done)continue; if(it.locked&&it.locked())continue;
+      if(it.done&&!fixable(it,this))continue; if(it.locked&&it.locked())continue;   // TODO 18: the management sees wrecks
       if(it.kind==='prop'&&(it.heldBy||it.banked))continue;
       const p=it.getPos?it.getPos():it;
       const S2=this.size||1;
@@ -2398,7 +2433,7 @@ class Kea{
     } else if(best){
       let label=best.label|| ('GRAB '+(best.name||'').toUpperCase());
       if(best.kind==='prop')label='GRAB '+best.name.toUpperCase();
-      if(best.kind==='tear')label='HOLD to '+label;
+      if(best.kind==='tear')label=fixable(best,this)?'HOLD to PUT IT BACK':('HOLD to '+label);
       setPrompt(this.idx,'<b>'+keyName(this.map.grab)+'</b> '+label);
     } else setPrompt(this.idx,'');
     hintScan(this);
@@ -2409,6 +2444,15 @@ class Kea{
         best.hits=(best.hits||0)+1; AU.tug(); this.peckAnim=0.18; burst(best.getPos(),0xffffff,3);
         if(best.mesh){ const m=best.mesh; TW.add(0.22,u=>{ m.rotation.z=Math.sin(u*Math.PI*3)*0.08*(1-u); }); }
         if(best.hits>=(best.needHits||1)){ if(best.repeat){best.hits=0;best.onDone(best.getPos());} else {best.done=true;best.onDone(best.getPos());} }
+      }
+      else if(fixable(best,this)&&inp.grabHeld){
+        /* the same effort as wrecking it, because putting a thing back should not be the cheap
+           option - the price of ORDER is the decay, not a shorter hold. */
+        this.tug=best; best.tuggers=best.tuggers||new Set(); best.tuggers.add(this);
+        best.fixProgress=(best.fixProgress||0)+dt*(this.size||1);
+        setTug(this.idx,best.fixProgress/best.need);
+        if(Math.random()<dt*7)AU.tug();
+        if(best.fixProgress>=best.need)fixTear(best,this);
       }
       else if(best.kind==='tear'&&inp.grabHeld){
         this.tug=best; best.tuggers=best.tuggers||new Set(); best.tuggers.add(this);
@@ -2443,7 +2487,15 @@ class Kea{
             if(typeof BREAKFX!=='undefined'&&best.fx&&BREAKFX[best.fx])BREAKFX[best.fx](best,p,this);
             if(G.colossal&&(this.size||1)>=1.8&&G.keas.length===1){
               if(best.needsPartner)done('c_sololatch'); if(best.needsBoth)done('c_solotarp'); }
-            best.onDone(p);
+            /* THE PRISTINE VALUE IS MEASURED ONCE, on the first wreck, before any decay can touch
+               it - and the decay for every later wreck is applied through the award hook, because
+               the value is a literal inside the handler and there is no other way to reach it. */
+            { const cyc=best.cycles||0, s0=G.score;
+              if(cyc>0&&vsOn())G._decay=Math.pow(DECAY,cyc);   // VS ONLY, by construction and not by circumstance
+              best.onDone(p);
+              G._decay=null;
+              if(!cyc)best.paid=Math.max(0,G.score-s0);
+              best.cycles=cyc+1; }
             if(best.mission)markMission(best.mission);
             if(best.tuggers)best.tuggers.forEach(k=>{k.tug=null;});
           }
@@ -3458,7 +3510,7 @@ function award(base,label,pos,who){
     if(G._fxSpy)G._fxSpy.push({why:'sparkle',pts:base}); }
   bumpCombo();
   const mult=Math.max(1,G.combo);
-  const pts=Math.round(base*mult);
+  const pts=Math.round(base*mult*(G._decay||1));   // TODO 18: a re-wreck is worth less, and only in a match
   G.score+=pts;
   purseAdd(pts);                    // the page keeps its own books: TODO 13
   vsNote(ledgerAdd(pts,who),pts,label);   // TODO 16 books it, TODO 22 remembers the biggest one
@@ -3919,6 +3971,7 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan},
     WORLDREGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
+    FIX:{DECAY,can:canRestore,fixable,value:orderValue,fix:fixTear},
     VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,
         scores:vsScores,role:vsRoleOf,note:vsNote},
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};

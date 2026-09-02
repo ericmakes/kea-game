@@ -1840,6 +1840,91 @@ C.section('2 KEA VERSUS - the match scaffold, every branch of the decision drive
   clear();
 }
 
+C.section('THE FIX VERB - wreck it, put it back, wreck it again, and it is worth less every time');
+// TODO 18. THE MANAGEMENT holds the same key on a wrecked tear and it goes back. No per-object
+// special cases: addTear already snapshots the base transform so the wreck animation can lean from
+// it, and the restore just puts the snapshot back.
+// What an act is WORTH is learned rather than tabulated (piece 13 again): a tear carries no points
+// field, every value is a literal inside its own onDone, so the FIRST wreck measures what actually
+// landed and that becomes the pristine value. One counter serves both directions.
+{
+  const FIX=X.FIX, V=X.VS, P2=H.P2;
+  X.startGame(2,{vs:true}); tick(6); park();
+  G.paused=false;
+  const a=G.keas[0], b=G.keas[1];
+  G.vs.roles={menace:0,management:1};                  // staged, because the coin is a coin
+  ok(FIX.can(b)&&!FIX.can(a),'only the management can put things back ('+V.role(0)+' / '+V.role(1)+')');
+
+  // a tear one bird can finish alone, and the other bird parked so it cannot join in (FLAKES law 3)
+  const t=G.inter.find(it=>it.kind==='tear'&&!it.done&&!it.needsBoth&&!it.needsPartner&&it.getPos);
+  ok(!!t,'a solo-finishable tear to work on ('+(t?t.label:'none')+')');
+  const far=k=>{ k.x=46; k.z=46; k.y=0.25; k.vy=0; k.grounded=true; };
+  /* THE COMBO IS HELD AT ZERO FOR THE WHOLE ACT, not just before it: the award lands somewhere
+     inside a multi-second hold, so there is no single moment to zero it at. Same reason as piece 22
+     - a literal in an assertion below would otherwise be asserting the combo. */
+  const act=(k,map,other,want)=>{ far(other);
+    const q=t.getPos(), yy=Math.max(q.y,X.groundHeightAt(q.x,q.z,3)+0.02);
+    const s0=V.scores()[k.idx];
+    hold(map.grab); let st=0;
+    while(t.done!==want&&st<60*20){ G.combo=0; G.comboT=0;
+      k.x=q.x; k.z=q.z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); st++; }
+    un(map.grab); tick(2);
+    return {paid:V.scores()[k.idx]-s0, frames:st}; };
+
+  // ---- WRECK ONE: full price, and the object learns what it is worth ----
+  const w1=act(a,P1,b,true);
+  ok(t.done===true,'the menace wrecks it');
+  ok(w1.paid>0,'and gets paid for it ('+w1.paid+')');
+  ok(t.paid===w1.paid,'the object learned its pristine value from what actually landed ('+t.paid+')');
+  ok(t.cycles===1,'one act, one cycle ('+t.cycles+')');
+  const base=t.paid;
+
+  // ---- FIX ONE: the same hold, the other bird, decayed once ----
+  ok(FIX.value(t)===Math.round(base*0.6),'the order value is the pristine value decayed once ('+
+     FIX.value(t)+' of '+base+')');
+  const f1=act(b,P2,a,false);
+  ok(t.done===false,'the management puts it back');
+  ok(t.mesh?t.mesh.visible===true:true,'and the thing is visible again');
+  ok(f1.paid===Math.round(base*0.6),'paid at DECAY once ('+f1.paid+' against '+Math.round(base*0.6)+')');
+  ok(t.cycles===2,'two acts, two cycles ('+t.cycles+')');
+
+  // ---- WRECK TWO: the SAME counter, so the menace is paid less for doing it again ----
+  const w2=act(a,P1,b,true);
+  ok(t.done===true,'the menace wrecks it a second time');
+  ok(w2.paid===Math.round(base*0.36),'and is paid at DECAY squared, because both directions share the count ('+
+     w2.paid+' against '+Math.round(base*0.36)+')');
+  ok(w2.paid<w1.paid,'which is less than the first time ('+w2.paid+' < '+w1.paid+')');
+  ok(t.cycles===3,'three acts, three cycles ('+t.cycles+')');
+
+  // ---- FIX TWO ----
+  const f2=act(b,P2,a,false);
+  ok(t.done===false,'and it goes back again');
+  ok(f2.paid===Math.round(base*0.216),'at DECAY cubed ('+f2.paid+' against '+Math.round(base*0.216)+')');
+  ok(t.cycles===4,'four acts, four cycles ('+t.cycles+')');
+
+  /* THE SEQUENCE IS THE PIECE, so it is asserted as a sequence and not only act by act: strictly
+     falling, and each step the same ratio as the last. */
+  const seq=[w1.paid,f1.paid,w2.paid,f2.paid];
+  ok(seq.every((v,i)=>i===0||v<seq[i-1]),'the four acts fall strictly in value ('+seq.join(' -> ')+')');
+  /* THE RATIO FORM OF THIS WAS A FLAKE AND WAS THROWN AWAY. Measured 35 -> 21 -> 13 -> 8, the
+     step ratios are 0.600, 0.619 and 0.615 - rounding at small values, and two of them sat inside a
+     0.02 tolerance by a thousandth. A tolerance that narrow passes today and fails the day a tear
+     award changes, on correct code. The exact form has no tolerance to get wrong: each act is the
+     pristine value decayed by the number of acts before it, rounded the way the game rounds. */
+  const want=seq.map((v,i)=>Math.round(base*Math.pow(FIX.DECAY,i)));
+  ok(seq.join(',')===want.join(','),'and each is exactly the pristine value decayed by the acts before it ('+
+     seq.join(' -> ')+' against '+want.join(' -> ')+')');
+
+  // ---- AND NONE OF IT EXISTS OUTSIDE A MATCH ----
+  X.startGame(2); tick(6); park(); G.paused=false;
+  const t2=G.inter.find(it=>it.kind==='tear'&&!it.done&&!it.needsBoth&&!it.needsPartner&&it.getPos);
+  ok(!V.on(),'no match is running');
+  ok(!FIX.can(G.keas[0])&&!FIX.can(G.keas[1]),'so neither bird is the management');
+  ok(!!t2&&!FIX.fixable(t2,G.keas[1]),'and a tear is not fixable by anybody');
+  ok(G._decay==null,'the award hook is not armed outside a match ('+G._decay+')');
+  X.startGame(1); tick(6);
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

@@ -161,7 +161,7 @@ prop at build time. Foundation for pieces 20/21.
 PROOF: homes recorded for cones, boots, shinies, food props; survive
 save/load.
 
-### 18. fix-verb  (VS)
+### 18. fix-verb  (VS)  — DONE session 8 (74e048b26061845b4f4da8e9cccf1997)
 Restorer role gets one generic verb: E-hold on any wrecked tear → restored
 state; ORDER points = chaos value undone x DECAY^cycles (per object; both
 directions share the cycle count).

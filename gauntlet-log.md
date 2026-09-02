@@ -1881,3 +1881,40 @@ already had, and both worth writing down.
   photograph contains a title.
 - EYEBALL: press 4 on the title. The horn, the roles popup, and the results screen after five minutes
   - or set G.vs.t near G.vs.len from the console if you do not want to wait.
+
+### PIECE 18 — fix-verb — CERTIFIED 74e048b26061845b4f4da8e9cccf1997
+Verdict: green first pass on the code, and I did not trust that - five sabotages, and the sixth thing
+I did was throw away an assertion of mine that was passing by a thousandth.
+- ONE VERB, NO SPECIAL CASES. THE MANAGEMENT holds the same grab key on a wrecked tear and it goes
+  back. Every tear in the game is restorable by the same code because addTear ALREADY snapshots the
+  base position and rotation - it needs them for the wreck animation to lean from - so the restore is
+  putting a snapshot back. Nothing per-object had to be written.
+- WHAT AN ACT IS WORTH IS LEARNED, NOT TABULATED, which is piece 13 for the third time. A tear has no
+  points field; every value is a literal inside its own onDone. So the FIRST wreck measures what
+  actually landed and that becomes the pristine value. Change any award in the file and this follows
+  it without anybody remembering to.
+- ONE COUNTER, BOTH DIRECTIONS, which is what the mode constants ask for. Every completed act on an
+  object advances the same count and pays pristine x DECAY^count: measured 35 -> 21 -> 13 -> 8 across
+  wreck, fix, wreck, fix. An object that gets fought over is worth less to BOTH sides every time,
+  which is the whole point of the rule and is why the counter cannot belong to one direction.
+- THE DECAY REACHES THE WRECK SIDE THROUGH ONE HOOK IN award(), scoped to the onDone call and armed
+  only inside a match. That is not elegance for its own sake: a tear award is a literal inside its
+  own handler, and there is no other way to reach it without editing forty handlers.
+- VS ONLY, BY CONSTRUCTION AND NOT BY CIRCUMSTANCE. The gate was originally implicit - outside a
+  match nothing can un-do a tear, so no second wreck can happen, so no decay can apply. That is true
+  today and would stop being true the moment anything else restored a tear. The hook now tests
+  vsOn() as well, and the battery asserts the hook is unarmed outside a match.
+- I THREW AWAY MY OWN ASSERTION FOR BEING NEARLY FLAKY. The sequence was checked by step RATIOS
+  against a 0.02 tolerance. Measured, the ratios are 0.600, 0.619 and 0.615 - rounding at small
+  values - so two of the three sat inside the tolerance by a THOUSANDTH. It passes today and fails
+  the day a tear award changes, on correct code. Replaced with the exact form, which has no tolerance
+  to get wrong: each act equals the pristine value decayed by the number of acts before it, rounded
+  the way the game rounds.
+- THE COMBO IS HELD AT ZERO FOR THE WHOLE ACT, not just before it, because the award lands somewhere
+  inside a multi-second hold and there is no single moment to zero it at. Piece 22 learned the same
+  thing one piece earlier; this is the version that works for holds rather than instants.
+- VERIFIED ADVERSARIALLY, FIVE WAYS, all caught: anybody in a match being able to restore, the decay
+  never reaching the wreck side, a fix not advancing the shared counter, the order value ignoring the
+  cycles, and the pristine value being re-measured on every wreck.
+- CAPTURE: four flagged, the same four from 53 and 51, no new ones.
+- EYEBALL: press 4, wreck something as kea 1, then hold the other bird key on the wreckage.
