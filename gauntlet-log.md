@@ -1918,3 +1918,35 @@ I did was throw away an assertion of mine that was passing by a thousandth.
   cycles, and the pristine value being re-measured on every wreck.
 - CAPTURE: four flagged, the same four from 53 and 51, no new ones.
 - EYEBALL: press 4, wreck something as kea 1, then hold the other bird key on the wreckage.
+
+## SESSION END — 2026-09-02, session 8, six pieces certified in Eric's ratified order
+Stop condition on the 6-piece rule. Nothing parked as failed. Tip 74e048b26061845b4f4da8e9cccf1997,
+gate CERTIFIED-SHIP, working tree clean, SESSION.lock released.
+    53 settle-17-flight             harness-side, md5 unchanged
+    51 vantage-stability            harness-side, md5 unchanged
+    52 hint-text-resolved-when-read d72bec482c1ec516c985c9c35b060008
+    36 tour-chassis                 520a4d78a337a9f7f08f9b7e0967d88c
+    22 vs-match-scaffold            846ee651e37429d7fa3355a49ee9329b
+    18 fix-verb                     74e048b26061845b4f4da8e9cccf1997
+- THE SESSION IS MOSTLY A CORRECTION, and that is the honest headline. Session 7 told Eric the settle
+  fixed 17. shot() reads o.settle||900 - nine hundred IS the default, so the change was a no-op and
+  the measurement that confirmed it was a lucky three-take sweep of an unchanged build. It was caught
+  by applying the fix and then testing it PROPERLY at five takes, which failed at 0.9848.
+- THE METHOD THAT REPLACED GUESSING, and it should be the first move next time something is unstable:
+  a probe on the capture rig that stages a vantage exactly as capture.mjs does and reads STATE back
+  instead of taking a photograph. It answered 17 in one run (the bird identical to nine decimals,
+  G.time not) and it answered 08 in one run (everything the rig can name identical, only the frame
+  count moving). Both answers were unavailable to any amount of reasoning about the code.
+- THREE ASSERTIONS OF MINE WERE THROWN AWAY, one per failure mode, all written up where they
+  happened: one that PASSED WHILE BROKEN (a function concatenated to its own source contains the
+  literal you are looking for), one that was flaky by a thousandth (ratios with a tolerance where an
+  exact form existed), and one that asserted a wrong expectation about a stale prompt.
+- AND ONE LESSON BECAME A RULE: three separate sabotages produced ZERO findings because an assertion
+  read state that only exists when the code works - G.squawk.n, result.winner, b.id - threw, and took
+  every later finding with it. Every such read now goes through an accessor. If an assertion reads
+  state that only exists on the happy path, read it through one.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: sections 1 and 2 of REPORT.md, then TODO 54 and 55, which
+  are both judged and both small. The run order after that is Eric's: 19-21, then 23-25.
+- FOUR FRAMES ARE FLAGGED AND NOTHING WAS RE-PINNED. 03, 05, 17 and 23 all carry the same intentional
+  change - the grass sway frozen so the frame is reproducible - and the baseline is untouched on disk
+  and in git. Final stability on those four against the shipped build: 0.9991, 1.0000, 0.9999, 0.9991.
