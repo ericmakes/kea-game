@@ -2196,3 +2196,35 @@ vantages 0 flagged, working tree clean, SESSION.lock released.
   because the next agent will see the same paste in the transcript and should make the same call.
 - WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md, then the three things still waiting on Eric - the
   re-pin question from session 8, TODO 56 (which collides with his own blocked list), and 54/55.
+
+## SESSION 10 — 2026-09-02, Eric order: 54, 55, then 37, then the numbered queue
+
+### PIECE 54 — flap-the-flight-vantage — HARNESS-SIDE, game md5 df4ae7c6cdee29c3a0bbe3aa7f514f24 unchanged
+Verdict: green. One line of staging, and the brief own proof had to be thrown out first.
+- THE FIX IS THE ONE LINE THE BRIEF NAMES: KEAGAME.press(KEAGAME.P1MAP.flap) in the 17 stage, which
+  04 has always had. The PIN chain is registered after the game loop, so it lands after update() and
+  render(); the game zeroed flapDrive every frame and the pinned 1 never reached an animate() call.
+  Pressing the key makes the GAME set it, so the pose is the real flap branch.
+- THE PROOF THE BRIEF ASKS FOR IS A TAUTOLOGY, AND IT WAS MY OWN WRONG SPEC FROM SESSION 8. It says
+  assert flapDrive is 1 at read time. It ALREADY read 1 while inert - the PIN writes it back after
+  render, so reading it reads my pin and never the game. Three takes on the unchanged build:
+  flapDrive 1, and the wing at the glide constants beside it.
+- SO READ THE POSE, AND READ THE ONE THING animate ASSIGNS. `H.rotation.x=this.flapDrive?-0.1:-0.2`
+  is not lerped, so it is exactly what animate last saw, and it moved -0.200 -> -0.100. Beside it:
+  wing.rotation.z -0.300 -> -1.171 (the glide constant, gone), wing.rotation.x 0.000 -> -0.120,
+  open 1.000 -> 0.998, and _beatT - the flap audio cadence, game-owned and NOT in the pin - went from
+  absent to 0.02-0.04, which is the game telling you the flapHeld branch is running.
+- THE PROBE IS capture.mjs WITH THE SHUTTER SWAPPED, one sed on the screenshot line, so the staging
+  cannot drift from the rig it is meant to be measuring. Five takes each side of the change.
+- STABILITY, three sweeps of five takes: 0.9997, 0.9972, 0.9976 against a bar of 0.995. Three sweeps
+  because one cannot classify a vantage - the session 9 rule, applied.
+- AND THE DRIFT DETECTOR NEVER SAW IT. The frame reads 0.9826 against the re-pinned baseline and
+  diff.mjs does not flag under 0.965, while the same pair cropped to the subject box subjects.mjs
+  already carries for 17 reads 0.639. A bird filling a twentieth of the frame can be replaced
+  outright inside the drift budget. Filed as TODO 57 - it is a missing instrument, not a bug in a
+  working one.
+- CAPTURE: 17 reshot, 25 compared, 0 flagged, worst 0.9826 (which is 17). Subject tripwire green,
+  442 kea pixels against a floor of 190. NOTHING RE-PINNED, per the brief.
+- EYEBALL: gauntlet/capture/17_flight.png against gauntlet/capture/baseline/17_flight.png. The wings
+  were at the glide spread and are now mid-downstroke. The decision is whether 17 and 04 should read
+  differently at all, given 04 is the underwing shot - the brief asks that out loud and it is yours.

@@ -185,12 +185,28 @@ await shotR('18_rear_close',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
    25 already use locally. Measured after: 0.9998, 0.9993, 0.9998 - three sweeps of five takes.
    ONE VANTAGE ONLY, per the brief. Doing it in QUIET for the whole set is TODO 30 and re-pins
    everything, which is a judged call and not this one.
-   AND A NOTE FOR WHOEVER READS THIS FRAME: the flapDrive pin is INERT. The PIN chain is registered
-   after the game loop, so it runs after update() and render(), and the game zeroes flapDrive every
-   frame because the flap key is not held. The probe shows the wing sitting at the flapDrive=0 glide
-   targets (rotation.z -0.3, open 1.0), not the flap branch. 04 avoids that by pressing the flap key
-   so the GAME sets flapDrive. Filed as TODO 54 - it changes the frame, so it is not part of 53. */
+   TODO 54, DONE 2026-09-02: THE flapDrive PIN IS INERT AND THIS FRAME WAS A GLIDE. The PIN chain is
+   registered after the game loop, so it runs after update() and render(): the game zeroed flapDrive
+   every frame because the flap key was not held, and the pinned 1 never reached an animate() call.
+   The press line above is the fix, the same one 04 has always had - the GAME sets flapDrive, so the
+   pose is the real flap branch.
+   AND THE PROOF THE BRIEF ASKED FOR CANNOT BE THE ONE IT NAMED. TODO 54 says to assert flapDrive is
+   1 at read time; it ALREADY read 1 while inert, because the PIN writes it back after render. Read
+   the pose instead. Five takes, before and after, off a probe that is this file with the shutter
+   swapped for a state read, so the staging cannot drift from the rig:
+     head.rotation.x  -0.200 -> -0.100   (H.rotation.x = flapDrive ? -0.1 : -0.2, assigned not
+                                          lerped, so it is exactly what animate last saw)
+     wing.rotation.z  -0.300 -> -1.171   (the glide constant, gone)
+     wing.rotation.x   0.000 -> -0.120
+     wing open         1.000 ->  0.998
+     _beatT           absent ->  0.02-0.04  (the flap audio cadence, game-owned and NOT pinned)
+   Stability after, three sweeps of five takes: 0.9997, 0.9972, 0.9976, bar 0.995.
+   NOT RE-PINNED - the wings go from glide to mid-downstroke and that is Eric judgement, per the
+   brief. And the frame reads 0.9826 against the old baseline, which diff.mjs does not flag at 0.965
+   even though the bird box alone moved to 0.639: a subject that fills a twentieth of the frame can
+   change completely without the drift detector noticing. Filed as TODO 57. */
 await shotR('17_flight',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
+  KEAGAME.press(KEAGAME.P1MAP.flap);
   ${PIN('k.x=0;k.z=0;k.y=3.0;k.vy=0;k.grounded=false;k.flapDrive=1;k.flapPh=1.1;k.ry=2.2;k.stun=0;k.landFlare=0;KEAGAME.G.time=12.0;')}
   ${CAM(2.35,3.15,2.1,0,3.0,0)}`);
 // a human opted OUT of the park is a human the ambient AI owns again, so law 4 applies to her

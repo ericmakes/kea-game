@@ -762,6 +762,18 @@ read differently at all, given 04 is the underwing shot.
 PROOF: probe the staged page and assert flapDrive is 1 and the wing is off its glide targets at read
 time; then stability >= 0.995 across repeated reshoots.
 RE-PIN: 17, once, on Eric's judgement.
+DONE session 10 (harness-side, game md5 df4ae7c6cdee29c3a0bbe3aa7f514f24 unchanged). One line, the
+same one 04 has always had. THE PROOF THIS BRIEF NAMES CANNOT WORK, THOUGH, AND THAT IS MY OWN ERROR
+FROM SESSION 8: flapDrive ALREADY reads 1 at read time while inert, because the PIN writes it back
+after render - reading it is reading my own pin, not the game. The honest witness is the pose, and
+the sharpest part of it is head.rotation.x, which animate ASSIGNS rather than lerps
+(`H.rotation.x=this.flapDrive?-0.1:-0.2`), so it is exactly what animate last saw. Five takes each
+side, off a probe that is capture.mjs with the shutter swapped for a state read so the staging cannot
+drift from the rig: head.rotation.x -0.200 -> -0.100, wing.rotation.z -0.300 -> -1.171,
+wing.rotation.x 0.000 -> -0.120, open 1.000 -> 0.998, and _beatT - the flap audio cadence, game-owned
+and unpinned - goes from absent to 0.02-0.04. Stability three sweeps of five takes: 0.9997, 0.9972,
+0.9976, bar 0.995. Subject tripwire still green, 442 kea pixels against a floor of 190.
+NOT RE-PINNED, per the brief: the wings are now mid-downstroke and that is the judged part.
 
 ### 55. THE CAGE HINT HAS NO MISSION BEHIND IT, SO NOBODY HAS EVER READ IT
 Found in session 8 by piece 52, while fixing the line it carries. hintScan drops any hint whose mid
@@ -792,3 +804,16 @@ anchor; if it's a shadow map, soften the edge and correct the projection.
 PROOF: shadow footprint bounded to a sane contact size at the feet across
 representative poses; no detached gap under the tail.
 RE-PIN: leave any affected vantage flagged for Eric.
+
+### 57. THE DRIFT DETECTOR CANNOT SEE THE SUBJECT CHANGE  (found in session 10 by piece 54)
+Piece 54 turned 17_flight from a glide into a mid-downstroke - a different photograph of a different
+wing pose - and diff.mjs reported 0.9826 against a threshold of 0.965 and did not flag it. Cropped to
+the subject box that subjects.mjs already carries for this vantage, the same pair reads 0.639. The
+bird fills about a twentieth of a 960x540 frame, so a whole-frame SSIM is a landscape metric: the
+subject can be replaced outright and stay inside the drift budget. Every showcase vantage is exposed
+to this and 03, 04, 13, 18, 20 and 25 are the ones where the subject IS the photograph.
+NOT A FLAKE AND NOT A BUG IN diff.mjs - it measures what it says it measures. The gap is that
+nothing measures the subject box for drift. subjects.mjs asks whether the bird is THERE; diff.mjs
+asks whether the FRAME moved; between them there is no instrument that asks whether the bird moved.
+PROOF once built: crop both frames to the box and SSIM that, with a tighter threshold than the frame
+one; prove it by feeding it the 54 pair, where the frame passes and the box must fail.
