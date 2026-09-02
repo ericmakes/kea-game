@@ -1138,22 +1138,54 @@ journey.mjs.
 ## FOUND IN SESSION 12 (appended 2026-09-02 by the overnight run)
 
 ### 67. QUIET DOES NOT PARK THE POPUP FEED, SO EVERY VANTAGE IS SHOT OVER A FADING CAPTION
-Found in session 12 by piece 31, from the cell map on its first run. Three vantages - 13_idle_preen,
-19_roof_follow and 20_dead_rear - put their hottest changed cells in the same top-centre strip,
-x300..x600 y0, and cropping it shows why: startGame calls popup() with DAWN. A CARPARK. NO WITNESSES
-YET., and popup() builds a div in #feed with a CSS animation and a setTimeout removal. The animation
-runs on the WALL CLOCK, not on G.time, so the caption is mid-fade when the shutter opens and which
-frame of the fade you get depends on how many frames the settle got through.
-THAT IS FLAKES LAW 12 WITH A FOURTH LIVE THING IN IT. QUIET parks the humans every frame, kills the
-traffic, marks the casefiles seen and hides the to-do panel. It does not touch #feed. Every vantage
-shot within POPLIFE of startGame therefore carries a live element, and that is a real slice of the
-churn the piece-31 table had to measure around.
-NOT THE CAUSE ITEM 33 SUSPECTED. Item 33 guessed accumulated simulation state - traffic, idle phase,
-ambient paths. This is a DOM animation on a timer, which no amount of pinning the world can settle.
-FIX: park it in QUIET the way the humans are parked - empty #feed every frame - or freeze the
-animation. Harness-side, one idiom, no game change.
-RE-PIN: the caption is IN eleven of the pinned frames and it is part of the composition, so removing
-it is a look change on every one of them. MEASURE FIRST, then leave flagged for Eric. Do not pin.
+Found in session 12 by piece 31, from the cell map on its first run. MEASURED AND BUILT IN SESSION
+12, THEN PARKED FOR YOUR JUDGEMENT - the patch is gauntlet/parked/todo67-park-the-feed.patch and it
+applies clean. Everything below is measured on 8232590523658dfc3f5a1fe59a916de0.
+THE FAULT. Three vantages - 13_idle_preen, 19_roof_follow, 20_dead_rear - put their hottest changed
+cells in the same top-centre strip, x300..x600 y0. Cropping it shows the caption: startGame calls
+popup() with DAWN. A CARPARK. NO WITNESSES YET., and popup() builds a div in #feed whose .pf rule is
+"animation: rise 1.6s ease forwards" - a CSS animation on the WALL CLOCK, not on G.time, with a
+setTimeout removing the wrapper at POPLIFE plus its own delay. So the caption is mid-fade when the
+shutter opens at a phase nobody controls, and sometimes it has been deleted first. That is why
+02_hut_snow reads either exactly 0 or exactly 1234 px against itself and never anything between.
+QUIET parks the humans every frame, kills the traffic, marks the casefiles seen and hides the to-do
+panel. It has never touched #feed. This is FLAKES law 12 with a fourth live thing in it, and it is
+NOT the cause item 33 suspected - not accumulated simulation state, a DOM animation on a timer.
+IT IS THE SINGLE BIGGEST SOURCE OF CROSS-RUN CHURN IN THE WHOLE SET. Five sweeps before, five after,
+worst pairwise distance per vantage:
+    05_tussock_ground  2775 ->    0     21_night_camp  2399 ->   21
+    29_lodge_deck       229 ->    0     25_preen_follow 2801 ->  27
+    30_groomed_band    1597 ->    0     17_flight       1951 ->  95
+    03_kea_plate       3033 ->   13     08_readability  1480 ->    3
+    04_flight_underwng 3086 ->   19     23_paddock_gate 1252 ->  111
+    11_trailhead       4446 ->  665     07_jam          2865 ->  768
+    18_rear_close      3909 ->  821     19_roof_follow  4168 ->  851
+    10_skifield        5822 -> 1074     22_torch_beam   5308 -> 1209
+    01_carpark_wide    3996 -> 1521     20_dead_rear    5489 -> 5037
+    13_idle_preen      6932 -> 2853     06_skyline      8791 -> 5613
+Ten of twenty-eight vantages drop under 100 px of cross-run churn, from a set where the worst was
+8791. What is left is three named causes: 20_dead_rear is TODO 69 (the camera is live), and
+06_skyline and 13_idle_preen are the shape TODO 30 describes.
+WHY IT IS PARKED AND NOT SHIPPED: EVERY DETERMINISTIC CHOICE COSTS ABOUT 2900 PIXELS ON THE PINNED
+FRAMES, and choosing which one is a look call on the whole set. The caption turns out to be in
+essentially every baseline, not the eleven I first guessed.
+  - EMPTY THE FEED (the patch). The caption leaves ~26 frames at about 2800 px each. diff.mjs goes
+    to 1 flagged, worst 0.9506, which is 08_readability_320 - a 320x180 frame where the caption is a
+    tenth of the picture. Everything else stays green.
+  - FREEZE EACH POPUP AT A FIXED PHASE instead, keeping the stagger. Reads beautifully and I built it
+    first. It requires clone-replacing the wrapper to survive its own pending remove(), which makes
+    the caption PERMANENT and fully opaque in every frame: about 5700 px into all 28 vantages and
+    08_readability_320 down to ssim 0.8711. Worse, and rejected.
+  - FREEZE AT THE LATE PHASE THE BASELINES ALREADY CAUGHT, to try to buy determinism for nothing. It
+    keeps diff.mjs at 0 flagged, worst 0.9798 - but the frames still move ~2900 px each, because a
+    single fixed phase is not the distribution of phases the baselines were pinned at. No free lunch.
+MY RECOMMENDATION: empty the feed, and re-pin the set in daylight. The 28_skifield_base comment at
+the bottom of capture.mjs is already the house position on this - a popup in a pinned frame is a
+live thing whose presence depends on how many frames the settle got through, and that vantage was
+restaged specifically to get one out of shot. The exception is built into the patch and is the same
+shape as h._park: 09_colossal IS the popup fanout and awards AFTER QUIET, so it sets __keaFeedKeep
+and keeps what it puts there. Verified by eye - the five staggered CAR: BUNTED rows survive.
+RE-PIN: the whole set, ONCE, judged. Do not pin it to make an instrument quiet.
 
 ### 68. WHAT A PIXEL COUNT CAN AND CANNOT SAY ABOUT THE PINNED SET
 Filed in session 12 by piece 31, and CORRECTED the same night by piece 33 before it had been read by
@@ -1179,3 +1211,20 @@ TODO 30 (the grass sways on G.time) are the two named causes, and 33 said from t
 honest target is a changed-pixel count near zero. Fix those, re-run crossrun, and the ceilings should
 collapse - at which point a band means something and this item can be asked again with real teeth.
 DO NOT RE-PIN ANYTHING TO MAKE AN INSTRUMENT QUIET. That is the law-12 trap from the other end.
+
+### 69. 20_dead_rear LEAVES THE CAMERA LIVE, WHICH IS THE ONE LAW-12 CASE ALREADY WRITTEN DOWN
+Found in session 12 by piece 67, in an A/B that was run to check whether piece 67 had made this
+vantage worse. It had not - it made it four times better - but the A/B is what put a number on what
+is left. Its stage line sets G.cams[0].position ONCE and uses no camLock and no PIN:
+    const c=KEAGAME.G.cams&&KEAGAME.G.cams[0]; if(c){c.position.set(...)}
+FLAKES law 12 names this exact case in its own text - "the follow cam lerped away from a directly
+assigned camera position (only camLock holds)" - and 20 is the vantage that still does it. Measured
+on the same build, five sweeps each: without the popup freeze 4688 px of cross-run churn with the
+samples spread continuously from 968 to 4688, which is the signature of a camera easing rather than
+of a discrete settle state; with the freeze 974 and 964 on two further batches.
+WHY IT IS NOT JUST camLock: this vantage is the FOLLOW cam view - a dead rear from the bird own
+camera at 1.7 behind it - so camLock would have to reproduce the follow rig geometry rather than
+override it. PIN the same assignment every frame instead, which is what the other nine live vantages
+do, and derive the offset the way the stage line already does.
+RE-PIN: 20 only, and it is a judged frame because holding the camera still WILL land it somewhere
+slightly different from the eased position the baseline caught. Measure first, leave flagged.

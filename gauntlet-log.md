@@ -2815,3 +2815,155 @@ tree clean, SESSION.lock released.
 - WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md and the three decisions in it, then TODO 40b (the
   tray-slide is the signature act of the map and the feel is Eric), then FLAKES 14 before writing a
   single assertion.
+
+## SESSION 12 — 2026-09-02, overnight, the numbered queue
+Started clean at 8232590523658dfc3f5a1fe59a916de0, gate CERTIFIED-SHIP, no lock held. Eligible queue
+after session 11: 30, 31, 32, 33, 61, plus the judged ones (39b, 40b, 60, 64) and blocked art (56).
+Took 31 first because 30 and 33 both say in their own briefs that they need its instrument to decide
+what they cover, and 32 is a look-to-judge sweep on every frame it touches.
+
+### PIECE 31 — changed-pixel-tripwire — harness-side, game md5 8232590523658dfc3f5a1fe59a916de0
+Verdict: green. gauntlet/verify/pxdiff.mjs and pxdiff-selftest.mjs. TODO 67 and 68 filed off its
+first run.
+- FOUR INSTRUMENTS IN THIS DIRECTORY AND ALL FOUR WERE SSIM, so all four shared one blind spot. The
+  new one is a count, in pixels, with the amplitude beside it and an optional 16x9 density map that
+  costs one extra ffmpeg call rather than 144 crops - the mask is area-scaled and read back raw.
+- THE PROOF IS THE PAIR THE BRIEF NAMED, REBUILT RATHER THAN RECOVERED. The brief said the piece-9
+  before/after was a ready-made test case sitting in the repo; it is not any more, because 59a8493
+  re-pinned the baselines on the smooth hulls. But the AFTER being pinned is exactly what makes the
+  BEFORE cheap: computeVertexNormals on non-indexed ExtrudeGeometry puts the flat facets back, which
+  is the same fact the piece-9 battery was built on. It reads ssim 0.9868 against a 0.965 gate and
+  12660 changed pixels against a band of 1650, and 0.9868 is the number the brief recorded for that
+  pair eleven builds ago from the other direction.
+- SHOT THROUGH A COPY OF capture.mjs, NOT A SWITCH INSIDE IT. gate-selftest.sh already established
+  the idiom and wrote the reason next to it: the production instrument keeps no override for anybody
+  to narrow it with by accident. The copy has to live in the repo, though - ESM resolves node_modules
+  from the file location, so a copy in /tmp cannot import puppeteer.
+- THREE SWEEPS WOULD HAVE LIED, AND MY OWN SELFTEST CAUGHT IT. I had a per-vantage table built from
+  three full sweeps and was about to commit it. Then the selftest control - an untouched frame shot
+  through the same rig - came back 3909 px on 18_rear_close, whose three-sweep ceiling was 825, twice
+  in eight runs. Re-measured over the ten pairwise distances of FIVE sweeps: 07_jam 20 -> 1881,
+  10_skifield 3 -> 1152, 19_roof_follow 890 -> 4168, 13_idle_preen 2922 -> 6932. The states are
+  discrete but there are more than three of them, so a ceiling from three samples is a floor.
+- THE CHURN IS NOT NOISE, IT IS A HANDFUL OF DISCRETE STATES, and that is why a ceiling means
+  anything at all. 01_carpark_wide: run1-run2 3993, run1-run3 3993, run2-run3 0 - two of the three
+  captures are bit-identical and the third is a different photograph. 14_player_view 1611/1611/0.
+  21_night_camp 2379/2379/0. And 08_readability_320 churns 1477 px tonight, which is the same 1477
+  session 6 recorded for it. The settle lands on one of a few frame counts, and each count is exact.
+- THE COUNT IS A STEP FUNCTION AND I ALMOST READ IT AS A DISTANCE. 29_lodge_deck sits 129 px from
+  its baseline on four sweeps and 1452 on the fifth, while its worst churn PAIR is 229 - which is
+  impossible for a metric and fine for a threshold: a wide area of that frame sits within a grey
+  level of the window, so one small move flips thirteen hundred pixels across the boundary together.
+  Written into the file header, because the next person will hit it too.
+- TWO OF MY OWN ASSERTIONS WERE FLAKES AND BOTH ARE NOW STATED DIFFERENTLY. (a) I asserted the
+  re-shade pair PASSES the 0.965 diff threshold. It reads 0.9868, 0.9863, 0.9863 - and 0.9580 on one
+  run in six, because the BEFORE shot carries the vantage own churn on top of the re-shade and the
+  pair straddles the bar. The claim does not need that side of it: SSIM barely registering a change
+  of this size is the complaint, so that is what it asserts. (b) I asked for the re-shade to be four
+  times the control and it went red twice in eight runs, because the denominator churns. A ratio
+  against a moving denominator is not a bound. It is a DIFFERENCE now, with both distributions
+  written down: the re-shade contribution is 11904/12651/12659/12660/12664 - stable to a fifth of a
+  percent, because it is the same hulls every time - and the control tops out under 4000.
+- AND THE FIRST VERSION HAD TWO ASSERTIONS THAT PASSED ON THE NULL FIXTURE, which is FLAKES 14 from
+  its other side. The no-op sabotage left "the worst pixel moved 43 levels" and "8 of 144 cells are
+  warm" green, because ordinary churn on that vantage moves 49 levels and warms 12 cells. Measured,
+  the re-shade peaks LOWER than the churn does. Amplitude does not discriminate here at all; the
+  count and the spread do, and both are now asserted against a control shot through the same copy.
+- THREE SABOTAGES, all caught: a no-op BEFORE fixture (3 findings), 18 band widened to 99999 (1),
+  and pxdelta with its geq threshold replaced by a constant (3, including the identity fixture).
+- CAPTURE: 28 compared by diff.mjs, 0 flagged, worst 0.9823. pxdiff on the same set: 5 over band,
+  5 over churn only. Nothing was re-pinned and the game file was not opened.
+- WHAT IT FOUND ON ITS FIRST RUN, filed as TODO 68: six vantages sit above their own five-sweep churn
+  ceiling on every one of five sweeps, so it is not churn. 07_jam and 17_flight were already known.
+  09_colossal is the cleanest signal in the set - 1565..1584 px against a churn of 22, ssim 0.9992,
+  seventy-one times its own churn - and session 6 measured that same pair at 0 px, so it moved after
+  that. Plus 20_dead_rear, 11_trailhead and 23_paddock_gate.
+- AND TODO 67, FOUND BY THE CELL MAP RATHER THAN BY A BRIEF: 13, 19 and 20 put their hottest cells in
+  the same top-centre strip. Cropped, it is the DAWN. A CARPARK. NO WITNESSES YET. caption, which
+  popup() builds as a div in #feed with a CSS animation on the WALL CLOCK. QUIET parks the humans
+  every frame, kills the traffic, marks the casefiles seen and hides the to-do panel, and does not
+  touch #feed - so every vantage shot inside POPLIFE of startGame is photographed over a caption
+  mid-fade. Item 33 guessed accumulated simulation state; this is a fourth live thing and no amount
+  of pinning the world settles it.
+- EYEBALL: nothing moved, so there is nothing new to look at. The instrument is read, not seen.
+
+### PIECE 33 — cross-run-churn — harness-side, game md5 8232590523658dfc3f5a1fe59a916de0
+Verdict: green. gauntlet/verify/crossrun.mjs and crossrun-selftest.mjs. It corrected piece 31 an
+hour after piece 31 shipped, which is the entry worth reading.
+- THE THIRD QUESTION ABOUT A FRAME, and three instruments had asked the other two. diff: has it
+  changed since it was pinned. stability: does it reshoot the same twice INSIDE one run, which is
+  what law 12 says in as many words. boxdiff: did the subject move. Nobody asked whether it reshoots
+  the same twice in a DIFFERENT PROCESS. Session 4 measured that by hand off a checkout and nothing
+  has measured it since.
+- THE BRIEF ASKED FOR A CONTRACT THAT CANNOT HOLD, and it took the measuring to see why. TODO 33
+  says assert the count per frame is near zero. That would be red on nineteen of twenty-eight
+  vantages, and red for something no assertion can fix: the settle lands on one of a handful of
+  animation frame counts and each count is an exact photograph, so the distance between two runs is
+  the distance between two STATES. Near zero is the goal of TODO 30 and 67, not a contract. What
+  ships instead is: no vantage churns more than it is recorded as churning, with the ceilings kept in
+  pxdiff.mjs - the file that has to read them - and a paste-ready table printed for recalibration.
+- AND ITS FIRST REAL RUN KILLED FOUR OF PIECE 31 SIX FINDINGS. Five more sweeps on the same
+  unchanged build, an hour later, and fourteen of twenty-eight vantages beat the five-sweep ceiling:
+  09_colossal 22 -> 2233, 11_trailhead 673 -> 4446, 23_paddock_gate 117 -> 1252, 10_skifield
+  1152 -> 5822. So the drift claims for 09, 20, 11 and 23 collapse - including 09, which had looked
+  unanswerable at seventy-one times its own churn with session 6 measuring the same pair at 0 px.
+  Only 07_jam and 17_flight survive ten sweeps, and both were already known. The pxdiff table, the
+  pxdiff header and TODO 68 are corrected in this commit rather than left to be read wrong.
+- WHICH MEANS MY OWN HEADLINE WAS WRONG BY ONE MEASUREMENT, and the lesson is the one piece 31
+  already had written on it in smaller print: a ceiling from three samples is a floor, and so is a
+  ceiling from five. The table now says that about itself.
+- WHAT IS ACTUALLY ESTABLISHED IS BIGGER THAN WHAT IT COST. The pinned set is far less reproducible
+  across processes than any instrument here has said: 06_skyline 8791 px of churn on one unchanged
+  build, 13_idle_preen 6932, 10_skifield 5822, 20_dead_rear 5489. stability.mjs calls them clean
+  because it compares takes inside a run. diff.mjs reads them at 0.998 and passes.
+- ONE OUTLIER LEFT OUT ON PURPOSE: 18_rear_close returned 16317 px once in a real cross-run pair
+  inside the selftest, against a distribution topping out at 3909 over thirty-odd pairs and 2563
+  over fifteen more taken straight afterwards. Fitting the table to it would put the 18 band above
+  the piece-9 re-shade and blind pxdiff on the one vantage it was proved with. Recorded as law 9,
+  watched, not absorbed.
+- THE SELFTEST DRIVES compare() OVER PREPARED DIRECTORIES, because the contract is about a frame that
+  got LESS reproducible and waiting for the rig to go unstable by itself is not a test. Fixture 5
+  still shoots for real, twice, on one vantage - a comparison function never handed a real pair
+  proves nothing about the shooting path.
+- THREE SABOTAGES, all caught: the first pair reported instead of the worst, only consecutive runs
+  paired so run1-vs-run3 is never taken, and a hardcoded ceiling instead of the pxdiff table.
+- AND TWO OF THEM WERE NO-OPS ON THE FIRST ATTEMPT, which is FLAKES 14 from its other side and the
+  exact thing the session 11 log warned about. My sed anchor ended )}; and the file says )}); so
+  nothing was edited; sabotage A "found" something only because an unrelated real flake fired in the
+  same run, and sabotage C reported ALL PASS on an unmodified file. Both redone against an anchor
+  asserted to exist first, which is the law for the game file and should have been the law here.
+- CAPTURE: nothing re-pinned, nothing shot for the record. Ten sweeps went through /tmp and out.
+
+### TODO 67 — park-the-feed — MEASURED, BUILT, PARKED (no piece, no commit to the rig)
+Verdict: parked for judgement, per its own brief - measure first, leave flagged, do not pin. The
+patch is gauntlet/parked/todo67-park-the-feed.patch and applies clean to capture.mjs.
+- IT IS THE BIGGEST SINGLE SOURCE OF CROSS-RUN CHURN IN THE SET, and that is now measured rather
+  than argued: five sweeps before, five after. Ten of twenty-eight vantages fall under 100 px of
+  cross-run churn - 05_tussock_ground 2775 -> 0, 29_lodge_deck 229 -> 0, 30_groomed_band 1597 -> 0,
+  03_kea_plate 3033 -> 13, 04 3086 -> 19, 21_night_camp 2399 -> 21, 25 2801 -> 27, 08 1480 -> 3,
+  17_flight 1951 -> 95, 23 1252 -> 111 - out of a set whose worst was 8791.
+- AND IT IS NOT SHIPPABLE WITHOUT ERIC, WHICH IS THE POINT OF STOPPING. Every deterministic choice
+  costs about 2900 px on the pinned frames, because the caption is in essentially every baseline
+  rather than the eleven I first guessed. There is no version of this that is free.
+- I BUILT THE WRONG ONE FIRST AND THE INSTRUMENT CAUGHT IT. Freezing each popup at a fixed phase of
+  its own animation keeps the stagger and looks right, and it needs the wrapper clone-replaced to
+  survive its own pending remove() - which makes the caption PERMANENT and fully opaque in every
+  frame. Measured: ~5700 px into all 28 vantages and 08_readability_320 down to ssim 0.8711 against
+  a 0.965 threshold. A rig change that reds the diff on a vantage it was not aiming at is not a
+  staging fix. Piece 31 is one session old and has already stopped me shipping something.
+- THEN I TRIED TO BUY DETERMINISM FOR NOTHING and could not. Freezing at the late phase the
+  baselines already caught keeps diff.mjs at 0 flagged, worst 0.9798 - but the frames still move
+  ~2900 px each, because one fixed phase is not the distribution of phases 28 baselines were pinned
+  at. That trial also wasted four capture runs to a sed that failed silently on a bracket and left
+  FREEZE at its default for all four, so the sweep measured the same value four times. Read the
+  echo, not the intention.
+- THE EXCEPTION IS THE h._park SHAPE THIS FILE ALREADY USES. 09_colossal IS the popup fanout -
+  CHAOS 10500 LV10 MAX over five staggered CAR: BUNTED rows - and it awards AFTER QUIET runs, so the
+  patch has it set __keaFeedKeep and keep what it puts there. Eyeballed: the five rows survive.
+- FILED ON THE WAY PAST: TODO 69, from an A/B run to check whether this had made 20_dead_rear worse.
+  It had not - 4688 px of churn without the change, 974 and 964 on two batches with it - but 20 sets
+  G.cams[0].position ONCE with no camLock and no PIN, which is the one law-12 case whose text names
+  the follow cam by name. Its samples spread continuously from 968 to 4688 rather than sitting in
+  discrete states, which is what an easing camera looks like.
+- EYEBALL, if you want to judge it before applying: the caption is the top-centre strip of any
+  pinned frame - gauntlet/capture/baseline/20_dead_rear.png is the clearest.
