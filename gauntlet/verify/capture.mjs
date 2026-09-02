@@ -152,8 +152,28 @@ await shotR('19_roof_follow',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
 await shotR('18_rear_close',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;k.x=-9.2;k.z=10.6;k.y=0;k.grounded=true;k.ry=5.8;k.stun=0;k.idleT=0;k.idleAct=null; ${CAM(-8.6,1.5,12.4,-9.6,0.5,9.4)}`);
 // same escape as 04. flapPh 1.1 sits just past the top of the stroke so the wings read
 // mid-beat rather than pinned at a limit.
+/* TODO 53, AND THE SESSION-7 DIAGNOSIS IT WAS FILED ON WAS WRONG. That report said the fix was to
+   give this vantage the {settle:900} that 04 passes. It is not: shot() already reads
+   `o.settle||900`, so 900 IS the default and 04 passing it explicitly is a no-op. The two vantages
+   have always had the same settle, and the 0.9024 that started this was simply the worst sample of
+   a frame that sits between 0.979 and 0.993 - measured three times at five takes on the unchanged
+   build, while 04 came back 0.9974 to 0.9999 on the same runs.
+   WHAT IT ACTUALLY IS, read off the rig rather than guessed: five takes reported the bird IDENTICAL
+   at read time - flapPh, flapDrive, y, ry, and the wing transform agreeing to nine decimal places -
+   while G.time came back between 2.3509 and 2.3843. The bird was never the variable. The ground was.
+   TODO 30 measured the same thing from the other end: the grass shader sways on uTime, so every
+   grass-filled frame varies with how many animation frames the settle got through, and this camera
+   looks down across the tussock from three metres up. Pinning G.time is the law-12 idiom that 21 and
+   25 already use locally. Measured after: 0.9998, 0.9993, 0.9998 - three sweeps of five takes.
+   ONE VANTAGE ONLY, per the brief. Doing it in QUIET for the whole set is TODO 30 and re-pins
+   everything, which is a judged call and not this one.
+   AND A NOTE FOR WHOEVER READS THIS FRAME: the flapDrive pin is INERT. The PIN chain is registered
+   after the game loop, so it runs after update() and render(), and the game zeroes flapDrive every
+   frame because the flap key is not held. The probe shows the wing sitting at the flapDrive=0 glide
+   targets (rotation.z -0.3, open 1.0), not the flap branch. 04 avoids that by pressing the flap key
+   so the GAME sets flapDrive. Filed as TODO 54 - it changes the frame, so it is not part of 53. */
 await shotR('17_flight',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
-  ${PIN('k.x=0;k.z=0;k.y=3.0;k.vy=0;k.grounded=false;k.flapDrive=1;k.flapPh=1.1;k.ry=2.2;k.stun=0;k.landFlare=0;')}
+  ${PIN('k.x=0;k.z=0;k.y=3.0;k.vy=0;k.grounded=false;k.flapDrive=1;k.flapPh=1.1;k.ry=2.2;k.stun=0;k.landFlare=0;KEAGAME.G.time=12.0;')}
   ${CAM(2.35,3.15,2.1,0,3.0,0)}`);
 // a human opted OUT of the park is a human the ambient AI owns again, so law 4 applies to her
 // directly: pin position AND state every frame, not once.

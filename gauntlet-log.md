@@ -1692,3 +1692,46 @@ happened. Tip is 4c29df092d4cf33cf5ee0f3b2524730b, gate CERTIFIED-SHIP, working 
   runs crashed instead of reporting, which cost every other finding in the run, so every read of new
   state in a battery now goes through a guard and every interpolated number through a formatter. A
   dead battery is a worse witness than a red one.
+
+## SESSION 8 — 2026-09-02, Eric ratified the run order 53 -> 51 -> 52 -> 36 -> 22 -> 18-21 -> 23-25
+Lock taken before any write. Eric pasted TODO 53 and the run order; the block had not been applied to
+the tree, so it was run first and committed as his.
+
+### PIECE 53 — settle-17-flight — CERTIFIED (harness-side, game md5 4c29df092d4cf33cf5ee0f3b2524730b unchanged)
+Verdict: green, but only after the brief turned out to be built on a wrong diagnosis of MINE from
+session 7. Three staging rounds, which is the FLAKES law 8 limit, and the third one was right.
+- I WAS WRONG LAST NIGHT AND THE REPORT SAID SO IN BOLD. Session 7 told Eric the fix was to give 17
+  the {settle:900} that 04 passes. shot() reads `o.settle||900`. NINE HUNDRED IS THE DEFAULT. So 04
+  passing it explicitly is a no-op, the two vantages have always had the same settle, and the
+  measurement that seemed to confirm it (0.9024 -> 0.9958) was a lucky sweep of a completely
+  unchanged build. That is what a three-take sample gets you on a frame that lives between 0.979 and
+  0.993.
+- HOW IT WAS CAUGHT: by applying the fix and testing it properly. Five takes instead of three, twice,
+  gave 0.9848 and 0.9960 - one of them under the bar the brief sets. A fix that only passes when you
+  sample it thinly is not a fix, and the honest move was to stop and read the file rather than run
+  the sweep again hoping.
+- THEN I STOPPED GUESSING AND MEASURED THE PAGE. Wrote a probe on the capture rig that stages 17
+  exactly as capture.mjs does and reads STATE back instead of taking a photograph, five times. The
+  bird is IDENTICAL across takes - flapPh, flapDrive, y, vy, ry and the wing transform agreeing to
+  nine decimal places. G.time is not: 2.3509 to 2.3843. The bird was never the variable. The ground
+  was, and TODO 30 had measured the same thing from the other end a session ago - the grass shader
+  sways on uTime, and this camera looks down across the tussock from three metres up.
+- THE FIX IS THE LAW-12 IDIOM 21 AND 25 ALREADY USE: pin G.time in the PIN body. Seven sweeps of five
+  takes across the session: 0.9998, 0.9993, 0.9998, then 0.9980, 0.9998, 0.9999, 0.9984. The brief
+  asks for >= 0.995 and the worst of seven is 0.9980.
+- ONE VANTAGE ONLY, per Eric. Doing this in QUIET for the whole set is TODO 30, and it re-pins
+  everything, which is a judged call and not this one. 08, 23, 05 and 03 were not touched.
+- DIFF: exactly ONE flagged, 17 at 0.9051, which is the intended change - freezing the sway moves the
+  grass. NOT re-pinned, per the brief. The other 24 are clean and the baseline is untouched.
+- AND THE PROBE FOUND SOMETHING ELSE, filed as TODO 54: the flapDrive pin on 17 is INERT. The PIN
+  chain is registered after the game loop, so it runs after update() and render(), and the game zeroes
+  flapDrive every frame because the flap key is not held. The probe reads the wing at the flapDrive=0
+  GLIDE targets - rotation.z -0.300, open 1.000. So the vantage called 17_flight, whose comment says
+  the wings read mid-beat, is photographing a glide, and the pinned flapPh is inert for the same
+  reason. 04 avoids it by pressing the flap key so the GAME sets flapDrive. Not fixed here because it
+  changes the photograph, which is Eric's call.
+- THE CORRECTION IS WRITTEN WHERE THE WRONG CLAIM WAS, not just here: TODO 51 lost the paragraph that
+  blamed the settle, TODO 53 carries the correction under Eric's own words, and capture.mjs says it at
+  the vantage.
+- EYEBALL: gauntlet/capture/17_flight.png against gauntlet/capture/baseline/17_flight.png. The grass
+  is frozen at G.time 12.0; the bird should be unchanged.

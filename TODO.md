@@ -669,13 +669,15 @@ takes each, compared against EACH OTHER (baseline out of the picture). Five do n
     03_kea_plate         0.9943
     every other vantage  0.9959 to 0.9999
 
-17 IS SOLVED AND THE FIX IS ONE WORD. It is not the pin and it is not the flap phase: it is the
-SETTLE. 04_flight_underwing stages the same way - poseLock off, PIN holding y, flapDrive and flapPh
-every frame - and it is stable at 0.9972, and the only difference between them is that 04 passes
-{settle:900} and 17 takes the default. Measured: give 17 the same settle and it goes 0.9024 to
-0.9958, three takes, on the same build. NOT SHIPPED, because the stop condition had been reached and
-the longer settle CHANGES THE FRAME, so it wants a re-pin and a re-pin wants Eric.
-    await shotR('17_flight',`...${CAM(2.35,3.15,2.1,0,3.0,0)}`,{settle:900});
+17 IS SOLVED - BUT NOT BY THE SETTLE, AND THE PARAGRAPH THAT USED TO SIT HERE WAS WRONG. It claimed
+the fix was to give 17 the {settle:900} that 04 passes. shot() reads `o.settle||900`, so 900 IS THE
+DEFAULT and 04 passing it explicitly is a no-op: the two vantages always had the same settle, and
+the 0.9958 that seemed to confirm it was a lucky sweep of the unchanged build. Corrected and fixed
+in session 8, piece 53. The real cause was read off the rig instead of reasoned about: five takes
+reported the BIRD identical at read time - flapPh, flapDrive, y, ry and the wing transform agreeing
+to nine decimal places - while G.time came back between 2.3509 and 2.3843. The bird was never the
+variable, the ground was, and TODO 30 had already measured the same thing from the other end (the
+grass shader sways on uTime). Pinning G.time in 17 alone: 0.9980 to 0.9999 across seven sweeps.
 The other four (08, 23, 05, 03) all stage the bird ONCE with no PIN wrapper, which is FLAKES law 12
 in its plainest form. Whether they want a PIN, a longer settle, or both is one measurement each -
 run stability.mjs after every change, because diff.mjs cannot answer this question at all.
@@ -702,8 +704,31 @@ settle:900. Apply the same settle to 17. Do NOT touch the four mildly
 unstable vantages (08, 23, 05, 03) - they belong to piece 51's table.
 PROOF: take-to-take stability >= 0.995 across repeated reshoots.
 RE-PIN: none - leave the new 17 flagged for Eric's weekend judging.
+DONE session 8 (harness-side, game md5 4c29df092d4cf33cf5ee0f3b2524730b unchanged) - BUT NOT THE WAY
+THIS BRIEF SAYS, because the brief inherited a wrong diagnosis of mine. settle:900 IS the default
+(shot reads `o.settle||900`), so applying it to 17 is a no-op and 04 has never differed from 17 in
+that respect. The cause is time-based ambient animation, not the settle and not the pose: the probe
+found the bird identical across takes to nine decimal places while G.time varied. 17 now pins G.time
+in its PIN body, the law-12 idiom 21 and 25 already use. Seven sweeps of five takes: 0.9980-0.9999.
+The four mildly unstable vantages were NOT touched, per the brief. 17 is flagged and not re-pinned.
 
 ## RUN ORDER (ratified by Eric, 2026-09-02)
 53 -> 51 -> 52 -> 36 (tour-chassis) -> 22 (vs-match-scaffold) -> 18-21
 (restore verbs) -> 23-25. Rationale: instruments first, then the maps
 foundation, then the stage before the actors.
+
+### 54. THE flapDrive PIN ON 17 IS INERT, AND THAT FRAME IS A GLIDE, NOT A FLAP
+Found in session 8 by piece 53, while probing what actually varies on 17. The PIN chain is registered
+AFTER the game loop, so it runs after update() and render(); the game zeroes flapDrive every frame
+because the flap key is not held, and the pinned flapDrive=1 never reaches an animate() call. The
+probe reads the wing sitting at the flapDrive=0 glide targets - rotation.z -0.300, userData.open
+1.000 - so the vantage named 17_flight, whose comment says the wings read mid-beat, is photographing
+a glide. The pinned flapPh=1.1 is inert for the same reason.
+04 DOES NOT HAVE THIS PROBLEM and shows the fix: it calls KEAGAME.press(P1MAP.flap), so the GAME sets
+flapDrive=1 every frame and the pose is the real flap branch. One line, same as 04.
+NOT DONE IN 53 because it CHANGES THE FRAME - the wings would go from glide to mid-downstroke, which
+is a different photograph and a judged one. It also wants deciding alongside whether 17 and 04 should
+read differently at all, given 04 is the underwing shot.
+PROOF: probe the staged page and assert flapDrive is 1 and the wing is off its glide targets at read
+time; then stability >= 0.995 across repeated reshoots.
+RE-PIN: 17, once, on Eric's judgement.
