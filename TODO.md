@@ -191,7 +191,7 @@ the menace's snack strategy.
 PROOF: scoff → fetch → place at home → points + prop present (botched);
 source depletion rules assert.
 
-### 22. vs-match-scaffold
+### 22. vs-match-scaffold  — DONE session 8 (846ee651e37429d7fa3355a49ee9329b)
 Title gains 2 KEA VERSUS. Match flow: coin-flip roles (THE MENACE / THE
 MANAGEMENT popups), timer 3/5/8 min (default 5), horn, results screen with
 split scores + the biggest single play each side. Tie → sudden death,

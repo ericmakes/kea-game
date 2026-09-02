@@ -1721,6 +1721,125 @@ C.section('THE TOUR CHASSIS - the world is now a biome, and it is the only one r
   X.startGame(1); tick(6);
 }
 
+C.section('2 KEA VERSUS - the match scaffold, every branch of the decision driven');
+// TODO 22. A match is a WINDOW over the shared economy: piece 16 gave each bird a book that adds up
+// to the score, and a match snapshots both at the whistle and reads the difference. So the chaos you
+// arrived with does not count, and nothing about scoring had to change to get a scoreboard.
+// The screens are browser-only and the timer is feel; the DECISION is a state machine and all four
+// of its endings are driven below - the horn, sudden death, the sudden-death cap, and the draw.
+{
+  const V=X.VS;
+  /* THE COMBO IS ISOLATED BEFORE EVERY PAYMENT, and that is the style-star lesson taken rather than
+     relearned: award() multiplies the base by the live combo, so a literal in an assertion below
+     would be asserting the combo and not the match. Zeroed here, bumpCombo takes it to one, and the
+     multiplier is one - which pay() then CHECKS by returning what actually landed. */
+  const pay=(k,pts,label)=>{ G.combo=0; G.comboT=0; const s0=G.score;
+    X.award(pts,label||'STAGED',{x:0,y:1,z:0},k); return G.score-s0; };
+  const clear=()=>{ G.paused=false; };   // vsEnd pauses the game; every ending here undoes it
+  /* every read of the result goes through this, because the failure mode of a broken ending is a
+     result that never arrives - and a battery that throws on result.winner takes every finding after
+     it down with it. Learned twice already tonight; taken as a habit now. */
+  const RES=()=>(G.vs&&G.vs.result)||{};
+
+  // ---- roles ----
+  X.startGame(2,{vs:true}); tick(4);
+  ok(!!G.vs&&G.vs.phase==='play','a match opens in play ('+(G.vs?G.vs.phase:'no match')+')');
+  ok(G.vs.roles.menace!==G.vs.roles.management,'the two roles are different birds ('+
+     JSON.stringify(G.vs.roles)+')');
+  ok(V.role(G.vs.roles.menace)==='menace'&&V.role(G.vs.roles.management)==='management',
+     'and each bird reports the role it holds');
+  ok(V.role(0)!==V.role(1),'never the same role twice');
+  /* IT IS A REAL FLIP, NOT A CONSTANT. Started repeatedly it must produce both assignments - the
+     draw comes from rnd(), so this is deterministic under the gauntlet seed rather than lucky. */
+  { const seen={}; for(let i=0;i<40;i++){ const v=V.start({}); seen[v.roles.menace]=1; }
+    ok(!!seen[0]&&!!seen[1],'forty flips produce both assignments, so the coin is a coin ('+
+       Object.keys(seen).join('/')+')'); }
+
+  // ---- the clock is named, and the default is five minutes ----
+  ok(V.LEN.short===180&&V.LEN.std===300&&V.LEN.long===480,'three lengths, 3 / 5 / 8 minutes');
+  X.startGame(2,{vs:true}); tick(2);
+  ok(G.vs.len===300&&G.vs.lenKey==='std','a match with no length asked for is the five minute one ('+G.vs.len+'s)');
+  X.startGame(2,{vs:true,len:'long'}); tick(2);
+  ok(G.vs.len===480,'and it takes a named length ('+G.vs.len+'s)');
+  X.startGame(2,{vs:true,len:'fortnight'}); tick(2);
+  ok(G.vs.len===300&&G.vs.lenKey==='std','an unknown length falls back to the default rather than to NaN ('+G.vs.len+')');
+
+  // ---- a match needs two birds ----
+  X.startGame(1); tick(4);
+  ok(V.start({})===null,'a versus match cannot start with one bird on the board');
+
+  // ---- THE SCORE IS A DELTA, which is the whole design ----
+  X.startGame(2); tick(4);
+  pay(G.keas[0],90,'BEFORE THE WHISTLE');
+  const pre=X.LEDGER.of(0);
+  X.startGame(2,{vs:true}); tick(4);
+  ok(X.LEDGER.of(0)>=pre,'the book carries the pre-match chaos over, because books outlive a restart');
+  ok(V.scores()[0]===0&&V.scores()[1]===0,'but the match starts level at nothing to nothing ('+
+     JSON.stringify(V.scores())+')');
+  const first=pay(G.keas[0],30,'IN THE MATCH');
+  ok(first===30,'the combo is out of the way, so a staged 30 pays 30 ('+first+')');
+  ok(V.scores()[0]===first,'and only what is earned inside the match counts ('+JSON.stringify(V.scores())+')');
+
+  // ---- the biggest single play each side ----
+  /* the tops are DERIVED from what actually landed rather than from the numbers asked for, so the
+     assertion survives anything that ever multiplies an award again. */
+  const plays=[['SMALL',10],['THE BIG ONE',55],['SMALL AGAIN',12]].map(p=>({l:p[0],pts:pay(G.keas[0],p[1],p[0])}));
+  const top=plays.reduce((a,b)=>b.pts>a.pts?b:a);
+  const theirs={l:'THEIR BEST',pts:pay(G.keas[1],25,'THEIR BEST')};
+  ok(G.vs.best[0]&&G.vs.best[0].pts===top.pts&&G.vs.best[0].label===top.l,
+     'the biggest play is remembered, not the latest (kept '+JSON.stringify(G.vs.best[0])+
+     ' of '+JSON.stringify(plays)+')');
+  ok(G.vs.best[1]&&G.vs.best[1].pts===theirs.pts&&G.vs.best[1].label===theirs.l,
+     'and each side keeps its own ('+JSON.stringify(G.vs.best[1])+')');
+
+  // ---- ENDING 1: the horn, with a leader ----
+  { G.vs.t=G.vs.len-0.001; tick(2);
+    ok(G.vs.phase==='over'&&G.vs.why==='time','the horn ends it ('+G.vs.phase+'/'+G.vs.why+')');
+    const r=RES();
+    ok(r.winner===0,'and the bird that earned more takes it ('+JSON.stringify(r.scores)+' -> kea '+r.winner+')');
+    ok(!!r.best&&r.best[0].pts===top.pts&&r.best[1].pts===theirs.pts,'the result carries both best plays ('+
+       (r.best?r.best[0].pts+' / '+r.best[1].pts:'no result')+')');
+    ok(V.update(1/60)===null,'a finished match does not tick on');
+    clear(); }
+
+  // ---- ENDING 2: level at the horn is NOT a result, it is sudden death ----
+  X.startGame(2,{vs:true}); tick(4); clear();
+  pay(G.keas[0],40,'LEVEL'); pay(G.keas[1],40,'LEVEL');
+  ok(V.scores()[0]===V.scores()[1],'the two are level going into the horn ('+JSON.stringify(V.scores())+')');
+  G.vs.t=G.vs.len-0.001; tick(2);
+  ok(G.vs.phase==='sudden','level at the horn opens sudden death rather than declaring a draw ('+G.vs.phase+')');
+  ok(G.vs.result===null,'and nothing is decided yet');
+  ok(JSON.stringify(G.vs.tieAt)===JSON.stringify(V.scores()),'it remembers the score it was level at');
+
+  // ---- ENDING 3: first point takes it ----
+  { tick(60);
+    ok(G.vs.phase==='sudden','still running a minute in is not required, but it is still running here');
+    pay(G.keas[1],5,'THE GOLDEN POINT'); tick(2);
+    ok(G.vs.phase==='over'&&G.vs.why==='sudden','the first point ends it ('+G.vs.why+')');
+    ok(RES().winner===1,'and it goes to whoever scored it ('+JSON.stringify(RES().scores)+
+       ' -> kea '+RES().winner+')');
+    clear(); }
+
+  // ---- ENDING 4: nobody blinks, and it is an honest draw ----
+  X.startGame(2,{vs:true}); tick(4); clear();
+  pay(G.keas[0],40,'LEVEL'); pay(G.keas[1],40,'LEVEL');
+  G.vs.t=G.vs.len-0.001; tick(2);
+  ok(G.vs.phase==='sudden','level again, so sudden death again');
+  G.vs.sudden=V.SUDDEN-0.001; tick(2);
+  ok(G.vs.phase==='over'&&G.vs.why==='draw','the cap runs out and it is a draw ('+G.vs.why+')');
+  ok(RES().winner===-1,'with nobody named the winner ('+RES().winner+')');
+  ok(!!RES().scores&&RES().scores[0]===RES().scores[1],'because the scores are still level ('+
+     JSON.stringify(RES().scores)+')');
+  clear();
+
+  // ---- FLAKES law 1: a restart takes the match with it ----
+  X.startGame(2,{vs:true}); tick(4); clear();
+  ok(!!G.vs&&V.on(),'a match is running when the restart comes');
+  X.startGame(1); tick(4);
+  ok(G.vs===null&&!V.on(),'startGame cleared it, so no match rides into the next run');
+  clear();
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

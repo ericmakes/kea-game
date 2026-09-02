@@ -1842,3 +1842,42 @@ not assertions at all - it is three comparisons that either match or do not.
   without its fallback fails three - after being guarded, because the first run of that sabotage
   KILLED the battery on `b.id` and took every later finding with it. The boot is wrapped now.
 - EYEBALL: nothing new. The four flagged frames are still the ones from 53 and 51.
+
+### PIECE 22 — vs-match-scaffold — CERTIFIED 846ee651e37429d7fa3355a49ee9329b
+Verdict: green. Two staging rounds, both of them my assertions being naive about systems the file
+already had, and both worth writing down.
+- A MATCH IS A WINDOW OVER THE SHARED ECONOMY, NOT A SECOND ONE. Piece 16 gave every bird a book that
+  adds up to the score at every instant; a match snapshots both books at the whistle and reads the
+  difference. So the chaos you arrived with does not count, nothing about scoring had to change to
+  get a scoreboard, and there is no second award path to keep in step with the first. Four days of
+  ledger work paid for in one subtraction.
+- FOUR ENDINGS, ALL FOUR DRIVEN: the horn with a leader, level-at-the-horn opening sudden death,
+  the golden point, and the sudden-death cap running out as an honest draw. Sudden death is decided
+  by the LEDGER MOVING rather than by a counter of its own, so anything that pays chaos ends it -
+  the same rule the rest of the match ran under.
+- THE ROLES ARE A SEEDED COIN, and the assertion is that forty flips produce BOTH assignments, so it
+  is a coin rather than a constant. They do nothing yet: piece 24 is what makes rex hunt the menace.
+  This piece only has to make them exist, be opposite, and be reported.
+- THE COMBO ATE MY FIRST DRAFT, exactly as the style-star section warned it would. award() multiplies
+  the base by the live combo, so a staged 30 paid 150 and a staged 55 was no longer the biggest play
+  by the time three awards had run. Two fixes, both the house idiom: the combo is ISOLATED before
+  every staged payment (zeroed, so bumpCombo takes it to one), and pay() RETURNS what actually landed
+  so every figure below is derived from the payout rather than from the number asked for. The best
+  play is then whichever measured payout was largest, which survives anything that ever multiplies an
+  award again.
+- AND THE GUARD LESSON, TAKEN AS A HABIT NOW RATHER THAN RELEARNED. Two of the six sabotages produced
+  ZERO findings on the first run: a broken ending leaves result null, and reading result.winner threw
+  and took every later finding down with it. Every result read now goes through RES(). That is the
+  third time this session, so it is written here as a rule: if an assertion reads state that only
+  exists when the code under test WORKS, read it through an accessor.
+- VERIFIED ADVERSARIALLY, SIX WAYS, all caught once guarded: the coin not being a coin, a level
+  scoreline declared a result, sudden death never ending, the golden point not ending it, the LATEST
+  play kept instead of the biggest, and the match counting chaos earned before the whistle.
+- SCREENS ARE FLAGGED, per the brief, and no vantage covers them - the capture set photographs the
+  world, never the title or a results screen. Eric has to look at these by playing: the title has a
+  fourth button (key 4), and the results screen is a new #vsend that borrows the win screen wholesale
+  with a colder ground so a match reads as a verdict rather than a coronation.
+- CAPTURE: four flagged, the same four from 53 and 51, NO new ones. The title gained a button and no
+  photograph contains a title.
+- EYEBALL: press 4 on the title. The horn, the roles popup, and the results screen after five minutes
+  - or set G.vs.t near G.vs.len from the console if you do not want to wait.

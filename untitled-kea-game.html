@@ -79,6 +79,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0c1420;font-family:
 #win{display:none;background:linear-gradient(180deg,#20304a,#5a3a6e 60%,#c46a3a)}
 #win h1{color:#ffe9c9;text-shadow:0 3px 0 rgba(0,0,0,.4)}
 #win .stats{font-family:'Patrick Hand';font-size:20px;color:#ffe9c9;line-height:1.5}
+/* TODO 22: the versus result borrows the win screen wholesale - same hidden-by-default rule, same
+   type, a colder ground so a match reads as a verdict rather than a coronation. LOOK IS FLAGGED. */
+#vsend{display:none;background:linear-gradient(180deg,#16233a,#2f4a63 60%,#8a9db0)}
+#vsend h1{color:#eaf2ff;text-shadow:0 3px 0 rgba(0,0,0,.4)}
+#vsend .stats{font-family:'Patrick Hand';font-size:20px;color:#eaf2ff;line-height:1.6}
 #hint2p{font-size:13px;color:#41411f;opacity:.8}
 .muted{position:fixed;top:10px;right:12px;z-index:15;pointer-events:auto;background:rgba(24,28,20,.6);color:#fff;border:none;border-radius:10px;font-size:13px;padding:5px 10px;cursor:pointer;font-family:'Fredoka'}
 @media (max-width:760px){.chip{font-size:14px;padding:4px 9px}#chaos{min-width:100px}.pf{font-size:17px}.pf.big{font-size:22px}}
@@ -167,8 +172,9 @@ body.photo #touchui{opacity:0;pointer-events:none}
     <button class="bigbtn" id="btn1p">1 KEA</button>
     <button class="bigbtn alt" id="btn2p">2 KEA (couch)</button>
     <button class="bigbtn col" id="btncol">🌋 COLOSSAL — grow with every point (solo)</button>
+    <button class="bigbtn alt" id="btnvs">⚔ 2 KEA VERSUS — menace vs management</button>
   </div>
-  <div id="hint2p">press <b>1</b> / <b>2</b> / <b>3</b> (or Enter) to start · real kea work as a team to inflict maximum damage on one car — two-player is the scientifically accurate mode</div>
+  <div id="hint2p">press <b>1</b> / <b>2</b> / <b>3</b> / <b>4</b> (or Enter) to start · real kea work as a team to inflict maximum damage on one car — two-player is the scientifically accurate mode</div>
   <div class="controls">
     <div class="ctl"><h3>KEA 1</h3><b>W A S D</b> waddle &nbsp; HOLD <b>SPACE</b> — fly<br><b>E</b> grab · rip (hold) &nbsp; <b>Q</b> screech</div>
     <div class="ctl"><h3>KEA 2</h3><b>ARROWS</b> waddle &nbsp; HOLD <b>/</b> — fly<br><b>.</b> grab · rip (hold) &nbsp; <b>,</b> screech</div>
@@ -181,6 +187,12 @@ body.photo #touchui{opacity:0;pointer-events:none}
   <h1>APEX MENACE<em>CERTIFIED KEA</em></h1>
   <div class="stats" id="winstats"></div>
   <div class="btnrow"><button class="bigbtn" id="btnagain">CAUSE MORE CHAOS</button></div>
+</div>
+
+<div class="screen" id="vsend">
+  <h1 id="vswin">FULL TIME<em>THE HORN</em></h1>
+  <div class="stats" id="vsstats"></div>
+  <div class="btnrow"><button class="bigbtn" id="btnvsagain">REMATCH</button></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -598,6 +610,81 @@ function ledgerAdd(pts,who){ const i=actorOf(who);
 function ledgerOf(i){ return (G.ledger&&G.ledger[i])||0; }
 function ledgerTotal(){ return (G.ledger||[]).reduce((a,b)=>a+(b||0),0)+(G.ledgerLoose||0); }
 
+/* ---------- 2 KEA VERSUS: THE MATCH SCAFFOLD (TODO 22, 2026-09-02) ----------
+   A match is a WINDOW over the shared economy, not a second economy. Piece 16 gave every bird a book
+   that adds up to the score at every instant; a match snapshots both books at the whistle and reads
+   the difference, so the chaos you arrived with does not count and nothing about scoring has to
+   change to support a scoreboard. That is also why this piece needs no per-mode award path: it is
+   subtraction.
+   PURE STATE, for the same reason the travel beat was: the screens are browser-only and the timer is
+   feel, but the DECISION - who won, why, and when a tie stops being a tie - is a state machine and
+   every branch of it can be driven headless.
+   THE ROLES ARE A SEEDED COIN. rnd() rather than Math.random, so a battery can predict the flip and
+   a replay of the same seed gives the same match. They do nothing yet: piece 24 is what makes rex
+   hunt the menace, and this piece only has to make the roles exist, be opposite, and be reported. */
+const VSLEN={short:180,std:300,long:480};   // seconds: 3, 5, 8 minutes. FENCED FOR PLAYTEST
+const VSSUDDEN=60;                          // sudden death runs this long, then it is an honest draw
+function vsOn(){ return !!(G.vs&&G.vs.phase!=='over'); }
+function vsScores(){ const v=G.vs; if(!v)return [0,0];
+  return [ledgerOf(0)-v.base[0], ledgerOf(1)-v.base[1]]; }
+function vsRoleOf(i){ const v=G.vs; if(!v)return null;
+  return v.roles.menace===i?'menace':(v.roles.management===i?'management':null); }
+function vsStart(opts){
+  if(G.keas.length<2)return null;                       // a versus match needs two birds
+  const key=(opts&&opts.len)||'std', len=VSLEN[key]||VSLEN.std;
+  const coin=rnd(0,1)<0.5?0:1;
+  G.vs={phase:'play',t:0,len,lenKey:VSLEN[key]?key:'std',sudden:0,
+        roles:{menace:coin,management:1-coin},
+        base:[ledgerOf(0),ledgerOf(1)], tieAt:null,
+        best:[null,null], result:null, why:null};
+  popup('2 KEA VERSUS','KEA '+(coin+1)+' IS THE MENACE - KEA '+(2-coin)+' IS THE MANAGEMENT',0,null,true);
+  AU.honk&&AU.honk(true);
+  return G.vs; }
+/* the biggest single play each side, which is the one line of a results screen anybody reads. Fed
+   from award() through the ledger, so it counts exactly what the scoreboard counts. */
+function vsNote(i,pts,label){ const v=G.vs;
+  if(!v||v.phase==='over'||!(i>=0))return null;
+  if(!v.best[i]||pts>v.best[i].pts)v.best[i]={pts,label:label||''};
+  return v.best[i]; }
+function vsEnd(why){ const v=G.vs; if(!v||v.phase==='over')return null;
+  const s=vsScores();
+  v.phase='over'; v.why=why;
+  v.result={scores:s, winner:(s[0]>s[1]?0:(s[1]>s[0]?1:-1)), why,
+            roles:{menace:v.roles.menace,management:v.roles.management},
+            best:[v.best[0],v.best[1]]};
+  AU.honk&&AU.honk(true); G.paused=true;
+  vsScreen(v.result);
+  return v.result; }
+function vsUpdate(dt){
+  const v=G.vs; if(!v||v.phase==='over')return null;
+  v.t+=dt;
+  if(v.phase==='play'){
+    if(v.t>=v.len){ const s=vsScores();
+      if(s[0]===s[1]){ v.phase='sudden'; v.sudden=0; v.tieAt=s.slice();
+        popup('SUDDEN DEATH','level at the horn - FIRST POINT TAKES IT',0,null,true); AU.honk&&AU.honk(true); return v; }
+      return vsEnd('time'); }
+    return v; }
+  /* SUDDEN DEATH IS DECIDED BY THE LEDGER MOVING, not by a points counter of its own - anything that
+     pays chaos ends it, which is the same rule the whole match ran under. */
+  v.sudden+=dt;
+  const s=vsScores();
+  if(s[0]!==v.tieAt[0]||s[1]!==v.tieAt[1])return vsEnd('sudden');
+  if(v.sudden>=VSSUDDEN)return vsEnd('draw');
+  return v; }
+function vsScreen(r){
+  if(HEADLESS||!r)return null;
+  const nm=i=>'KEA '+(i+1)+' ('+(vsRoleOf(i)||'').toUpperCase()+')';
+  const play=b=>b?(b.label+' <b>'+b.pts+'</b>'):'nothing worth mentioning';
+  const h=document.getElementById('vswin'), st=document.getElementById('vsstats'),
+        sc=document.getElementById('vsend');
+  if(h)h.innerHTML=(r.winner<0?'A DRAW':nm(r.winner)+' TAKES IT')+
+    '<em>'+({time:'ON THE HORN',sudden:'SUDDEN DEATH',draw:'NOBODY BLINKED'})[r.why]+'</em>';
+  if(st)st.innerHTML=
+    nm(0)+': <b>'+r.scores[0]+'</b> &middot; best play: '+play(r.best[0])+'<br>'+
+    nm(1)+': <b>'+r.scores[1]+'</b> &middot; best play: '+play(r.best[1]);
+  if(sc)sc.style.display='flex';
+  return r; }
+
 const SAVE={
   key(){ return 'keaSaveV1_'+(G.colossal?'c':'n'); },
   ok(){ try{ return typeof localStorage!=='undefined'&&!!localStorage; }catch(e){ return false; } },
@@ -651,7 +738,7 @@ const G={
   keas:[], humans:[], cars:[], props:[], inter:[], colliders:[], sheep:[],
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
-  stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0, biome:null,
+  stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0, biome:null, vs:null,
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -3374,7 +3461,7 @@ function award(base,label,pos,who){
   const pts=Math.round(base*mult);
   G.score+=pts;
   purseAdd(pts);                    // the page keeps its own books: TODO 13
-  ledgerAdd(pts,who);               // and so does each bird: TODO 16
+  vsNote(ledgerAdd(pts,who),pts,label);   // TODO 16 books it, TODO 22 remembers the biggest one
   popup(label,'+'+pts+(mult>1?'  ×'+mult:''),pts,pos);
   if(G.colossal){ while(G.level<MAXLVL&&G.score>=lvlThresh(G.level))levelUp();
     el('chaos').textContent='CHAOS '+G.score+' · LV'+G.level+(G.level<MAXLVL?' ('+lvlThresh(G.level)+' next)':' MAX'); }
@@ -3652,6 +3739,7 @@ function update(dt){
     for(const k of G.keas){ G.actor=k; k.update(dt); }   // TODO 16: award() reads whose frame this is
     G.actor=null;                                        // nothing outside the loop gets to be a bird by accident
     squawkUpdate(dt);   // after the loop: a prompt written inside it belongs to whoever updates last
+    vsUpdate(dt);       // the match clock, after everything that could have paid a point this frame
     for(const h of [...G.humans])h.update(dt);
     updateTraffic(dt); updateSheep(dt); updateFX(dt);
     // props physics
@@ -3697,7 +3785,7 @@ function update(dt){
 function startGame(mode,opts){
   G.mode=mode; G.running=true; AU.boot();
   G.colossal=!!(opts&&opts.colossal); G.level=1;
-  G.camYaw=0; G.camDist=1; G.squawk=null; G.actor=null;   // the ledgers are NOT cleared: see the note at ledgerAdd
+  G.camYaw=0; G.camDist=1; G.squawk=null; G.actor=null; G.vs=null;   // the ledgers are NOT cleared: see the note at ledgerAdd
   G.won=false; G.finaleOn=false; G.apexArmed=false; G.apexNoted=false;
   for(const k of G.keas){ if(k.hatProp)k.doff(); if(k.held)k.drop();   // the bird leaves with nothing: what it carried stays in the world
     if(k.g&&k.g.parent)k.g.parent.remove(k.g); if(k.labelEl&&k.labelEl.remove)k.labelEl.remove(); }
@@ -3707,6 +3795,7 @@ function startGame(mode,opts){
   defineMissions(mode,opts);
   G.keas.push(new Kea(0,P1MAP,0,4));
   if(mode===2){ G.keas.push(new Kea(1,P2MAP,1.6,4.8)); }
+  if(opts&&opts.vs)vsStart(opts);   // TODO 22: after both birds exist, because a match needs two
   // humans
   G.humans.push(new Human('trish','Trish',PAL.red,15,-10.5,{hat:'beanie',patrol:[{x:15,z:-10.5},{x:13,z:-13.8},{x:17,z:-12}]}));
   G.humans.push(new Human('tom','Tramper Tom',0x2F6E5E,28,0,{asleep:true,hat:'beanie'}));
@@ -3792,12 +3881,14 @@ function boot(opts){
   document.getElementById('btn1p').onclick=()=>startGame(1);
   document.getElementById('btn2p').onclick=()=>startGame(2);
   document.getElementById('btncol').onclick=()=>startGame(1,{colossal:true});
+  document.getElementById('btnvs').onclick=()=>startGame(2,{vs:true});
+  document.getElementById('btnvsagain').onclick=()=>location.reload();
   document.getElementById('btnagain').onclick=()=>location.reload();
   document.getElementById('cfgo').onclick=()=>closeCaseFile(true);
   document.getElementById('cfskip').onclick=()=>closeCaseFile(false);
   document.getElementById('mutebtn').onclick=e=>{ AU.muted=!AU.muted; e.target.textContent=AU.muted?'🔇 muted':'🔊 sound'; };
   addEventListener('keydown',e=>{
-    if(!G.running){ if(e.code==='Enter'||e.code==='Digit1')startGame(1); else if(e.code==='Digit2')startGame(2); else if(e.code==='Digit3')startGame(1,{colossal:true}); return; }
+    if(!G.running){ if(e.code==='Enter'||e.code==='Digit1')startGame(1); else if(e.code==='Digit2')startGame(2); else if(e.code==='Digit3')startGame(1,{colossal:true}); else if(e.code==='Digit4')startGame(2,{vs:true}); return; }
     if(G.cfOpen){ if(e.code==='Enter')closeCaseFile(true); else if(e.code==='Escape')closeCaseFile(false); e.preventDefault(); return; }
     if(e.code==='Tab'&&G.running){ const t=document.getElementById('todo'); G.todoPinned=!t.classList.contains('open'); t.classList.toggle('open'); }
     if(e.code==='Backspace'&&!G.running){ SAVE.wipe(); const h=document.getElementById('hint2p'); if(h)h.innerHTML='<b>save wiped</b> — fresh beak, fresh crimes'; }
@@ -3828,6 +3919,8 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan},
     WORLDREGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
+    VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,
+        scores:vsScores,role:vsRoleOf,note:vsNote},
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();
