@@ -1655,3 +1655,40 @@ for being small.
 - OPTION (a) IS STILL OPEN AND STILL NOT MINE. Applying the heading turns every prop in the game; it
   is a judged art call and it would re-pin every vantage with props in it.
 - EYEBALL: nothing. Frames are unchanged, which is the point.
+
+## SESSION END — 2026-09-02, session 7, six pieces certified
+Stop condition reached on the 6-piece rule, not on failures. Nothing was parked as failed, no piece
+needed a third staging attempt, and no assertion was weakened, skipped or deleted. Two assertions
+were REWRITTEN because they asserted something untrue, both of them mine, both written up where they
+happened. Tip is 4c29df092d4cf33cf5ee0f3b2524730b, gate CERTIFIED-SHIP, working tree clean.
+    49 ratify-flakes-11-13        docs, md5 unchanged
+    50 revert-travel-beat         0038af8b3ce396103b14526baf162227
+    15 coop-jail-hardening        3d420ba5dc1359ad6ec2c4a4071261a8
+    16 score-attribution          f08f3364e9d513a03c0a6ff8c100bdc4
+    48 one-build-one-world        20ee30e813a75df2f132024da35c35b3
+    47 name-the-dead-prop-heading 4c29df092d4cf33cf5ee0f3b2524730b
+- CAPTURE: a full 25-shot pass after every one of the four game-file pieces, 0 flagged every time,
+  worst 0.9815 against 0.965. NOTHING RE-PINNED - the baseline is untouched on disk and in git.
+- THE STABILITY SWEEP IS THE HEADLINE, and it ran LAST per the shift discipline. Five vantages do not
+  reshoot the same: 17_flight at 0.9024, then 08 at 0.9922, 23 at 0.9929, 05 at 0.9931, 03 at 0.9943,
+  everything else between 0.9959 and 0.9999. 17 is thirty times worse than the next one and it PASSES
+  the pinned diff at 0.9882, so that pass is a coin toss. The cause is the SETTLE and it is measured,
+  not guessed: 04 stages identically and is stable, the only difference is settle:900, and giving 17
+  the same takes it to 0.9958. Not shipped - a longer settle changes the frame and a re-pin is Eric.
+- THE ORDER MATTERED AGAIN, and differently from session 6. 49 and 50 were taken first because Eric
+  said so. After that the diet turned out to be mostly ALREADY SHIPPED - items 1 to 12 were done in
+  earlier sessions and never marked - so the real work was 15, 16 and then the two findings 47 and 48
+  that Eric had asked me to strike. Marking a diet item DONE when it ships would have saved a
+  read-through; the ones that were marked (13, 14, 17) were the only ones I did not have to check
+  against git log.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: sections 1 and 2 of REPORT.md. Section 1 needs Eric, not the
+  next agent - do not strike 47 or 48 on your own judgement, and note they are both shipped now
+  anyway. Section 2 is a one-line harness fix that is fully measured and only wants an eyeball.
+- FOUR FINDINGS FILED: 51 (five unstable vantages, with 17 solved) and 52 (the ute cage hint still
+  tells a co-op bird to mash its way out). 47 and 48 were both found in session 6 and both shipped
+  tonight.
+- AND THE HABIT THAT PAID OFF: every piece tonight was proved by SABOTAGE before it was committed -
+  eight for the co-op cell, six for the ledger, two each for the last three. Two of those sabotage
+  runs crashed instead of reporting, which cost every other finding in the run, so every read of new
+  state in a battery now goes through a guard and every interpolated number through a formatter. A
+  dead battery is a worse witness than a red one.
