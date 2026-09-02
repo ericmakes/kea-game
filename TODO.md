@@ -266,7 +266,7 @@ actual contract, since the defect is variance, not a wrong-looking frame.
 RE-PIN: 19, 21, 22 after the staging is stable. Expect a one-time move; leave flagged for Eric.
 NOTE: measured spread before the fix — 19 sits 0.956-0.961, 22 sits 0.944-0.950 across runs.
 
-### 30. pin-G-time-set-wide  (harness-side only — game file untouched)
+### 30. pin-G-time-set-wide  (harness-side only — game file untouched)  — APPLIED session 13b on Eric order. NOT RE-PINNED: 11 frames flagged and waiting on his look.
 MEASURED AND BUILT IN SESSION 12, THEN PARKED FOR YOUR JUDGEMENT, exactly as this item asked - judge
 before pinning, leave flagged. The patch is gauntlet/parked/todo30-and-67-deterministic-rig.patch and
 it carries BOTH this and TODO 67, because they want ONE re-pin sweep between them rather than two.
@@ -1189,7 +1189,7 @@ journey.mjs.
 
 ## FOUND IN SESSION 12 (appended 2026-09-02 by the overnight run)
 
-### 67. QUIET DOES NOT PARK THE POPUP FEED, SO EVERY VANTAGE IS SHOT OVER A FADING CAPTION
+### 67. QUIET DOES NOT PARK THE POPUP FEED, SO EVERY VANTAGE IS SHOT OVER A FADING CAPTION  — APPLIED session 13b inside the combined patch. NOT RE-PINNED.
 Found in session 12 by piece 31, from the cell map on its first run. MEASURED AND BUILT IN SESSION
 12, THEN PARKED FOR YOUR JUDGEMENT - the patch is gauntlet/parked/todo67-park-the-feed.patch and it
 applies clean. Everything below is measured on 8232590523658dfc3f5a1fe59a916de0.
@@ -1425,4 +1425,27 @@ control is in the file and prints before any row.
 AND THE AUDIT PREDICTS ITS OWN ANSWER. It reports pushOut's overlap alongside the measured move and
 flags a row where they disagree; all four agree exactly, which is what makes the cause a fact rather
 than a correlation.
+
+### 72. THE BULL WHEEL IS A dt ACCUMULATOR, AND IT IS THE LARGEST CHURNER LEFT IN THE SET
+Found in session 13b by applying the deterministic rig, which is the point of a rig that stops
+churning: the next thing up is visible. With TODO 30 and 67 in, the whole pinned set falls under
+1000 px of cross-run churn except three, and 28_skifield_base is the worst of them at 1291.
+IT IS THE BULL WHEEL AT THE BOTTOM STATION, line 3720: `if(G.towWheel)G.towWheel.rotation.z+=dt*2.4;`
+A PURE dt ACCUMULATOR with nothing to pin it - TODO 70 class (a), and the same shape as walkPh
+except that walkPh drives nothing in a pinned frame and this one is a red disc a metre across in the
+middle of the photograph. Pinning G.time does not touch it, which is why it survived the patch that
+took 06_skyline from 8791 to 129. Cropped, two runs show the same wheel with its bolt-head at a
+different angle; the hot cells are cx 7..9, cy 3..4, which is exactly where it sits.
+THE FIX IS THE LAW-12 IDIOM AND IT IS ONE LINE, in the 28 stage PIN beside the bird:
+    if(KEAGAME.G.towWheel)KEAGAME.G.towWheel.rotation.z=<a chosen angle>;
+A vantage that leaves something LIVE during the settle must pin it every frame, and this vantage
+does not. The angle is a free parameter exactly like the 12.0 in TODO 30, and choosing it moves the
+frame, so it is a judged re-pin of 28 - which is why it is filed rather than taken.
+NOTE THE RECORDED CHURN FOR 28 IS WRONG IN THE OTHER DIRECTION AND WAS ALREADY WRONG. crossrun goes
+red on 28 with the patch in - 1291 against a recorded 453 - and that is NOT the patch. Measured on
+the same machine the same night with the patch STASHED, six runs, fifteen pairs: 5844 px worst,
+with the samples 14, 250, 265, 464, 608, 742, 1105, 1249, 1810, 3678, 5046, 5515, 5655, 5756, 5844.
+The patch takes 28 from 5844 to 1291. The 453 in the table is a ceiling from a sample that never saw
+the wheel in its far states - the third session in a row that a recorded ceiling has turned out to
+be a floor, and this time it is the calibration table itself.
 

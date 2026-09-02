@@ -56,7 +56,7 @@ async function shot(name,stage,opts){
   await page.goto(seeded(o.biome||BIOME),{waitUntil:'load'}); await sleep(1000);
   await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
   await page.evaluate(QUIET);
-  if(o.colossal){ await page.evaluate(`for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
+  if(o.colossal){ await page.evaluate(`window.__keaFeedKeep=true; for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
   await page.evaluate('{'+stage+'}'); await sleep(o.settle||900);
   await page.screenshot({path:path.join(OUT,name+'.png')});
   await browser.close();
@@ -83,6 +83,45 @@ const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getEle
         h.x=46; h.z=46; h.home={x:46,z:46}; h.patrol=null; h.state='idle'; h.t=0;
         if(h.g)h.g.position.set(46,0,46); }); }catch(e){}
       requestAnimationFrame(_pk); }; requestAnimationFrame(_pk); }
+  /* LAW 12, AND A FOURTH LIVE THING NOBODY HAD PARKED (TODO 67). startGame calls popup() with
+     DAWN. A CARPARK. NO WITNESSES YET., and popup() builds a div in #feed whose .pf rule is
+     "animation: rise 1.6s ease forwards" - a CSS animation on the WALL CLOCK, not on G.time. The
+     rise keyframes take opacity 0 -> 1 -> 0 and translateY 14px -> 0 -> -26px, and a setTimeout
+     removes the wrapper at POPLIFE plus its own delay. So the caption is mid-fade when the shutter
+     opens, at a phase that depends on how many frames the settle got through - and sometimes it has
+     gone entirely, which is why 02_hut_snow reads either exactly 0 or exactly 1234 px against
+     itself and never anything in between. FOUND BY THE PIECE 31 CELL MAP rather than by a brief:
+     13, 19 and 20 put their hottest changed cells in the same top-centre strip, and cropping it
+     shows the caption.
+     IT IS PARKED, NOT FROZEN, AND I TRIED IT THE OTHER WAY FIRST. Freezing each popup at a fixed
+     phase of its own animation keeps the stagger and reads beautifully, and it is wrong: the
+     wrapper has to be clone-replaced to survive its own pending remove(), so the caption becomes
+     PERMANENT and fully opaque in every frame instead of mostly gone in most of them. Measured,
+     that put about 5700 px of caption into all 28 vantages and took 08_readability_320 - a 320x180
+     frame, where the caption is a tenth of the picture - to ssim 0.8711 against a 0.965 threshold.
+     A rig change that reds the diff on a vantage it was not aiming at is not a staging fix.
+     So the feed is emptied, once up front and then every frame, which is what this file already
+     does to the ambient humans and for the same reason. THE 28_skifield_base COMMENT AT THE BOTTOM
+     OF THIS FILE IS THE HOUSE POSITION ON IT: a popup in a pinned frame is a live thing whose
+     presence depends on how many animation frames the settle got through, and that vantage was
+     restaged to get rid of one. The exception is the same shape as h._park: 09_colossal IS the
+     popup fanout - CHAOS 10500 LV10 MAX over five staggered CAR: BUNTED rows - and it awards AFTER
+     this runs, so it sets __keaFeedKeep and keeps what it puts there. */
+  /* TODO 30: FREEZE THE CLOCK FOR THE WHOLE PASS. The grass shader takes uTime straight off
+     G.time, the tussock sway is sin(G.time*1.6+phase), the camp fire is four sines on it, and a
+     dozen idle animations ride it - so every grass-filled frame varies with how many animation
+     frames the settle got through. Four vantages already pin it locally (03, 28, 29, 30) and this
+     is the same line applied once. The game file EXPECTS it: the purse keys on G.frames rather
+     than G.time with the comment "the photographer pins G.time in QUIET and a pinned clock would
+     collapse every frame into one purse", so the defensive work was done before the pin existed.
+     12.0 is the value the four local pins already use. nightT is a separate driver, so the night
+     vantages are unaffected. */
+  { const _cl=()=>{ try{ KEAGAME.G.time=12.0; }catch(e){} requestAnimationFrame(_cl); };
+    requestAnimationFrame(_cl); }
+  { const fd0=document.getElementById('feed'); if(fd0)fd0.textContent='';
+    const _pf=()=>{ try{ if(!window.__keaFeedKeep){ const fd=document.getElementById('feed');
+          if(fd&&fd.firstChild)fd.textContent=''; } }catch(e){}
+      requestAnimationFrame(_pf); }; requestAnimationFrame(_pf); }
   KEAGAME.G.trafT.a=999;KEAGAME.G.trafT.b=999;
   for(let i=KEAGAME.G.cars.length-1;i>=0;i--){const c=KEAGAME.G.cars[i];if(c.traffic){KEAGAME.G.scene.remove(c.g);const ci=KEAGAME.G.colliders.indexOf(c.collider);if(ci>=0)KEAGAME.G.colliders.splice(ci,1);for(let q=KEAGAME.G.inter.length-1;q>=0;q--)if(KEAGAME.G.inter[q].car===c)KEAGAME.G.inter.splice(q,1);KEAGAME.G.cars.splice(i,1);}}`;
 

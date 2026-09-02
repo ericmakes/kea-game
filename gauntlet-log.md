@@ -3361,3 +3361,40 @@ released. ONE FRAME MOVED AND IS NOT RE-PINNED: 20_dead_rear.
 - WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md, then TODO 71 and the audit it names, then TODO 69
   including its correction, and FLAKES 14 before writing a single assertion. The two parked patches
   in gauntlet/parked/ are untouched and still apply clean.
+
+## SESSION 13b — 2026-09-03, Eric order mid-session: APPLY THE RIG PATCH
+The lock was retaken for this. gauntlet/parked/todo30-and-67-deterministic-rig.patch applied clean
+onto the six pieces above; capture.mjs only, game file still never opened, md5 unchanged, gate
+CERTIFIED-SHIP. NOT RE-PINNED and NOT RECALIBRATED - both are judged and both are Eric.
+
+### PIECE: apply-deterministic-rig — TODO 30 and 67, applied
+Verdict: green, and it does what session 12 said it would do, to the fourth decimal.
+- SESSION 12 PREDICTED 11 FLAGGED FRAMES WORST 0.8467. Measured tonight: 11 flagged, worst
+  13_idle_preen 0.8468, then 14_player_view 0.8884 and 16_trish 0.9166 - their whole table, one
+  build and one machine later. The eleven are 02, 06, 08, 10, 11, 12, 13, 14, 16, 19 and 20.
+- WHAT IT BUYS, FULL SET, FIVE SWEEPS, TEN PAIRS EACH: nineteen of twenty-eight vantages under 100
+  px of cross-run churn, two at exactly zero (29_lodge_deck, 30_groomed_band), and the vantage that
+  used to be the worst in the set - 06_skyline, recorded 8791 - reads 129. 20_dead_rear, which was
+  4353 last night before piece 69 and 3185 after it, reads 22. The two pieces stack the way they
+  were supposed to.
+- THE THREE THAT DO NOT COLLAPSE: 28_skifield_base 1291, 22_torch_beam 969, 09_colossal 825. The
+  last of those is BY DESIGN - it is the popup fanout and it sets __keaFeedKeep - and 22 is the Rex
+  arm lerp that TODO 70 named. 28 is new and is now TODO 72.
+- ONE RED ON THE crossrun CONTRACT AND IT IS NOT THE PATCH, which took twenty minutes to establish
+  and was worth every one of them. 28_skifield_base churns 1291 against a recorded 453. Measured
+  with the patch STASHED, same machine, same night, six runs and fifteen pairs: 5844 px worst,
+  samples 14 250 265 464 608 742 1105 1249 1810 3678 5046 5515 5655 5756 5844. So the patch takes 28
+  from 5844 to 1291 and the RECORDED CEILING was always too low. Third time in three sessions that a
+  ceiling from a sample turned out to be a floor, and the first time it has been the calibration
+  table rather than a claim in a report.
+- AND THE CAUSE OF THE RESIDUAL IS NAMED RATHER THAN GUESSED: the bull wheel, line 3720,
+  `G.towWheel.rotation.z+=dt*2.4`, a pure dt accumulator that no clock pin can reach. Two runs
+  cropped side by side show the same red disc with its bolt-head at a different angle, and the hot
+  cells are cx 7..9 cy 3..4, which is where it sits. One line in the 28 PIN fixes it and moves that
+  frame, so it is filed as TODO 72 rather than taken.
+- THE NEW BOXDIFF ROW IS THE INSTRUMENT EARNING ITS KEEP. 13_idle_preen goes to 0.8891 in the
+  subject box: a pinned clock freezes the idle animation, so the preen is caught at a different
+  phase and that is a different bird in the same frame. diff sees it too here, but the box is what
+  says WHY - and it is exactly the failure boxdiff was built for after piece 54.
+- SUBJECTS STAYS 16 CHECKED 0 MISSING, which is the load-bearing check for a change this wide: the
+  clock pin and the feed park moved eleven photographs and did not lose a single bird.
