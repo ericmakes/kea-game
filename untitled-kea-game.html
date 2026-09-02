@@ -725,19 +725,49 @@ function botchNoise(key){                                // deterministic, in [-
   h=(h+0x6D2B79F5)>>>0; let r=Math.imul(h^h>>>15,1|h); r^=r+Math.imul(r^r>>>7,61|r);
   return ((((r^r>>>14)>>>0)/4294967296)*2)-1; }
 function botchWonk(id,cycle){ const k=String(id)+':'+(cycle||0)+':';
-  return {rz:botchNoise(k+'rz')*BOTCHBAND.rot, rx:botchNoise(k+'rx')*BOTCHBAND.rot,
-          px:botchNoise(k+'px')*BOTCHBAND.off, pz:botchNoise(k+'pz')*BOTCHBAND.off}; }
-/* the ONE place a restore lands, so pieces 20 and 21 put their carried props and their replacements
-   back through exactly this and cannot invent a second kind of crooked. */
-function botchApply(it,cycle){
-  if(!it||!it.mesh||!it.base)return null;
-  const w=botchWonk(it.id,cycle);
-  it.mesh.position.x=it.base.px+w.px;
-  it.mesh.position.z=it.base.pz+w.pz;
-  it.mesh.rotation.x=(it.base.rx||0)+w.rx;
-  it.mesh.rotation.z=(it.baseRz||0)+w.rz;
-  it.botch=w;
-  return w; }
+  return {rot:botchNoise(k+'rot')*BOTCHBAND.rot, tilt:botchNoise(k+'tilt')*BOTCHBAND.rot,
+          x:botchNoise(k+'x')*BOTCHBAND.off, z:botchNoise(k+'z')*BOTCHBAND.off}; }
+/* THE ONE PLACE A RESTORE LANDS. Two kinds of thing get put back and they are held in the world
+   differently, so the APPLICATION differs while the wonk does not: a tear owns its mesh transform
+   outright, but a prop mesh is re-positioned from p.x/p.y/p.z every frame by the physics loop and
+   has its rotation.x flattened when it settles - so a prop is wonked on the axes that survive, which
+   is the logical position and rotation.y. Same band, same seed, same non-compounding rule, one
+   function: piece 21 puts its replacements back through this too. */
+function botchApply(o,cycle){
+  if(!o)return null;
+  const w=botchWonk(o.id,cycle);
+  if(o.kind==='prop'&&o.home){
+    o.x=o.home.x+w.x; o.z=o.home.z+w.z;
+    if(o.home.y!==undefined)o.y=o.home.y;
+    o.vx=0; o.vz=0; o.vy=0; o.rvx=0; o.rvy=0;
+    if(o.mesh){ o.mesh.position.set(o.x,o.y,o.z); o.mesh.rotation.y=(o.home.ry||0)+w.rot; }
+    o.botch=w; return w; }
+  if(o.mesh&&o.base){
+    o.mesh.position.x=o.base.px+w.x;
+    o.mesh.position.z=o.base.pz+w.z;
+    o.mesh.rotation.x=(o.base.rx||0)+w.tilt;
+    o.mesh.rotation.z=(o.baseRz||0)+w.rot;
+    o.botch=w; return w; }
+  return null; }
+
+/* ---------- THE CARRY-BACK (TODO 20, 2026-09-02) ----------
+   A cone on the road, a boot in the tussock, a shiny in the nest-ward direction: the management
+   picks it up and drops it where it lives, and it counts. The whole verb is two questions asked at
+   the moment of a drop - was this thing away when you picked it up, and is it home now - so there is
+   no carry state to keep in step with the physics and nothing to clean up if the bird is shooed
+   mid-carry. It simply does not count.
+   WHAT IT PAYS IS LEARNED, the same way the tear learned it: whatever the DROP that displaced it
+   actually awarded becomes its pristine value, and the carry-back pays that decayed by the shared
+   cycle count. A cone nobody was ever paid for is worth nothing to tidy, which is correct. */
+function carryValue(p){ return Math.round((p&&p.paid||0)*Math.pow(DECAY,(p&&p.cycles)||0)); }
+function carryBack(p,by){
+  if(!p||!p.home)return null;
+  const pts=carryValue(p);
+  botchApply(p,p.cycles||0);
+  p._wasAway=false; p.cycles=(p.cycles||0)+1;
+  if(pts>0)award(pts,'ORDER: '+String(p.name||'prop').toUpperCase()+' PUT BACK',{x:p.x,y:p.y+0.4,z:p.z},by);
+  AU.pop&&AU.pop();
+  return {pts,cycles:p.cycles}; }
 function canRestore(k){ return !!(k&&vsOn()&&vsRoleOf(k.idx)==='management'); }
 function fixable(it,k){ return !!(it&&it.kind==='tear'&&it.done&&canRestore(k)); }
 function orderValue(it){ return Math.round((it&&it.paid||0)*Math.pow(DECAY,(it&&it.cycles)||0)); }
@@ -2585,6 +2615,7 @@ class Kea{
     p.mesh.position.set(p.x,p.y,p.z); AU.pop(); }
   drop(){
     const p=this.held; if(!p)return;
+    const _s0=G.score;                       // TODO 20: what this drop pays for moving it
     p.heldBy=null; this.held=null; AU.pop();
     p.x=this.x+Math.sin(this.ry)*0.5; p.z=this.z+Math.cos(this.ry)*0.5; p.y=this.y+0.5;
     p.vy=0.6; p.vx=Math.sin(this.ry)*1.4; p.vz=Math.cos(this.ry)*1.4; p.rvx=rnd(-5,5); p.rvy=rnd(-6,6);
@@ -2594,6 +2625,11 @@ class Kea{
     if(p.name==='boot'&&dist2(p.x,p.z,p.home.x,p.home.z)>22&&!p.bootScored){ p.bootScored=true; award(30,'ONE BOOT, NEVER RECOVERED',this.pos());
       if(G.props.filter(q=>q.name==='boot'&&q.bootScored).length>=2)done('b_boot2'); }
     if(p.missionFar&&!p._farScored&&dist2(p.x,p.z,p.home.x,p.home.z)>(p.farR||16)){ p._farScored=true; done(p.missionFar); award(20,'RELOCATED: '+p.name.toUpperCase(),this.pos()); }
+    /* TODO 20. Two questions, asked here and nowhere else: did this drop leave it AWAY from home -
+       in which case whatever it just paid is what displacing it is worth - or has the management
+       brought it back inside the radius, in which case it goes home crooked and pays ORDER. */
+    if(p.home&&!atHome(p)){ p._wasAway=true; p.paid=Math.max(p.paid||0,G.score-_s0); }
+    else if(p.home&&p._wasAway&&canRestore(this))carryBack(p,this);
   }
   bank(){
     const p=this.held; if(!p)return;
@@ -4009,6 +4045,7 @@ if(typeof globalThis!=='undefined'){
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
     FIX:{DECAY,can:canRestore,fixable,value:orderValue,fix:fixTear},
     BOTCH:{FIDELITY:BOTCH,BAND:BOTCHBAND,noise:botchNoise,wonk:botchWonk,apply:botchApply},
+    CARRY:{value:carryValue,back:carryBack,HOMER,at:atHome,dist:homeDist},
     VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,
         scores:vsScores,role:vsRoleOf,note:vsNote},
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};

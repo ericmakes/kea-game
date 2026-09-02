@@ -2013,3 +2013,33 @@ Verdict: green. Two staging rounds, both of them the world being more interestin
 - CAPTURE: 25 shots, 0 flagged, worst 0.9894. Nothing re-pinned. The botch only fires inside a match
   and no vantage runs one.
 - EYEBALL: nothing in the set. Press 4, wreck something, put it back, and look at how it sits.
+
+### PIECE 20 — carry-back-restore — CERTIFIED d16cf644cfdffd8c4ca08510f288b5d9
+Verdict: green. Three staging rounds, all of them the world being more crowded than the driver
+assumed, and the third one is a good FLAKES law 3 story.
+- THE WHOLE VERB IS TWO QUESTIONS ASKED AT A DROP: was this thing away when you picked it up, and is
+  it home now. That is deliberately all the state there is - no carry flag to keep in step with the
+  physics, nothing to unwind if the bird is shooed mid-carry. It simply does not count.
+- WHAT IT PAYS IS LEARNED, third time this week: whatever the drop that displaced it AWARDED becomes
+  its pristine value, measured across the whole tail of drop() so any future award added there is
+  picked up without anybody remembering to. A prop nobody was ever paid for is worth nothing to tidy,
+  which is correct and is asserted rather than dodged.
+- ONE COUNTER AND ONE KIND OF CROOKED. The carry-back decays on the same shared cycle count the tears
+  use, and it lands through piece 19's botchApply rather than a second implementation.
+- WHICH MEANT GENERALISING 19 RATHER THAN COPYING IT, and the reason is worth writing down: a tear
+  owns its mesh transform outright, but a PROP mesh is re-positioned from p.x/p.y/p.z every frame by
+  the physics loop and has its rotation.x flattened when it settles. So a prop is wonked on the axes
+  that survive - the logical position and rotation.y - while the band, the seed and the
+  non-compounding rule stay exactly the same. One function, two application paths, and both asserted.
+- THREE STAGING ROUNDS, AND THE THIRD IS THE LESSON. interact() takes the NEAREST candidate, and the
+  first displaceable prop in the world is a ski lying under CHEW THE BINDING: the tear sits 0.36 away
+  and the ski 0.57, so every tap went to the tear and the bird never picked anything up - twenty-three
+  findings, all downstream of one silent miss. FLAKES law 3 says isolate by teleporting the prop to
+  clean ground; that is exactly wrong here, because this piece is about where a prop LIVES and moving
+  its neighbourhood moves the question. So the driver picks the prop with the MOST ELBOW ROOM in the
+  world instead, and asserts it has more than 0.9m of it.
+- VERIFIED ADVERSARIALLY, FIVE WAYS: the menace being allowed to tidy up, a prop never learning it
+  was away, a carry-back counting no cycle, the prop landing exactly home unbotched, and the value
+  ignoring the cycles.
+- CAPTURE: 25 shots, 0 flagged, worst 0.9900. Nothing re-pinned - the verb only fires in a match.
+- EYEBALL: nothing in the set. Press 4, take a cone somewhere it should not be, then bring it back.

@@ -176,7 +176,7 @@ replacements.
 PROOF: restore an object; assert state restored AND transform inside the
 wonk band and not pristine; seeded so the tripwire stays deterministic.
 
-### 20. carry-back-restore  (VS)
+### 20. carry-back-restore  (VS)  — DONE session 9 (d16cf644cfdffd8c4ca08510f288b5d9)
 Displaced props (cones on the road, boots, stolen shinies): restorer picks
 up and drops within the home radius → restored (botched placement) + ORDER
 points on the drop.

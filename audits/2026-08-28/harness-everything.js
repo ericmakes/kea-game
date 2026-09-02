@@ -2005,6 +2005,111 @@ C.section('THE BOTCH - a restore goes back, and it goes back crooked, and it nev
   X.startGame(1); tick(6);
 }
 
+C.section('THE CARRY-BACK - pick it up where it does not belong, drop it where it does');
+// TODO 20. The whole verb is two questions asked at the moment of a drop: was this away when you
+// picked it up, and is it home now. No carry state, so a bird shooed mid-carry simply does not score.
+// What it pays is LEARNED - whatever the drop that displaced it awarded becomes its pristine value -
+// and the carry-back pays that decayed by the same shared cycle count the tears use.
+{
+  const CY=X.CARRY, B=X.BOTCH, V=X.VS, P2=H.P2;
+  X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  const a=G.keas[0], b=G.keas[1];
+  G.vs.roles={menace:0,management:1};
+  const free=k=>{ if(k.held){k.held.heldBy=null;k.held=null;} };
+  const takeWith=(k,map,p)=>{ free(k);
+    const yy=Math.max(0.25,p.y,X.groundHeightAt(p.x,p.z,3)+0.02);
+    for(let i=0;i<3;i++){ k.x=p.x; k.z=p.z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); }
+    tap(map.grab); tick(2); return k.held===p; };
+  const dropAt=(k,map,x,z)=>{ const yy=Math.max(0.25,X.groundHeightAt(x,z,3)+0.02);
+    for(let i=0;i<3;i++){ k.x=x; k.z=z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); }
+    G.combo=0; G.comboT=0; const s0=V.scores()[k.idx];
+    tap(map.grab); tick(4); return V.scores()[k.idx]-s0; };
+
+  /* FLAKES law 3, and the first pick failed on it: interact() takes the NEAREST candidate, and the
+     first displaceable prop in the world is a ski lying under CHEW THE BINDING - the tear sits
+     0.36 away and the ski 0.57, so every tap went to the tear and the bird never picked anything up.
+     Choose a prop standing on clean ground instead of teleporting one there, because this piece is
+     about where a prop LIVES and moving its neighbourhood would be moving the question. */
+  const nearest=q=>{ let d=99; for(const it of G.inter){ if(it===q)continue;
+      if(it.kind==='prop'&&(it.heldBy||it.banked))continue;
+      const g=it.getPos?it.getPos():it;
+      d=Math.min(d,Math.hypot(g.x-q.x,g.z-q.z)); } return d; };
+  const clean=exclude=>G.props.filter(q=>q.home&&!q.banked&&!q.heldBy&&q.homeClass==='displaceable'&&q!==exclude)
+    .sort((u,v)=>nearest(v)-nearest(u))[0];
+  const p=clean(null);
+  ok(!!p&&nearest(p)>0.9,'a displaceable prop with a home and the most elbow room in the world ('+
+     (p?p.name:'none')+', nearest neighbour '+(p?nearest(p).toFixed(2):'-')+'m)');
+  const home={x:p.home.x,z:p.home.z};
+  const dist=()=>Math.hypot(p.x-home.x,p.z-home.z);
+
+  // ---- THE MENACE TAKES IT SOMEWHERE IT DOES NOT BELONG ----
+  ok(takeWith(a,P1,p),'the menace picks it up');
+  dropAt(a,P1,home.x+26,home.z);
+  ok(dist()>20,'and drops it a long way from home ('+dist().toFixed(1)+'m)');
+  ok(p._wasAway===true,'the prop knows it is away');
+  ok(CY.at(p)===false,'and the home predicate agrees');
+  const learned=p.paid||0;
+  ok(p.paid!==undefined,'the drop taught it what displacing it was worth ('+learned+')');
+
+  // ---- WRONG BIRD: the menace cannot tidy up ----
+  { ok(takeWith(a,P1,p),'the menace picks it up again');
+    const paid=dropAt(a,P1,home.x,home.z);
+    ok(paid===0,'dropping it home as the MENACE pays nothing ('+paid+')');
+    ok((p.cycles||0)===0,'and counts no cycle ('+(p.cycles||0)+')'); }
+
+  // ---- RIGHT BIRD, WRONG PLACE: outside the radius is not a restore ----
+  { ok(takeWith(a,P1,p),'move it out again'); dropAt(a,P1,home.x+26,home.z);
+    ok(takeWith(b,P2,p),'the management picks it up');
+    const paid=dropAt(b,P2,home.x+6,home.z);
+    ok(paid===0,'dropping it SIX metres from home pays nothing ('+paid+')');
+    ok(dist()>CY.HOMER,'because it is outside the catch radius ('+dist().toFixed(2)+' > '+CY.HOMER+')');
+    ok(p._wasAway===true,'and it is still away');
+    ok((p.cycles||0)===0,'still no cycle ('+(p.cycles||0)+')'); }
+
+  // ---- RIGHT BIRD, RIGHT PLACE ----
+  { p.paid=40;                     // staged pristine value, so the payment is a number and not a maybe
+    ok(takeWith(b,P2,p),'the management picks it up');
+    const want=CY.value(p);
+    ok(want===40,'the order value of an untouched object is its pristine value ('+want+')');
+    const paid=dropAt(b,P2,home.x,home.z);
+    ok(paid===want,'dropping it home pays exactly that ('+paid+' against '+want+')');
+    ok(p._wasAway===false,'the prop is no longer away');
+    ok((p.cycles||0)===1,'one cycle counted ('+p.cycles+')');
+    ok(CY.at(p),'and it is home ('+dist().toFixed(3)+'m)');
+
+    /* BOTCHED PLACEMENT, through piece 19 and not a second kind of crooked: home, but not EXACTLY
+       home, and inside the band the mode constant sets. */
+    ok(dist()>1e-6,'but not exactly home - a bird put it there ('+dist().toFixed(4)+'m)');
+    ok(Math.abs(p.x-home.x)<=B.BAND.off+1e-9&&Math.abs(p.z-home.z)<=B.BAND.off+1e-9,
+       'and the offset is inside the botch band ('+B.BAND.off.toFixed(3)+'m)');
+    ok(!!p.botch,'the prop records the wonk it is wearing'); }
+
+  // ---- AND IT DECAYS ON THE SHARED COUNTER ----
+  { ok(takeWith(a,P1,p),'the menace takes it away again'); dropAt(a,P1,home.x+26,home.z);
+    ok(takeWith(b,P2,p),'the management fetches it back');
+    const want=CY.value(p);
+    ok(want===Math.round(40*Math.pow(X.FIX.DECAY,p.cycles)),'the second homecoming is worth less ('+
+       want+' at cycle '+p.cycles+')');
+    const paid=dropAt(b,P2,home.x,home.z);
+    ok(paid===want,'and pays that ('+paid+')');
+    ok(paid<40,'strictly less than the first ('+paid+' < 40)'); }
+
+  // ---- A PROP NOBODY WAS EVER PAID FOR IS WORTH NOTHING TO TIDY, WHICH IS CORRECT ----
+  { const q=clean(p);
+    ok(!!q&&nearest(q)>0.9,'a second displaceable prop with room around it ('+(q?q.name:'none')+
+       ', nearest '+(q?nearest(q).toFixed(2):'-')+'m)');
+    q.paid=0; q.cycles=0;
+    ok(takeWith(a,P1,q),'moved away by the menace'); dropAt(a,P1,q.home.x+26,q.home.z);
+    q.paid=0;                                     // whatever that drop taught it, stage it back to nothing
+    ok(takeWith(b,P2,q),'and fetched back by the management');
+    const paid=dropAt(b,P2,q.home.x,q.home.z);
+    ok(paid===0,'it pays nothing, because undoing something worthless is worthless ('+paid+')');
+    ok((q.cycles||0)===1,'but it still COUNTS as a restore ('+q.cycles+')');
+    ok(Math.hypot(q.x-q.home.x,q.z-q.home.z)<=B.BAND.off+1e-9,'and it still lands home, botched'); }
+
+  X.startGame(1); tick(6);
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
