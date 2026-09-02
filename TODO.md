@@ -1363,3 +1363,39 @@ THE TWO WAYS OUT, and both re-pin, so both are yours:
       change. Cheaper, weaker - 106 px is not 0 - and it still moves those frames.
 DO NOT take (b) globally: the settle is 900ms x 30 shots today and 4000ms would make a capture pass
 take three times as long for four vantages worth of benefit.
+
+## FOUND IN SESSION 13 (appended 2026-09-03 by the overnight run)
+
+### 71. FOUR VANTAGES STAND THEIR BIRD INSIDE A SOLID, AND THE GAME QUIETLY MOVES IT
+Found in session 13 by piece 69, which needed to know where the bird actually WAS before it could
+converge a camera on it. The audit is audits/2026-09-03/audit-stage-marks.js - a report, not a
+battery, deliberately out of gate.sh for the reason audit-bevel-flanks.js states for itself.
+FOUR OF THE TWENTY-SIX LITERAL MARKS IN capture.mjs ARE INSIDE A SOLID BOX, and pushOut ejects the
+bird on the FIRST frame of the settle. It is not drift and it is not a flake: the move is the same
+to five decimals every time, in node and in the browser, and it is a single step.
+    01_carpark_wide     4, 16          -> 2.82, 16              1.180 m   a PARKED CAR at 4.2, 16.4
+    08_readability_320  4, 16          -> 2.82, 16              1.180 m   the same mark, same car
+    20_dead_rear        -9.55, 10.15   -> -8.87763, 10.0137     0.686 m   the caravan at -11, 8
+    18_rear_close       -9.2, 10.6     -> -9.14552, 10.86876    0.274 m   the caravan, on z
+THE ESTABLISHING SHOT IS THE WORST ONE. 01_carpark_wide is the frame the set opens with, and its
+bird has been standing 1.18 m from its own stage line since the day it was written - beside a parked
+car it is meant to be near, not where the line says. 08 is the same mark through a different camera
+at 320x180, so the readability frame inherits it exactly.
+WHAT IT COSTS, and it is not the photographs: they are what they are and the baselines are pinned to
+them. It costs anyone who edits a mark. A small nudge to 01 or 20 does nothing at all until the mark
+clears the body, so the frame does not respond to the edit and the next person reads that as the rig
+ignoring them. Piece 69 hit exactly this: the camera offset for 20 was computed from a mark the bird
+does not occupy, which is how that vantage framed a bird 0.68 off its own line for four builds.
+THE FIX IS A JUDGED RE-PIN AND THEREFORE NOT MINE. Moving a mark out of its body moves the bird in
+the photograph - 1.18 m on the establishing shot is a different picture, not a nudge - so it wants
+the same sitting as the TODO 30 and 67 re-pin sweep. The honest cheap half, if you want one: leave
+the marks alone and write the EJECTED position beside each one as a comment, so the next person
+reads the truth without the frame moving.
+PROOF THE AUDIT IS MEASURING THE PHOTOGRAPHED WORLD, because rig.js says node and the browser build
+different countries from one seed: all three ejecting marks were also measured through puppeteer on
+the staged page at shutter, and headless and browser agree to five decimals on every one. The
+control is in the file and prints before any row.
+AND THE AUDIT PREDICTS ITS OWN ANSWER. It reports pushOut's overlap alongside the measured move and
+flags a row where they disagree; all four agree exactly, which is what makes the cause a fact rather
+than a correlation.
+

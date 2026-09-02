@@ -3222,3 +3222,39 @@ Closes TODO 61: subjects 15 -> 16 checks, boxdiff 11 -> 12 boxes.
 - THE 20 BASELINE IS STILL THE PRE-69 PIN and the new box passes against it at 0.9893, so nothing
   here is waiting on the re-pin. Subjects 16 checked 0 missing, boxdiff 12 compared with only the
   two known ones flagged, diff 28 compared 0 flagged, gate CERTIFIED-SHIP.
+
+### PIECE 71-AUDIT — stage-mark-ejection — investigation + report, no game change, no rig change
+Verdict: green. audits/2026-09-03/audit-stage-marks.js, filed as TODO 71. Nothing was re-pinned and
+capture.mjs was not touched: the finding is that four stage lines do not say where their bird stands.
+- THE QUESTION CAME OUT OF PIECE 69 AN HOUR EARLIER. That piece had to know where the bird actually
+  was before it could converge a camera on it, and found the 20 mark inside the caravan. The obvious
+  next question is whether 20 was the only one, and it is cheap to ask headless.
+- FOUR OF TWENTY-SIX LITERAL MARKS ARE INSIDE A SOLID, and pushOut ejects the bird on the first frame:
+    01_carpark_wide     4, 16          -> 2.82, 16            1.180 m   a PARKED CAR at 4.2, 16.4
+    08_readability_320  4, 16          -> 2.82, 16            1.180 m   the same mark, same car
+    20_dead_rear        -9.55, 10.15   -> -8.87763, 10.0137   0.686 m   the caravan at -11, 8
+    18_rear_close       -9.2, 10.6     -> -9.14552, 10.86876  0.274 m   the caravan, on z
+  THE ESTABLISHING SHOT IS THE WORST OF THEM. 01 is the frame the whole set opens with.
+- IT IS NOT A FLAKE AND THE DISTINCTION MATTERS. The move is one step, identical to five decimals
+  every take, in both engines. Nothing here churns. What it costs is anybody who edits a mark: a
+  small nudge does nothing until it clears the body, so the rig reads as if it ignored the edit.
+- THE WRONG CONVENTION COST AN HOUR AND IS WRITTEN INTO THE FILE. I first identified the ejector with
+  the camera march test from updateCams - a POINT in a box - and 18_rear_close came back moved with
+  no collider anywhere near it. The bird is separated by pushOut with a radius of 0.28 and resolves
+  on the SHALLOWER axis; with pushOut own numbers 18 is the caravan at 2.906 against 2.9 + 0.28 in
+  the collider rotated frame. FLAKES law 10, met from the side where the wrong convention produces a
+  finding with no cause rather than a number that is merely off.
+- SO THE AUDIT PREDICTS ITS OWN ANSWER NOW. It prints pushOut overlap beside the measured move and
+  flags any row where they disagree. All four agree exactly, which is what turns the cause from a
+  correlation into a fact.
+- AND THE CONTROL IS THREE BROWSER MEASUREMENTS, not one, because rig.js says in its own text that
+  node and the browser build different countries from one seed. 20, 01 and 18 were all read off the
+  staged page at shutter through puppeteer, and headless and browser agree to five decimals on every
+  one - including the parked car, which is the body a seeded-world divergence would most likely move.
+  The control prints before any row and says the rows are worthless if it breaks.
+- ONE THING THE AUDIT GETS RIGHT THAT THE FIRST DRAFT DID NOT: a vantage names its own map. The ski
+  field marks are tested in a ski field world, not in carpark tussock where all three would have read
+  clean and meant nothing.
+- THE FIX IS A JUDGED RE-PIN, so it is filed rather than taken: moving the 01 mark 1.18 m is a
+  different photograph. The cheap half, if Eric wants one, is to write the ejected position beside
+  each mark as a comment and move nothing.
