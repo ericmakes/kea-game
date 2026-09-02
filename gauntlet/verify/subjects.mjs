@@ -69,19 +69,28 @@ const SPEC=[
      ABSENT IS MEASURED, NOT GUESSED, the same way the ski field floors were: a copy of capture.mjs
      that parks the bird at (-49,-49) every frame AFTER the stage line has run, so a vantage that
      aims its camera off the bird has already aimed it.
-     20_dead_rear IS DELIBERATELY NOT HERE, AND TODO 69 IS WHY. Parking its bird moved the CAMERA
-     with it - that vantage assigns G.cams[0].position once and the follow cam eases away from it -
-     so the parked probe is a picture of the bird at (-49,-49) and scored 135 against 200 for the
-     real thing. Locking the camera to the position its own stage line computes gives a CLOSE-UP,
-     nothing like the pinned wide frame, which scored 0 with the bird present. So the pinned 20 is
-     the EASED camera position and cannot be reproduced from its own stage line at all: there is no
-     honest floor to measure until 69 is fixed, and a guessed one would be worse than none. */
+     20_dead_rear WAS DELIBERATELY NOT HERE UNTIL TODO 69 WAS FIXED, and the reason is worth keeping
+     because it is what a dishonest floor looks like. Parking its bird used to move the CAMERA with
+     it - that vantage assigned G.cams[0].position once and the follow cam eased away from it - so
+     the parked probe was a picture of the bird at (-49,-49) from somewhere else and scored 135
+     against 200 for the real thing, a margin of nothing. Piece 69 locked the camera to the fixed
+     point of the follow rig, computed BEFORE the bird is parked, so the away probe is now the same
+     photograph with the bird deleted from it: 0. That is the floor below. */
   { file:'03_kea_plate', tests:[
     { what:'the portrait has its bird in it',          cls:'kea',     box:[0.3531,0.4815,0.5417,0.2870], min:1600, absent:3 } ]},
   { file:'13_idle_preen', tests:[
     { what:'the preening bird fills the near frame',   cls:'kea',     box:[0.3375,0.4907,0.2760,0.2870], min:900,  absent:5 } ]},
   { file:'18_rear_close', tests:[
     { what:'the rear close has its bird in it',        cls:'kea',     box:[0.3438,0.6481,0.2865,0.2741], min:700,  absent:0 } ]},
+  /* 20_dead_rear IS THE SMALLEST SUBJECT IN THE SET - the bird is 31x46 px behind the caravan, 200
+     kea pixels in a 55x65 box - so the two questions come apart here more cleanly than anywhere
+     else. THE FLOOR IS DELIBERATELY UNDER A RE-POSE, not at the usual half of the staged count:
+     yawing the bird 1.2 rad from its own stage line drops the count to 91, and 91 is a bird that is
+     THERE. Presence is this file question and 60 answers it against a measured absent of 0; the
+     pose question is boxdiff, which reads 0.4539 on that same re-posed frame while diff.mjs reads
+     0.9953 whole-frame and passes it. Three takes of the unchanged build score the box at 1.0000. */
+  { file:'20_dead_rear', tests:[
+    { what:'the dead rear has its bird in it',       cls:'kea',     box:[0.4740,0.5370,0.0573,0.1204], min:60, absent:0 } ]},
 
   // 25_preen_follow judges the ORIGINAL complaint - that the preening bird reads headless from the
   // FOLLOW camera - which no vantage could see before. It stages the worst frame of the cycle

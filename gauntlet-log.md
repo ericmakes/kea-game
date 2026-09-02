@@ -3194,3 +3194,31 @@ Verdict: green, frame moved on purpose, NOT RE-PINNED. gauntlet/verify/capture.m
   4692 from its own baseline (inside its 4334-to-5489 churn) and 13237 from the new frame.
 - WHAT IT UNBLOCKS: TODO 61 for vantage 20. That frame has neither a subjects.mjs presence check nor
   a boxdiff box, so nothing in the rig verifies the bird is in this photograph at all.
+
+### PIECE 61-20 — subject-box-20 — harness-side, game md5 8232590523658dfc3f5a1fe59a916de0 unchanged
+Verdict: green. gauntlet/verify/subjects.mjs, one SPEC entry, which boxdiff.mjs picks up by itself.
+Closes TODO 61: subjects 15 -> 16 checks, boxdiff 11 -> 12 boxes.
+- IT IS THE PIECE 69 DIVIDEND, AND IT ARRIVED THE SAME NIGHT. The away probe - capture.mjs with the
+  bird parked at (-49,-49) every frame after the stage line - used to drag the CAMERA with it and
+  score 135 against 200 for the real thing, which is why session 12 refused to guess a floor. With
+  the camera locked to the follow fixed point, computed before the bird is parked, the probe is now
+  literally the same photograph with the bird deleted from it. Absent 0, staged 198.
+- THE SMALLEST SUBJECT IN THE SET: the bird is 31x46 px behind the caravan, measured bbox
+  x 464..494, y 302..347, about 200 kea pixels in a 55x65 box read off the frame by eye.
+- THE TWO PROOFS THE BRIEF ASKED FOR, and the second one is the whole argument for boxdiff existing:
+    unchanged reshoot  three separate captures score the box 1.0000, 1.0000, 1.0000 - bit-identical,
+                       which is also the cleanest confirmation that the piece-69 lock holds
+    re-posed subject   yaw the bird 1.2 rad from its own stage line: box ssim 0.4550, while
+                       diff.mjs reads the whole frame at 0.9953 and passes it comfortably
+- AND I MOVED THE FLOOR OFF THE HOUSE CONVENTION ON PURPOSE. Every other box sits at about half its
+  staged count, which here would be 100. The re-posed bird scores 91 - and 91 is a bird that is
+  THERE. A floor of 100 would report it MISSING, which is a lie about the question this file owns.
+  60 against a measured absent of 0 keeps presence and pose in the two files that can answer them.
+- ONE ACCIDENT WORTH RECORDING, because it ran the whole instrument set by mistake and they all told
+  the truth: I ran subjects and boxdiff while the re-posed probe frame was still sitting in the
+  capture directory. subjects passed it at 91 over a floor of 60 (the bird is there), boxdiff flagged
+  it at 0.4550 (the bird is not the same bird), and diff passed it at 0.9953 (the photograph barely
+  moved). That is the three-instrument split from OVERNIGHT step 6, unplanned, on one frame.
+- THE 20 BASELINE IS STILL THE PRE-69 PIN and the new box passes against it at 0.9893, so nothing
+  here is waiting on the re-pin. Subjects 16 checked 0 missing, boxdiff 12 compared with only the
+  two known ones flagged, diff 28 compared 0 flagged, gate CERTIFIED-SHIP.

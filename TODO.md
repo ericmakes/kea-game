@@ -1094,7 +1094,7 @@ wing rest is the one you want, and either re-pin 07 or file the pose as a bug. N
 a judged frame is Eric.
 AND THE SAME QUESTION SHOULD BE ASKED OF EVERY OTHER VANTAGE, which is exactly what TODO 61 buys.
 
-### 61. THE SUBJECT-DRIFT INSTRUMENT ONLY COVERS FIVE VANTAGES  — DONE session 12 for 03, 13 and 18 (harness-side, game md5 unchanged); 20 blocked on TODO 69
+### 61. THE SUBJECT-DRIFT INSTRUMENT ONLY COVERS FIVE VANTAGES  — DONE. 03, 13 and 18 session 12; 20 session 13 once TODO 69 unblocked it (harness-side, game md5 unchanged)
 boxdiff.mjs uses the boxes subjects.mjs already carries, which is 04, 07, 09, 17 and 25. The
 vantages where the subject IS the photograph and there is no box are 03, 13, 18 and 20 - a portrait,
 a preen, a rear close and a dead rear, every one of which could have its bird replaced outright
@@ -1105,6 +1105,21 @@ chosen region, and a density peak lands on the KEA 1 HUD badge because it is pai
 olive as the bird. Reading the fractions off the frame by eye is ten minutes and is correct.
 PROOF: each new box scores above 0.99 on an unchanged reshoot, and fails when the subject is staged
 into a different pose - which every one of those four vantages can do from its own stage line.
+CLOSED session 13 with the fourth box, and 20 is the one that makes the case for the whole item.
+  THE FLOOR IS HONEST NOW BECAUSE THE CAMERA IS. The away probe - a copy of capture.mjs that parks
+  the bird at (-49,-49) every frame AFTER the stage line - used to take the camera with it and score
+  135 against 200, a margin of nothing. With the piece-69 lock the camera is computed before the
+  bird is parked, so the probe is the same photograph with the bird deleted: absent 0, staged 198.
+  THE BOX IS 55x65 AND THE BIRD IS 31x46 OF IT, read off the frame by eye per the brief, measured
+  bbox x 464..494, y 302..347. It is the smallest subject in the set.
+  PROOF, both halves, and they come apart exactly the way the item predicted:
+    unchanged reshoot   three separate captures, box ssim 1.0000, 1.0000, 1.0000 - bit-identical
+    re-posed subject    yaw the bird 1.2 rad from its own stage line: box ssim 0.4550, while
+                        diff.mjs reads the WHOLE FRAME at 0.9953 and passes it comfortably
+  THE PRESENCE FLOOR SITS UNDER THE RE-POSE ON PURPOSE, which is a departure from the half-the-count
+  convention the other boxes use. The re-posed bird scores 91 kea pixels and 91 is a bird that is
+  THERE; a floor of 100 would report it MISSING, which is a lie about a question this file owns.
+  60 against a measured absent of 0 is the presence answer; the pose answer is boxdiff at 0.4550.
 
 ### 62. A BUILD LEAVES ITS SINGLE-OBJECT HANDLES ON THE BOARD  (found in session 11 by piece 39)
 WORLDREGS now covers props, inter, colliders, cars, sheep, strips, foodSrc, hints and snow - every
