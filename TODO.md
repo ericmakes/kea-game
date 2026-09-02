@@ -629,3 +629,24 @@ binding.
 PROOF: no travelcard/beat code remains; all nine batteries green; gate
 CERTIFIED-SHIP; star and home-position proofs still pass untouched; diff
 flags nothing new.
+
+### 51. VANTAGE 08 DOES NOT RESHOOT THE SAME TWICE  (harness-side only — game file untouched)
+Found in session 7 by piece 50, which it very nearly got blamed on. 08_readability_320 flagged at
+ssim 0.9446 against its baseline on the first pass after the revert. Three takes on each build,
+compared pairwise, cleared the code: within-mine 0.9884-0.9994, within-HEAD 0.9927-0.9979, ACROSS
+builds 0.9798-0.9994 - the across-build spread sits inside the within-build spread, so the two
+builds are indistinguishable and the flag was a bad take. stability.mjs agrees: 08 alone, four
+takes, worst 0.9936 against the 0.995 threshold.
+THE CAUSE IS FLAKES LAW 12 AND IT IS VISIBLE IN ONE LINE OF capture.mjs. 08 stages with
+`k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.6` and NO PIN() wrapper, so the bird is set once and then
+lives through the whole settle - and 08 is a 320x180 HUD shot, where the prompt plate and the TAB
+pill are driven by what the bird is standing next to. A bird that drifts changes the HUD text, and a
+few characters of changed text is a large SSIM move on a frame that small.
+WHY IT MATTERS MORE THAN THE USUAL NOISE: session 6 measured 08 at ssim 1.0000 and 26 changed pixels
+and named it one of the three genuinely reproducible frames in the set, which is exactly the reading
+a lucky take gives you. It is currently the tripwire most likely to accuse an innocent piece.
+FIX: wrap the staging in PIN() like 09/21/22 do, and pin whatever the HUD reads as well as the bird.
+Then confirm with stability.mjs, which is the instrument that can answer this and diff.mjs is not.
+PROOF: stability.mjs 08 at TAKES=5 comes back above 0.995; diff unchanged or re-pinned once with the
+reason recorded. Game md5 unchanged - say so in the commit message.
+NOTE FOR TODO 5 (hud-tab-reflow), which re-pins 08: land this first or the re-pin pins a coin toss.
