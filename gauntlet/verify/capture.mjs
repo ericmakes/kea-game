@@ -254,4 +254,15 @@ await shotR('26_tour_brochure',`const G=KEAGAME.G, S=KEAGAME.STARS;
   for(const kind of S.KINDS){ S.rec(G.chapters[0])[kind]=true; S.rec(G.chapters[1])[kind]=true; }
   KEAGAME.SAVE.write();
   KEAGAME.TOUR.open(true);`);
+/* 27 (TODO 38): THE ARRIVAL BEAT, frozen halfway. The camera is mid-blend between the anchor and the
+   follow cam and the level card is up, which is the whole of what that piece has a LOOK for - and
+   the brief flags the feel, so this exists to be judged rather than pinned.
+   NO camLock HERE, deliberately: this vantage is photographing the travel blend, which camLock is
+   built to override. The beat is held at u=0.5 by pinning its clock every frame, because
+   travelUpdate would otherwise run it out during the settle - the same law-12 idiom as everything
+   else in this file that leaves something live. */
+await shotR('27_travel_card',`const k=KEAGAME.G.keas[0];
+  KEAGAME.TRAVEL.in();
+  ${PIN("k.x=0;k.z=0;k.y=0;k.vy=0;k.grounded=true;k.ry=2.2;k.stun=0;k.idleT=0;k.idleAct=null;"+
+        "KEAGAME.G.time=12.0; if(KEAGAME.G.travel&&KEAGAME.G.travel.phase)KEAGAME.G.travel.t=KEAGAME.TRAVEL.K.in*0.5;")}`);
 console.log('CAPTURE COMPLETE');

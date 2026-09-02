@@ -96,6 +96,11 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0c1420;font-family:
 .trow .stamp{font-family:'Fredoka';font-size:11px;color:var(--bad);border:2px solid var(--bad);border-radius:6px;padding:1px 6px;transform:rotate(-7deg);flex:none}
 .trow button{font-family:'Fredoka';font-weight:700;font-size:14px;border:none;border-radius:10px;padding:7px 13px;background:var(--kea);color:#fff;cursor:pointer;flex:none}
 .trow button[disabled]{background:#b4ad99;cursor:not-allowed}
+/* the level title card (TODO 38). LOOK IS FLAGGED with the brochure. */
+#travelcard{position:fixed;left:0;right:0;top:38%;z-index:15;text-align:center;pointer-events:none;opacity:0;
+  font-family:'Fredoka';font-weight:700;font-size:clamp(28px,6vw,58px);letter-spacing:3px;color:#FFF6E2;
+  text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 26px rgba(255,200,120,.5);transition:opacity .45s ease}
+#travelcard.on{opacity:1}
 .controls{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;margin-top:6px}
 .ctl{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;font-size:15px;color:#2c3318;min-width:200px}
 .ctl h3{font-size:15px;letter-spacing:1px;margin-bottom:6px;color:#5E6E2F}
@@ -209,6 +214,8 @@ body.photo #touchui{opacity:0;pointer-events:none}
   </div>
   <div class="crimes">based on documented crimes: the Homer Tunnel cone gang · the 2009 passport theft · the Craigieburn snow-ambush crew (they used a sentry) · nails stolen and stashed sorted by size · one hiking boot never recovered</div>
 </div>
+
+<div id="travelcard"></div>
 
 <div class="screen" id="tour">
   <div class="brochure">
@@ -958,8 +965,20 @@ const SAVE={
   pick(id){ if(!this.ok())return; try{ localStorage.setItem(TOURKEY,String(id)); }catch(e){} },
   picked(){ if(!this.ok())return null; try{ const v=localStorage.getItem(TOURKEY);
     return (v&&BIOMES[v])?v:null; }catch(e){ return null; } },
+  /* THE ARRIVAL IS A ONE-SHOT (TODO 38). The pick is durable - it is where you live now - but the
+     flyover in must play once and not on every reload of that map, so it is a separate key, and it
+     carries the run you left so the new map opens in the mode you were playing rather than at a
+     title screen. peek is for boot, which has to decide whether to start a run at all; take is for
+     startGame, which consumes it. */
+  armArrival(to,run){ if(!this.ok())return; try{ localStorage.setItem(ARRIVEKEY,JSON.stringify(
+    {to:String(to), from:G.biome||null, run:run||{mode:G.mode||1}})); }catch(e){} },
+  peekArrival(){ if(!this.ok())return null; try{ const r=localStorage.getItem(ARRIVEKEY);
+    const o=r?JSON.parse(r):null; return (o&&o.to&&BIOMES[o.to])?o:null; }catch(e){ return null; } },
+  takeArrival(){ const o=this.peekArrival();
+    if(this.ok())try{ localStorage.removeItem(ARRIVEKEY); }catch(e){}
+    return o; },
   wipe(){ if(!this.ok())return; try{ localStorage.removeItem('keaSaveV1_n'); localStorage.removeItem('keaSaveV1_c');
-    localStorage.removeItem(TOURKEY); }catch(e){} }
+    localStorage.removeItem(TOURKEY); localStorage.removeItem(ARRIVEKEY); }catch(e){} }
 };
 /* THE SLOT FOR THE MAP YOU ARE STANDING IN IS THE ONE THAT HYDRATES, and the career-wide numbers -
    peak chaos, time played, band colour - stay at the top of the blob because they are the player,
@@ -1704,7 +1723,15 @@ function buildCarpark(){
       const rk=sph(rnd(0.5,1.6),i%2?PAL.rock:PAL.rockD,Math.cos(a)*r,0.2,Math.sin(a)*r,null,6); rk.scale.y=0.6; }
   }
 }
-defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark});
+/* THE ANCHOR IS PART OF DECLARING A BIOME (TODO 38). It is the establishing shot: where the camera
+   stands to show you the whole map on the way out and on the way in. It is a TABLE and not a
+   derivation, and that is the binding evidence from the Sep 1 investigation rather than a
+   preference - area centroids cannot come from hints or mission props, because three or four
+   chapters have none and the paddock resolved forty units off the paddock. What the table CAN be
+   held to is the world it names, and the battery does exactly that: the look-at sits on the built
+   prop centroid, so the day somebody moves the carpark and not this line, an assertion says so. */
+defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark,
+  anchor:{x:7,y:26,z:34, lx:7,ly:1,lz:-11}});
 
 /* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
    The level select. One table, and everything the brochure says comes out of it: the order of the
@@ -1721,7 +1748,7 @@ defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark});
    unbuilt, and saying open when there is nothing to walk into would be the lie.
    THE MODEL IS DATA AND CARRIES NO DOM, so the whole state machine is assertable under node - which
    matters here more than usual, because five of the six pins cannot be photographed yet. */
-const TOURKEY='keaTourPick';
+const TOURKEY='keaTourPick', ARRIVEKEY='keaTourArrive';
 const TOUR=[
   {id:'carpark',   need:0,  name:'THE CARPARK',        sub:'where it started - rubber, sandwiches, no witnesses', pin:{x:0.27,y:0.60}},
   {id:'skifield',  need:6,  name:'THE CLUB SKI FIELD', sub:'a rope tow, a day lodge, and a carpark full of nutters', pin:{x:0.44,y:0.28}},
@@ -1790,14 +1817,91 @@ function tourRender(){
       const btn=document.createElement('button');
       btn.textContent=p.state==='current'?'YOU ARE HERE':p.state==='open'?'GO':p.state==='soon'?'NOT BUILT YET':'LOCKED';
       btn.disabled=p.state!=='open';
-      btn.onclick=()=>{ if(tourPick(p.id).ok)location.reload(); };   // TODO 38 replaces the reload with a flyover
+      /* TODO 38: GO records the pick and flies OUT; the reload happens when the beat ends, inside
+         travelEnd, so the player sees the map they are leaving rather than a white flash. From the
+         TITLE there is nothing to fly out of - no run, no bird - so it arms the arrival directly
+         and the flyover IN is the whole transition. */
+      btn.onclick=()=>{ if(!tourPick(p.id).ok)return;
+        tourOpen(false);
+        if(G.running&&travelOut(p.id))return;
+        SAVE.armArrival(p.id,{mode:G.mode||1,colossal:!!G.colossal}); location.reload(); };
       r.appendChild(btn); list.appendChild(r); } }
   return m;
 }
 function tourOpen(on){ if(HEADLESS)return false; const t=document.getElementById('tour');
   if(!t)return false;
-  if(on===false){ t.classList.remove('open'); return false; }
+  // OPENING THE MAP MID-RUN STOPS THE WORLD, because reading a brochure is not a thing a bird does
+  // while a ranger is chasing it. Closing puts the pause back the way it was, not to false.
+  if(on===false){ t.classList.remove('open'); if(G.running)G.paused=!!G._tourPaused; return false; }
+  if(G.running){ G._tourPaused=!!G.paused; G.paused=true; }
   tourRender(); t.classList.add('open'); return true; }
+
+/* ---------- TRAVEL: LEAVING AND ARRIVING (TODO 38, 2026-09-02) ----------
+   Two beats and one state machine. OUT flies the camera off the map you are on; IN flies it down
+   onto the map you arrived at, with the name of the place on screen. Both are skippable and both put
+   the camera and control state back exactly as they found them.
+   THE WORLD CANNOT BE REBUILT IN PLACE YET - buildWorld empties the registries but the old meshes
+   are still in the scene - so the swap in the middle is a page load, and the state machine is
+   written so that the load is an implementation detail: OUT arms an arrival in storage and reloads,
+   boot lands in the picked biome and starts the run it was in, and startGame consumes the arrival
+   and plays IN. The day a biome can be swapped in place, travelOut stops reloading and nothing else
+   about this changes.
+   SKIP ARMS LATE AND REMEMBERS WHAT WAS ALREADY DOWN, which is the second piece of binding evidence
+   from Sep 1 and cost a session to learn: the thing that opened this beat was itself a keypress, so
+   a key still held from that press has not asked for anything. A key only counts once it has been
+   released and pressed again, and not before the arm delay either.
+   THE CAMERA BLEND SITS BEFORE THE camLock LINE in updateCams. That is not a style choice - camLock
+   is the photographer hook, and a blend applied after it would make every pinned vantage depend on
+   whether a travel beat happened to be running. */
+const TRAVEL={out:0.95, in:1.7, arm:0.25};        // seconds. FENCED FOR PLAYTEST
+const TRAVELKEYS=['Space','Enter','Escape','KeyE','Period','Slash'];
+function travelBusy(){ return !!(G.travel&&G.travel.phase); }
+function travelAnchorOf(id){ const b=BIOMES[id]; return (b&&b.anchor)||null; }
+function travelKeep(){ return {camYaw:G.camYaw||0, camDist:G.camDist||1, photo:!!G.photo}; }
+function travelHeld(){ const h={}; for(const c of TRAVELKEYS)h[c]=KEYS.has(c); return h; }
+function travelBegin(phase,o){
+  G.travel={phase, t:0, dur:phase==='out'?TRAVEL.out:TRAVEL.in,
+            from:o.from||null, to:o.to||null, anchor:o.anchor||null, card:o.card||null,
+            keep:travelKeep(), held:travelHeld(), armed:false, skipped:false, ended:null};
+  return G.travel;
+}
+function travelOut(to,run){
+  if(travelBusy()||!BIOMES[to])return null;   // nothing flies out toward a map that has no builder
+  const v=travelBegin('out',{from:G.biome,to,anchor:travelAnchorOf(G.biome)});
+  v.run=run||{mode:G.mode||1,colossal:!!G.colossal,vs:!!(G.vs&&G.vs.on)};
+  return v;
+}
+function travelIn(from){
+  const id=G.biome||BIOME_DEFAULT;
+  return travelBegin('in',{from:from||null,to:id,anchor:travelAnchorOf(id),
+                           card:(BIOMES[id]&&BIOMES[id].label)||id});
+}
+function travelU(){ const v=G.travel; return (!v||!v.dur)?1:clamp(v.t/v.dur,0,1); }
+function travelSkip(){ const v=G.travel; if(!v||!v.phase||!v.armed)return false;
+  v.skipped=true; v.t=v.dur; travelEnd(); return true; }
+function travelUpdate(dt){
+  const v=G.travel; if(!v||!v.phase)return;
+  v.t+=dt;
+  if(!v.armed&&v.t>=TRAVEL.arm)v.armed=true;
+  for(const c of TRAVELKEYS){ const down=KEYS.has(c);
+    if(!down&&v.held[c]){ v.held[c]=false; continue; }          // released: it may ask from now on
+    if(down&&!v.held[c]&&v.armed){ travelSkip(); return; } }
+  if(v.t>=v.dur)travelEnd();
+}
+function travelEnd(){
+  const v=G.travel; if(!v||!v.phase)return G.travel||null;
+  const ph=v.phase, to=v.to, skipped=v.skipped, run=v.run;
+  G.camYaw=v.keep.camYaw; G.camDist=v.keep.camDist; G.photo=v.keep.photo;
+  G.travel={phase:null, ended:ph, to, from:v.from, skipped};
+  if(ph==='out'&&to)SAVE.armArrival(to,run);
+  if(!HEADLESS){ travelCard(null);
+    if(ph==='in')flashTodo();                  // the list gets its flash once the card is done with the screen
+    if(ph==='out'&&to)location.reload(); }
+  return G.travel;
+}
+function travelCard(text){ if(HEADLESS)return; const el2=document.getElementById('travelcard');
+  if(!el2)return; if(!text){ el2.classList.remove('on'); return; }
+  el2.textContent=text; el2.classList.add('on'); }
 
 /* ---------- HOME POSITIONS (TODO 17, 2026-09-02) ----------
    Every displaceable and consumable prop remembers the transform it was BUILT at, so a later piece
@@ -2592,7 +2696,7 @@ class Kea{
       scream:PRESSED.includes(m.scream) };
   }
   update(dt){
-    const inp=G.running&&!G.paused&&this.stun<=0?this.input():{f:0,b:0,l:0,r:0};
+    const inp=G.running&&!G.paused&&!travelBusy()&&this.stun<=0?this.input():{f:0,b:0,l:0,r:0};   // TODO 38
     if(this.stun>((this._stunPrev||0)+0.1)){ RUMBLE(this.idx,220,0.85); if(G._rumbleSpy)G._rumbleSpy.push({i:this.idx,why:'stun'}); }
     this._stunPrev=this.stun;
     if((this.caged||0)>0){ const coop=coopCell();
@@ -4011,8 +4115,13 @@ function hudReflow(vw){
 function setTug(i,v){ TUGS[i]=v; }
 function keyName(code){ return ({Space:'SPACE',Slash:'/',Period:'.',Comma:',',KeyE:'E',KeyQ:'Q'})[code]||code.replace('Key',''); }
 let uiCache=['','',-2,-2,'','',''];
+let _cardShown=null;
 function updateUI(){
   if(HEADLESS)return;
+  /* THE CARD IS RAISED FROM THE UI SIDE, not from travelIn, because travelIn has to run under node
+     where there is no DOM at all. One string compared per frame, and the state machine stays clean. */
+  { const v=G.travel, want=(v&&v.phase==='in'&&v.card)||null;
+    if(want!==_cardShown){ _cardShown=want; travelCard(want); } }
   for(let i=0;i<2;i++){
     const pEl=document.getElementById('prompt'+(i+1));
     if(uiCache[i]!==PROMPTS[i]){ uiCache[i]=PROMPTS[i]; pEl.innerHTML=PROMPTS[i]; pEl.style.display=PROMPTS[i]?'block':'none'; }
@@ -4129,7 +4238,15 @@ function updateCams(dt){
     const sm=1-Math.pow(0.0018,dt);
     cam.position.x+=(tx-cam.position.x)*sm; cam.position.y+=(ty-cam.position.y)*sm; cam.position.z+=(tz-cam.position.z)*sm;
     if(G.shake>0){ const shk=G.shake*(RM?0.15:1); cam.position.x+=rnd(-1,1)*shk*0.3; cam.position.y+=rnd(-1,1)*shk*0.22; }
-    cam.lookAt(k.x+Math.sin(effRy)*1.6,k.y+0.72*(k.size||1),k.z+Math.cos(effRy)*1.6);
+    let lax=k.x+Math.sin(effRy)*1.6, lay=k.y+0.72*(k.size||1), laz=k.z+Math.cos(effRy)*1.6;
+    /* TODO 38: THE TRAVEL BLEND, and it sits HERE - after the follow cam has decided where it wants
+       to be and BEFORE camLock. Out eases the eye away toward the anchor, in comes down from it.
+       Smoothstep both ways so neither end of a beat starts or stops with a jerk. */
+    if(travelBusy()&&G.travel.anchor){ const A=G.travel.anchor, u=travelU();
+      const f=G.travel.phase==='out'?u:1-u, e=f*f*(3-2*f);
+      cam.position.x=lerp(cam.position.x,A.x,e); cam.position.y=lerp(cam.position.y,A.y,e); cam.position.z=lerp(cam.position.z,A.z,e);
+      lax=lerp(lax,A.lx,e); lay=lerp(lay,A.ly,e); laz=lerp(laz,A.lz,e); }
+    cam.lookAt(lax,lay,laz);
     if(G.camLock){ const L=G.camLock; cam.position.set(L.x,L.y,L.z); cam.lookAt(L.lx,L.ly,L.lz); } // gauntlet photographer hook (inert in play)
   }
   G.shake=Math.max(0,(G.shake||0)-dt*1.4);
@@ -4204,6 +4321,7 @@ function update(dt){
   }
   if(G.needHydrate){ G.needHydrate=false; applySave(); }
   G.time+=dt; G.frames=(G.frames||0)+1;
+  travelUpdate(dt);   // TODO 38: outside the running gate, because a beat can play with no run on
   if(G.running&&!G.paused&&!G.won){
     for(const k of G.keas){ G.actor=k; k.update(dt); }   // TODO 16: award() reads whose frame this is
     G.actor=null;                                        // nothing outside the loop gets to be a bird by accident
@@ -4265,6 +4383,9 @@ function startGame(mode,opts){
   G.keas.push(new Kea(0,P1MAP,0,4));
   if(mode===2){ G.keas.push(new Kea(1,P2MAP,1.6,4.8)); }
   if(opts&&opts.vs)vsStart(opts);   // TODO 22: after both birds exist, because a match needs two
+  G.travel=null;
+  { const ar=SAVE.takeArrival();   // TODO 38: one shot, and only for the map it was armed for
+    if(ar&&ar.to===(G.biome||BIOME_DEFAULT))travelIn(ar.from); }
   // humans
   G.humans.push(new Human('trish','Trish',PAL.red,15,-10.5,{hat:'beanie',patrol:[{x:15,z:-10.5},{x:13,z:-13.8},{x:17,z:-12}]}));
   G.humans.push(new Human('tom','Tramper Tom',0x2F6E5E,28,0,{asleep:true,hat:'beanie'}));
@@ -4302,8 +4423,17 @@ function startGame(mode,opts){
     document.getElementById('mutebtn').style.display='block';
     if(mode===2){ document.getElementById('phud2').style.display='flex'; document.getElementById('splitline').style.display='block'; }
     setCamAspect();
-    flashTodo();
-    popup('DAWN. A CARPARK. NO WITNESSES YET.','',0,null,true);
+    /* TODO 38: THE TO-DO FLASH WOULD SIT ON TOP OF THE ARRIVAL CARD, which the 27 frame showed
+       plainly - the list panel covered half the name of the place. So on arrival the flash waits for
+       the beat and travelEnd raises it, which also puts it after a SKIP rather than after a timer
+       that a skip would have made wrong. */
+    if(!travelBusy())flashTodo();
+    /* AND THE OPENING LINE CALLED EVERY MAP A CARPARK. One line of copy that was true while there
+       was one biome. The carpark keeps its own wording exactly; anywhere else is named by the
+       registry rather than described wrongly. */
+    popup(G.biome===BIOME_DEFAULT?'DAWN. A CARPARK. NO WITNESSES YET.'
+          :('DAWN. '+((BIOMES[G.biome]&&BIOMES[G.biome].label)||'SOMEWHERE')+'. NO WITNESSES YET.'),
+          '',0,null,true);
   }
 }
 
@@ -4361,6 +4491,11 @@ function boot(opts){
   document.getElementById('btntour').onclick=()=>tourOpen(true);
   document.getElementById('tourback').onclick=()=>tourOpen(false);
   document.getElementById('btnvsagain').onclick=()=>location.reload();
+  /* TODO 38: AN ARMED ARRIVAL STARTS THE RUN IT LEFT, so the page load in the middle of a journey
+     is a load and not a trip back to the title screen. peek, not take - startGame consumes it. */
+  { const ar=SAVE.peekArrival();
+    if(ar&&ar.to===G.biome){ const r=ar.run||{};
+      setTimeout(()=>startGame(r.mode||1,{colossal:!!r.colossal}),0); } }
   document.getElementById('btnagain').onclick=()=>location.reload();
   document.getElementById('cfgo').onclick=()=>closeCaseFile(true);
   document.getElementById('cfskip').onclick=()=>closeCaseFile(false);
@@ -4380,6 +4515,9 @@ function boot(opts){
       for(const k of G.keas){ if(k.band&&k.band.material){ k.band.material=mat(k.band._cols[G.bandIdx]); } }
       SAVE.write(); }
     if(e.code==='KeyP'&&G.running&&!G.cfOpen){ G.paused=!G.paused; popup(G.paused?'PAUSED':'RESUMED','',0,null,true); }
+    // TODO 38: the map is reachable mid-run, which is what LEAVING via it means
+    if(e.code==='KeyM'&&G.running&&!G.cfOpen&&!travelBusy()){
+      tourOpen(!document.getElementById('tour').classList.contains('open')); }
   });
   let last=performance.now();
   function frame(now){
@@ -4402,7 +4540,10 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
     WORLDREGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
-    TOUR:{TABLE:TOUR,KEY:TOURKEY,model:tourModel,pin:tourPin,pick:tourPick,render:tourRender,open:tourOpen},
+    TOUR:{TABLE:TOUR,KEY:TOURKEY,ARRIVEKEY,model:tourModel,pin:tourPin,pick:tourPick,render:tourRender,open:tourOpen},
+    TRAVEL:{K:TRAVEL,KEYS:TRAVELKEYS,out:travelOut,in:travelIn,busy:travelBusy,u:travelU,
+            skip:travelSkip,end:travelEnd,tick:travelUpdate,anchor:travelAnchorOf},
+    CAMS:{update:updateCams},   // the seam the TODO 38 camLock-ordering proof drives, with a stub camera
     FIX:{DECAY,can:canRestore,fixable,value:orderValue,fix:fixTear},
     BOTCH:{FIDELITY:BOTCH,BAND:BOTCHBAND,noise:botchNoise,wonk:botchWonk,apply:botchApply},
     CARRY:{value:carryValue,back:carryBack,HOMER,at:atHome,dist:homeDist},

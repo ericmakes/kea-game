@@ -1993,6 +1993,188 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
      Object.keys(X.BIOME.ALL).join(',')+')');
 }
 
+C.section('TRAVEL - leaving a map, arriving at one, and a skip that knows what was already down');
+/* TODO 38, built fresh: piece 34 was reverted and there was no travel code left in the file to
+   re-key. The two findings the Sep 1 investigation paid for are BINDING and both are honoured here:
+   the anchors are a TABLE rather than a derivation from hints or mission props, and the skip arms
+   late AND remembers which keys were already down when the beat opened, because the thing that
+   opened it was itself a keypress.
+   G.cams IS EMPTY UNDER NODE, so what is asserted is the STATE MACHINE - phases, the clock, the
+   freeze, the skip, the restore, and the one-shot arrival - and the feel of the blend is flagged.
+   The blend itself is placed in updateCams BEFORE the camLock line, which is the third piece of
+   binding evidence: after it, every pinned vantage would depend on whether a beat was running. */
+{
+  const realLS=globalThis.localStorage, _m=new Map();
+  globalThis.localStorage={getItem:k=>_m.has(k)?_m.get(k):null,
+                           setItem:(k,v)=>_m.set(k,String(v)),removeItem:k=>_m.delete(k)};
+  const V=X.TRAVEL, T=X.TOUR, B=X.BIOME;
+  const tv=()=>G.travel||{};
+  /* READ THROUGH AN ACCESSOR - the guard rule, and the THIRD time in this one session that it has
+     been the difference between a sabotage landing and a battery dying. tv().held only exists while
+     a beat is RUNNING: the ended record does not carry it, so any sabotage that makes a beat end
+     early turns `tv().held[KEY]` into a throw and takes every finding after it down. */
+  const heldOf=c=>((G.travel||{}).held||{})[c];
+  try{
+    X.SAVE.wipe(); X.boot(); X.startGame(1); tick(8); park();
+
+    // 0. THE ANCHOR TABLE IS HELD TO THE WORLD IT NAMES, which is the only way a table cannot drift.
+    { const a=V.anchor('carpark');
+      ok(!!a,'the carpark declares an anchor');
+      ok(!!a&&['x','y','z','lx','ly','lz'].every(k=>typeof a[k]==='number'),'and it is six numbers');
+      let sx=0,sz=0; for(const pr of G.props){ sx+=pr.x; sz+=pr.z; }
+      const cx=sx/G.props.length, cz=sz/G.props.length;
+      ok(!!a&&Math.hypot(a.lx-cx,a.lz-cz)<24,
+         'it looks at the map the world actually built, within 24 of the prop centroid ('+
+         (a?Math.hypot(a.lx-cx,a.lz-cz).toFixed(1):'none')+' from '+cx.toFixed(1)+','+cz.toFixed(1)+')');
+      ok(!!a&&a.y>X.groundHeightAt(a.x,a.z,a.y)+6,'from well above the ground at its own feet ('+(a?a.y:0)+')');
+      ok(!!a&&a.y>a.ly,'looking down at the map rather than up out of it');
+      ok(V.anchor('nowhere-at-all')===null,'and a biome that does not exist declares no anchor rather than inventing one'); }
+
+    // 1. LEAVING. The beat opens, names both ends, and refuses to be doubled up.
+    ok(V.out('nowhere-at-all')===null,'travel refuses a destination with no builder');
+    { const o=V.out('carpark');
+      ok(!!o&&o.phase==='out','travelOut opens an OUT beat ('+tv().phase+')');
+      ok(tv().from==='carpark'&&tv().to==='carpark','naming where from and where to ('+tv().from+' -> '+tv().to+')');
+      ok(V.busy()===true,'and the machine reports itself busy');
+      ok(V.out('carpark')===null,'a second beat cannot open on top of one that is running');
+      ok(V.u()===0,'the clock starts at zero ('+V.u()+')'); }
+
+    /* THE BIRD IS NOT DRIVING DURING A BEAT. Asserted by holding the key down rather than by reading
+       a flag, because the flag is not the claim - the claim is that the waddle does not happen. */
+    { const k=G.keas[0]; k.x=0; k.z=0; k.y=0; k.grounded=true; k.ry=0; tick(2);
+      const x0=k.x, z0=k.z;
+      hold(P1.fwd); tick(10); un(P1.fwd);
+      ok(Math.hypot(k.x-x0,k.z-z0)<0.01,'a held waddle key moves the bird nowhere while a beat plays ('+
+         Math.hypot(k.x-x0,k.z-z0).toFixed(4)+')');
+      ok(V.busy()===true,'and the beat is still running, so that was the freeze and not the end of it'); }
+
+    // 2. IT ENDS BY ITSELF, ON ITS OWN CLOCK, AND AN OUT BEAT ARMS AN ARRIVAL.
+    { let n=0; while(V.busy()&&n<600){ X.update(1/60); n++; }
+      ok(!V.busy(),'the beat ends on its own clock ('+n+' frames)');
+      ok(Math.abs(n/60-V.K.out)<0.2,'and that clock is the tunable one ('+(n/60).toFixed(2)+'s vs '+V.K.out+')');
+      ok(tv().ended==='out'&&tv().skipped===false,'the record says which beat ended and that nobody skipped it');
+      const ar=X.SAVE.peekArrival();
+      ok(!!ar&&ar.to==='carpark','leaving arms an arrival at the map it was leaving for ('+JSON.stringify(ar&&ar.to)+')');
+      ok(!!ar&&!!ar.run&&ar.run.mode===1,'and remembers the run it was in, so the load lands in it ('+
+         JSON.stringify(ar&&ar.run)+')'); }
+
+    /* AND THE BIRD DRIVES AGAIN, which is the other half of the freeze claim. Same held key, same
+       ten frames, and the only thing that changed is that the beat is over. */
+    { const k=G.keas[0]; k.x=0; k.z=0; k.y=0; k.grounded=true; k.ry=0; tick(2);
+      const x0=k.x, z0=k.z; hold(P1.fwd); tick(10); un(P1.fwd);
+      ok(Math.hypot(k.x-x0,k.z-z0)>0.2,'with the beat over the same held key moves it again ('+
+         Math.hypot(k.x-x0,k.z-z0).toFixed(3)+')'); }
+
+    // 3. ARRIVING. startGame consumes the armed arrival exactly once and plays the IN beat.
+    { X.SAVE.armArrival('carpark',{mode:1});
+      X.startGame(1); tick(2);
+      ok(tv().phase==='in','starting a run with an arrival armed plays the IN beat ('+tv().phase+')');
+      ok(tv().card==='THE CARPARK','and the card is the name the biome registry gives the place ('+tv().card+')');
+      ok(X.SAVE.peekArrival()===null,'the arrival is consumed on the way in');
+      const wasIn=tv().phase;
+      X.startGame(1); tick(2);
+      ok(wasIn==='in'&&tv().phase!=='in','so restarting does not play it again ('+tv().phase+')');
+      // and an arrival armed for a DIFFERENT map is not this map beat
+      B.define('skifield',{label:'THE CLUB SKI FIELD',build:B.ALL.carpark.build});
+      X.SAVE.armArrival('skifield',{mode:1});
+      X.boot({biome:'carpark'}); X.startGame(1); tick(2);
+      ok(tv().phase!=='in','an arrival armed for another map does not fire on this one ('+tv().phase+')');
+      delete B.ALL.skifield; _m.delete(T.ARRIVEKEY); }
+
+    /* 4. THE SKIP, WHICH IS THE PART THAT COST A SESSION TO LEARN. The beat is opened WITH a travel
+       key already down - which is what actually happens, because the button or the key that opened
+       it is still under the finger - and that key must not skip anything. It only counts after it
+       has been released and pressed again. */
+    { X.startGame(1); tick(6); park();
+      const KEY=V.KEYS[0];
+      X.KEYS.add(KEY);                       // down at the open, exactly like the press that opened it
+      V.in();
+      ok(heldOf(KEY)===true,'the beat remembers which travel keys were already down at the open ('+heldOf(KEY)+')');
+      let n=0; while(V.busy()&&n<40){ X.update(1/60); n++; }   // well past the arm delay
+      ok(V.busy()===true,'a key still held from before the open skips nothing ('+n+' frames in)');
+      ok(tv().armed===true,'even though the beat is armed by now');
+      X.KEYS.delete(KEY); X.update(1/60);
+      ok(heldOf(KEY)===false,'releasing it hands it back the right to ask ('+heldOf(KEY)+')');
+      X.KEYS.add(KEY); X.update(1/60);
+      ok(!V.busy(),'and pressing it again skips the beat');
+      ok(tv().ended==='in'&&tv().skipped===true,'the record says it was skipped, not that it ran out ('+
+         JSON.stringify({ended:tv().ended,skipped:tv().skipped})+')');
+      X.KEYS.delete(KEY); }
+
+    /* THE ARM DELAY IS A SECOND LOCK, not the same one. A key that was NOT down at the open, pressed
+       inside the delay, is a real request - so it must not be thrown away, and it must not land
+       early either. It takes effect the moment the beat arms. */
+    { X.KEYS.clear(); const KEY=V.KEYS[0];
+      V.in(); ok(tv().armed===false,'a fresh beat is not armed yet');
+      X.KEYS.add(KEY); X.update(1/60);
+      ok(V.busy()===true&&tv().armed===false,'a key pressed inside the arm delay does not skip yet');
+      let n=0; while(V.busy()&&n<40){ X.update(1/60); n++; }
+      ok(!V.busy(),'and lands the moment the beat arms rather than being thrown away ('+n+' frames)');
+      ok(tv().skipped===true,'as a skip');
+      ok(Math.abs((n+1)/60-V.K.arm)<0.06,'which is the arm delay and not the full beat ('+
+         ((n+1)/60).toFixed(3)+'s vs '+V.K.arm+')');
+      X.KEYS.clear(); }
+
+    // 5. THE CAMERA AND CONTROL STATE COME BACK EXACTLY, and the assertion proves it is a RESTORE
+    //    rather than a coincidence by moving all three while the beat is running.
+    { X.startGame(1); tick(6);
+      G.camYaw=1.2; G.camDist=0.7; G.photo=true;
+      V.in();
+      G.camYaw=-9; G.camDist=1.6; G.photo=false;
+      let n=0; while(V.busy()&&n<400){ X.update(1/60); n++; }
+      ok(G.camYaw===1.2&&G.camDist===0.7&&G.photo===true,
+         'the camera and control state are restored to what they were at the open ('+
+         JSON.stringify({camYaw:G.camYaw,camDist:G.camDist,photo:G.photo})+')');
+      G.photo=false; }
+
+    /* 6. THE BLEND SITS BEFORE camLock, WHICH IS THE THIRD PIECE OF BINDING EVIDENCE, and it can be
+       proved under node after all - G.cams is empty, but nothing about updateCams needs a real
+       camera. A stub with a position and a lookAt is enough to ask the only question that matters:
+       with a beat running AND camLock set, which one wins. If the blend were applied after camLock,
+       every pinned vantage in the capture set would depend on whether a travel beat was live. */
+    { X.startGame(1); tick(6);
+      const mk=()=>({position:{x:0,y:0,z:0,set(a,b,c){this.x=a;this.y=b;this.z=c;}},
+                     look:null, lookAt(a,b,c){ this.look={x:a,y:b,z:c}; }});
+      const cam=mk(); G.cams.length=0; G.cams.push(cam);
+      const k=G.keas[0]; k.x=0; k.z=0; k.y=0; k.grounded=true; k.ry=0;
+      // a beat halfway through, so the blend is at full strength and cannot be mistaken for a no-op
+      V.in(); G.travel.t=V.K.in/2;
+      X.CAMS.update(1/60);
+      const blended={x:cam.position.x,y:cam.position.y,z:cam.position.z};
+      const a=V.anchor('carpark');
+      ok(Math.abs(blended.y-a.y)>0.5&&blended.y>1,
+         'mid-beat the blend has actually moved the eye toward the anchor ('+blended.y.toFixed(2)+
+         ' between the follow height and '+a.y+')');
+      G.camLock={x:11,y:4.2,z:25,lx:3.5,ly:0.8,lz:15.5};
+      X.CAMS.update(1/60);
+      ok(cam.position.x===11&&cam.position.y===4.2&&cam.position.z===25,
+         'and camLock still wins over it, so the photographer is untouched by travel ('+
+         JSON.stringify({x:cam.position.x,y:cam.position.y,z:cam.position.z})+')');
+      ok(!!cam.look&&cam.look.x===3.5&&cam.look.y===0.8&&cam.look.z===15.5,
+         'look-at included, which is the half a blend would have quietly kept ('+JSON.stringify(cam.look)+')');
+      G.camLock=null; G.cams.length=0; G.travel=null; }
+
+    // 7. A BEAT WITH NO ANCHOR STILL RUNS, because a biome is allowed to ship before its
+    //    establishing shot has been chosen. It just has nothing to blend toward.
+    { B.define('anchorless',{label:'THE ANCHORLESS PLACE',build:B.ALL.carpark.build});
+      let threw=null;
+      try{ X.boot({biome:'anchorless'}); X.startGame(1); tick(4);
+        const o=V.out('anchorless'); if(o)ok(o.anchor===null,'a biome with no anchor opens a beat with no anchor');
+        let n=0; while(V.busy()&&n<400){ X.update(1/60); n++; } }
+      catch(e){ threw=e&&e.message||String(e); }
+      ok(!threw,'and nothing throws for the want of one ('+(threw||'no throw')+')');
+      delete B.ALL.anchorless; }
+  } finally {
+    delete B.ALL.skifield; delete B.ALL.anchorless;
+    globalThis.localStorage=realLS;
+    X.KEYS.clear(); G.travel=null;
+    X.SAVE.wipe&&X.SAVE.wipe(); X.boot(); X.startGame(1); tick(6);
+  }
+  ok(Object.keys(X.BIOME.ALL).length===1,'the travel section leaves one biome registered ('+
+     Object.keys(X.BIOME.ALL).join(',')+')');
+  ok(!X.TRAVEL.busy(),'and no beat running');
+}
+
 C.section('2 KEA VERSUS - the match scaffold, every branch of the decision driven');
 // TODO 22. A match is a WINDOW over the shared economy: piece 16 gave each bird a book that adds up
 // to the score, and a match snapshots both at the whistle and reads the difference. So the chaos you
@@ -2398,7 +2580,20 @@ C.section('THE CARRY-BACK - pick it up where it does not belong, drop it where i
     const paid=dropAt(b,P2,q.home.x,q.home.z);
     ok(paid===0,'it pays nothing, because undoing something worthless is worthless ('+paid+')');
     ok((q.cycles||0)===1,'but it still COUNTS as a restore ('+q.cycles+')');
-    ok(Math.hypot(q.x-q.home.x,q.z-q.home.z)<=B.BAND.off+1e-9,'and it still lands home, botched'); }
+    /* THE BOUND THIS ASSERTED WAS NEVER THE ONE THE CODE GUARANTEES, and it had been passing on the
+       luck of which prop this block picked. botchWonk draws x and z INDEPENDENTLY - each a noise in
+       [-1,1] times BAND.off - so the invariant is PER AXIS and the furthest a botched landing can
+       sit from home is the corner of the band. Every other botch assertion in this file reads it per
+       axis (three of them); this one was the outlier. Found by piece 38, whose extra world builds
+       moved the rng stream and handed this block a different prop: DOC radio, dx -0.0314 and dz
+       0.0248 against an off of 0.0360 - inside the band on both axes, 0.0399 away in a straight
+       line. FLAKES law 10: read the convention, do not re-hardcode a number. */
+    ok(Math.abs(q.x-q.home.x)<=B.BAND.off+1e-9&&Math.abs(q.z-q.home.z)<=B.BAND.off+1e-9,
+       'and it still lands home, botched inside the band on both axes ('+(q.x-q.home.x).toFixed(4)+
+       ', '+(q.z-q.home.z).toFixed(4)+' vs '+B.BAND.off.toFixed(4)+')');
+    ok(Math.hypot(q.x-q.home.x,q.z-q.home.z)<=B.BAND.off*Math.SQRT2+1e-9,
+       'which is no further from home than the corner of it ('+
+       Math.hypot(q.x-q.home.x,q.z-q.home.z).toFixed(4)+')'); }
 
   X.startGame(1); tick(6);
 }

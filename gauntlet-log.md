@@ -2316,3 +2316,55 @@ state machine. Five sabotages, and the one that came back EMPTY is the entry wor
   - every pin but the carpark reads LOCKED or NOT BUILT YET. The open path is proved headless until
   piece 39 builds the ski field. That is the honest state of the tour, and the brochure says so out
   loud rather than pretending.
+
+### PIECE 38 — tour-travel — CERTIFIED fdc032709319f9a207d0492077b41da2
+Verdict: green. Built fresh - 34 was reverted and there was no travel code left to re-key - and all
+four findings of the Sep 1 investigation honoured rather than rediscovered.
+- ANCHORS ARE A TABLE, declared by the biome beside its builder. The binding evidence says centroids
+  cannot come from hints or mission props, so they do not. What a table CAN be held to is the world it
+  names: the carpark look-at is asserted within 24 of the built prop centroid, above the ground at its
+  own feet, and pointing down. Move the carpark and not the line and an assertion says so.
+- TWO LOCKS ON THE SKIP, ANSWERING DIFFERENT QUESTIONS. A key still held from the press that OPENED
+  the beat has not asked for anything - it counts only after a release and a fresh press. A key
+  pressed INSIDE the arm delay is a real request, so it is not discarded; it lands the moment the beat
+  arms, and the assertion measures that it lands at the arm delay and not at the end of the beat.
+- THE BLEND SITS BEFORE camLock, AND THAT IS PROVABLE UNDER NODE AFTER ALL. G.cams is empty headless,
+  but nothing in updateCams needs a real camera - a stub with a position and a lookAt answers the only
+  question that matters. With a beat running at u=0.5 AND camLock set, camLock wins, look-at included,
+  which is the half a blend would have quietly kept.
+- THE PAGE LOAD IN THE MIDDLE IS AN IMPLEMENTATION DETAIL, and the state machine is written so it
+  stays one. OUT arms an arrival in storage and reloads; boot lands in the picked biome AND STARTS
+  THE RUN IT LEFT rather than dropping the player at a title screen; startGame consumes the arrival
+  once and plays IN. When a biome can be swapped in place, travelOut stops reloading and nothing else
+  about this piece changes.
+- DRIVEN END TO END IN A REAL BROWSER, because half of this does not exist anywhere else.
+  gauntlet/verify/journey.mjs injects a stand-in ski field into a temp copy of the game so it survives
+  the reload - and stops injecting the day 39 registers a real one, rather than overwriting the thing
+  it is meant to be testing. Map opens mid-run and PAUSES the world; GO closes it, puts the pause back
+  the way it found it, and runs the OUT beat; the load lands in the ski field with the run going and
+  the card up; one fresh press of SPACE skips it.
+- TWO DEFECTS THE FRAMES CAUGHT, and no assertion could have. The to-do list flash sat on top of the
+  arrival card and covered half the name of the place - it now waits for the beat, raised by travelEnd,
+  which is also correct after a SKIP where a timer would have been wrong. And the opening popup called
+  every map A CARPARK; the carpark keeps its exact wording and anywhere else is named by the registry.
+  Both were made reachable by this piece, which is why they are in it.
+- SIX SABOTAGES, ALL CAUGHT - and the first caught NOTHING until the read went through an accessor.
+  THIRD TIME IN ONE SESSION for that rule, and this time in my own brand new section: held only
+  exists while a beat is RUNNING, the ended record does not carry it, so every sabotage that ends a
+  beat early turned tv().held[KEY] into a throw and killed the battery. Two of the three cost a
+  sabotage each before I spotted it. If a section reads a field that only exists in one phase, read it
+  through an accessor - it is no longer a guideline in this file, it is the failure mode.
+- AND IT FOUND A FOUR-BUILD-OLD BAD ASSERTION OF MINE, filed and fixed as TODO 59. Adding world
+  builds moved the seeded rng stream, the carry-back section picked a different prop, and an assertion
+  asking for hypot <= BAND.off failed - because botchWonk draws x and z independently, so the
+  invariant is PER AXIS and the corner of the band is off times root two. It had been passing on the
+  luck of which prop got picked, and it was the only one of four botch assertions written that way.
+- CAPTURE: 27 shots, 25 compared, 0 flagged, worst 0.9826 which is still 17 from piece 54. Subjects
+  7/7. New vantage 27_travel_card, NOT pinned - the feel is flagged per the brief.
+- EYEBALL: gauntlet/capture/27_travel_card.png - the arrival beat frozen halfway, the anchor shot of
+  the carpark with the name over it. Then run `node gauntlet/verify/journey.mjs` and read the state
+  line by line, because no player can do this yet.
+- AND WHAT IS NOT REACHABLE, SAID PLAINLY: with one biome registered there is nowhere to travel to.
+  GO is disabled on every pin but the one you are standing on, so nothing in this piece can be
+  triggered by a player until 39 builds the ski field. The journey instrument is the stand-in until
+  then, and it is committed for exactly that reason.

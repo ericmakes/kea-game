@@ -538,6 +538,44 @@ than rediscovering: the anchor table can be asserted against the build sites in 
 cannot drift from the world, and the skip needs to remember which keys were ALREADY down at the open
 as well as arming late, because a player mid-waddle has not asked to skip anything.
 PROOF: state machine headless incl. skip + restore. Feel: flagged.
+DONE session 10 (fdc032709319f9a207d0492077b41da2). Built fresh, keyed to biomes, and all four
+findings of the Sep 1 investigation honoured rather than rediscovered.
+ANCHORS ARE A TABLE, declared by the biome in the registry beside its builder - not derived from
+hints or mission props, which is the binding evidence. What a table CAN be held to is the world it
+names, so the battery asserts the carpark look-at sits within 24 of the built prop centroid, above
+the ground at its own feet, and pointing down rather than up. Move the carpark and not the line and
+an assertion says so.
+THE SKIP ARMS LATE AND REMEMBERS WHAT WAS ALREADY DOWN. Two separate locks, and they answer
+different questions: a key still held from the press that OPENED the beat has not asked for
+anything, so it only counts after being released and pressed again; and a key pressed inside the arm
+delay is a real request, so it is not thrown away - it lands the moment the beat arms. Both driven.
+THE BLEND SITS BEFORE camLock, and that is provable under node after all. G.cams is empty, but
+nothing in updateCams needs a real camera: a stub with a position and a lookAt answers the only
+question that matters - with a beat running AND camLock set, camLock wins, look-at included.
+THE PAGE LOAD IN THE MIDDLE IS AN IMPLEMENTATION DETAIL. The world cannot be rebuilt in place yet,
+so OUT arms an arrival in storage and reloads, boot lands in the picked biome AND STARTS THE RUN IT
+LEFT rather than dropping you at a title screen, and startGame consumes the arrival once and plays
+IN. The day a biome can be swapped in place, travelOut stops reloading and nothing else changes.
+DRIVEN END TO END IN A REAL BROWSER, which is the only place half of this exists:
+gauntlet/verify/journey.mjs injects a stand-in ski field into a temp copy so it survives the reload
+(and stops injecting the day 39 registers a real one), then opens the map mid-run, clicks GO, and
+reads the state across the load. Map opens and PAUSES the world; GO closes it, restores the pause,
+runs the OUT beat; the load lands in the ski field with the run going, the card up, and one fresh
+press of SPACE skips it.
+TWO DEFECTS THE FRAMES CAUGHT, both fixed here because this piece made them reachable: the to-do
+list flash sat on top of the arrival card (it now waits for the beat and travelEnd raises it, which
+is also right after a skip), and the opening popup called every map A CARPARK (the carpark keeps its
+exact wording, anywhere else is named by the registry).
+SIX SABOTAGES, all caught - and the first caught NOTHING until I read tv().held through an accessor.
+That is the guard rule landing for the THIRD time in one session, in my own new section this time:
+held only exists while a beat is RUNNING, so any sabotage that ends a beat early turned the read
+into a throw and killed the battery.
+AND IT FOUND A FOUR-BUILD-OLD BAD ASSERTION IN SOMEBODY ELSE WORK - mine, piece 20. See TODO 59.
+FEEL IS FLAGGED, per the brief, with a frame: vantage 27_travel_card, not pinned - the arrival beat
+frozen at u=0.5 with the card up.
+NOT REACHABLE IN THE SHIPPED GAME YET, and this needs saying plainly: with one biome registered
+there is nowhere to travel to, so no player can trigger any of this until 39 lands. Same shape as
+TODO 55. The journey instrument is what stands in for a player until then.
 
 ### 39. skifield-biome
 First new map: a club ski field diorama - rope tow line, day lodge with
@@ -883,3 +921,18 @@ it wants moving into the carpark build beside the ute rather than sitting in sta
 one. Then a biome with no cage has no cage hint and needs no if.
 PROOF: boot a biome with no ute and assert startGame completes and the cage hint is absent; carpark
 unchanged, hint present, and the 55 assertions still green.
+
+### 59. A BOTCH ASSERTION HAD THE WRONG BOUND AND PASSED FOR FOUR BUILDS  — DONE session 10 (harness-side)
+Found by piece 38, which added world builds and so moved the seeded rng stream, which handed the
+carry-back section a different prop to tidy. botchWonk draws x and z INDEPENDENTLY - each a noise in
+[-1,1] times BOTCHBAND.off - so the invariant is PER AXIS and the furthest a botched landing can sit
+from home is the corner of the band, off times root two. One assertion in the carry-back section
+asked for hypot <= off, which the code has never guaranteed; it passed on the luck of which prop the
+block picked. The new prop was DOC radio: dx -0.0314, dz 0.0248 against an off of 0.0360 - inside
+the band on both axes, 0.0399 away in a straight line.
+FIXED IN PLACE, and not by loosening a number: the assertion now reads the convention the other
+three botch assertions in the file already read (per axis), plus the diagonal as the total bound. It
+was the only one of the four written differently, which is what made it wrong.
+WORTH REMEMBERING AS A CLASS: any section that builds a world moves the stream for every section
+after it, so a magic bound that happens to hold for one prop is a time bomb. FLAKES law 10 already
+says the assertion reads the convention; this is what it costs when one does not.
