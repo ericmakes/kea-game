@@ -2398,3 +2398,32 @@ cannot boot at all while startGame reaches into G.uteG with no guard.
 - CAPTURE: 27 shots, 25 compared, 0 flagged, worst 0.9823 which is 17 from piece 54. Subjects 7/7.
   Nothing moved, which is the expected result: no mesh and no rnd draw changed hands.
 - EYEBALL: nothing new. Stand by the DOC ute in solo and in co-op and the line is where it was.
+
+### PIECE 57 — subject-drift-instrument — HARNESS-SIDE, game md5 5c955bb4e7741eaea477606db3d228ac unchanged
+Verdict: green, and it found something on its first run.
+- gauntlet/verify/boxdiff.mjs asks the question that fell between the two instruments we had.
+  diff.mjs asks whether the FRAME moved; subjects.mjs asks whether the bird is THERE; nothing asked
+  whether the bird MOVED. Piece 54 proved the gap was real - a glide became a mid-downstroke and the
+  frame detector passed it at 0.9826.
+- THE BOXES ARE subjects.mjs OWN, IMPORTED, not copied. One small refactor there: SPEC and the
+  classifiers are exported and the run is guarded as a main module, so importing the file no longer
+  fires seven ffmpeg crops and prints a verdict nobody asked for. The jam road box is excluded by
+  CLASS rather than by vantage name, because what disqualifies it is being scenery.
+- THE 54 PAIR IS THE PROOF AND IT LANDS: 17_flight 0.6388 in the box, 0.9826 on the frame.
+  Threshold 0.98, sitting between that and the three unchanged boxes at 0.9999, 1.0000 and 0.9996.
+- AND 07_jam CAME BACK RED, which was not planned. 0.9580 in the box against 0.9904 on the frame,
+  and not noise: three consecutive reshoots gave 0.957981, 0.957981, 0.957993. The subject is
+  perfectly reproducible and has MOVED since it was pinned - the resting wings sit lower and tucked
+  where the baseline has them slightly spread. Baseline pinned at 59a8493, many builds back. Filed
+  as TODO 60 with the crop pair saved at gauntlet/capture/boxdrift_07_jam.png. NOT re-pinned.
+- DO NOT TRY TO FIND THE BIRD AUTOMATICALLY, and both traps are written into the instrument header
+  so the next agent does not pay for them again. A bounding box over every kea-window pixel spans 96
+  percent of the frame, because that window only discriminates INSIDE a chosen region - the trap
+  subjects.mjs already warns about, wearing a new coat. And a peak-density search finds the HUD in 24
+  of 25 frames, because the KEA 1 badge is painted in var(--kea): the same olive as the bird, by
+  design. Two attempts, both worthless, both recorded.
+- COVERAGE IS FIVE VANTAGES and the four that need boxes most - 03, 13, 18, 20, where the subject IS
+  the photograph - do not have them. TODO 61, with the method spelled out and the automation warned
+  off.
+- CAPTURE: nothing reshot beyond 07 three times for the stability measurement. Game file untouched.
+- EYEBALL: gauntlet/capture/boxdrift_07_jam.png - fresh on the left, pinned on the right. The wings.

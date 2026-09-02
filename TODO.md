@@ -907,6 +907,24 @@ nothing measures the subject box for drift. subjects.mjs asks whether the bird i
 asks whether the FRAME moved; between them there is no instrument that asks whether the bird moved.
 PROOF once built: crop both frames to the box and SSIM that, with a tighter threshold than the frame
 one; prove it by feeding it the 54 pair, where the frame passes and the box must fail.
+DONE session 10 (harness-side, game md5 5c955bb4e7741eaea477606db3d228ac unchanged).
+gauntlet/verify/boxdiff.mjs, run beside diff.mjs after a capture pass. The boxes are subjects.mjs OWN,
+IMPORTED rather than copied - the same regions, a different question - which needed one small
+refactor there: SPEC and the classifiers are exported and the run is guarded as a main module, so
+importing the file no longer fires seven crops and prints a verdict nobody asked for. The 07 road box
+is excluded by class, because a queue of cars is scenery and not a subject.
+THE 54 PAIR IS THE PROOF THE BRIEF ASKS FOR AND IT LANDS: 17_flight reads 0.6388 in the box while
+diff.mjs reads 0.9826 on the frame and passes it at 0.965. Threshold 0.98, measured against the three
+unchanged boxes at 0.9999, 1.0000 and 0.9996.
+AND ITS FIRST RUN FOUND A DRIFT NOBODY HAD SEEN - see TODO 60. 07_jam reads 0.9580 in the subject box
+against 0.9904 on the frame.
+DO NOT TRY TO FIND THE BIRD AUTOMATICALLY, and this is the finding worth keeping. Two attempts, both
+worthless, and both traps are written into the instrument header: a bounding box over every kea-window
+pixel spans 96 percent of the frame, because that window only discriminates INSIDE a chosen region -
+the trap subjects.mjs already warns about, in a new coat. And a peak-density search finds the HUD in
+24 of 25 frames, because the KEA 1 badge is painted in var(--kea) - the same olive as the bird, by
+design. Coverage is therefore the five vantages that carry a measured subject box today; 03, 13, 18
+and 20 need one measured per vantage with an eyeball, which is TODO 61.
 
 ### 58. THE CAGE HINT IS BUILT OFF G.uteG WITH NO GUARD, WHICH THE SECOND BIOME WALKS INTO
 Found in session 10 by piece 55. startGame does `const up=new THREE.Vector3(0,1.2,-1.1);
@@ -957,3 +975,28 @@ was the only one of the four written differently, which is what made it wrong.
 WORTH REMEMBERING AS A CLASS: any section that builds a world moves the stream for every section
 after it, so a magic bound that happens to hold for one prop is a time bomb. FLAKES law 10 already
 says the assertion reads the convention; this is what it costs when one does not.
+
+### 60. 07_jam HAS DRIFTED IN THE SUBJECT BOX AND NOBODY SAW IT  (found in session 10 by piece 57)
+The new subject-drift instrument reads 07_jam at 0.9580 against its pinned baseline while the whole
+frame reads 0.9904 and passes at 0.965. It is NOT noise: three consecutive reshoots gave 0.957981,
+0.957981 and 0.957993, so the subject is perfectly reproducible and has simply moved since it was
+pinned. Cropped side by side (gauntlet/capture/boxdrift_07_jam.png) the resting WINGS sit
+differently - lower and tucked now, slightly spread in the baseline - and the tail with them.
+THE BASELINE WAS PINNED AT 59a8493, which is many builds back, so the change could be any of a dozen
+pieces; narrowing it needs a bisect with a camera at every step and that is real money.
+WHAT IS ACTUALLY WANTED IS A JUDGEMENT, not a bisect: look at the pair, decide whether the current
+wing rest is the one you want, and either re-pin 07 or file the pose as a bug. NOT re-pinned by me -
+a judged frame is Eric.
+AND THE SAME QUESTION SHOULD BE ASKED OF EVERY OTHER VANTAGE, which is exactly what TODO 61 buys.
+
+### 61. THE SUBJECT-DRIFT INSTRUMENT ONLY COVERS FIVE VANTAGES  (filed in session 10 by piece 57)
+boxdiff.mjs uses the boxes subjects.mjs already carries, which is 04, 07, 09, 17 and 25. The
+vantages where the subject IS the photograph and there is no box are 03, 13, 18 and 20 - a portrait,
+a preen, a rear close and a dead rear, every one of which could have its bird replaced outright
+inside the frame drift budget and nothing would say so.
+A BOX PER VANTAGE, MEASURED WITH AN EYEBALL. Do not automate the search: piece 57 tried twice and
+both traps are written into the boxdiff header - the kea colour window spans the frame outside a
+chosen region, and a density peak lands on the KEA 1 HUD badge because it is painted in the same
+olive as the bird. Reading the fractions off the frame by eye is ten minutes and is correct.
+PROOF: each new box scores above 0.99 on an unchanged reshoot, and fails when the subject is staged
+into a different pose - which every one of those four vantages can do from its own stage line.

@@ -76,8 +76,14 @@ function count(file,box,cls){
   return n;
 }
 
+/* SPEC AND THE CLASSIFIERS ARE EXPORTED (TODO 57) so boxdiff.mjs can ask a DIFFERENT question about
+   the same regions rather than keeping its own copy of them. The run below is guarded as a main
+   module for the same reason: importing this file must not fire seven ffmpeg crops and print a
+   verdict nobody asked for. */
+export {SPEC, CLS, count, hsv, W, H};
+const MAIN=import.meta.url===('file://'+path.resolve(process.argv[1]||''));
 let fails=0, ran=0;
-for(const s of SPEC){
+for(const s of (MAIN?SPEC:[])){
   const file=path.join(CAP,s.file+'.png');
   if(!fs.existsSync(file)){ console.log(`- ${s.file.padEnd(22)} not captured, skipped`); continue; }
   for(const t of s.tests){
@@ -88,5 +94,5 @@ for(const s of SPEC){
       (ok?'':'  <-- SUBJECT MISSING'));
   }
 }
-console.log(`SUBJECTS: ${ran} checked, ${fails} missing`);
-process.exitCode=fails?1:0;
+if(MAIN){ console.log(`SUBJECTS: ${ran} checked, ${fails} missing`);
+  process.exitCode=fails?1:0; }
