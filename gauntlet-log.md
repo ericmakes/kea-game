@@ -2427,3 +2427,41 @@ Verdict: green, and it found something on its first run.
   off.
 - CAPTURE: nothing reshot beyond 07 three times for the stability measurement. Game file untouched.
 - EYEBALL: gauntlet/capture/boxdrift_07_jam.png - fresh on the left, pinned on the right. The wings.
+
+## SESSION END — 2026-09-02, session 10, six pieces and the tour exists but has nowhere to go
+Stop condition on the 6-piece rule. Tip 5c955bb4e7741eaea477606db3d228ac, gate CERTIFIED-SHIP, 25
+pinned vantages 0 flagged, two new vantages shot and deliberately unpinned, working tree clean,
+SESSION.lock released.
+    54 flap-the-flight-vantage   harness-side (df4ae7c6 unchanged)
+    55 cage-hint-alive           4c7fd986c7a3762b4e556a62ae9942e2
+    37 tour-save-and-map         c1fcfbc6df3b2939d240f8112bb8b38a
+    38 tour-travel               fdc032709319f9a207d0492077b41da2
+    58 hint-belongs-to-its-map   5c955bb4e7741eaea477606db3d228ac
+    57 subject-drift-instrument  harness-side (unchanged)
+- ERIC ORDER WAS 54, 55, 37, THEN THE NUMBERED QUEUE, and it was followed with one substitution:
+  58 was taken ahead of 39 because it BLOCKS it. startGame reached into G.uteG.localToWorld with no
+  guard, so the first real second map could not have booted at all. A biome with nothing in it now
+  boots and starts, and that assertion is standing for 39 to lean on.
+- THE TOUR IS REAL AND UNREACHABLE. 37 built the schema and the brochure, 38 built the beats, both
+  work end to end - and with one biome registered no player can trigger either. 39 is the gate on all
+  of it. That is the headline of the report and it is said out loud rather than implied.
+- 39 WAS NOT ATTEMPTED, and the reason is worth reading before somebody tries it at 3am: its
+  GRADUATION half deletes the carpark ski corner, and propAt keeps a deliberate rnd draw per prop
+  (TODO 47) PRECISELY SO THE COUNTRY DOES NOT MOVE - so removing five props shifts every later draw
+  and reshuffles grass, snow, tussock and beech across all 25 baselines. It also takes five missions
+  and a star page out of a live save. That is a ratification, not an overnight decision. The diorama
+  half is clean and additive and should ship on its own first.
+- FOUR SABOTAGES DIED ON A THROW BEFORE I BELIEVED IT WAS A PATTERN. Session 9 logged the guard rule;
+  this session met it four more times in three different pieces - a save blob slot, a travel held-key
+  map, and three separate reads of one hint. It is FLAKES law 14 now, with the tell written down: a
+  sabotage that returns NOTHING means look for a stack trace before you conclude the test is thin.
+- AND FLAKES LAW 15, paid for the same way: piece 38 added two world builds, the seeded stream moved,
+  and a four-build-old assertion of mine failed because it asked for hypot <= BAND.off while
+  botchWonk draws x and z independently. The corner of the band is off times root two. It was the
+  only one of four botch assertions written that way. TODO 59.
+- THE TWO NEW VANTAGES EARNED THEIR KEEP ON THEIR FIRST SHOT. 26 showed the brochure heading clipped
+  at 540px (.screen centres inside overflow hidden); 27 showed the to-do flash sitting on top of the
+  arrival card. Neither was reachable by any assertion in the file, and both are fixed.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md, then the three decisions in it - 17 as a
+  photograph, 07 as a drift (TODO 60), and the 39 graduation re-pin. Then FLAKES 14 before writing a
+  single assertion.
