@@ -6,12 +6,15 @@ const ROOT='/Users/e.barker/kea-gauntlet-portable';
 const THREE_LOCAL=fs.readFileSync(path.join(ROOT,'node_modules/three/build/three.min.js'));
 let src=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
 const A="defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark,\n  anchor:{x:7,y:26,z:34, lx:7,ly:1,lz:-11}});";
-if(src.split(A).length!==2)throw new Error('journey: carpark registration anchor missing');
-/* THE STAND-IN ONLY GOES IN IF THE REAL ONE IS NOT THERE YET. The day TODO 39 registers a ski field
-   for real, this instrument stops injecting one and drives the journey into the actual map instead -
-   so it does not quietly overwrite the thing it is supposed to be testing. */
+/* THE STAND-IN ONLY GOES IN IF THE REAL ONE IS NOT THERE YET, and since TODO 39 it never does: the
+   ski field is a real map with its own builder, so this drives the journey into the actual thing.
+   The injection is kept for the day somebody reverts a biome, and the carpark anchor is only
+   REQUIRED when it is about to be used - it changed the morning the carpark took a cast, and a
+   dead code path is a poor reason to fail an instrument. */
 const INJECT=!/defineBiome\('skifield'/.test(src);
-if(INJECT)src=src.replace(A,A+"\ndefineBiome('skifield',{label:'THE CLUB SKI FIELD',build:buildCarpark,anchor:{x:7,y:26,z:34,lx:7,ly:1,lz:-11}});");
+if(INJECT){
+  if(src.split(A).length!==2)throw new Error('journey: carpark registration anchor missing');
+  src=src.replace(A,A+"\ndefineBiome('skifield',{label:'THE CLUB SKI FIELD',build:buildCarpark,anchor:{x:7,y:26,z:34,lx:7,ly:1,lz:-11}});"); }
 console.log(INJECT?'journey: ski field injected as a stand-in (it builds the carpark)':'journey: a real ski field is registered, driving into that');
 const TMP=path.join(os.tmpdir(),'kea-journey.html'); fs.writeFileSync(TMP,src);
 const p=await import('puppeteer');

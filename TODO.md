@@ -586,6 +586,37 @@ vantage 10 re-staged or retired, Eric judges. All new skifield vantages
 are first-pins: shoot, leave ALL flagged.
 PROOF: boot-skifield battery in house style; presence checks per new
 vantage; migrated missions complete headless in the new map.
+DIORAMA HALF DONE session 11 (aff1fa389a8e8ed138299474e77dc028), ADDITIVE ONLY per Eric order.
+The graduation is NOT done and is still the piece below.
+THE MAP EXISTS AND THE TOUR IS REACHABLE. journey.mjs drives it end to end in a browser: M opens the
+brochure mid-run, GO runs the OUT beat, the load lands in the ski field with the card up, SPACE
+skips it. 37 and 38 had been unreachable for two sessions.
+THREE GLOBALS THAT ONLY LOOKED LIKE CONSTANTS became map declarations, each one TODO 58 a layer up:
+the CAST (a live throw - startGame read G.ladder, set only by buildHut, with no guard, so a fresh
+load into a hutless map died before the run started; it only ever looked safe because an earlier
+carpark boot left G.ladder lying about), the NEST SITE (buildNest reads G.nestPos), and the SNOW
+ENVELOPE (SNOWFIELD is the carpark band). Plus a fourth a soak test found and the brief did not
+name: THE ROAD. spawnTraffic had the carpark lanes written into it, so the ski field put seven
+hatchbacks across the snow at z 34. Lanes are a biome declaration now.
+G.snow JOINED THE WORLD REGISTRIES - the last thing a build left on the board.
+THE SKI FIELD DECLARES NO CAST ON PURPOSE. Nobody is on the hill until 40 brings the missions the
+crowd exists for.
+CAPTURE: 25 pinned compared, 0 flagged. Three first pins - 28_skifield_base, 29_lodge_deck,
+30_groomed_band - shot and left FLAGGED, per the brief. Five new presence checks, all measured.
+STILL A LIE UP THERE, AND IT IS 40: defineMissions is biome-blind, so the ski field shows the
+CARPARK to-do list. Same class as TODO 55. s_lift is the one carpark mission this map can honestly
+answer, because it has a tow wheel.
+
+### 39b. skifield-graduation  (JUDGED - Eric only, never overnight)
+The other half of 39, unchanged and unattempted: the carpark ski corner and its five missions
+(s_ski, s_pole, s_binding, s_goggles, s_lift) migrate to the ski field, carpark vantage 10 is
+re-staged or retired, and every baseline is re-judged.
+WHY IT IS NOT AN OVERNIGHT PIECE, twice over: propAt keeps a deliberate rnd draw per prop (TODO 47,
+_ryUnused) PRECISELY so the country does not move, so deleting five props shifts every later draw
+and reshuffles grass, snow, tussock and beech across all 25 baselines. And it takes five missions
+and a star page out of a live save.
+DO IT AFTER 40, so the missions have a home to graduate INTO rather than being deleted from one map
+and reinvented in another.
 
 ### 40. skifield-missions
 8-12 missions incl. the graduates. Signatures: tray-slide down the
@@ -1000,3 +1031,22 @@ chosen region, and a density peak lands on the KEA 1 HUD badge because it is pai
 olive as the bird. Reading the fractions off the frame by eye is ten minutes and is correct.
 PROOF: each new box scores above 0.99 on an unchanged reshoot, and fails when the subject is staged
 into a different pose - which every one of those four vantages can do from its own stage line.
+
+### 62. A BUILD LEAVES ITS SINGLE-OBJECT HANDLES ON THE BOARD  (found in session 11 by piece 39)
+WORLDREGS now covers props, inter, colliders, cars, sheep, strips, foodSrc, hints and snow - every
+LIST a build fills. It does not cover the single objects a builder hangs on G: G.towWheel, G.ladder,
+G.signG, G.uteG, G.nestG, G.paddle, G.snowCap, G.gravel, G.stones, G.wear. The dispatcher clears
+none of them, so after a carpark boot they describe meshes in a scene that was thrown away.
+THE EVIDENCE IS A SABOTAGE TRANSCRIPT, not a theory. With G.towWheel=wheel removed from the ski
+field builder, the battery reported the wheel at -37.9,-40 FROM INSIDE THE SKI FIELD - the carpark
+wheel, still on G, still being spun by update every frame, and still able to complete s_lift at
+coordinates in a country that is not loaded.
+NO SHIPPED CONSEQUENCE TODAY, which is why it is filed and not fixed in 39: both registered maps set
+G.towWheel, every read of G.snowCap and G.uteG is guarded, and G.ladder is only read for Dave, who is
+carpark cast. The consequence arrives with the third map.
+IT IS ALSO HOW THE CAST BUG HID FOR TWO SESSIONS: a stale G.ladder made a hutless boot look safe in
+every battery. That is the argument for fixing it as a class rather than one handle at a time.
+PROOF: the dispatcher nulls a declared list of handles; a biome that does not set one reads undefined
+rather than the last map value; and the ONE BUILD ONE WORLD section grows a handle sweep beside its
+registry sweep. Watch for readers that are NOT guarded once the value can be undefined - that sweep
+is the risky half, and vantage 15 reads G.signG from the rig.

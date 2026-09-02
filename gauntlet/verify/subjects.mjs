@@ -42,6 +42,10 @@ const CLS={
   // there and nowhere else. The cere was tried first and is useless (x1.2): a sliver of it shows
   // even when the head is fully buried. The beak is the signal, because a buried head has none.
   beak:    (h,s,v)=>v<=0.34&&s<=0.35,
+  // TODO 39: the day lodge is PAL.ranger 0x24513B - h155 s0.72 v0.32 - and it is the only saturated
+  // green on a map made of snow, which is what makes a plain hue window safe HERE. On the carpark
+  // frame shot from the same camera the identical box scores 5.
+  hutgreen:(h,s,v)=>h>=140&&h<=175&&s>=0.45&&v>=0.10&&v<=0.45,
 };
 
 // region is [x,y,w,h] as fractions of the frame, so a viewport change does not silently move it
@@ -64,6 +68,29 @@ const SPEC=[
   { file:'25_preen_follow', tests:[
     { what:'the preening head and beak clear the body from the follow cam',
       cls:'beak', box:[0.500,0.518,0.057,0.074], min:12, absent:0 } ]},
+  /* ---------- THE CLUB SKI FIELD (TODO 39), three first pins ----------
+     ABSENT IS MEASURED TWICE HERE, because the two kinds of test have two different meanings of
+     missing, and both are reproducible from this file:
+       a BIRD floor is measured against the same frame with the bird parked in the far corner,
+         reshot by copying capture.mjs with the three PIN positions swapped for k.x=-49;k.z=-49;
+       a DIORAMA floor is measured against the same CAMERA in the carpark, which is the map that
+         does not have a lodge or a bull wheel in it - reshot by copying capture.mjs with
+         SKI={biome:'carpark'}.
+     Both sets of probe frames are kept beside the vantages as probeaway_* and probeabs_*.
+     AND 30 GETS NO DIORAMA TEST ON PURPOSE. The groomed band is the subject of that photograph and a
+     colour classifier cannot see it: the corduroy is snow ridges lit almost exactly like the snow
+     around them, so the ridge window scores 711 inside the piste box on 30 and 9755 on the SHADED
+     SNOW of 29, where there is no piste at all. It reads as geometry, not as colour - the same trap
+     the header above describes for olive, met from the other end. The bird is the presence question
+     that box can honestly answer. */
+  { file:'28_skifield_base', tests:[
+    { what:'the bull wheel is at the bottom station',  cls:'scarlet', box:[0.48,0.33,0.16,0.22], min:1500, absent:440 },
+    { what:'and the bird is up on the engine shed',    cls:'kea',     box:[0.42,0.42,0.10,0.10], min:25,   absent:0 } ]},
+  { file:'29_lodge_deck', tests:[
+    { what:'the day lodge is in frame',                cls:'hutgreen',box:[0.36,0.36,0.40,0.20], min:8000, absent:5 },
+    { what:'and the bird is on the trestle table',     cls:'kea',     box:[0.53,0.45,0.08,0.09], min:12,   absent:1 } ]},
+  { file:'30_groomed_band', tests:[
+    { what:'the bird is standing on the groomed band', cls:'kea',     box:[0.36,0.70,0.10,0.12], min:35,   absent:0 } ]},
 ];
 
 function count(file,box,cls){
@@ -90,7 +117,7 @@ for(const s of (MAIN?SPEC:[])){
     const n=count(file,t.box,t.cls); ran++;
     const ok=n>=t.min; if(!ok)fails++;
     console.log(`${ok?'✓':'✗'} ${s.file.padEnd(22)} ${t.cls.padEnd(8)} ${String(n).padStart(6)} `+
-      `(floor ${t.min}, birdless frame scored ${t.absent})  ${t.what}`+
+      `(floor ${t.min}, reference frame scored ${t.absent})  ${t.what}`+
       (ok?'':'  <-- SUBJECT MISSING'));
   }
 }

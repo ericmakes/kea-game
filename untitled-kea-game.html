@@ -1419,8 +1419,13 @@ const SNOWSLIDE=(()=>{ const t=[[0,0]];
   for(const step of SNOWSTEPS)for(let i=0;i<8;i++){ const a=i*Math.PI/4;
     t.push([+(Math.cos(a)*step).toFixed(4),+(Math.sin(a)*step).toFixed(4)]); }
   return t; })();
-function snowBlocked(x,z,r){ // the raised structure this disc would sit on, or null
-  if(x<SNOWFIELD.x0||x>SNOWFIELD.x1||z<SNOWFIELD.z0||z>SNOWFIELD.z1)return {offmap:true};
+/* THE ENVELOPE IS THE ONE PART OF THIS THAT BELONGS TO A MAP (TODO 39). SNOWFIELD is the band the
+   CARPARK draws its patches from; a ski field is snow from edge to edge. The verdict itself - what
+   counts as a structure, and where a blocked disc slides to - is the same law on every map, so the
+   envelope is the only parameter and it defaults to the carpark one. */
+function snowBlocked(x,z,r,env){ // the raised structure this disc would sit on, or null
+  const F=env||SNOWFIELD;
+  if(x<F.x0||x>F.x1||z<F.z0||z>F.z1)return {offmap:true};
   for(const c of G.colliders){
     if(c.kind==='box'&&!(c.top>0.2))continue;           // laid ground is not a structure
     if(Math.min(c.w,c.d)<SNOWBULK)continue;            // a post or a trunk is banked against, not slid off
@@ -1430,9 +1435,9 @@ function snowBlocked(x,z,r){ // the raised structure this disc would sit on, or 
     if(dx*dx+dz*dz<r*r)return c;                       // closest point on the footprint is inside the disc
   }
   return null; }
-function snowSpot(x,z,r){
+function snowSpot(x,z,r,env){
   for(const [dx,dz] of SNOWSLIDE){ const nx=x+dx, nz=z+dz;
-    if(!snowBlocked(nx,nz,r))return {x:nx,z:nz,r,slid:Math.hypot(dx,dz)}; }
+    if(!snowBlocked(nx,nz,r,env))return {x:nx,z:nz,r,slid:Math.hypot(dx,dz)}; }
   return {x,z,r,slid:0,stuck:true}; }                  // nowhere to go: leave it where it was, and say so
 /* ONE BUILD, ONE WORLD (TODO 48, 2026-09-02). boot() calls initScene, which throws the old
    THREE.Scene away and makes a new one - so a second boot leaves the registries describing meshes
@@ -1449,7 +1454,11 @@ function snowSpot(x,z,r){
    take back off it, which was invisible while there was one map: build a second biome and the
    carpark teaching came with you, pointing at props forty units away in a country that no longer
    existed. A hint belongs to the map that can answer it. */
-const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints'];
+/* TODO 39 adds snow, for the same reason 58 added hints. The carpark drifts are built inside a
+   !HEADLESS branch, so a second build left the first map drifts on the board and drew its own on top
+   of them - invisible under node, two maps worth of snow in the browser. A drift is a fact about one
+   map. */
+const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow'];
 
 /* ---------- THE BIOME REGISTRY (TODO 36, the tour chassis) ----------
    The tour turns this game into separate maps, one diorama per biome. Nothing about that can start
@@ -1473,6 +1482,11 @@ function buildWorld(biome){
   b.build();
 }
 function buildCarpark(){
+  /* THE MAP OWNS ITS NEST SITE (TODO 39). buildNest is called below off G.nestPos, which was a G
+     default and so a global that only looked like a constant. The ski field sets its own, and the
+     day it did, the next carpark build would have put the carpark nest up the mountain. Same value
+     it has always had, declared by the map that uses it. */
+  G.nestPos={x:-4,z:-33};
   // terrain
   const gg=new THREE.PlaneGeometry(240,240,48,48);
   const pos=gg.attributes.position;
@@ -1734,8 +1748,258 @@ function buildCarpark(){
    chapters have none and the paddock resolved forty units off the paddock. What the table CAN be
    held to is the world it names, and the battery does exactly that: the look-at sits on the built
    prop centroid, so the day somebody moves the carpark and not this line, an assertion says so. */
-defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark,
-  anchor:{x:7,y:26,z:34, lx:7,ly:1,lz:-11}});
+function castCarpark(){
+  // humans
+  G.humans.push(new Human('trish','Trish',PAL.red,15,-10.5,{hat:'beanie',patrol:[{x:15,z:-10.5},{x:13,z:-13.8},{x:17,z:-12}]}));
+  G.humans.push(new Human('tom','Tramper Tom',0x2F6E5E,28,0,{asleep:true,hat:'beanie'}));
+  { const tomH=G.humans[G.humans.length-1];
+    const bn=propAt("tramper's beanie",tomH.x+1.05,0.9,tomH.z,PB.beanie,{wearable:true,owner:'tom',sleepGuard:'tom',mission:'b_beanie'});
+    bn.srcHatG=tomH.hatG; if(tomH.hatG)tomH.hatG.visible=false; }
+  const dave=new Human('dave','Dave',PAL.blue,G.ladder.x,G.ladder.z+0.6,{hat:'hard',vest:true}); dave.onLadder=true; G.humans.push(dave);
+  G.humans.push(new Human('rex','Ranger Rex',PAL.ranger,8,24,{hat:'cap',hatColor:PAL.ranger,vest:false,
+    patrol:[{x:8,z:24},{x:-6,z:22},{x:-14,z:12},{x:2,z:8},{x:14,z:12},{x:18,z:26}]}));
+  { const rex=G.humans[G.humans.length-1];
+    const tg=new THREE.Group(); tg.position.set(0.34,1.05,0.2); rex.g.add(tg);
+    const body=cyl(0.045,0.05,0.24,PAL.dark,0,0,0,tg,8); body.rotation.x=1.57;
+    const lens=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8),new THREE.MeshBasicMaterial({color:0xFFE9B8,fog:false}));
+    lens.position.set(0,0,0.14); lens.visible=false; tg.add(lens);
+    const spot=new THREE.SpotLight(0xFFE0B0,0,17,0.42,0.5,1.5); spot.position.set(0,0,0.1);
+    const tgt=new THREE.Object3D(); tgt.position.set(0,-0.35,4.5); tg.add(tgt); spot.target=tgt; tg.add(spot);
+    const beam=new THREE.Mesh(new THREE.ConeGeometry(0.8,6.8,12,1,true),
+      new THREE.MeshBasicMaterial({color:0xFFE0A6,transparent:true,opacity:0.08,side:THREE.FrontSide,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
+    beam.rotation.x=Math.PI/2-0.078; beam.position.set(0,-0.16,3.5); beam.visible=false; tg.add(beam);
+    rex.torch={g:tg,spot,lens,beam};
+  }
+}
+defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark,cast:castCarpark,
+  anchor:{x:7,y:26,z:34, lx:7,ly:1,lz:-11},
+  traffic:{up:32.2,down:35.8,x:115}});      // the two lanes of the road along z 34, where they have always been
+
+/* ---------- THE CLUB SKI FIELD (TODO 39, the first new map) ----------
+   36 built the seam, 37 built the brochure and 38 built the flyover, and no player could reach any
+   of it, because a tour of one map is not a tour. This is the second map: a NZ club field at dawn -
+   a rope tow straight up the fall line, a day lodge with the deck everybody eats on, racks of other
+   people gear, a groomed band down the middle, and drifts banked against everything that stood
+   still long enough.
+   IT IS ADDITIVE, AND THAT IS THE WHOLE SHAPE OF THE PIECE. The GRADUATION the brief asks for -
+   moving the carpark ski corner and its five missions up here - shifts every seeded draw after it
+   and therefore re-pins all 25 baselines, and it takes five missions and a star page out of a live
+   save. That is a judged call, so it is filed and not done: nothing below moves or deletes one line
+   of the carpark.
+   FLAT WHERE THE BIRD WALKS. groundHeightAt reads COLLIDERS and returns zero everywhere else, so a
+   terrain mesh with a real gradient in it would have the bird walking on air above the snow or
+   buried under it. The country therefore rises OUTSIDE the play clamp - pushOut holds the bird
+   inside 52 - exactly the way the carpark does, and the fall line is told by the corduroy, the tow
+   line and the drifts rather than by a slope nobody could stand on.
+   THE MAP OWNS ITS NEST, ITS SNOW ENVELOPE AND ITS CAST, and every one of those three was a global
+   that only looked like a constant while there was one map. */
+const SKISNOW={x0:-52,x1:52,z0:-52,z1:52};        // up here the whole map is snow: the envelope is the map
+const SKITOW={x:4, base:24, top:-40, towers:[18,8,-2,-12,-22,-32], rope:3.2, ret:2.9};
+const SKIPISTE={x0:10,x1:30,z0:-44,z1:30};
+const SKILODGE={x:-22,z:8,w:11,d:7,h:3.0,deck:4.4};
+const SKINEST={x:-40,z:32};
+function buildSkifield(){
+  G.nestPos={x:SKINEST.x,z:SKINEST.z};
+  // terrain: hard alpine snow, scoured grey where the wind gets at it, tussock where the snow ends
+  const gg=new THREE.PlaneGeometry(240,240,48,48);
+  const pos=gg.attributes.position;
+  for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
+    let h=0; if(d>58) h=(d-58)*0.075*(1+0.35*Math.sin(x*0.07)*Math.cos(y*0.06));
+    h+=Math.sin(x*0.13)*Math.cos(y*0.11)*0.14; pos.setZ(i,h); }
+  gg.computeVertexNormals();
+  /* THE PLANE IS BUILT IN XY AND LAID DOWN BY THE MINUS-90 ROTATION, so local y is world MINUS z -
+     which matters because the snowline is a fact about the bottom of the map and getting the sign
+     wrong puts bush above the peaks. The battery reads the vertex colours back at known world
+     coordinates rather than trusting this comment. */
+  { const cols=[], pp=gg.attributes.position;
+    const cS=new THREE.Color(PAL.snow).convertSRGBToLinear(), cW=new THREE.Color(PAL.snowShade).convertSRGBToLinear(),
+          cR=new THREE.Color(PAL.rock).convertSRGBToLinear(), cT=new THREE.Color(PAL.tussock).convertSRGBToLinear();
+    for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i);
+      const n=Math.sin(x*0.09+0.6)*Math.cos(zw*0.08)+Math.sin(x*0.27)*0.4;
+      const c=cS.clone().lerp(cW,clamp(n*0.28+0.2,0,0.55));            // wind scour
+      const t=clamp((zw-34)/16,0,1); if(t>0)c.lerp(cT,t*0.85);         // the snowline, at the bottom of the map
+      const d=Math.hypot(x,zw); if(d>52)c.lerp(cR,Math.min(0.8,(d-52)/30));
+      cols.push(c.r,c.g,c.b); }
+    gg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+  const ground=new THREE.Mesh(gg,mat(0xFFFFFF,{vertexColors:true}));
+  ground.rotation.x=-Math.PI/2; if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
+  G.skiGround=ground;
+
+  // THE GROOMED BAND: corduroy down the fall line, which is where the tray-slide goes in TODO 40
+  { const P=SKIPISTE, w=P.x1-P.x0, len=P.z1-P.z0, cx=(P.x0+P.x1)/2, cz=(P.z0+P.z1)/2;
+    const slab=box(w,0.1,len,PAL.snow,cx,0.05,cz,null,{noshadow:true}); slab.receiveShadow=!HEADLESS;
+    for(let z=P.z0+0.9;z<P.z1;z+=1.8) box(w-0.5,0.06,0.34,PAL.snowShade,cx,0.11,z,null,{noshadow:true});
+    // wanded both edges, because a club field marks its groomer runs and its rocks with the same bamboo
+    for(let z=P.z0+2;z<P.z1;z+=6)for(const wx of [P.x0-0.7,P.x1+0.7]){
+      cyl(0.02,0.025,1.4,PAL.woodD,wx,0.7,z,null,5);
+      box(0.16,0.12,0.02,PAL.cone,wx+0.09,1.3,z,null,{noshadow:true}); } }
+
+  // THE ROPE TOW: engine shed and bull wheel at the bottom, six towers, a return at the top
+  { const T=SKITOW;
+    const shed=new THREE.Group(); shed.position.set(T.x,0,T.base); G.scene.add(shed);
+    box(3.4,2.2,2.6,0x4E6E8E,0,1.1,0,shed);
+    const sr=box(3.8,0.16,3.0,PAL.hutRoof,0,2.3,0,shed); sr.rotation.z=0.07;
+    box(1.0,1.1,0.08,PAL.woodD,0,0.75,1.34,shed);                     // the ticket window, shuttered
+    addBoxCollider(T.x,T.base,3.4,2.6,2.2,true);
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,0.18,16),mat(PAL.red));
+    wheel.rotation.x=Math.PI/2; wheel.position.set(T.x,2.5,T.base-2.0); G.scene.add(wheel); G.towWheel=wheel;
+    cyl(0.1,0.12,2.5,PAL.metal,T.x,1.25,T.base-2.0,null,8);
+    const stops=[T.base-2.0].concat(T.towers,[T.top]);
+    for(const z of T.towers){
+      cyl(0.11,0.14,T.rope+0.3,PAL.metal,T.x,(T.rope+0.3)/2,z,null,8);
+      box(1.1,0.1,0.1,PAL.metal,T.x,T.rope+0.25,z);
+      for(const ox of [-0.42,0.42]){ const sh=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.07,10),mat(PAL.dark));
+        sh.rotation.x=Math.PI/2; sh.position.set(T.x+ox,T.rope+0.12,z); G.scene.add(sh); }
+      box(0.6,0.05,0.6,PAL.snowShade,T.x,0.055,z,null,{noshadow:true}); }   // the pad the queue stamps flat
+    { const z=T.top;                                                   // the top: A-frame, return wheel, old anchor
+      cyl(0.12,0.15,3.6,PAL.metal,T.x-0.7,1.8,z,null,8).rotation.z=0.18;
+      cyl(0.12,0.15,3.6,PAL.metal,T.x+0.7,1.8,z,null,8).rotation.z=-0.18;
+      const rw=new THREE.Mesh(new THREE.CylinderGeometry(0.8,0.8,0.16,14),mat(PAL.metal));
+      rw.rotation.x=Math.PI/2; rw.position.set(T.x,T.rope,z); G.scene.add(rw);
+      box(1.8,0.5,1.4,0x9B9891,T.x,0.25,z+1.2); addBoxCollider(T.x,z+1.2,1.8,1.4,0.5,true); }
+    for(let i=0;i<stops.length-1;i++){ const a=stops[i], b=stops[i+1], mid=(a+b)/2, L=Math.abs(b-a);
+      for(const [y,rr,ox] of [[T.rope,0.035,0],[T.ret,0.03,0.5]]){
+        const rope=cyl(rr,rr,L,PAL.dark,T.x+ox,y,mid,null,6); rope.rotation.x=Math.PI/2; }
+      if(i%2===0){ box(0.1,0.34,0.06,PAL.metal,T.x,T.rope-0.2,mid,null,{noshadow:true});
+        box(0.24,0.06,0.06,PAL.rubber,T.x,T.rope-0.36,mid,null,{noshadow:true}); } }   // a nutcracker, hung and forgotten
+  }
+
+  // THE DAY LODGE, and the deck it eats its lunch on
+  { const L=SKILODGE, x=L.x, z=L.z;
+    const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
+    box(L.w+0.3,0.5,L.d+0.3,PAL.paper,0,0.25,0,g);                     // piles, cream, forty winters old
+    box(L.w,L.h,L.d,PAL.ranger,0,L.h/2+0.4,0,g);
+    for(const s of [-1,1]){ const rf=box(L.w+0.6,0.16,L.d*0.62,PAL.hutRoof,0,L.h+1.0,s*L.d*0.26,g); rf.rotation.x=s*0.44; }
+    G.colliders.push({kind:'roof',x,z,w:(L.w+0.6)/2,d:L.d*0.55,ridge:L.h+1.32,slope:0.48});
+    addBoxCollider(x,z,L.w,L.d,L.h+0.4,true);
+    for(const wx of [-3.4,0,3.4]){ const pane=new THREE.Mesh(new THREE.PlaneGeometry(2.2,1.1),bmat(PAL.glass));
+      pane.position.set(wx,2.2,L.d/2+0.02); g.add(pane);
+      box(2.4,0.1,0.08,PAL.paper,wx,1.58,L.d/2+0.03,g,{noshadow:true}); }
+    box(1.0,2.0,0.1,PAL.woodD,-L.w/2+1.2,1.4,L.d/2+0.03,g);            // the door, out onto the deck
+    cyl(0.22,0.26,1.2,0x9B9891,2.0,L.h+1.5,-0.4,g,8); cyl(0.16,0.16,0.5,PAL.dark,2.0,L.h+2.3,-0.4,g,7);
+    const dz=z+L.d/2+L.deck/2;
+    box(L.w,0.18,L.deck,PAL.wood,x,0.62,dz);
+    for(const px of [-L.w/2+0.4,0,L.w/2-0.4])for(const pz of [-L.deck/2+0.3,L.deck/2-0.3])
+      cyl(0.09,0.09,0.62,PAL.woodD,x+px,0.31,dz+pz,null,6);
+    addBoxCollider(x,dz,L.w,L.deck,0.71,false);                        // walk onto it, do not walk through it
+    for(let i=0;i<9;i++) cyl(0.05,0.05,0.9,PAL.woodD,x-L.w/2+0.4+i*((L.w-0.8)/8),1.16,dz+L.deck/2,null,6);
+    box(L.w,0.08,0.08,PAL.wood,x,1.6,dz+L.deck/2,null,{noshadow:true});
+    for(const s of [-1,1]) box(0.08,0.08,L.deck,PAL.wood,x+s*(L.w/2-0.04),1.6,dz,null,{noshadow:true});
+    for(const tx of [-2.6,2.6]){ rbox(2.2,0.09,0.8,0.03,PAL.wood,x+tx,1.44,dz-0.4,null);
+      for(const lx of [-0.9,0.9])for(const lz of [-0.3,0.3]) cyl(0.05,0.05,0.7,PAL.woodD,x+tx+lx,1.05,dz-0.4+lz,null,6);
+      rbox(2.0,0.07,0.3,0.02,PAL.wood,x+tx,1.16,dz+0.55,null); }       // the bench everybody straddles
+    for(let i=0;i<3;i++) box(1.6,0.08,0.34,PAL.wood,x-L.w/2+1.2,0.5-i*0.17,dz+L.deck/2+0.25+i*0.34,null); }
+
+  /* RACKS OF OTHER PEOPLE GEAR, which is the only reason a kea comes to a ski field. NO MISSION IDS
+     ON ANY OF IT: the missions are TODO 40, and a prop up here that answered a CARPARK mission would
+     be the same class of lie TODO 55 was sent to fix. The ski boot is called a SKI BOOT for the same
+     reason - a prop NAME is a detector in this engine, and anything called boot scores the carpark
+     bonus the moment it is carried twenty-two metres from where it was built. */
+  { for(const [rx,rz,ry] of [[-16,18.5,0.2],[-28,18.5,-0.15],[SKITOW.x+3.4,SKITOW.base+1.8,0.6]]){
+      const g=new THREE.Group(); g.position.set(rx,0,rz); g.rotation.y=ry; G.scene.add(g);
+      box(2.4,0.09,0.14,PAL.woodD,0,0.95,0,g);
+      cyl(0.06,0.07,0.95,PAL.woodD,-1.1,0.47,0,g,6); cyl(0.06,0.07,0.95,PAL.woodD,1.1,0.47,0,g,6);
+      box(2.4,0.07,0.1,PAL.woodD,0,0.3,0.12,g); }
+    for(const [px,pz] of [[-16.9,19.1],[-16.4,19.1],[-15.5,19.1],[-27.6,19.1],[-28.6,19.1]]){
+      const s=propAt('ski',px,0.95,pz,PB.ski,{heavy:true}); s.mesh.rotation.x=1.35; }
+    for(const [px,pz] of [[-15.0,19.2],[-14.7,19.2],[-27.0,19.2]]) propAt('ski pole',px,0.7,pz,PB.skipole,{});
+    propAt('ski goggles',-17.4,0.2,19.9,PB.goggles,{wearable:true});
+    propAt('ski goggles',SKITOW.x+2.6,0.2,SKITOW.base+2.6,PB.goggles,{wearable:true});
+    propAt('ski boot',-13.2,0.2,17.7,PB.boot,{});
+    propAt('rubbish',SKITOW.x+1.4,0.2,SKITOW.base+3.2,PB.rubbish,{}); }
+
+  /* DRIFTS BANKED AGAINST THE STRUCTURES, and the unbury verdict is the law they obey. TODO 28 said
+     a snow disc must never be the saucer a building stands in; up here every drift is DELIBERATELY
+     aimed at a wall, so the same resolver does the work it was written for - the hard disc slides
+     clear of the footprint and stays there, the soft halo is free to lap the wall, and the banked
+     wedge leans back the way the drift came, which is the part that touches.
+     THE RECORDS ARE BUILT HEADLESS TOO, unlike the carpark patches, which live inside a !HEADLESS
+     branch and can therefore only be trusted by looking at them. Every drift up here is inspectable,
+     so a battery holds all of them to the verdict rather than the drawing. */
+  { const L=SKILODGE, T=SKITOW, want=[];
+    for(const dx of [-3.2,1.0,4.2]) want.push([L.x+dx,L.z-L.d/2-1.3,'lodge']);   // the uphill wall, where it always drifts
+    for(const dx of [-3.0,2.4]) want.push([L.x+dx,L.z+L.d/2+L.deck+1.3,'deck']); // below the deck, clear of the steps
+    want.push([L.x-L.w/2-1.2,L.z,'lodge'],[L.x+L.w/2+1.2,L.z,'lodge']);      // and both gable ends
+    want.push([T.x-2.4,T.base,'shed'],[T.x+2.4,T.base-0.6,'shed'],[T.x,T.top+2.4,'anchor']);
+    for(const z of T.towers) want.push([T.x-1.4,z,'tower']);
+    /* EVERY DRIFT SAYS WHAT IT WAS AIMED AT, the way G.wear and G.stones say what surface they were
+       painted on. Without it the only way to tell a tower drift from a gable one is to re-derive the
+       builder arithmetic in whatever is asking, and two of those coordinates already collide. */
+    for(const [wx,wz,at] of want){ const r=1.3+rnd(0,1.3);
+      const q=snowSpot(wx,wz,r,SKISNOW);
+      G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x:wx,z:wz},at,slid:q.slid,stuck:!!q.stuck,bank:true}); }
+    if(!HEADLESS)for(const s of G.snow){
+      const disc=new THREE.Mesh(new THREE.CircleGeometry(s.r,20),mat(PAL.snow));
+      disc.rotation.x=-Math.PI/2; disc.position.set(s.x,0.05,s.z); disc.receiveShadow=true; G.scene.add(disc);
+      const halo=new THREE.Mesh(new THREE.CircleGeometry(s.r*1.35,20),
+        new THREE.MeshStandardMaterial({color:0xFFFFFF,transparent:true,opacity:0.42,roughness:0.96}));
+      halo.rotation.x=-Math.PI/2; halo.position.set(s.x,0.042,s.z); G.scene.add(halo);
+      s.disc=disc; s.halo=halo;
+      /* THE WEDGE ONLY EXISTS WHERE THE DRIFT IS STILL AT THE WALL. One ladder step out is snow
+         piled against a building; four steps out is a drift that had to go somewhere else entirely,
+         and leaning a bank at a wall six metres away would be drawing a lie. */
+      if(s.slid>0.01&&s.slid<=3.3){ const ux=s.want.x-s.x, uz=s.want.z-s.z, ul=Math.hypot(ux,uz)||1;
+        const wedge=sph(s.r*0.8,PAL.snow,s.x+ux/ul*s.r*0.6,0.02,s.z+uz/ul*s.r*0.6,null,10);
+        wedge.scale.set(1.15,0.42,1.15); s.wedge=wedge; } } }
+
+  buildNest(G.nestPos.x,G.nestPos.z);
+
+  /* THE COUNTRY. This is the carpark own mountain construction with ski field radii and a snowline
+     dropped to where a club field actually sits - deliberately NOT a new silhouette language, which
+     is on the blocked art list and belongs to a wave with eyes on it. */
+  for(let i=0;i<16;i++){ const far=i%2===0, a=i/16*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(120,150):rnd(88,112);
+    const h=far?rnd(38,64):rnd(26,48), w=far?rnd(42,66):rnd(26,48);
+    const geo=new THREE.ConeGeometry(w,h,22,7);
+    { const pos=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
+      for(let v=0;v<pos.count;v++){
+        const x=pos.getX(v), y=pos.getY(v), z=pos.getZ(v);
+        const rr=Math.hypot(x,z); if(rr<0.001)continue;
+        const ang=Math.atan2(z,x), t01=y/h+0.5;
+        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
+        const kR=1+nz*0.28*(1-t01*0.55);
+        pos.setX(v,x*kR); pos.setZ(v,z*kR);
+        pos.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
+      geo.computeVertexNormals(); }
+    { const cols=[],pos=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
+        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
+      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
+      for(let v=0;v<pos.count;v++){ const t=clamp((pos.getY(v)/h+0.5-0.42)*7,0,1);
+        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+    const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
+    m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m); }
+  // rock through the snow, everywhere the groomer does not sweep
+  for(let i=0;i<14;i++){ const a=rnd(0,6.3), r=rnd(26,50), rx=Math.cos(a)*r, rz=Math.sin(a)*r;
+    if(rx>SKIPISTE.x0-2&&rx<SKIPISTE.x1+2&&rz>SKIPISTE.z0&&rz<SKIPISTE.z1)continue;
+    const rk=sph(rnd(0.6,1.8),i%2?PAL.rock:PAL.rockD,rx,0.15,rz,null,6); rk.scale.y=0.55; }
+  // beech below the snowline only, which is the bottom arc of the map and nowhere near the peaks
+  for(let i=0;i<9;i++){ const a=0.42+i/9*2.3, r=rnd(74,92);
+    const b=new THREE.Mesh(new THREE.ConeGeometry(rnd(12,20),rnd(5,8),6),nightTint(mat(PAL.beech)));
+    b.position.set(Math.cos(a)*r,1.2,Math.sin(a)*r); b.scale.y=0.7; b.rotation.y=rnd(0,3); G.scene.add(b); }
+  /* THE LAST DRAWS IN THE BUILDER ARE THE BROWSER-ONLY ONES, on purpose: a !HEADLESS block consumes
+     seeded draws that node never makes, so anything after it lands somewhere else in the two worlds.
+     Everything a battery reads back - the drifts above especially - is drawn before this line. */
+  if(!HEADLESS)for(let i=0;i<26;i++){ const tx=rnd(-50,50), tz=rnd(34,50);
+    const tf=cyl(0.02,0.3,0.85,PAL.tussock,tx,0.42,tz,null,5); tf.rotation.z=rnd(-0.2,0.2); }
+}
+/* THE CAST BELONGS TO THE MAP TOO, and this is the TODO 58 finding one layer up. startGame pushed
+   four humans by hand with CARPARK coordinates baked into them - Trish on a carpark patrol, Tom
+   asleep at the campsite, Rex walking the bays, and Dave up a ladder that only buildHut ever builds.
+   So G.ladder.x was read with no guard at all: a fresh load into a map with no hut threw before the
+   run began, in every mode, and it only ever looked safe in the batteries because an earlier carpark
+   boot had left G.ladder lying about. An owner, not a guard - the cast is declared beside the
+   builder, and a map with nobody on it says so by declaring nobody. */
+function castSkifield(){
+  /* NOBODY YET, AND THAT IS THE HONEST STATE OF THIS MAP. The club field crowd - the ones whose
+     lunch, goggles and tow tickets are the whole point - arrive with the missions in TODO 40.
+     DECLARED AND EMPTY rather than left out, so the registry says nobody is home on purpose. */
+}
+/* THE ANCHOR STANDS DOWNHILL AND LOOKS UP THE TOW LINE, which is the establishing shot of this map
+   the way the road is the carpark one. Held to the world it names by the same assertion the carpark
+   anchor is: the look-at sits on the built prop centroid, above the ground at its own feet, pointing
+   down the way in rather than up out of it. */
+defineBiome('skifield',{label:'THE CLUB SKI FIELD',build:buildSkifield,cast:castSkifield,
+  anchor:{x:-2,y:28,z:52, lx:-4,ly:1.5,lz:14}, snow:SKISNOW});
 
 /* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
    The level select. One table, and everything the brochure says comes out of it: the order of the
@@ -2575,8 +2839,15 @@ function mkDocUte(x,z){
 }
 
 /* traffic cars share mkCar but start on road */
+/* THE ROAD BELONGS TO THE MAP THAT HAS ONE (TODO 39). These two lane numbers were the carpark road
+   written into the traffic spawner, and updateTraffic runs whenever a run is running - so the first
+   thing the ski field did with a soak test was put seven hatchbacks across the snow at z 34, driving
+   through a road that is not there. Same shape as the cast and the nest: the lanes are declared by
+   the biome, and a map that declares no road gets no traffic rather than somebody elses. */
+function biomeTraffic(){ const b=BIOMES[G.biome||BIOME_DEFAULT]; return (b&&b.traffic)||null; }
 function spawnTraffic(dir){
-  const z=dir>0?32.2:35.8, x=dir>0?-115:115;
+  const T=biomeTraffic(); if(!T)return null;
+  const z=dir>0?T.up:T.down, x=dir>0?-T.x:T.x;
   if(G.cars.some(c=>c.traffic&&c.dir===dir&&Math.abs(c.x-x)<7))return null; // never spawn into someone's boot
   const c=mkCar(x,z,dir>0?0:Math.PI,pick([PAL.blue,PAL.white,PAL.yellow,0x9C5AA0,0x666E76]),'hatch');
   c.parked=false; c.dir=dir; c.speed=8; c.traffic=true;
@@ -3713,6 +3984,11 @@ function roadObstructionAhead(car){
   return null;
 }
 function updateTraffic(dt){
+  /* THE ROAD TEST IS IN THE SPAWNER AND NOWHERE ELSE. The first version of TODO 39 also returned
+     early here, and no sabotage could break it: spawnTraffic refuses a map with no road anyway, so
+     the extra condition was a strict subset that could never change the answer - the same shape as
+     the match term piece 25 put in tabDocked and then took back out. One place, one truth, and a
+     test that can reach it. */
   if(!G.running)return;
   G.trafT.a-=dt; G.trafT.b-=dt;
   const trafficCount=G.cars.filter(c=>c.traffic).length;
@@ -4412,27 +4688,9 @@ function startGame(mode,opts){
   G.travel=null;
   { const ar=SAVE.takeArrival();   // TODO 38: one shot, and only for the map it was armed for
     if(ar&&ar.to===(G.biome||BIOME_DEFAULT))travelIn(ar.from); }
-  // humans
-  G.humans.push(new Human('trish','Trish',PAL.red,15,-10.5,{hat:'beanie',patrol:[{x:15,z:-10.5},{x:13,z:-13.8},{x:17,z:-12}]}));
-  G.humans.push(new Human('tom','Tramper Tom',0x2F6E5E,28,0,{asleep:true,hat:'beanie'}));
-  { const tomH=G.humans[G.humans.length-1];
-    const bn=propAt("tramper's beanie",tomH.x+1.05,0.9,tomH.z,PB.beanie,{wearable:true,owner:'tom',sleepGuard:'tom',mission:'b_beanie'});
-    bn.srcHatG=tomH.hatG; if(tomH.hatG)tomH.hatG.visible=false; }
-  const dave=new Human('dave','Dave',PAL.blue,G.ladder.x,G.ladder.z+0.6,{hat:'hard',vest:true}); dave.onLadder=true; G.humans.push(dave);
-  G.humans.push(new Human('rex','Ranger Rex',PAL.ranger,8,24,{hat:'cap',hatColor:PAL.ranger,vest:false,
-    patrol:[{x:8,z:24},{x:-6,z:22},{x:-14,z:12},{x:2,z:8},{x:14,z:12},{x:18,z:26}]}));
-  { const rex=G.humans[G.humans.length-1];
-    const tg=new THREE.Group(); tg.position.set(0.34,1.05,0.2); rex.g.add(tg);
-    const body=cyl(0.045,0.05,0.24,PAL.dark,0,0,0,tg,8); body.rotation.x=1.57;
-    const lens=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8),new THREE.MeshBasicMaterial({color:0xFFE9B8,fog:false}));
-    lens.position.set(0,0,0.14); lens.visible=false; tg.add(lens);
-    const spot=new THREE.SpotLight(0xFFE0B0,0,17,0.42,0.5,1.5); spot.position.set(0,0,0.1);
-    const tgt=new THREE.Object3D(); tgt.position.set(0,-0.35,4.5); tg.add(tgt); spot.target=tgt; tg.add(spot);
-    const beam=new THREE.Mesh(new THREE.ConeGeometry(0.8,6.8,12,1,true),
-      new THREE.MeshBasicMaterial({color:0xFFE0A6,transparent:true,opacity:0.08,side:THREE.FrontSide,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
-    beam.rotation.x=Math.PI/2-0.078; beam.position.set(0,-0.16,3.5); beam.visible=false; tg.add(beam);
-    rex.torch={g:tg,spot,lens,beam};
-  }
+  /* THE CAST IS THE MAP CAST (TODO 39). This was four hand-written pushes of carpark furniture,
+     one of which read G.ladder with no guard - see the note above castSkifield. */
+  { const cast=biomeOf(G.biome).cast; if(cast)cast(); }
   if(!HEADLESS){
     document.getElementById('title').style.display='none';
     tourOpen(false);                                        // the brochure never survives into play
@@ -4557,6 +4815,8 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
     WORLDREGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
+    SKI:{SNOW:SKISNOW,TOW:SKITOW,PISTE:SKIPISTE,LODGE:SKILODGE,NEST:SKINEST},
+    TRAFFIC:{of:biomeTraffic,spawn:spawnTraffic},
     TOUR:{TABLE:TOUR,KEY:TOURKEY,ARRIVEKEY,model:tourModel,pin:tourPin,pick:tourPick,render:tourRender,open:tourOpen},
     TRAVEL:{K:TRAVEL,KEYS:TRAVELKEYS,out:travelOut,in:travelIn,busy:travelBusy,u:travelU,
             skip:travelSkip,end:travelEnd,tick:travelUpdate,anchor:travelAnchorOf},

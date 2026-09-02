@@ -11,13 +11,20 @@ const HTML='file://'+path.join(ROOT,'untitled-kea-game.html');
 // added object reshuffle the whole world. Seed the game rng at its own boot instead.
 // TODO 36: the rig photographs a NAMED biome. Default carpark, so every existing baseline is a
 // carpark baseline and nothing about the pinned set changes until somebody asks for another map.
+/* TODO 39: A VANTAGE NAMES ITS OWN MAP. There are two maps now, so the biome cannot be one global
+   for the whole pass - the ski field vantages at the bottom of this file are shot in the ski field
+   and every carpark baseline is shot in the carpark, in one run. BIOME is still the DEFAULT, so a
+   shot that says nothing lands exactly where it always did and no pinned frame moves. One seeded
+   temp copy per biome, written once and reused. */
 const BIOME=(process.env.BIOME||'carpark').replace(/[^a-z0-9_]/gi,'');
-const GAMESRC=(()=>{ const raw=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
-  const anchor='if(!HEADLESS)boot();';
-  if(raw.split(anchor).length!==2) throw new Error('capture: boot anchor missing from the game file');
-  return raw.replace(anchor,"if(!HEADLESS){setSeed(20260828);boot({biome:'"+BIOME+"'});}"); })();
-const SEEDEDTMP=path.join(os.tmpdir(),'kea-seeded-capture.html'); fs.writeFileSync(SEEDEDTMP,GAMESRC);
-const SEEDEDHTML='file://'+SEEDEDTMP; // a real navigation, so evaluateOnNewDocument still fires
+const RAWSRC=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
+const seeded=(()=>{ const cache={}; return b=>{
+  if(!cache[b]){ const anchor='if(!HEADLESS)boot();';
+    if(RAWSRC.split(anchor).length!==2) throw new Error('capture: boot anchor missing from the game file');
+    const p=path.join(os.tmpdir(),'kea-seeded-capture-'+b+'.html');
+    fs.writeFileSync(p,RAWSRC.replace(anchor,"if(!HEADLESS){setSeed(20260828);boot({biome:'"+b+"'});}"));
+    cache[b]='file://'+p; }                 // a real navigation, so evaluateOnNewDocument still fires
+  return cache[b]; }; })();
 const ONLY=(process.env.SHOTS||'').split(',').filter(Boolean);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -46,7 +53,7 @@ async function shot(name,stage,opts){
   await page.setRequestInterception(true);
   page.on('request',r=>{ if(/three(\.min)?\.js/.test(r.url()))r.respond({contentType:'application/javascript',body:THREE_LOCAL});
     else if(/fonts\./.test(r.url()))r.respond({contentType:'text/css',body:''}); else r.continue(); });
-  await page.goto(SEEDEDHTML,{waitUntil:'load'}); await sleep(1000);
+  await page.goto(seeded(o.biome||BIOME),{waitUntil:'load'}); await sleep(1000);
   await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
   await page.evaluate(QUIET);
   if(o.colossal){ await page.evaluate(`for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
@@ -265,4 +272,26 @@ await shotR('27_travel_card',`const k=KEAGAME.G.keas[0];
   KEAGAME.TRAVEL.in();
   ${PIN("k.x=0;k.z=0;k.y=0;k.vy=0;k.grounded=true;k.ry=2.2;k.stun=0;k.idleT=0;k.idleAct=null;"+
         "KEAGAME.G.time=12.0; if(KEAGAME.G.travel&&KEAGAME.G.travel.phase)KEAGAME.G.travel.t=KEAGAME.TRAVEL.K.in*0.5;")}`);
+/* ---------- THE CLUB SKI FIELD (TODO 39) ----------
+   THREE FIRST PINS, AND ALL THREE ARE LEFT FLAGGED, per the brief: nothing here has ever been
+   photographed, so there is nothing to drift from and every one of them is a judged frame. They are
+   shot in the ski field by naming it, which is the whole of the rig change above.
+   The bird is PINNED in all three (law 7 and law 12): two of them stand it on a structure, where
+   gravity and the roof logic would otherwise have it somewhere else by the time the shutter opens,
+   and the third stands it on the corduroy where the idle animation would turn it around. */
+const SKI={biome:'skifield'};
+// 28: the bottom station - engine shed, bull wheel, the queue pad, drifts banked against the shed.
+await shotR('28_skifield_base',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=4.0;k.z=24.0;k.y=2.2;k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(11.5,4.6,29.5, 4.0,2.0,23.0)}`,SKI);
+// 29: the day lodge from downhill - the deck, the racks, and the drift banked along the wall.
+// the deck floor put the bird behind its own railing at this distance, so it stands on the near
+// trestle TABLE instead - which is where a kea would be anyway, and reads against the green wall.
+await shotR('29_lodge_deck',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=-19.4;k.z=13.3;k.y=1.49;k.vy=0;k.grounded=true;k.ry=2.7;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-13.0,3.4,23.0, -21.5,1.8,13.0)}`,SKI);
+// 30: up the groomed band, with the tow line and its towers running away to the top station.
+await shotR('30_groomed_band',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=17.0;k.z=19.0;k.y=0.11;k.vy=0;k.grounded=true;k.ry=3.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(19.5,3.2,26.0, 15.0,1.2,-6.0)}`,SKI);
 console.log('CAPTURE COMPLETE');

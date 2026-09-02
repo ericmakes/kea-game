@@ -1764,9 +1764,14 @@ C.section('THE TOUR CHASSIS - the world is now a biome, and it is the only one r
   const B=X.BIOME;
   ok(!!B&&!!B.ALL,'there is a biome registry');
   ok(B.DEFAULT==='carpark','and the default is the world that already existed ('+B.DEFAULT+')');
-  ok(Object.keys(B.ALL).length===1&&!!B.ALL.carpark,
-     'exactly one biome is registered today, which is the honest state of the tour ('+
+  /* TODO 39 REGISTERED THE SECOND MAP, so the honest state of the tour is two - and the count is
+     asserted against the BROCHURE rather than against a number, because the thing that would be
+     wrong is a map with a pin and no builder or a builder with no pin. */
+  ok(Object.keys(B.ALL).length===2&&!!B.ALL.carpark&&!!B.ALL.skifield,
+     'two biomes are registered today, which is the honest state of the tour ('+
      Object.keys(B.ALL).join(', ')+')');
+  ok(Object.keys(B.ALL).every(id=>X.TOUR.TABLE.some(t=>t.id===id)),
+     'and every registered map has a pin on the brochure ('+Object.keys(B.ALL).join(', ')+')');
   ok(typeof B.ALL.carpark.build==='function','the carpark carries its builder');
   ok(B.ALL.carpark.label==='THE CARPARK','and a label to put on a map pin later ('+B.ALL.carpark.label+')');
 
@@ -1785,11 +1790,15 @@ C.section('THE TOUR CHASSIS - the world is now a biome, and it is the only one r
   /* the boot is WRAPPED because the failure mode here is a throw, not a wrong value - biomeOf
      returning undefined kills the battery on the next property access and takes every finding
      after it down too. A dead battery is a worse witness than a red one. */
-  let threw=null; try{ X.boot({biome:'skifield'}); }catch(e){ threw=e&&e.message||String(e); }
+  /* THE ID HERE MUST BE ONE NOTHING WILL EVER REGISTER. It used to be skifield, which was fine
+     while the ski field did not exist and wrong the morning it did - the test quietly became a test
+     that booting the ski field lands in the ski field. */
+  let threw=null; try{ X.boot({biome:'nowhere-at-all'}); }catch(e){ threw=e&&e.message||String(e); }
   ok(!threw,'an unregistered biome does not throw on the way in ('+(threw||'no throw')+')');
   ok(G.biome==='carpark','and it falls back to the default rather than nowhere ('+G.biome+')');
   ok(G.props.length===counts.props,'and the fallback is a real world, not an empty one ('+G.props.length+' props)');
-  ok(B.of('skifield')===B.ALL.carpark,'the resolver says the same thing on its own');
+  ok(B.of('nowhere-at-all')===B.ALL.carpark,'the resolver says the same thing on its own');
+  ok(B.of('skifield')===B.ALL.skifield,'while a map that IS registered resolves to itself');
   ok(B.of('carpark')===B.ALL.carpark&&B.of()===B.ALL.carpark,'and a missing id is the default too');
 
   // THE TODO 48 GUARANTEE LIVES IN THE DISPATCHER, ABOVE THE BIOME, so a biome author cannot forget
@@ -1823,6 +1832,10 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
   globalThis.localStorage={getItem:k=>_m.has(k)?_m.get(k):null,
                            setItem:(k,v)=>_m.set(k,String(v)),removeItem:k=>_m.delete(k)};
   const T=X.TOUR, S=X.STARS, B=X.BIOME;
+  /* THE STUB IS PIN 2 SINCE TODO 39, because pin 1 is built. STUB names the first pin on the paper
+     that has a price and no builder, which is what every unbuilt-map question below needs, and it
+     is the one this section is allowed to register and delete. */
+  const STUB=2;
   const grant=(area,kinds)=>{ const r=S.rec(area); for(const k of kinds)r[k]=true; return r; };
   try{
     // 1. THE TABLE IS THE TUNING SURFACE, so the things a tuner could get wrong are asserted.
@@ -1858,24 +1871,30 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
          'the carpark denominator is its own page count times three ('+m.pins[0].of+')');
       ok(m.pins[0].stamp===false,'and it is not stamped on a fresh run'); }
 
-    // 3. THE CURRENCY IS THE TOTAL, and it is the ledger the game already keeps.
-    const NEED2=T.TABLE[1].need;
-    grant(G.chapters[0],S.KINDS); grant(G.chapters[1],S.KINDS);
+    /* 3. THE CURRENCY IS THE TOTAL, and it is the ledger the game already keeps.
+       TODO 39 CHANGED WHAT THIS BLOCK CAN ASK, and for the better: the paid-for-and-unbuilt state
+       has moved one pin along the paper, so both states are now asserted against REAL rows of the
+       table - pin 1 open because a map was built behind it, pin 2 soon because none has been yet. */
+    const NEED2=T.TABLE[1].need, NEED3=T.TABLE[STUB].need;
+    for(let i=0;i<4;i++)grant(G.chapters[i],S.KINDS);
     { const m=T.model();
-      ok(m.stars===2*S.KINDS.length,'six stars granted on two pages count as six ('+m.stars+')');
+      ok(m.stars===4*S.KINDS.length,'twelve stars granted on four pages count as twelve ('+m.stars+')');
       ok(m.pins[0].stars===m.stars,'all of them belong to the map they were earned on');
       ok(NEED2<=m.stars,'which is what the second pin costs ('+NEED2+')');
       ok(m.pins[1].unlocked===true,'so the second pin is paid for');
-      ok(m.pins[1].state==='soon',
-         'and it says NOT BUILT YET rather than GO, because the map does not exist ('+m.pins[1].state+')');
-      ok(m.pins[2].state==='locked','while the third pin is still locked at '+m.pins[2].need); }
+      ok(m.pins[1].state==='open',
+         'and it says GO, because TODO 39 built the map behind it ('+m.pins[1].state+')');
+      ok(NEED3<=m.stars&&m.pins[STUB].unlocked===true,'the third pin is paid for too ('+NEED3+')');
+      ok(m.pins[STUB].state==='soon',
+         'and THAT one says NOT BUILT YET rather than GO, because its map does not exist ('+m.pins[STUB].state+')');
+      ok(m.pins[3].state==='locked','while the fourth pin is still locked at '+m.pins[3].need); }
 
     /* A PICK IS REFUSED FOR TWO DIFFERENT REASONS AND SAYS WHICH, because the brochure button and
        whatever piece 38 builds both need to tell the player something true. */
-    { const r1=T.pick(T.TABLE[2].id);
-      ok(r1.ok===false&&r1.why==='locked'&&r1.need===T.TABLE[2].need,
+    { const r1=T.pick(T.TABLE[3].id);
+      ok(r1.ok===false&&r1.why==='locked'&&r1.need===T.TABLE[3].need,
          'picking a locked map is refused as locked, with the price in the answer ('+JSON.stringify(r1)+')');
-      const r2=T.pick(T.TABLE[1].id);
+      const r2=T.pick(T.TABLE[STUB].id);
       ok(r2.ok===false&&r2.why==='not built yet',
          'picking a paid-for map that has no builder is refused as unbuilt ('+JSON.stringify(r2)+')');
       const r3=T.pick('nowhere');
@@ -1891,33 +1910,33 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
          blob.biomes.carpark.areas.length+')'); }
 
     // 4. THE MAP EXISTS NOW. Same table, same save, and the pin flips to GO.
-    B.define(T.TABLE[1].id,{label:T.TABLE[1].name,build:B.ALL.carpark.build});
+    B.define(T.TABLE[STUB].id,{label:T.TABLE[STUB].name,build:B.ALL.carpark.build});
     { const m=T.model();
-      ok(m.pins[1].built===true&&m.pins[1].state==='open',
-         'registering a builder turns the paid-for pin into GO ('+m.pins[1].state+')');
-      const r=T.pick(T.TABLE[1].id);
+      ok(m.pins[STUB].built===true&&m.pins[STUB].state==='open',
+         'registering a builder turns the paid-for pin into GO ('+m.pins[STUB].state+')');
+      const r=T.pick(T.TABLE[STUB].id);
       ok(r.ok===true,'and the pick is accepted ('+JSON.stringify(r)+')');
-      ok(_m.get(T.KEY)===T.TABLE[1].id,'and recorded where boot will find it ('+_m.get(T.KEY)+')');
-      ok(X.SAVE.picked()===T.TABLE[1].id,'which is exactly what SAVE.picked reads back'); }
+      ok(_m.get(T.KEY)===T.TABLE[STUB].id,'and recorded where boot will find it ('+_m.get(T.KEY)+')');
+      ok(X.SAVE.picked()===T.TABLE[STUB].id,'which is exactly what SAVE.picked reads back'); }
 
     // 5. BOOT INTO THE BIOME, AND BACK, WITH THE SLOTS KEEPING THEIR OWN STARS.
     //    Both maps have the SAME page names here, which is the collision v2 could not survive.
-    X.boot({biome:T.TABLE[1].id}); X.startGame(1); tick(8); park();
-    ok(G.biome===T.TABLE[1].id,'booting into the second map lands there ('+G.biome+')');
+    X.boot({biome:T.TABLE[STUB].id}); X.startGame(1); tick(8); park();
+    ok(G.biome===T.TABLE[STUB].id,'booting into the stub map lands there ('+G.biome+')');
     { const m=T.model();
-      ok(m.here===T.TABLE[1].id&&m.pins[1].state==='current','and the brochure follows you ('+m.here+')');
-      ok(m.pins[1].stars===0,'the new map starts with no stars of its own ('+m.pins[1].stars+')');
-      ok(m.pins[0].stars===2*S.KINDS.length,
-         'while the carpark still has all six, read off the blob rather than the world ('+m.pins[0].stars+')');
-      ok(m.stars===2*S.KINDS.length,'so the career total is unchanged by travelling ('+m.stars+')');
+      ok(m.here===T.TABLE[STUB].id&&m.pins[STUB].state==='current','and the brochure follows you ('+m.here+')');
+      ok(m.pins[STUB].stars===0,'the new map starts with no stars of its own ('+m.pins[STUB].stars+')');
+      ok(m.pins[0].stars===4*S.KINDS.length,
+         'while the carpark still has all twelve, read off the blob rather than the world ('+m.pins[0].stars+')');
+      ok(m.stars===4*S.KINDS.length,'so the career total is unchanged by travelling ('+m.stars+')');
       ok(Object.keys(G.stars).length===0,
          'and the live ledger is empty, because the slot that hydrated was this map own ('+
          Object.keys(G.stars).length+' pages)'); }
     grant(G.chapters[0],['style']); X.SAVE.write();
     { const m=T.model();
-      ok(m.pins[1].stars===1&&m.pins[0].stars===2*S.KINDS.length,
-         'a star earned here lands here ('+m.pins[1].stars+' vs carpark '+m.pins[0].stars+')');
-      ok(m.stars===2*S.KINDS.length+1,'and the total is the sum of the maps ('+m.stars+')'); }
+      ok(m.pins[STUB].stars===1&&m.pins[0].stars===4*S.KINDS.length,
+         'a star earned here lands here ('+m.pins[STUB].stars+' vs carpark '+m.pins[0].stars+')');
+      ok(m.stars===4*S.KINDS.length+1,'and the total is the sum of the maps ('+m.stars+')'); }
     /* READ THROUGH AN ACCESSOR, and this block is the reason the rule exists. Written the obvious
        way - blob.biomes.carpark.stars - it THREW under the sabotage that made every write start the
        blob fresh, and a battery that dies takes every finding after it down with it: that sabotage
@@ -1925,10 +1944,10 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
        reading state that only exists when the code works. Five pieces old and it still caught me. */
     { const blob=JSON.parse(_m.get('keaSaveV1_n'));
       const stars=id=>((blob.biomes||{})[id]||{}).stars||{};
-      const a=stars('carpark'), b=stars(T.TABLE[1].id);
+      const a=stars('carpark'), b=stars(T.TABLE[STUB].id);
       ok(Object.keys(blob.biomes||{}).length===2,
          'both maps are in the blob ('+Object.keys(blob.biomes||{}).join(',')+')');
-      ok(Object.keys(a).length===2&&Object.keys(b).length===1,
+      ok(Object.keys(a).length===4&&Object.keys(b).length===1,
          'each holding its own record ('+Object.keys(a).length+' pages of carpark vs '+Object.keys(b).length+')');
       ok(!!Object.keys(a)[0]&&Object.keys(a)[0]===Object.keys(b)[0],
          'and they key their pages by the SAME name, which is the collision the slots exist for ('+
@@ -1937,18 +1956,18 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
     X.boot({biome:'carpark'}); X.startGame(1); tick(8); park();
     ok(G.biome==='carpark','and back again');
     { const m=T.model();
-      ok(m.pins[0].stars===2*S.KINDS.length,'the carpark stars are still there after the round trip ('+m.pins[0].stars+')');
+      ok(m.pins[0].stars===4*S.KINDS.length,'the carpark stars are still there after the round trip ('+m.pins[0].stars+')');
       ok(S.rec(G.chapters[0]).style===true&&S.rec(G.chapters[1]).clean===true,
          'in the live ledger, off the blob, page by page');
-      ok(m.pins[1].stars===1,'and the other map kept its one ('+m.pins[1].stars+')');
-      ok(m.stars===2*S.KINDS.length+1,'total unchanged ('+m.stars+')'); }
+      ok(m.pins[STUB].stars===1,'and the other map kept its one ('+m.pins[STUB].stars+')');
+      ok(m.stars===4*S.KINDS.length+1,'total unchanged ('+m.stars+')'); }
 
     /* AND A PLAIN BOOT FOLLOWS THE PICK, which is the whole mechanism the brochure GO button uses
        today - it records and reloads, and piece 38 replaces the reload with a flyover. This caught
        itself while the section was being written: the migration block below booted plainly, landed
        in the picked map rather than the carpark, and read a slot that had never been written. That
        is the feature working, and it is now an assertion instead of a surprise. */
-    X.boot(); ok(G.biome===T.TABLE[1].id,'a plain boot follows the recorded pick ('+G.biome+')');
+    X.boot(); ok(G.biome===T.TABLE[STUB].id,'a plain boot follows the recorded pick ('+G.biome+')');
     X.SAVE.pick('carpark'); X.boot();
     ok(G.biome==='carpark','and picking the carpark brings you back to it ('+G.biome+')');
 
@@ -1973,7 +1992,7 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
       ok(S.rec(G.chapters[0]).cleared===true&&S.rec(G.chapters[0]).style===true,
          'a v2 save hydrates through the migration ('+S.pips(G.chapters[0])+')');
       ok(G.chaosPeak>=1234,'and the career peak comes with it ('+G.chaosPeak+')');
-      ok(T.model().pins[1].stars===0,'while the second map is back to nothing, because v2 never had one');
+      ok(T.model().pins[STUB].stars===0,'while the other map is back to nothing, because v2 never had one');
       // a v1 blob has no marker at all
       const v1=X.SAVE.migrate({done:['wiper'],chapIdx:0});
       ok(v1.v===3&&v1.biomes.carpark.from==='v1','a blob with no marker at all migrates as v1 ('+v1.biomes.carpark.from+')');
@@ -1990,11 +2009,15 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
     _m.set(T.KEY,'nowhere-at-all');
     ok(X.SAVE.picked()===null,'a pick naming a map that does not exist reads as no pick ('+X.SAVE.picked()+')');
   } finally {
-    delete B.ALL[T.TABLE[1].id];       // the registry goes back to what the chassis section asserts
+    delete B.ALL[T.TABLE[STUB].id];    // the registry goes back to what the chassis section asserts
     globalThis.localStorage=realLS;
     X.SAVE.wipe&&X.SAVE.wipe(); X.boot(); X.startGame(1); tick(6);
   }
-  ok(Object.keys(X.BIOME.ALL).length===1,'the stub biome is out of the registry again ('+
+  /* AND THE REAL MAPS SURVIVE THE SECTION. This mattered the day TODO 39 landed: the finally used to
+     delete pin 1 by index, which was the stub while the ski field was hypothetical and would have
+     quietly deleted the actual ski field out of the registry for every section after this one. */
+  ok(Object.keys(X.BIOME.ALL).length===2&&!!X.BIOME.ALL.skifield,
+     'the stub biome is out of the registry again and the built ones are not ('+
      Object.keys(X.BIOME.ALL).join(',')+')');
 }
 
@@ -2079,12 +2102,13 @@ C.section('TRAVEL - leaving a map, arriving at one, and a skip that knows what w
       const wasIn=tv().phase;
       X.startGame(1); tick(2);
       ok(wasIn==='in'&&tv().phase!=='in','so restarting does not play it again ('+tv().phase+')');
-      // and an arrival armed for a DIFFERENT map is not this map beat
-      B.define('skifield',{label:'THE CLUB SKI FIELD',build:B.ALL.carpark.build});
+      /* AND AN ARRIVAL ARMED FOR A DIFFERENT MAP IS NOT THIS MAP BEAT. This used to register a
+         stub called skifield and delete it again; since TODO 39 the ski field is a real map, so the
+         other end of the journey is the actual other end and nothing here touches the registry. */
       X.SAVE.armArrival('skifield',{mode:1});
       X.boot({biome:'carpark'}); X.startGame(1); tick(2);
       ok(tv().phase!=='in','an arrival armed for another map does not fire on this one ('+tv().phase+')');
-      delete B.ALL.skifield; _m.delete(T.ARRIVEKEY); }
+      _m.delete(T.ARRIVEKEY); }
 
     /* 4. THE SKIP, WHICH IS THE PART THAT COST A SESSION TO LEARN. The beat is opened WITH a travel
        key already down - which is what actually happens, because the button or the key that opened
@@ -2170,12 +2194,13 @@ C.section('TRAVEL - leaving a map, arriving at one, and a skip that knows what w
       ok(!threw,'and nothing throws for the want of one ('+(threw||'no throw')+')');
       delete B.ALL.anchorless; }
   } finally {
-    delete B.ALL.skifield; delete B.ALL.anchorless;
+    delete B.ALL.anchorless;           // and NOT the ski field, which is a map and not a stub
     globalThis.localStorage=realLS;
     X.KEYS.clear(); G.travel=null;
     X.SAVE.wipe&&X.SAVE.wipe(); X.boot(); X.startGame(1); tick(6);
   }
-  ok(Object.keys(X.BIOME.ALL).length===1,'the travel section leaves one biome registered ('+
+  ok(Object.keys(X.BIOME.ALL).length===2&&!!X.BIOME.ALL.skifield,
+     'the travel section leaves the two real biomes registered and no stubs ('+
      Object.keys(X.BIOME.ALL).join(',')+')');
   ok(!X.TRAVEL.busy(),'and no beat running');
 }
@@ -2230,7 +2255,7 @@ C.section('A HINT BELONGS TO THE MAP THAT CAN ANSWER IT - and startGame no longe
     ok(!!after&&after.free===true&&typeof after.text==='function',
        'still free and still resolved when read, so piece 52 and piece 55 are untouched by the move');
   } finally { delete B.ALL.bareground; X.boot(); X.startGame(1); tick(6); }
-  ok(Object.keys(X.BIOME.ALL).length===1,'the bare-ground biome is out of the registry again ('+
+  ok(Object.keys(X.BIOME.ALL).length===2,'the bare-ground biome is out of the registry again ('+
      Object.keys(X.BIOME.ALL).join(',')+')');
 }
 
@@ -3025,6 +3050,217 @@ C.section('THE VERSUS HUD - two scores, two roles and a clock, down to 320px');
     ok(VH.state(1280).over===true,'a finished match reports itself over');
     X.startGame(1); tick(4);
     ok(VH.state(1280).on===false,'and a fresh solo run draws nothing at all'); }
+}
+
+C.section('THE CLUB SKI FIELD - the second map boots, and it is a map and not a stub');
+/* TODO 39, and the first thing to say is what it is NOT: the GRADUATION is not here. Moving the
+   carpark ski corner and its five missions up the mountain shifts every seeded draw after it and
+   therefore re-pins all 25 baselines, and it takes five missions and a star page out of a live save.
+   That is a judged call. What is here is purely additive - a new builder, a new registration, and
+   three things that were globals pretending to be constants for as long as there was one map.
+   THREE OWNERS, NOT THREE GUARDS, which is TODO 58 applied one layer up each time:
+     the NEST SITE, because buildNest reads G.nestPos and the ski field setting its own would
+       otherwise have moved the carpark nest up the hill on the next build,
+     the SNOW ENVELOPE, because SNOWFIELD is the band the CARPARK draws patches from,
+     and the CAST, which is the one that was a live throw: startGame pushed four humans with carpark
+       coordinates in them and read G.ladder - set only by buildHut - with no guard at all. The
+       batteries never saw it because an earlier carpark boot had always left G.ladder lying about.
+       The section below deletes it and proves both halves.
+   AND IT IS ALL READ HEADLESS, drifts included, which the carpark patches are not: those live inside
+   a !HEADLESS branch and can only be trusted by looking at them. */
+{
+  const B=X.BIOME, S=X.SKI, T=X.TOUR;
+  const ski=()=>B.ALL.skifield||{};
+  const drift=i=>(G.snow||[])[i]||{};
+  const col=id=>G.colliders.find(c=>c.kind==='box'&&Math.abs(c.x-id.x)<0.01&&Math.abs(c.z-id.z)<0.01)||{};
+  try{
+    // 1. THE REGISTRATION IS A DECLARATION, and every part of it is something a map cannot do without.
+    ok(typeof ski().build==='function','the ski field carries its builder');
+    ok(typeof ski().cast==='function','and its cast, so nobody elses furniture arrives with it');
+    ok(!!ski().anchor,'and an anchor to establish it from');
+    ok(!!ski().snow&&ski().snow===S.SNOW,'and the snow envelope it draws its drifts inside');
+    ok(ski().label===T.TABLE[1].name,'with the label the brochure already promised ('+ski().label+')');
+
+    // 2. IT BOOTS, IT STARTS, AND IT IS REALLY THAT MAP.
+    let threw=null;
+    try{ X.boot({biome:'skifield'}); X.startGame(1); tick(8); }catch(e){ threw=e&&e.message||String(e); }
+    ok(!threw,'the ski field boots and starts a run without throwing ('+(threw||'no throw')+')');
+    ok(G.biome==='skifield','and it is that map rather than a fallback ('+G.biome+')');
+
+    /* 3. THE CAST. Nobody is on the hill yet and the registry says so on purpose - the club field
+       crowd arrive with the missions in TODO 40. What matters here is that the carpark four do NOT
+       arrive, because every one of them carries carpark coordinates. */
+    ok(G.humans.length===0,'nobody is on the hill, because this map declares nobody ('+
+       G.humans.map(h=>h.key).join(',')+')');
+
+    /* AND THE THROW THAT USED TO BE THERE IS STILL A THROW FOR THE CODE THAT ASKED FOR IT. Give a
+       map with no hut the CARPARK cast and startGame dies on G.ladder, exactly as it did in every
+       biome without a hut before this piece. The ski field is safe because it owns its cast, not
+       because anything anywhere got a guard. */
+    { B.define('hutless',{label:'HUTLESS',build:()=>{},cast:B.ALL.carpark.cast});
+      delete G.ladder;
+      let lt=null;
+      try{ X.boot({biome:'hutless'}); X.startGame(1); tick(2); }catch(e){ lt=e&&e.message||String(e); }
+      ok(!!lt,'the carpark cast in a map with no hut still dies for the want of a ladder ('+(lt||'no throw')+')');
+      delete B.ALL.hutless; }
+    { delete G.ladder;
+      let st=null;
+      try{ X.boot({biome:'skifield'}); X.startGame(1); tick(8); }catch(e){ st=e&&e.message||String(e); }
+      ok(!st,'while the ski field boots with no ladder in the world at all ('+(st||'no throw')+')');
+      ok(G.ladder===undefined,'and it never invented one ('+String(G.ladder)+')'); }
+
+    // 4. THE NEST IS THIS MAP NEST, and the carpark one is where it always was afterwards.
+    ok(!!G.nestPos&&G.nestPos.x===S.NEST.x&&G.nestPos.z===S.NEST.z,
+       'the nest site is the one the ski field declares ('+JSON.stringify(G.nestPos)+')');
+    ok(!!G.nestG&&Math.abs(G.nestG.position.x-S.NEST.x)<0.01&&Math.abs(G.nestG.position.z-S.NEST.z)<0.01,
+       'and the nest was actually built there ('+(G.nestG?G.nestG.position.x+','+G.nestG.position.z:'none')+')');
+
+    /* 4b. NO ROAD, NO TRAFFIC. This is what a soak test found on the first build of this map: the
+       lane numbers were the carpark road written into spawnTraffic, and updateTraffic runs whenever
+       a run does, so thirty seconds up the mountain put seven hatchbacks across the snow at z 34.
+       The lanes are a biome declaration now, and this drives the timer rather than waiting on it -
+       if a car can be spawned here at all, it is a car in the wrong country. */
+    { ok(X.TRAFFIC.of()===null,'the ski field declares no road ('+JSON.stringify(X.TRAFFIC.of())+')');
+      ok(X.TRAFFIC.spawn(1)===null&&X.TRAFFIC.spawn(-1)===null,'so the spawner refuses both directions outright');
+      G.trafT.a=0; G.trafT.b=0; tick(120);
+      ok(G.cars.length===0,'and two seconds of the traffic timer puts nothing on the hill ('+
+         G.cars.map(c=>c.x.toFixed(0)+','+c.z.toFixed(1)).join(' ')+')'); }
+
+    /* 5. THE DIORAMA IS HELD TO ITS OWN DECLARATION, which is the only way a table of coordinates
+       cannot drift from the world it describes - law 10, and the same contract the carpark anchor
+       is under. */
+    ok(S.TOW.top<S.TOW.base,'the tow runs uphill, which is the direction the map is built around ('+
+       S.TOW.top+' above '+S.TOW.base+')');
+    ok(S.TOW.towers.every(z=>z<S.TOW.base&&z>S.TOW.top),'and every tower stands between its two stations ('+
+       S.TOW.towers.join(',')+')');
+    { let desc=true; for(let i=1;i<S.TOW.towers.length;i++)if(S.TOW.towers[i]>=S.TOW.towers[i-1])desc=false;
+      ok(desc,'in order up the hill rather than in a heap'); }
+    ok(!!G.towWheel&&Math.abs(G.towWheel.position.x-S.TOW.x)<0.01&&Math.abs(G.towWheel.position.z-(S.TOW.base-2.0))<0.01,
+       'the bull wheel is at the bottom station ('+(G.towWheel?G.towWheel.position.x+','+G.towWheel.position.z:'none')+')');
+    ok(!!G.towWheel&&G.towWheel.position.y>2,'up where a bird has to fly to it ('+(G.towWheel?G.towWheel.position.y:0)+')');
+    ok([S.PISTE.x0,S.PISTE.x1,S.PISTE.z0,S.PISTE.z1].every(v=>Math.abs(v)<=52),
+       'the groomed band lies inside the play clamp, so the whole of it can be walked ('+
+       [S.PISTE.x0,S.PISTE.x1,S.PISTE.z0,S.PISTE.z1].join(',')+')');
+    { const c=col({x:S.LODGE.x,z:S.LODGE.z});
+      ok(c.solid===true&&Math.abs(c.w-S.LODGE.w/2)<0.01&&Math.abs(c.d-S.LODGE.d/2)<0.01,
+         'the lodge is a solid box the size the table says ('+c.w+' by '+c.d+')');
+      ok(Math.abs((c.top||0)-(S.LODGE.h+0.4))<0.01,'standing on its piles ('+c.top+')'); }
+    { const dz=S.LODGE.z+S.LODGE.d/2+S.LODGE.deck/2;
+      ok(Math.abs(X.groundHeightAt(S.LODGE.x,dz,0.8)-0.71)<0.01,
+         'the deck is somewhere a kea can stand ('+X.groundHeightAt(S.LODGE.x,dz,0.8)+')');
+      ok(X.groundHeightAt(S.LODGE.x,S.LODGE.z,4.4)>S.LODGE.h,
+         'and so is the lodge roof, because a kea will ('+X.groundHeightAt(S.LODGE.x,S.LODGE.z,4.4)+')'); }
+
+    /* 6. THE GEAR ON THE RACKS, AND NOT ONE MISSION ID ON ANY OF IT. The missions are TODO 40; a
+       prop up here that answered a CARPARK mission would be the lie TODO 55 was sent to fix. The
+       ski boot is called a SKI BOOT for the same reason - a prop NAME is a detector in this engine,
+       and anything called boot scores the carpark bonus the moment it is carried far enough. */
+    { const n=nm=>G.props.filter(p=>p.name===nm).length;
+      ok(n('ski')===5&&n('ski pole')===3&&n('ski goggles')===2&&n('ski boot')===1&&n('rubbish')===1,
+         'the racks hold five skis, three poles, two goggles, a boot and a bit of litter ('+
+         G.props.map(p=>p.name).join(', ')+')');
+      ok(G.props.length===12,'twelve props and nothing else ('+G.props.length+')');
+      ok(G.props.every(p=>!p.mission&&!p.missionFar&&!p.missionProg),
+         'and not one of them claims a mission ('+G.props.filter(p=>p.mission||p.missionFar||p.missionProg)
+         .map(p=>p.name).join(',')+')');
+      ok(G.props.every(p=>p.name!=='boot'),'nothing up here is called boot, which is a detector and not a name');
+      ok(G.props.every(p=>!p.food&&!p.shiny),'nothing is food or shiny, so no counted economy is shadowed');
+      ok(G.inter.length===G.props.length&&G.inter.every(it=>it.kind==='prop'),
+         'every interactable on the map is one of those props ('+G.inter.length+')'); }
+
+    /* 7. THE DRIFTS, AND THE UNBURY VERDICT AS LAW. Every drift up here is DELIBERATELY aimed at a
+       wall, so the resolver does the work it was written for. The bound is read off how a drift is
+       CONSTRUCTED rather than off a number one of them produced - law 15. */
+    { const env=S.SNOW;
+      ok(G.snow.length===16,'sixteen drifts are registered, headless included ('+G.snow.length+')');
+      const buried=G.snow.filter(s=>!!X.snowBlocked(s.x,s.z,s.r,env));
+      ok(buried.length===0,'not one of their hard discs sits on a structure, which is the unbury verdict ('+
+         buried.length+' buried)');
+      const near=s=>G.colliders.some(c=>c.kind==='box'&&c.top>0.2&&Math.min(c.w,c.d)>=X.SNOWBULK&&
+        Math.hypot(Math.max(0,Math.abs(s.x-c.x)-c.w),Math.max(0,Math.abs(s.z-c.z)-c.d))<s.r+1.2);
+      const touching=G.snow.filter(near);
+      ok(touching.length>=8,'and the ones aimed at a building are still banked against it ('+
+         touching.length+' of '+G.snow.length+' touching)');
+      ok(touching.every(s=>s.slid>0&&s.slid<=3.3),
+         'each having slid clear by a step or two rather than to somewhere else entirely ('+
+         touching.map(s=>s.slid.toFixed(1)).join(',')+')');
+      /* A POLE IS BANKED AGAINST, NOT SLID OFF - SNOWBULK, and the six tower drifts are the case it
+         was written for. Nothing moved them, because nothing up there is broad enough to be a
+         structure. */
+      const towerD=G.snow.filter(s=>s.at==='tower');
+      ok(towerD.length===S.TOW.towers.length&&towerD.every(s=>s.slid===0),
+         'and the drift at the foot of every tower never moved at all, because a pole is banked against ('+
+         towerD.map(s=>s.slid).join(',')+')');
+      ok(G.snow.every(s=>!s.stuck),'no drift ran out of places to go ('+G.snow.filter(s=>s.stuck).length+' stuck)'); }
+
+    /* 8. THE ENVELOPE IS THE ONLY THING ABOUT THE VERDICT THAT MOVED, and this is the assertion that
+       says so: the same point is off the map for the carpark band and on it for a ski field. */
+    { const off=X.snowBlocked(0,0,2), on=X.snowBlocked(0,0,2,S.SNOW);
+      ok(!!off&&off.offmap===true,'the middle of the map is outside the CARPARK snow band ('+JSON.stringify(off)+')');
+      ok(on===null||!on.offmap,'and inside the ski field one, because up here it is snow edge to edge'); }
+
+    /* 9. THE SNOWLINE IS AT THE BOTTOM OF THE MAP, and this is the sign of the plane rotation read
+       back off the geometry rather than trusted to a comment. The plane is built in XY and laid down
+       by the minus-90 rotation, so local y is world MINUS z: get it backwards and there is bush above
+       the peaks. */
+    { const gd=G.skiGround, pp=gd&&gd.geometry.attributes.position, cc=gd&&gd.geometry.attributes.color;
+      const at=(xw,zw)=>{ if(!pp)return null; let best=-1,bi=0;
+        for(let i=0;i<pp.count;i++){ const d=Math.hypot(pp.getX(i)-xw,-pp.getY(i)-zw); if(best<0||d<best){best=d;bi=i;} }
+        return {r:cc.getX(bi),g:cc.getY(bi),b:cc.getZ(bi)}; };
+      const bot=at(0,45), top=at(0,-45);
+      ok(!!bot&&!!top,'the ground carries vertex colours to read');
+      ok(!!top&&top.b>0.9,'the top of the map is snow ('+(top?top.b.toFixed(3):'none')+' blue)');
+      ok(!!bot&&!!top&&bot.b<top.b-0.3,'and the bottom of it is tussock, which is where a snowline goes ('+
+         (bot?bot.b.toFixed(3):'none')+' vs '+(top?top.b.toFixed(3):'none')+')'); }
+
+    /* 10. THE ANCHOR, UNDER THE SAME CONTRACT THE CARPARK ONE IS. A table cannot drift from the
+       world if the world is what it is asserted against. */
+    { const a=X.TRAVEL.anchor('skifield');
+      ok(!!a&&['x','y','z','lx','ly','lz'].every(k=>typeof a[k]==='number'),'the ski field anchor is six numbers');
+      let sx=0,sz=0; for(const pr of G.props){ sx+=pr.x; sz+=pr.z; }
+      const cx=sx/G.props.length, cz=sz/G.props.length;
+      ok(!!a&&Math.hypot(a.lx-cx,a.lz-cz)<24,'looking at the map the builder actually built ('+
+         (a?Math.hypot(a.lx-cx,a.lz-cz).toFixed(1):'none')+' from '+cx.toFixed(1)+','+cz.toFixed(1)+')');
+      ok(!!a&&a.y>X.groundHeightAt(a.x,a.z,a.y)+6,'from well above the ground at its own feet ('+(a?a.y:0)+')');
+      ok(!!a&&a.y>a.ly,'looking down at the map rather than up out of it'); }
+
+    /* 11. ONE BUILD, ONE WORLD - INCLUDING THE SNOW. G.snow was the last thing a build put on the
+       board that the dispatcher never took back off it: invisible under node, where the carpark
+       patches are not built at all, and two maps worth of drifts in the browser. TODO 48 for snow. */
+    { const one=G.snow.length;
+      X.boot({biome:'carpark'});
+      ok(G.snow.length===0,'the carpark takes the ski field drifts off the board on its way in ('+G.snow.length+')');
+      X.boot({biome:'skifield'});
+      ok(G.snow.length===one,'and coming back leaves one map worth of them rather than two ('+G.snow.length+')'); }
+
+    // 12. AND THE CARPARK IS EXACTLY WHERE IT WAS LEFT, which is the whole additive claim.
+    X.boot({biome:'carpark'});
+    ok(G.props.length===BOOTCOUNTS.props,'the carpark still builds its own props after a trip up the hill ('+
+       G.props.length+' vs '+BOOTCOUNTS.props+')');
+    X.startGame(1); tick(8);
+    ok(G.props.length===BOOTCOUNTS.props+1,
+       'and its cast still puts the sleeping tramper beanie out on top of them ('+G.props.length+')');
+    ok((G.hints||[]).length===9,'and its nine hints ('+(G.hints||[]).length+')');
+    ok(G.nestPos.x===-4&&G.nestPos.z===-33,'its nest is back at the carpark site ('+JSON.stringify(G.nestPos)+')');
+    ok(!!G.nestG&&Math.abs(G.nestG.position.x+4)<0.01&&Math.abs(G.nestG.position.z+33)<0.01,
+       'and built there, which is what would have gone wrong if the ski field had kept the global ('+
+       (G.nestG?G.nestG.position.x+','+G.nestG.position.z:'none')+')');
+    ok(G.humans.map(h=>h.key).join(',')==='trish,tom,dave,rex','the carpark four are back on the job ('+
+       G.humans.map(h=>h.key).join(',')+')');
+    ok(!!G.ladder,'and Dave has his ladder again ('+JSON.stringify(G.ladder)+')');
+    { const RD=X.TRAFFIC.of();
+      ok(!!RD&&RD.up===32.2&&RD.down===35.8,'the carpark still declares the road it has always had ('+
+         JSON.stringify(RD)+')');
+      G.trafT.a=0; G.trafT.b=0; tick(6);
+      const traf=G.cars.filter(c=>c.traffic);
+      ok(traf.length>0&&traf.every(c=>Math.abs(c.z-34)<2.5),
+         'and its morning traffic still arrives on it ('+traf.map(c=>c.z.toFixed(1)).join(',')+')'); }
+  } finally {
+    delete B.ALL.hutless;
+    X.boot(); X.startGame(1); tick(6);
+  }
+  ok(Object.keys(X.BIOME.ALL).length===2,'the section leaves the two real maps registered ('+
+     Object.keys(X.BIOME.ALL).join(',')+')');
 }
 
 C.section('PERF FLOOR');

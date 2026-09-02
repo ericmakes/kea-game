@@ -2465,3 +2465,107 @@ SESSION.lock released.
 - WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md, then the three decisions in it - 17 as a
   photograph, 07 as a drift (TODO 60), and the 39 graduation re-pin. Then FLAKES 14 before writing a
   single assertion.
+
+## SESSION 11 — 2026-09-02, Eric order: 39 first (additive only, no graduation), then the numbered queue
+
+### PIECE 39 — skifield-biome — CERTIFIED aff1fa389a8e8ed138299474e77dc028
+Verdict: green. THE SECOND MAP EXISTS AND A PLAYER CAN WALK INTO IT. Additive only, per the order:
+the graduation is not here and nothing in the carpark moved - 25 pinned vantages, 0 flagged.
+- THE BROCHURE SAYS GO AND IT WORKS END TO END IN A BROWSER. journey.mjs no longer injects a
+  stand-in, because there is a real ski field to drive into: map opens mid-run and pauses the world,
+  GO records the pick and runs the OUT beat, the load lands in the SKI FIELD with the run going and
+  the arrival card reading THE CLUB SKI FIELD, and one fresh press of SPACE skips it. 37 and 38 have
+  been unreachable for two sessions and are reachable as of this commit.
+- THE DIORAMA: a rope tow up the fall line (engine shed, bull wheel, six towers with sheaves, a
+  nutcracker on every second span, an A-frame and an old concrete anchor at the top), a day lodge on
+  piles with a gable roof, three windows, a chimney and the deck everybody eats on (railing, two
+  trestle tables, benches, steps), three ski racks with five skis, three poles, two goggles, a ski
+  boot and somebody litter, a groomed band of corduroy down the middle wanded on both edges, sixteen
+  drifts banked against the structures, a nest on the rock at the bottom, and the carpark own
+  mountain construction with ski field radii and a snowline dropped to where a club field sits.
+- FLAT WHERE THE BIRD WALKS, and that is a physics fact rather than a style choice. groundHeightAt
+  reads COLLIDERS and returns zero everywhere else, so a terrain with a real gradient would have the
+  bird walking above the snow or under it. The country rises outside the play clamp the way the
+  carpark does, and the fall line is told by the corduroy, the tow and the drifts.
+- THREE OWNERS, NOT THREE GUARDS - TODO 58 applied one layer up, three times:
+  THE CAST was a live throw and the sharpest of the three. startGame pushed four humans by hand with
+  carpark coordinates in them, and read G.ladder - set only by buildHut - with NO guard. A fresh load
+  into a map without a hut died before the run started, in every mode. It never showed in a battery
+  because an earlier carpark boot always left G.ladder lying about, which is exactly why the section
+  deletes it and proves both halves: the carpark cast in a hutless map still dies for want of a
+  ladder, and the ski field boots with no ladder in the world at all. The cast is declared beside the
+  builder now; the ski field declares NOBODY, on purpose, until 40.
+  THE NEST SITE was a G default that only looked like a constant. buildNest is called off G.nestPos,
+  so the day the ski field set its own, the next carpark build would have put the carpark nest up the
+  mountain. Both maps declare their own; the carpark value is the one it has always had.
+  THE SNOW ENVELOPE is now the only parameter of the unbury verdict. SNOWFIELD is the band the
+  CARPARK draws patches from; up here it is snow edge to edge. What counts as a structure and where a
+  blocked disc slides to is unchanged law on every map.
+- AND A FOURTH THAT A SOAK TEST FOUND, NOT THE BRIEF: THE ROAD. spawnTraffic had the carpark lane
+  numbers written into it and updateTraffic runs whenever a run does, so thirty seconds up the
+  mountain put SEVEN HATCHBACKS across the snow at z 34, driving through a road that is not there.
+  The lanes are a biome declaration now, and a map with no road gets no traffic. Found by running
+  1800 frames in both modes and printing what was on the board - which is a test no assertion in the
+  file would have thought to write.
+- ONE GUARD WENT BACK OUT AGAIN for the reason piece 25 documented. The first version also returned
+  early from updateTraffic, and no sabotage could break it: spawnTraffic refuses a roadless map
+  anyway, so the condition was a strict subset that could never change an answer. One place, one
+  truth, and a test that can reach it.
+- SNOW JOINED THE WORLD REGISTRIES, the last thing a build put on the board that the dispatcher never
+  took back off. Invisible under node, where the carpark patches are not built at all, and two maps
+  worth of drifts in the browser. Same shape as hints in 58.
+- THE DRIFTS ARE INSPECTABLE, unlike the carpark patches, which live inside a !HEADLESS branch and
+  can only be trusted by looking at them. Records are built headless, meshes are not, and every
+  drift says what it was AIMED at - which is not decoration: two of the candidate coordinates
+  collide, and without the tag the only way to tell a tower drift from a gable one is to re-derive
+  the builder arithmetic in the test. Sixteen drifts, none buried, ten still banked against a
+  building having slid one ladder step, and the six at the tower feet never moved at all because
+  SNOWBULK says a pole is banked against and not slid off.
+- ELEVEN SABOTAGES, ALL CAUGHT, no stack traces and not one zero-finding result: the borrowed cast
+  (4 findings), the nest global (2), snowSpot dropping the envelope (4), unresolved drifts (2), snow
+  out of the registries (4), the snowline sign flipped (2), a ski claiming s_ski (1), the anchor
+  looking elsewhere (1), the wheel left off the hill (1), every map inheriting the road (4), and the
+  spawner not asking which map it is in (3). Law 14 held: the one sabotage that produced a throw
+  reported it as an assertion message rather than dying.
+- A PROP NAME IS A DETECTOR IN THIS ENGINE, which is why the ski boot is called a SKI BOOT. Anything
+  named boot scores the carpark ONE BOOT, NEVER RECOVERED bonus the moment it is carried 22 units
+  from home, and two of them complete b_boot2. Nothing up here carries a mission id at all.
+- THE BATTERY SECTIONS THAT HAD TO CHANGE, and why none of it is a weakened assertion: three
+  sections had encoded THERE IS ONE MAP. The chassis asserted exactly one biome (now two, and every
+  registered map is held to having a pin on the brochure) and used skifield as its unregistered id,
+  which would have quietly become a test that booting the ski field lands in the ski field. The tour
+  section moved its unbuilt-pin questions one pin along the paper - and its finally deleted TABLE[1]
+  by index, which as of this piece would have DELETED THE REAL SKI FIELD out of the registry for
+  every section after it. The travel section registered a skifield stub over the top of the real one;
+  it drives into the real map now.
+- CAPTURE: full pass, 30 shots. 25 compared, 0 FLAGGED, worst 0.9826 (17, which session 10 left
+  deliberately un-repinned). boxdiff reports the same two known subjects it did last night - 07 at
+  0.9580 (TODO 60, yours to judge) and 17 at 0.6389 - and skips the three new vantages as having no
+  pinned pair. NOTHING RE-PINNED, and the three new vantages are FIRST PINS LEFT FLAGGED per the
+  brief.
+- THE RIG SHOOTS A NAMED MAP PER SHOT now, one seeded temp copy per biome. BIOME is still the
+  default, so every existing baseline is a carpark baseline shot exactly as before.
+- PRESENCE CHECKS: three new vantages, five new tests, all measured. ABSENT MEANS TWO THINGS and both
+  are reproducible from a note in subjects.mjs - a bird floor against the same frame with the bird
+  parked in the far corner, a diorama floor against the same CAMERA in the carpark, which is the map
+  that has no lodge and no bull wheel. The bull wheel scores 3342 against 440, the lodge wall 15858
+  against 5, and the three birds 55, 27 and 70 against 0, 1 and 0.
+- AND 30 GETS NO DIORAMA TEST, WHICH IS A MEASURED FINDING RATHER THAN A GAP. The groomed band is the
+  subject of that photograph and a colour classifier cannot see it: the ridge window scores 711
+  inside the piste box on 30 and 9755 on the plain SHADED SNOW of 29, where there is no piste at all.
+  Corduroy reads as geometry, not as colour.
+- TWO THINGS THE FIRST FRAMES CAUGHT, both fixed before the pass: the ski racks stood ON the deck
+  footprint, so the skis came up through the boards, and the bird pinned on the deck FLOOR sat behind
+  its own railing at that distance. Racks moved downhill of the deck; the bird stands on the near
+  trestle table, which is where a kea would be anyway.
+- WHAT IS STILL A LIE UP THERE, and it is 40 and not this piece: defineMissions is biome-blind, so
+  the ski field shows the CARPARK to-do list. That is the same class as TODO 55 and it is the reason
+  40 should be next. One of those missions - s_lift, perch the spinning tow wheel - is answerable
+  here, because this map has a tow wheel, which is a preview of the graduation rather than a bug.
+- FOUND, NOT FIXED: a build leaves its single-object handles on the board. Filed as TODO 62 with the
+  evidence - the wheel sabotage reported the CARPARK wheel coordinates from inside the ski field,
+  because G.towWheel, G.ladder, G.signG, G.uteG, G.paddle and G.snowCap are not registries and the
+  dispatcher clears none of them.
+- EYEBALL: gauntlet/capture/28_skifield_base.png, 29_lodge_deck.png, 30_groomed_band.png - three
+  first pins, nothing pinned, all yours. Also worth doing rather than looking at: press M in a run
+  with six stars and click GO on the ski field.
