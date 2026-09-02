@@ -1735,3 +1735,35 @@ session 7. Three staging rounds, which is the FLAKES law 8 limit, and the third 
   the vantage.
 - EYEBALL: gauntlet/capture/17_flight.png against gauntlet/capture/baseline/17_flight.png. The grass
   is frozen at G.time 12.0; the bird should be unchanged.
+
+### PIECE 51 — vantage stability, three fixed and one classified — CERTIFIED (harness-side, game md5 4c29df092d4cf33cf5ee0f3b2524730b unchanged)
+Verdict: green for 03, 05 and 23. 08 - the vantage the item is NAMED for - is classified review-tier
+under FLAKES law 8 and deliberately left alone, with the measurements to say why.
+- THE FIRST THING THIS PIECE DID WAS DISPROVE ITS OWN PREMISE. Session 7 flagged five vantages off a
+  single three-take sweep. Re-measured at five takes, four sweeps each, before touching anything:
+  08 came back 0.9978/0.9978/0.9978/0.9995 and 23 came back 0.9980 four times - both PASSING every
+  time - and 05 came back 1.0000 on the sweep right after being called unstable. Only 03 and 05
+  dipped at all, once each. 17 was the only one that never passed, which is why 53 was different.
+  ONE SWEEP CANNOT CLASSIFY A VANTAGE, and that is now written into TODO 51 as the finding.
+- SO NOTHING WAS CHANGED ON A SINGLE READING. Each candidate got a before-distribution, then the fix,
+  then an after-distribution, and only the ones that measurably improved were kept.
+      03  0.9943-0.9974  ->  0.9998 0.9998 0.9998
+      05  0.9947-1.0000  ->  0.9998 1.0000 0.9998
+      23  0.9978-0.9980  ->  0.9995 0.9997 0.9997
+- THE FIX IS THE LAW-12 IDIOM, the same one 53 proved on 17: wrap the staging in PIN so the bird
+  cannot drift, and pin G.time so the grass shader cannot sway. All three are ground shots looking
+  across tussock, which is what TODO 30 predicted from the other end a session ago.
+- AND 08 REFUSED, WHICH IS THE PART WORTH KEEPING. The brief says wrap it in PIN and pin whatever the
+  HUD reads. Done, measured: 1.0000/0.9879/0.9983 - no better than unpinned and one sweep worse. So
+  the pin was REVERTED rather than shipped, because changing a baseline frame that buys no measured
+  stability is a cost with no purchase.
+- THE PROBE SAYS WHY. Staged and pinned, five takes report the bird, BOTH prompt strings, the wrapped
+  line counts, the docked flag, the plate height and the chaos readout all identical - only the frame
+  count moves, 140 to 142. Everything the rig can name is already deterministic. What is left is
+  dt-driven per-frame accumulation on a 320x180 canvas, where two frames of drift is a visible number
+  of pixels, and the answer to that is a deterministic frame clock for the whole rig: TODO 33.
+- DIFF: four flagged - 03 at 0.8571, 05 at 0.8836, 23 at 0.8966 from this piece, and 17 at 0.9051
+  still carrying piece 53. The drift is large because freezing the sway moves every blade. NOTHING
+  RE-PINNED; all four are for Eric.
+- EYEBALL: 03, 05, 23 and 17 against their baselines. The subject should be unchanged in each; only
+  the grass phase moves.

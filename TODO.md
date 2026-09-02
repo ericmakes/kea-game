@@ -637,7 +637,27 @@ PROOF: no travelcard/beat code remains; all nine batteries green; gate
 CERTIFIED-SHIP; star and home-position proofs still pass untouched; diff
 flags nothing new.
 
-### 51. VANTAGE 08 DOES NOT RESHOOT THE SAME TWICE  (harness-side only — game file untouched)
+### 51. VANTAGE 08 DOES NOT RESHOOT THE SAME TWICE  — DONE session 8, BUT NOT FOR 08 (harness-side, game md5 unchanged)
+OUTCOME: 03, 05 and 23 are fixed and are FLAGGED for judging. 08 - the vantage this item is named
+for - is NOT fixed and was deliberately left alone; it is review-tier under FLAKES law 8 and the
+evidence is below. The session-7 table that started this over-classified: it read three takes once,
+and one sweep cannot classify a vantage.
+    vantage   before (4 sweeps x 5 takes)              after
+    03        0.9943 0.9974 0.9974 0.9974              0.9998 0.9998 0.9998
+    05        1.0000 0.9983 0.9947 0.9984              0.9998 1.0000 0.9998
+    23        0.9980 0.9980 0.9980 0.9978              0.9995 0.9997 0.9997
+    08        0.9978 0.9978 0.9978 0.9995   pinned ->  1.0000 0.9879 0.9983   (no better, one worse)
+THE FIX FOR THE THREE is the law-12 idiom 21 and 25 already use and 53 proved on 17: wrap the staging
+in PIN and pin G.time, so the bird cannot drift and the grass shader cannot sway. Frames change - the
+sway freezes - so all three are left FLAGGED and NOT re-pinned.
+WHY 08 RESISTS, and this is the useful part. The probe stages 08 exactly as capture.mjs does, pinned,
+and reads state back five times: the bird, BOTH prompt strings, the wrapped line counts, the docked
+flag, the plate height and the chaos readout are all identical, and only the frame count moves (140
+to 142). Everything this rig can name is already deterministic. What is left is dt-driven per-frame
+accumulation on a 320x180 canvas, where two frames of drift is a visible number of pixels. The fix is
+a deterministic frame clock for the whole rig - TODO 33 - and it re-pins every vantage.
+DO NOT PIN 08 FOR THE SAKE OF PINNING. Changing a baseline frame that buys no measured stability is a
+cost with no purchase, and it was measured twice.
 Found in session 7 by piece 50, which it very nearly got blamed on. 08_readability_320 flagged at
 ssim 0.9446 against its baseline on the first pass after the revert. Three takes on each build,
 compared pairwise, cleared the code: within-mine 0.9884-0.9994, within-HEAD 0.9927-0.9979, ACROSS

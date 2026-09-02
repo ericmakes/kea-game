@@ -78,7 +78,9 @@ const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getEle
 
 await shotR('01_carpark_wide',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.4; ${CAM(11,4.2,25,3.5,0.8,15.5)}`);
 await shotR('02_hut_snow',`const k=KEAGAME.G.keas[0];k.x=-24;k.z=-2.5;k.y=0;k.grounded=true;k.ry=Math.PI; ${CAM(-16,4.5,3,-24,2.6,-8)}`);
-await shotR('03_kea_plate',`const k=KEAGAME.G.keas[0];k.preenT=99;k.idleT=0;KEAGAME.G.poseLock=true;k.x=0;k.z=0;k.y=KEAGAME.groundHeightAt(0,0,1);k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0; ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
+await shotR('03_kea_plate',`const k=KEAGAME.G.keas[0];k.preenT=99;k.idleT=0;KEAGAME.G.poseLock=true;
+  ${PIN('k.preenT=99;k.idleT=0;k.idleAct=null;k.x=0;k.z=0;k.y=KEAGAME.groundHeightAt(0,0,1);k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0;KEAGAME.G.time=12.0;')}
+  ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
 // the bird sat above the HUD band, behind the chaos chip. Pin it mid-air at the top of the
 // upstroke: flapPh PI/2 gives sst=1, which is both max stroke and open=1.0, and open above
 // 0.25 is the only thing that makes the scarlet underwing panel (oPan) visible at all.
@@ -86,7 +88,9 @@ await shotR('04_flight_underwing',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=
   KEAGAME.press(KEAGAME.P1MAP.flap);
   ${PIN('k.x=0;k.z=0;k.y=3.2;k.vy=0;k.grounded=false;k.ry=0.4;k.flapDrive=1;k.flapPh=0.36;k.stun=0;k.landFlare=0;')}
   ${CAM(0.6,1.2,1.5,0,3.12,0)}`,{settle:900});
-await shotR('05_tussock_ground',`const k=KEAGAME.G.keas[0];k.x=-8;k.z=-24;k.y=0;k.grounded=true;k.ry=0.6; ${CAM(-8,1.0,-19.5,-14,3.5,-60)}`);
+await shotR('05_tussock_ground',`const k=KEAGAME.G.keas[0];
+  ${PIN('k.x=-8;k.z=-24;k.y=0;k.vy=0;k.grounded=true;k.ry=0.6;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-8,1.0,-19.5,-14,3.5,-60)}`);
 await shotR('06_skyline',CAM(0,3.2,10,-40,16,-120));
 // QUIET deletes every traffic car, so the jam vantage was an empty road. spawnTraffic is not
 // exported and the game file is out of scope for this piece, so drive the game OWN spawner:
@@ -119,6 +123,17 @@ await shotR('07_jam',`const G=KEAGAME.G;
   const cone=G.props.find(p=>p.cone&&!p.heldBy); if(cone){cone.x=1.2;cone.z=34.0;cone.y=0.06;cone.mesh.position.set(cone.x,cone.y,cone.z);}
   ${PIN('for(const c of G.cars){ if(c.traffic){c.speed=0;c.rootCause="kea";} } const k=G.keas[0];k.x=-4.3;k.z=34.0;k.y=0;k.vy=0;k.grounded=true;k.ry=1.57;k.stun=0;')}
   ${CAM(-8.6,1.7,34.0,3.0,1.15,34.0)}`);
+/* 08 IS LEFT ALONE ON PURPOSE (TODO 51, session 8). It is the vantage this item is named for, and
+   the PIN it asks for does NOT fix it - measured: unpinned it runs 0.9978/0.9978/0.9978/0.9995 over
+   four sweeps of five takes, and pinned it runs 1.0000/0.9879/0.9983, which is no better and one
+   sweep worse. The probe says why nothing else here will help either: staged and pinned, five takes
+   report the bird, both prompt strings, the wrapped line counts, the docked flag, the plate height
+   and the chaos readout ALL IDENTICAL, with only the frame count moving (140 to 142). Everything
+   this rig can name is already deterministic. What is left is dt-driven per-frame accumulation on a
+   320x180 canvas where two frames of drift is a visible number of pixels, and the fix for that is a
+   deterministic frame clock for the whole rig, which is TODO 33 and re-pins every vantage.
+   Classified review-tier under FLAKES law 8 rather than pinned for the sake of pinning: changing a
+   baseline frame that buys no measured stability is a cost with no purchase. */
 await shotR('08_readability_320',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.6; ${CAM(8,3.4,22,2,0.8,14)}`,{w:320,h:180});
 // the colossal bird wandered during the settle - colossal stomps and bunts fire on contact and
 // the score pump had already put it in a mood. Pin it, and bring the camera in so LV10 reads
@@ -187,7 +202,9 @@ await shotR('15_sign',`const k=KEAGAME.G.keas[0];const sg=KEAGAME.G.signG; k.x=s
 await shotR('13_idle_preen',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=false;k.idleT=99;k.idleAct={kind:'preen',t:0.7,dur:3.5,side:1};k._idleEver=true; ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
 await shotR('12_seal_midpeel',`{const t=KEAGAME.G.inter.find(x=>x.strip&&/DOOR SEAL/.test(x.label)); for(let i=0;i<6;i++)t.onDone(t.getPos());
 const k=KEAGAME.G.keas[0], p=t.getPos(); k.x=p.x-0.35; k.y=p.y-0.15; k.z=p.z+0.55; k.grounded=false; k.vy=0; k.ry=2.4;} ${CAM(-6.6,1.9,11.2,-9.7,1.3,8.4)}`);
-await shotR('23_paddock_gate',`const k=KEAGAME.G.keas[0];k.x=-41.4;k.z=6.4;k.y=0;k.grounded=true;k.ry=-1.1; ${CAM(-45.0,1.5,8.6,-41.6,0.7,3.2)}`);
+await shotR('23_paddock_gate',`const k=KEAGAME.G.keas[0];
+  ${PIN('k.x=-41.4;k.z=6.4;k.y=0;k.vy=0;k.grounded=true;k.ry=-1.1;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-45.0,1.5,8.6,-41.6,0.7,3.2)}`);
 await shotR('24_verge_paddle',`const k=KEAGAME.G.keas[0];k.x=6.2;k.z=28.4;k.y=0;k.grounded=true;k.ry=0.5; ${CAM(3.6,1.7,26.2,7.4,1.05,29.4)}`);
 // 25 (2026-09-01): piece 6 fixed the preen head read and was certified against a metric, but the
 // original complaint named the FOLLOW camera and NO vantage stood there - 13 is a 1.35-unit
