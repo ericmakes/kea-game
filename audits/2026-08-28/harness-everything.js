@@ -1585,6 +1585,90 @@ C.section('THE PROP HEADING IS A DRAW NOBODY READS, AND IT IS NOW NAMED THAT');
   X.startGame(1); tick(6);
 }
 
+C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and it turns out nobody could read it anyway');
+// TODO 52. Piece 15 took the mash away in co-op, which made the one line this hint carries false in
+// one of the two modes: "a mate pecks the latch, or mash your way out". addHint refuses to replace a
+// mid it already has and nothing clears G.hints between runs, so a line baked in at build time is
+// the line the process keeps - a solo run followed by a co-op restart would hand over the solo copy.
+// So hint text is now RESOLVED WHEN READ. Strings still work; a function is evaluated at the moment
+// somebody looks at it, which is the only moment the mode is known.
+{
+  const HI=X.HINTS;
+  const cage=()=>(G.hints||[]).find(h=>h.mid==='cage');
+
+  X.startGame(1); tick(6);
+  ok(!!cage(),'the cage hint is on the board');
+  ok(typeof cage().text==='function','and it carries a function, not a baked line');
+  const solo=HI.text(cage());
+  ok(solo.indexOf('mash your way out')>=0,'solo: it still tells you to mash, because solo still lets you ('+solo+')');
+
+  // THE ASSERTION THE BRIEF ASKED FOR: restart into the other mode and read it again. Under the old
+  // baked string this is the one that could not pass - addHint had already refused to replace it.
+  X.startGame(2); tick(6);
+  const coop=HI.text(cage());
+  ok(coop.indexOf('mash')<0,'co-op: the mash instruction is gone, because mashing squawks and buys nothing ('+coop+')');
+  ok(coop.indexOf('latch')>=0,'and it names the thing that does work');
+  ok(coop!==solo,'the two modes read differently from the same hint object');
+
+  // and back again, because the bug was specifically that the FIRST mode won forever
+  X.startGame(1); tick(6);
+  ok(HI.text(cage())===solo,'and it goes back when the mode does, which a baked string could never do');
+
+  // a plain string hint is untouched by any of this
+  { const str=(G.hints||[]).find(h=>typeof h.text==='string');
+    ok(!!str&&HI.text(str)===str.text,'a string hint still resolves to itself ('+(str?str.mid:'none')+')'); }
+
+  /* AND THE FINDING THIS PIECE TRIPPED OVER, which is bigger than the lie it was sent to fix:
+     NOBODY HAS EVER BEEN ABLE TO READ THIS HINT. hintScan drops any hint whose mid is not an open
+     mission - `const m=G.missions.find(m=>m.id===h.mid); if(!m||m.done||locked)continue;` - and
+     there is no mission with the id 'cage'. Every other hint mid has one. So the line has been
+     unreachable for its whole life, in both modes, and the lie was invisible.
+     THIS ASSERTION IS A TRIPWIRE, NOT AN ENDORSEMENT. It states today's truth, and it FAILS the day
+     somebody gives 'cage' a mission - which is exactly the day a human should read the copy above
+     and decide whether it should be on screen at all. Filed as TODO 55. */
+  const mids=(G.hints||[]).map(h=>h.mid);
+  const orphan=mids.filter(m=>!G.missions.find(x=>x.id===m));
+  ok(orphan.length===1&&orphan[0]==='cage',
+     'exactly one hint has no mission behind it and it is the cage one, so it cannot display today ('+
+     JSON.stringify(orphan)+') - if this fails, somebody made it reachable: read the copy and see TODO 55');
+
+  // THE RESOLVER IS ON THE DISPLAY PATH, proved through a hint that CAN fire rather than by trusting
+  // the export. Pick an open-mission hint, stand the bird in it with an empty plate, and read the HUD.
+  { X.startGame(1); tick(6); park();
+    const k=G.keas[0]; if(k.held){k.held.heldBy=null;k.held=null;}
+    const live=(G.hints||[]).find(h=>{ const m=G.missions.find(x=>x.id===h.mid);
+      return m&&!m.done&&!(typeof m.locked==='function'?m.locked():m.locked); });
+    ok(!!live,'a hint with an open mission behind it to test the display path with ('+(live?live.mid:'none')+')');
+    X.setPrompt(k.idx,'');
+    for(let i=0;i<4;i++){ k.x=live.x; k.z=live.z; k.y=Math.max(0.25,live.y); k.vy=0; k.grounded=true; X.update(1/60); }
+    /* hintScan returns the FIRST hint in list order whose radius the bird is in, and hint radii
+       overlap - standing in one can put you in an earlier one. So the assertion reads back WHICH
+       hint fired and holds the plate to that one, rather than insisting on the one that was aimed
+       at: the claim is that the display path resolves, not that a particular hint won. */
+    const fired=(G.hints||[]).find(h=>h.mid===(G.hintNow||[])[k.idx]);
+    ok(!!fired,'the bird is standing in a hint ('+((G.hintNow||[])[k.idx]||'nothing')+')');
+    ok(!!fired&&String(X.PROMPTS[k.idx]).indexOf(HI.text(fired))>=0,
+       'and the plate carries exactly what the resolver returns for it');
+    /* AND THE SAME THING WITH A FUNCTION, END TO END. Every hint that can currently display carries a
+       string, so the assertion above passes whether the display path resolves or reads h.text raw -
+       it would not catch the resolver being taken back out. So this one hands a live hint a FUNCTION
+       and requires the plate to show what it returns. Restored afterwards. */
+    if(fired){ const keep=fired.text;
+      /* THE RETURN VALUE IS COMPUTED, NOT A LITERAL, and that is not decoration. Concatenating a
+         function gives you its SOURCE - so a display path that had stopped resolving would still
+         put the words of a literal onto the plate and this assertion would pass while broken. It
+         did, on the first attempt. Joined at run time, the sentence exists nowhere in the source. */
+      fired.text=()=>['RESOLVED','ON','THE','DISPLAY','PATH'].join(' ');
+      X.setPrompt(k.idx,'');
+      for(let i=0;i<4;i++){ k.x=fired.x; k.z=fired.z; k.y=Math.max(0.25,fired.y); k.vy=0; k.grounded=true; X.update(1/60); }
+      const plate=String(X.PROMPTS[k.idx]);
+      ok(plate.indexOf('RESOLVED ON THE DISPLAY PATH')>=0,
+         'a function-backed hint reaches the plate RESOLVED ('+plate.replace(/<[^>]*>/g,'').slice(0,60)+')');
+      ok(plate.indexOf('=>')<0,'and not as its own source text, which is what a raw concatenation would show');
+      fired.text=keep; } }
+  X.startGame(1); tick(6);
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

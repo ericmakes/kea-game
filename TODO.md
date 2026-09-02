@@ -702,7 +702,11 @@ The other four (08, 23, 05, 03) all stage the bird ONCE with no PIN wrapper, whi
 in its plainest form. Whether they want a PIN, a longer settle, or both is one measurement each -
 run stability.mjs after every change, because diff.mjs cannot answer this question at all.
 
-### 52. THE CAGE HINT STILL TELLS A CO-OP BIRD TO MASH ITS WAY OUT
+### 52. THE CAGE HINT STILL TELLS A CO-OP BIRD TO MASH ITS WAY OUT  — DONE session 8 (d72bec482c1ec516c985c9c35b060008)
+Fixed with option (b): hint text is RESOLVED WHEN READ, so a hint that depends on the mode is a
+function rather than a baked line, and the ownership-of-G.hints question option (a) raised does not
+have to be answered at all. Strings still work and are still the normal case. See TODO 55 for what
+this turned up: the hint has never been displayable.
 Found in session 7 by piece 15, and deliberately not fixed there because it is a world hint rather
 than the cell. startGame adds hint 'cage' at the ute with the text 'the night ranger cages
 troublemakers - a mate pecks the latch, or mash your way out'. Under the co-op cell the second half
@@ -752,3 +756,22 @@ read differently at all, given 04 is the underwing shot.
 PROOF: probe the staged page and assert flapDrive is 1 and the wing is off its glide targets at read
 time; then stability >= 0.995 across repeated reshoots.
 RE-PIN: 17, once, on Eric's judgement.
+
+### 55. THE CAGE HINT HAS NO MISSION BEHIND IT, SO NOBODY HAS EVER READ IT
+Found in session 8 by piece 52, while fixing the line it carries. hintScan drops any hint whose mid
+is not an OPEN mission - `const m=G.missions.find(m=>m.id===h.mid); if(!m||m.done||locked)continue;`
+- and there is no mission with the id 'cage'. Every other hint mid has one: airmail, jam, paddock,
+q_chimney, q_median, q_muster, roofhonk, snow. So this hint has been unreachable for its whole life,
+in both modes, and the lie piece 52 was sent to fix was invisible.
+THE COPY IS NOW CORRECT IN BOTH MODES REGARDLESS, so nothing is broken by leaving it dead. The
+question is whether it should be alive, and it is a judged one because it puts a new line of text on
+screen during play: a bird near the ute would start being told how the cage works.
+THREE OPTIONS: (a) leave it dead and delete it, which loses a genuinely useful piece of teaching;
+(b) give hintScan a path for hints with no mission behind them - a hint that is always available
+while its subject exists - which is the smallest honest change and makes this one live; (c) give
+'cage' a real mission and let the existing machinery carry it.
+THERE IS A TRIPWIRE ON THIS ALREADY. The everything battery asserts that exactly one hint has no
+mission and that it is the cage one. The day somebody makes it reachable, that assertion FAILS and
+says so - which is exactly when a human should read the copy and decide.
+PROOF once built: stand a bird in the hint radius in both modes and assert the plate carries the
+resolved line for the mode it is in. The resolver and its display path are already proved by 52.

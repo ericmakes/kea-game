@@ -3393,6 +3393,13 @@ function popup(label,pts,val,pos,small,big){
 /* prompts + tug bars (cached to avoid DOM churn) */
 const PROMPTS=['',''],TUGS=[-1,-1],HOLDS=['',''];
 function addHint(mid,x,y,z,r,text){ if(G.hints&&G.hints.some(h=>h.mid===mid))return;  (G.hints=G.hints||[]).push({mid,x,y,z,r,text}); }
+/* HINT TEXT IS RESOLVED WHEN IT IS READ, NOT WHEN IT IS ADDED (TODO 52, 2026-09-02). addHint refuses
+   to replace a mid it already has and nothing clears G.hints between runs, so a line baked in at
+   build time is the line the player gets for the rest of the process - including after a restart
+   into a different mode. A hint that depends on the mode therefore cannot be a string; it has to be
+   a function, evaluated at the moment somebody reads it. Strings still work and are still the normal
+   case. */
+function hintText(h){ return h&&typeof h.text==='function'?h.text():(h?h.text:''); }
 function hintScan(k){
   G.hintNow=G.hintNow||[null,null];
   if(!G.hints||!G.missions){ G.hintNow[k.idx]=null; return; }
@@ -3400,7 +3407,7 @@ function hintScan(k){
     const m=G.missions.find(m=>m.id===h.mid);
     if(!m||m.done||(typeof m.locked==='function'?m.locked():m.locked))continue;
     if(Math.hypot(k.x-h.x,k.z-h.z)<h.r&&Math.abs(k.y-h.y)<3.5){
-      G.hintNow[k.idx]=h.mid; if(!PROMPTS[k.idx])setPrompt(k.idx,'<span style="opacity:.78">✎ '+h.text+'</span>'); return; }
+      G.hintNow[k.idx]=h.mid; if(!PROMPTS[k.idx])setPrompt(k.idx,'<span style="opacity:.78">✎ '+hintText(h)+'</span>'); return; }
   }
   G.hintNow[k.idx]=null;
 }
@@ -3698,7 +3705,11 @@ function startGame(mode,opts){
     beam.rotation.x=Math.PI/2-0.078; beam.position.set(0,-0.16,3.5); beam.visible=false; tg.add(beam);
     rex.torch={g:tg,spot,lens,beam};
     { const up=new THREE.Vector3(0,1.2,-1.1); G.uteG.localToWorld(up);
-      addHint('cage',up.x,up.y,up.z,6,'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out'); } }
+      /* TODO 52: co-op took the mash away (piece 15), so the old single line became a lie in one of
+         the two modes. A function, because the mode is not known until somebody reads it. */
+      addHint('cage',up.x,up.y,up.z,6,()=>coopCell()
+        ? 'the night ranger cages troublemakers - only a mate can peck the latch open'
+        : 'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out'); } }
   if(!HEADLESS){
     document.getElementById('title').style.display='none';
     G.tabHintOn=true;
@@ -3791,6 +3802,7 @@ if(typeof globalThis!=='undefined'){
     HOMES:{R:HOMER,cls:homeClass,register:homesRegister,dist:homeDist,at:atHome},
     JAIL:{SQUAWK,coop:coopCell,dir:squawkDir,fire:squawkFire,ping:squawkUpdate},
     LEDGER:{actorOf,add:ledgerAdd,of:ledgerOf,total:ledgerTotal},
+    HINTS:{text:hintText,scan:hintScan},
     WORLDREGS,
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }

@@ -1767,3 +1767,43 @@ under FLAKES law 8 and deliberately left alone, with the measurements to say why
   RE-PINNED; all four are for Eric.
 - EYEBALL: 03, 05, 23 and 17 against their baselines. The subject should be unchanged in each; only
   the grass phase moves.
+
+### PIECE 52 — hint-text-resolved-when-read — CERTIFIED d72bec482c1ec516c985c9c35b060008
+Verdict: green. Two staging rounds on the proof, both of them my assertions being too weak rather
+than the code being wrong, and the second one is the more instructive.
+- OPTION (b), AND IT DISSOLVES THE QUESTION OPTION (a) RAISED. The brief offered either re-texting
+  the hint in startGame - which needs somebody to decide who owns G.hints across a restart - or
+  giving hint text a function evaluated when it is read. The second needs no decision at all: strings
+  still work, a mode-dependent hint becomes a function, and the mode is read at the moment somebody
+  looks. addHint can go on refusing to replace a mid it already has, because the line is no longer
+  baked in at the time it is added.
+- THE ASSERTION THE BRIEF ASKED FOR IS THE RESTART ONE, and it now passes both ways: solo says mash,
+  co-op does not, and going BACK to solo says mash again - which a baked string could never do,
+  because the first mode of the process won forever.
+- AND THE PIECE TRIPPED OVER SOMETHING BIGGER THAN THE LIE IT WAS SENT TO FIX. NOBODY HAS EVER BEEN
+  ABLE TO READ THIS HINT. hintScan drops any hint whose mid is not an open MISSION, and there is no
+  mission with the id 'cage'; every other hint mid has one. So the line has been unreachable for its
+  whole life and the lie was invisible. Filed as TODO 55, with the display decision left to Eric
+  because making it live puts a new line of text on screen during play.
+- THE TRIPWIRE IS THE INTERESTING BIT OF THAT. The battery asserts that exactly ONE hint has no
+  mission behind it and that it is the cage one. That states today's truth and FAILS the day somebody
+  makes it reachable - which is exactly the day a human should read the copy. An assertion that
+  documents a gap and rings when it closes, rather than one that quietly blesses it.
+- TWO WEAK ASSERTIONS OF MINE WERE CAUGHT BY SABOTAGE, NOT BY LUCK:
+    1. The display-path check named the hint it expected to fire. Hint radii overlap and hintScan
+       returns the first match in list order, so standing in one put the bird in an earlier one and
+       the test failed on a true claim. It now reads back WHICH hint fired and holds the plate to
+       that one - the claim is that the path resolves, not that a particular hint wins.
+    2. Worse, and this one PASSED while broken. The end-to-end check handed a live hint a function
+       returning a LITERAL and looked for those words on the plate. Concatenating a function gives
+       you its SOURCE, which contains the literal - so a display path that had stopped resolving
+       still printed the words and the assertion was happy. The sabotage caught it. The return value
+       is now computed at run time (a join), so the sentence exists nowhere in the source, and a
+       second assertion requires the plate NOT to contain an arrow. Under the sabotage the failure
+       message now shows the source leaking onto the plate verbatim.
+- VERIFIED ADVERSARIALLY, THREE WAYS, all caught: the display path reading h.text raw, the resolver
+  refusing to call a function, and the hint going back to a baked string.
+- CAPTURE: 25 shots. Four flagged - 03, 05, 23 from piece 51 and 17 from piece 53, all still awaiting
+  Eric - and NO NEW ONES, which is the claim for this piece: the cage hint cannot display, so no
+  frame can contain it. Nothing re-pinned.
+- EYEBALL: nothing new. The four already-flagged frames are the ones to judge.
