@@ -1134,3 +1134,40 @@ parking a live meter beside a frozen PEAK 0. todoFoot() is one function with two
 on a rebuild, and the HUD frame while the panel is open and the string has changed. Browser-proved in
 journey.mjs.
 
+
+## FOUND IN SESSION 12 (appended 2026-09-02 by the overnight run)
+
+### 67. QUIET DOES NOT PARK THE POPUP FEED, SO EVERY VANTAGE IS SHOT OVER A FADING CAPTION
+Found in session 12 by piece 31, from the cell map on its first run. Three vantages - 13_idle_preen,
+19_roof_follow and 20_dead_rear - put their hottest changed cells in the same top-centre strip,
+x300..x600 y0, and cropping it shows why: startGame calls popup() with DAWN. A CARPARK. NO WITNESSES
+YET., and popup() builds a div in #feed with a CSS animation and a setTimeout removal. The animation
+runs on the WALL CLOCK, not on G.time, so the caption is mid-fade when the shutter opens and which
+frame of the fade you get depends on how many frames the settle got through.
+THAT IS FLAKES LAW 12 WITH A FOURTH LIVE THING IN IT. QUIET parks the humans every frame, kills the
+traffic, marks the casefiles seen and hides the to-do panel. It does not touch #feed. Every vantage
+shot within POPLIFE of startGame therefore carries a live element, and that is a real slice of the
+churn the piece-31 table had to measure around.
+NOT THE CAUSE ITEM 33 SUSPECTED. Item 33 guessed accumulated simulation state - traffic, idle phase,
+ambient paths. This is a DOM animation on a timer, which no amount of pinning the world can settle.
+FIX: park it in QUIET the way the humans are parked - empty #feed every frame - or freeze the
+animation. Harness-side, one idiom, no game change.
+RE-PIN: the caption is IN eleven of the pinned frames and it is part of the composition, so removing
+it is a look change on every one of them. MEASURE FIRST, then leave flagged for Eric. Do not pin.
+
+### 68. FOUR BASELINES HAVE DRIFTED WHERE NO SSIM COULD SEE IT
+Found in session 12 by piece 31 on its first run, and the arithmetic is in that file header. A
+vantage whose distance from its baseline exceeds its own five-sweep churn ceiling on EVERY sweep is
+not churning, it has moved. Two of the six were already known (07_jam, TODO 60; 17_flight, the piece
+54 wing). These four are new, and diff.mjs reads all of them as clean:
+    09_colossal      1565..1584 px over a churn of 22    ssim 0.9992   SEVENTY-ONE TIMES its churn,
+                     and session 6 measured this same pair at 0 px, so it moved after that
+    20_dead_rear     3512..5425 px over a churn of 2475  ssim 0.9985
+    11_trailhead     1221..1893 px over a churn of  673  ssim 0.9992
+    23_paddock_gate   235..319  px over a churn of  117  ssim 0.9996   small, but five for five
+09 IS THE ONE TO TAKE FIRST. It is the cleanest signal in the set - a frame that reshoots to twenty
+pixels and sits fifteen hundred from its pin - and its baseline has not been re-pinned since 9cd861e,
+so a bisect over the builds since session 6 is a short walk. Some of TODO 67 is probably inside
+20_dead_rear, which is one of the three frames whose hot cells are the caption.
+PROOF once built: name the build that moved each one. Do NOT re-pin to make the instrument quiet -
+that is the law-12 trap from the other end, and it is what this piece exists to stop.
