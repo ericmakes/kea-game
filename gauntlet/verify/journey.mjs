@@ -62,6 +62,15 @@ await page.screenshot({path:path.join(ROOT,'gauntlet/capture/probe_arrival.png')
             rows:[...document.querySelectorAll('#milist .mi')].map(r=>r.textContent.trim().slice(0,52))}; });
   console.log('to-do heads   ',JSON.stringify(todo.heads));
   console.log('to-do rows    ',JSON.stringify(todo.rows));
+  /* TODO 66: THE FOOTER TICKS WHILE THE PANEL IS OPEN, which only a browser can answer - renderTodo
+     runs on a mission event, so the three live numbers used to be a snapshot of the last one. Award
+     some chaos, wait, and read the same element twice with nothing ticked in between. */
+  const foot1=await page.evaluate(()=>{ KEAGAME.award(240,'PROBE',{x:0,y:1,z:0});
+    return (document.getElementById('mifoot')||{}).textContent; });
+  await sleep(2200);
+  const foot2=await page.evaluate(()=>(document.getElementById('mifoot')||{}).textContent);
+  console.log('footer         ',JSON.stringify(foot1),'->',JSON.stringify(foot2),
+    foot1!==foot2?'(it ticks)':'(STALE - it did not move)');
   await page.screenshot({path:path.join(ROOT,'gauntlet/capture/probe_todo_skifield.png')});
   await page.evaluate(()=>document.getElementById('todo').classList.remove('open')); }
 await page.keyboard.press('Space'); await sleep(200);

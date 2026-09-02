@@ -1124,3 +1124,13 @@ PROOF when it is built: the beanie stays at head height for a minute of run; it 
 b_beanie still completes through the sleepGuard; and the prop is still takeable at his head rather
 than at his feet.
 
+### 65. THE CAREER PEAK WAS A DEAD READ  — DONE session 11 (9dfe7f3d147d65b4dc639df8775ab575)
+The peak half of TODO 35. See that entry: split, half done, and the night auto-driver is still yours.
+
+### 66. THE TO-DO FOOTER WAS A SNAPSHOT OF THE LAST MISSION  — DONE session 11 (8232590523658dfc3f5a1fe59a916de0)
+Jobs done, career peak and time were built inside renderTodo, which runs on a mission event and at no
+other time, so the footer read 0:00 two minutes into a run - and piece 65 would have made it worse by
+parking a live meter beside a frozen PEAK 0. todoFoot() is one function with two call sites: renderTodo
+on a rebuild, and the HUD frame while the panel is open and the string has changed. Browser-proved in
+journey.mjs.
+

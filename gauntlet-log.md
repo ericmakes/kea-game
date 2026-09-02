@@ -2756,3 +2756,25 @@ than the half that does.
 - FOUR SABOTAGES, all caught, including the tripwire one.
 - CAPTURE: 25 compared, 0 flagged. The two places a player reads the peak are DOM strings and
   renderTodo returns immediately under HEADLESS, so no pinned frame could move.
+
+### PIECE 66 — the-footer-is-a-clock — CERTIFIED 8232590523658dfc3f5a1fe59a916de0
+Verdict: green. The other half of piece 65 rather than a new complaint, and I only saw it because the
+journey instrument printed the footer at me twice tonight and I read straight past it both times.
+- THE THREE LIVE NUMBERS A PLAYER CHECKS - jobs done, career peak, time at it - were built INSIDE
+  renderTodo, which runs on a mission event and at no other time. So the footer was a snapshot of
+  whenever the last row was ticked: open the list two minutes into a run and it read 0:00.
+- AND PIECE 65 WOULD HAVE MADE IT WORSE. With the peak finally alive, the footer would have sat
+  showing PEAK 0 next to a meter reading four hundred, which is a louder lie than the dead read was.
+- ONE FUNCTION, TWO CALL SITES. todoFoot() builds the line; renderTodo writes it when it rebuilds the
+  list, and the HUD frame rewrites that ONE element - only while the panel is open, and only when the
+  string has actually changed, because the list is a full-height panel and rebuilding it every frame
+  for three numbers is a layout thrash.
+- THE STRING IS THE ASSERTABLE PART AND THE DOM IS NOT, which is the shape piece 5 and the versus HUD
+  both use: the render is browser-only, the decision is not. Nine assertions on the line, and the one
+  that matters is that all three numbers move with NO MISSION EVENT AT ALL.
+- BROWSER PROOF in journey.mjs, on the mountain, reading the same element twice with nothing ticked
+  in between: "0/8 PEAK 0 0:00" -> "0/8 PEAK 240 0:01".
+- FOUR SABOTAGES, all caught. And the combo bit me for the third time in this file history: award
+  multiplies by G.combo, so a 240 landed 960 and my first assertion compared the footer against a
+  number I had typed. It reads the meter now, which is the claim anyway.
+- CAPTURE: 25 compared, 0 flagged. QUIET hides the to-do panel, and the frame guard needs it open.

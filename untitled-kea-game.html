@@ -3687,6 +3687,12 @@ function burst(p,color,n){
 }
 function updateFX(dt){
   if(G.hudPulse>0){ G.hudPulse=Math.max(0,G.hudPulse-dt*2.4);
+    /* THE FOOTER TICKS WHILE YOU ARE READING IT (TODO 66), and only while you are: the list is a
+       full-height panel and rebuilding it every frame would be a layout thrash for three numbers, so
+       this writes the ONE line, and only when it has actually changed and the panel is open. */
+    if(!HEADLESS){ const _td=document.getElementById('todo');
+      if(_td&&_td.classList.contains('open')){ const _ft=document.getElementById('mifoot'), _s=todoFoot();
+        if(_ft&&_s!==G._footLast){ _ft.textContent=_s; G._footLast=_s; } } }
     if(!HEADLESS){ const ce=el('chaos'), p=G.hudPulse;
       ce.style.transform='scale('+(1+p*0.14).toFixed(3)+')';
       ce.style.textShadow=p>0.05?'0 0 '+(p*14).toFixed(1)+'px rgba(255,211,77,'+(p*0.75).toFixed(2)+')':''; } }
@@ -4626,6 +4632,15 @@ function updateUI(){
   const cEl=document.getElementById('combo');
   if(G.combo>=2&&G.comboT>0){ cEl.style.display='block'; cEl.textContent='×'+G.combo+' SPREE'; } else cEl.style.display='none';
 }
+/* THE FOOTER OF THE TO-DO LIST (TODO 66). It was three live numbers built inside renderTodo, which
+   runs when a MISSION EVENT happens and at no other time - so the page count, the career peak and
+   the clock were a snapshot of whenever the last row was ticked. Open the list two minutes into a
+   run and it said 0:00, and after tonight peak fix it would have said PEAK 0 next to a meter reading
+   four hundred. One function, two call sites: renderTodo writes it once when it rebuilds the list,
+   and the HUD frame keeps it honest between rebuilds. */
+function todoFoot(){
+  const all=(G.missions||[]).filter(m=>!m.finale&&!m.hide), dn=all.filter(m=>m.done).length;
+  return dn+'/'+all.length+' · PEAK '+Math.round(G.chaosPeak||0)+' · '+fmtT(G.playT||0); }
 function renderTodo(){
   if(HEADLESS)return;
   const list=document.getElementById('milist'); list.innerHTML='';
@@ -4647,8 +4662,7 @@ function renderTodo(){
     if(bonus.length){ addHead(bonus[0].area); bonus.forEach(addRow); }
     const fin=G.missions.find(m=>m.finale);
     if(fin){ addHead('AND FINALLY'); addRow(fin); }
-    { const all=G.missions.filter(m=>!m.finale&&!m.hide), dn=all.filter(m=>m.done).length;
-      addHead(dn+'/'+all.length+' · PEAK '+Math.round(G.chaosPeak||0)+' · '+fmtT(G.playT||0)); }
+    { addHead(todoFoot()); list.lastChild.id='mifoot'; }
     return;
   }
   let lastArea=null;
@@ -5012,7 +5026,7 @@ if(typeof globalThis!=='undefined'){
           orders:foodOrders,orderFor:foodOrderFor,fetch:foodFetch},
     VS:{LEN:VSLEN,SUDDEN:VSSUDDEN,on:vsOn,start:vsStart,end:vsEnd,update:vsUpdate,
         scores:vsScores,role:vsRoleOf,note:vsNote},
-    grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
+    grassBlade,plateLines,hudReflow,todoFoot,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();
 /* KEA-LOGIC-END */

@@ -3741,6 +3741,72 @@ C.section('THE CAREER PEAK IS ALIVE - PEAK 0 was not modesty, it was a dead read
   }
 }
 
+C.section('THE TO-DO FOOTER IS A CLOCK, NOT A SNAPSHOT OF THE LAST MISSION');
+/* TODO 66, and it is the other half of tonight peak fix rather than a new complaint. The footer of
+   the to-do list carries the three live numbers a player checks - how many jobs are done, the career
+   peak, and how long they have been at it - and every one of them was built INSIDE renderTodo, which
+   runs on a mission event and at no other time. Open the list two minutes into a run and it read
+   0:00; after piece 65 made the peak real it would have read PEAK 0 beside a meter showing four
+   hundred, which is a worse lie than the dead read was.
+   ONE FUNCTION, TWO CALL SITES. todoFoot() builds the line; renderTodo writes it when it rebuilds
+   the list, and the HUD frame rewrites that one element while the panel is open and the string has
+   actually changed. The string is the assertable part and the DOM is not, which is the same shape as
+   plateLines and hudReflow: the render is browser-only, the decision is not. */
+{
+  try{
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6); park();
+    G.playT=0; G.chaosPeak=0; G.score=0;
+    const foot=()=>X.todoFoot();
+    const parse=str=>{ const m=/^(\d+)\/(\d+) · PEAK (\d+) · (\d+:\d\d)$/.exec(str||'');
+      return m?{dn:+m[1],all:+m[2],peak:+m[3],t:m[4]}:null; };
+
+    // 1. THE SHAPE, so the three numbers cannot quietly become two.
+    { const f=parse(foot());
+      ok(!!f,'the footer is three numbers in one line ('+foot()+')');
+      ok(!!f&&f.all===G.missions.filter(m=>!m.finale&&!m.hide).length,
+         'the denominator is every job on the page list, finale and hidden rows aside ('+(f&&f.all)+')');
+      ok(!!f&&f.dn===0&&f.peak===0&&f.t==='0:00','and at the start of a run all three are zero ('+foot()+')'); }
+
+    /* 2. IT MOVES WITH NO MISSION EVENT AT ALL, which is the whole piece: nothing below completes a
+       row, and all three numbers still change. */
+    /* THE COMBO IS WHY THIS READS THE METER AND NOT THE LITERAL. award multiplies by G.combo, so a
+       240 landed 960 - the same trap piece 22 and piece 18 both wrote down, met here for the third
+       time. The claim is that the footer carries the peak, not that a number I typed is the peak. */
+    X.award(240,'A BIG ONE',{x:0,y:1,z:0});
+    tick(600);
+    { const f=parse(foot());
+      ok(!!f&&f.peak===Math.round(G.chaosPeak)&&f.peak===Math.round(G.score),
+         'ten seconds later the peak is on it, and it is the meter high-water mark ('+foot()+
+         ', meter '+G.score+')');
+      ok(!!f&&f.t==='0:10','and the clock has run ('+(f&&f.t)+')');
+      ok(!!f&&f.dn===0,'with not one row ticked in between ('+(f&&f.dn)+' done)'); }
+
+    // 3. AND THE DONE COUNT STILL FOLLOWS THE LIST, because that is what it was always for.
+    { const before=parse(foot()).dn;
+      const open=G.missions.find(m=>!m.done&&!m.finale&&!m.hide&&!m.bonus);
+      ok(!!open,'there is a job left to tick ('+(open?open.id:'none')+')');
+      if(open){ X.done(open.id); tick(2);
+        const f=parse(foot());
+        ok(!!f&&f.dn===before+1,'ticking one moves the count by one ('+before+' -> '+(f&&f.dn)+')'); } }
+
+    /* 4. THE CLOCK IS THE CAREER CLOCK, not the run clock, and the footer reads the same G.playT the
+       save carries - so it survives a reload the way the peak does. Asserted through the accessor
+       rather than the DOM, because the DOM does not exist here. */
+    { const t0=G.playT; G.playT=125; const f=parse(foot());   // absolute: ten seconds have already run
+      ok(!!f&&f.t==='2:05','two minutes and five seconds reads as 2:05 ('+(f&&f.t)+')');
+      G.playT=t0; }
+
+    /* 5. AND THE FOOTER IS ONE STRING FROM ONE FUNCTION. Nothing else in the file may build it: this
+       is asserted the only way a battery can, by holding the function to the numbers it reads and
+       then changing one of them underneath it. */
+    { const was=G.chaosPeak; G.chaosPeak=987;
+      ok(/PEAK 987/.test(foot()),'the line is built from the live numbers each time it is asked ('+foot()+')');
+      G.chaosPeak=was; }
+  } finally {
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+  }
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
