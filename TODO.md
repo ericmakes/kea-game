@@ -1305,6 +1305,18 @@ not held STILL at the offset the stage line names, it is held at the FIXED POINT
       before   4334 px    6, 25, 952, 958, 968, 974, 3702, 3704, 4331, 4334   an ease
       after     991 px    0, 5, 5, 14, 976, 976, 981, 986, 986, 991           two discrete states
   The residual 991 is the caption feed and the grass, which are TODO 67 and 30 and are parked.
+  CORRECTED THE SAME NIGHT, BY THE RULE SESSION 12 WROTE DOWN: a ceiling from five runs is a floor,
+  and the 991 above is one. Ten runs a side, 45 pairs each, same machine, same night:
+      before  4353 px worst   0 x4, 8 x2, 30..32 x6, 952..972 x17, 1020, 3306..3318 x4,
+                              3714..3731 x8, 4338..4353 x4
+      after   3185 px worst   0..8 x8, 985..998 x14, 1273..1281 x17, 2259..2271 x5, 3185
+      after   2271 px worst   a second batch of ten taken straight afterwards
+  So the pixel claim is a worst case down about a QUARTER, not down four times, and the "continuous
+  spread versus discrete states" reading was an artifact of a ten-pair sample - BOTH distributions
+  are clustered. WHAT IS UNAFFECTED is the thing the piece was for: the camera is a constant now,
+  proven by the four-settle probe above, and it cannot land somewhere else because the machine was
+  busy. AND IT SETTLES THE CHURN-TABLE QUESTION IN THE OTHER DIRECTION - 5489 stays, because
+  lowering it to 991 would have gone red on the very next batch of ten.
   THE FRAME MOVED AND IS LEFT FLAGGED, per the brief. The lock sits 1.4 cm from the eased position
   the baseline caught: ssim 0.9831 against a 0.965 gate, which diff.mjs passes, and 16308 changed
   pixels against a recorded churn of 5489, which pxdiff.mjs flags at 3.0x. PXCELLS puts the change

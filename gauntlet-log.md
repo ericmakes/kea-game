@@ -3258,3 +3258,31 @@ capture.mjs was not touched: the finding is that four stage lines do not say whe
 - THE FIX IS A JUDGED RE-PIN, so it is filed rather than taken: moving the 01 mark 1.18 m is a
   different photograph. The cheap half, if Eric wants one, is to write the ejected position beside
   each mark as a comment and move nothing.
+
+### PIECE 69-CORRECTION — the churn drop was oversold by a five-run sample — no rig behaviour change
+Verdict: green, and it corrects my own piece three commits later. capture.mjs comment and TODO 69
+prose only; the stage line is not touched and no frame moves.
+- I MEASURED THE AFTER AT FIVE RUNS AND FILED 4334 -> 991, which is exactly the mistake session 12
+  wrote into the log twice and into pxdiff own header once: A CEILING FROM FIVE SAMPLES IS A FLOOR.
+  Ten runs a side, 45 pairs each, same machine, same night:
+      before  4353   0 x4, 8 x2, 30..32 x6, 952..972 x17, 1020, 3306..3318 x4, 3714..3731 x8,
+                     4338..4353 x4
+      after   3185   0..8 x8, 985..998 x14, 1273..1281 x17, 2259..2271 x5, 3185
+      after   2271   a second batch of ten straight afterwards
+- SO THE HONEST NUMBER IS A WORST CASE DOWN ABOUT A QUARTER, not down four times. And the second
+  half of the claim was worse than the first: I called the before "continuous" and the after "two
+  discrete states". At 45 pairs BOTH are clustered. Ten pairs cannot tell those two shapes apart and
+  I should not have named the shape off ten.
+- WHAT SURVIVES UNTOUCHED IS THE POINT OF THE PIECE, and it never rested on the pixel count: the
+  camera reads identical to five decimals at settles of 600, 900, 1200 and 4000 ms, where all four
+  moved it before. That is a state probe, not a sample - the camera cannot land somewhere else
+  because the machine was busy, and the residual churn is the caption feed and the grass.
+- AND IT ANSWERS THE QUESTION I HAD DELIBERATELY LEFT OPEN, in the opposite direction to my instinct.
+  Piece 69 declined to lower the pxdiff CHURN entry for 20 from 5489 to 991 on the grounds that five
+  runs is not a calibration. Lowering it would have gone red on the very next batch of ten. The entry
+  stays at 5489 and now has a reason in the file rather than a hunch.
+- ONE PROCESS SLIP OF MY OWN, caught by a grep before it printed a number: my first "before" batch
+  was shot from git show HEAD~2, which is already the fixed capture.mjs, so it was a second AFTER
+  batch wearing a before label - and it came back 2271, which reads perfectly plausible as a before.
+  The check that caught it was counting the old anchor in the extracted file, which is the same
+  assert-the-anchor-exists law the game file has had since session 3.

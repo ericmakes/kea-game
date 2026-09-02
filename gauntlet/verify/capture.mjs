@@ -168,9 +168,7 @@ await shotR('22_torch_beam',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEA
 /* TODO 69: THE CAMERA WAS THE ONE THING LEFT LIVE HERE, AND FLAKES LAW 12 NAMES THIS EXACT CASE IN
    ITS OWN TEXT. The stage line set G.cams[0].position ONCE, with no camLock and no PIN, and the
    follow cam spent the whole settle easing away from it - so the photograph landed wherever the
-   machine frame count left it. Measured before: 4334 px of cross-run churn over ten pairs, the
-   samples spread continuously 6, 25, 952, 958, 968, 974, 3702, 3704, 4331, 4334, which is the
-   signature of an ease rather than of a handful of discrete settle states.
+   machine frame count left it.
    IT CANNOT BE camLock AT THE OFFSET THE OLD LINE REACHED FOR. 1.7 behind the bird is a close-up;
    the pinned frame is the WIDE follow view, because the ease had all but converged by the shutter.
    Piece 61 proved that the hard way while trying to measure a floor for this vantage.
@@ -182,9 +180,22 @@ await shotR('22_torch_beam',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEA
    mark this vantage has always declared, (-9.55, 10.15), is inside a solid: the first update puts
    the bird at (-8.87763, 10.0137) and leaves it there for 240 frames, so the camera has always been
    framing a bird 0.68 off its own stage mark. Converge against where the bird IS.
-   MEASURED AFTER: the camera reads -5.85379, 2.30050, 14.49733 to five decimals at settles of 600,
-   900, 1200 and 4000 ms - frame counts 36 to 240 - where every one of those moved it before. That
-   lock sits 1.4 cm from the eased position the baseline caught, so the frame DOES move slightly.
+   WHAT IS PROVEN, AND IT IS THE PROBE RATHER THAN THE PIXEL COUNT: the camera reads
+   -5.85379, 2.30050, 14.49733 to five decimals at settles of 600, 900, 1200 and 4000 ms - frame
+   counts 36 to 240 - where every one of those four gave a different camera before. The camera can
+   no longer land somewhere else because the machine was busy.
+   WHAT IT BUYS IN PIXELS IS LESS THAN THE FIRST MEASUREMENT SAID, and the correction is the useful
+   part. Five runs said cross-run churn fell 4334 -> 991 and that the samples went from continuous
+   to two clusters. Ten runs of each, 45 pairs a side, same machine, same night:
+       before  4353   0 0 0 0 8 8 30 30 31 31 31 32 | 952..972 x17 | 1020 | 3306..3318 x4
+                      | 3714..3731 x8 | 4338..4353 x4
+       after   3185   0 4 5 8 x8 | 985..998 x14 | 1273..1281 x17 | 2259..2271 x5 | 3185
+   A second batch of ten after the change came back 2271. So the honest claim is a worst case that
+   drops about a quarter and a camera that is now a constant; the residual is the caption feed and
+   the grass, which are TODO 67 and TODO 30 and are parked. BOTH DISTRIBUTIONS ARE CLUSTERED - the
+   ease reading was an artifact of ten pairs, and the pxdiff CHURN entry for 20 stays at 5489
+   because a ceiling from five runs is a floor, measured here for the third time in three sessions.
+   The lock sits 1.4 cm from the eased position the baseline caught, so the frame DOES move slightly.
    NOT RE-PINNED: left flagged for Eric, per the brief. */
 await shotR('20_dead_rear',`const G=KEAGAME.G,k=G.keas[0];
   k.x=-9.55;k.z=10.15;k.y=0;k.vy=0;k.grounded=true;k.stun=0;k.ry=Math.atan2((-11)-(-9.55),8-10.15);
