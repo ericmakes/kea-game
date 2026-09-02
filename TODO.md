@@ -458,6 +458,15 @@ PROOF once built: stage chaos just under and just over the threshold with wanted
 G.night flips on exactly one side of it - currently that test cannot be made to pass at all.
 RE-PIN: none from the code change itself, but night arriving earlier may change what a playtest
 sees. Leave the decision to Eric.
+SPLIT AND HALF-DONE, session 11 (65, 9dfe7f3d147d65b4dc639df8775ab575). There are TWO reads of
+G.chaos, not one, and this entry treated them as the same item. They are not:
+  THE CAREER PEAK - `if((G.chaos||0)>(G.chaosPeak||0))G.chaosPeak=G.chaos` in update - was a dead
+  statistic and no feel call at all. Every player has always been shown PEAK 0 on the to-do footer,
+  on the win screen and in the save blob. FIXED: it reads G.score, which is the meter.
+  THE NIGHT AUTO-DRIVER at `(G.wanted>=3||G.chaos>=260)` is STILL OPEN and still yours, exactly as
+  written above. Options (a) and (b) unchanged. Today behaviour is now PINNED by an assertion in the
+  everything battery - a quiet 5000 chaos does not bring the night, WANTED 3 does - so the day you
+  take option (a) that line goes red and tells you to update it. That is deliberate.
 
 ## THE SOUTH ISLAND TOUR (commissioned 2026-09-01, Eric)
 DESIGN INTENT, binding on all tour pieces: the game becomes separate maps

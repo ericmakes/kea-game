@@ -3702,7 +3702,15 @@ function updateFX(dt){
       n.position.y=0.36+0.06*Math.sin(T*21.1+2); n.rotation.y=-T*3.4; }
     if(G._fireSpy)G._fireSpy.push(F);
   }
-  G.playT=(G.playT||0)+dt; if((G.chaos||0)>(G.chaosPeak||0))G.chaosPeak=G.chaos;
+  /* THE CAREER PEAK WAS DEAD (TODO 35, the half of it that needs no judgement). This line read
+     G.chaos, which NOTHING in the file has ever assigned - the meter is G.score, and the HUD says so
+     out loud: it renders CHAOS plus G.score. So (undefined||0) > (peak||0) was 0 > 0 every frame of
+     every run, the peak never rose off zero, and every player has always been shown PEAK 0 - on the
+     to-do footer, on the win screen, and in the save blob that carries it between maps.
+     THE OTHER READ OF G.chaos IS THE NIGHT AUTO-DRIVER and it is deliberately left alone: pointing
+     that one at the meter changes WHEN NIGHT FALLS, which is a feel change on two pinned vantages
+     and a playtest call. TODO 35 still holds it, and the battery asserts it is still there. */
+  G.playT=(G.playT||0)+dt; if((G.score||0)>(G.chaosPeak||0))G.chaosPeak=G.score;
   if(G.towWheel)G.towWheel.rotation.z+=dt*2.4;
   updateStrips(dt);
   AMB.update(dt,G.keas&&G.keas[0]);

@@ -3670,6 +3670,77 @@ C.section('A RAIL IS A SURFACE - the rack, the boot rail and the clothesline hol
   }
 }
 
+C.section('THE CAREER PEAK IS ALIVE - PEAK 0 was not modesty, it was a dead read');
+/* TODO 35, the half of it that needs no judgement. One line in update read G.chaos, which NOTHING in
+   the file has ever assigned: the meter is G.score, and the HUD says so out loud - it renders CHAOS
+   plus G.score. So (undefined||0) > (peak||0) was 0 > 0 on every frame of every run since the line
+   was written, the peak never rose, and every player has always been shown PEAK 0 in three places -
+   the to-do footer, the win screen, and the save blob that carries the number between maps.
+   THE OTHER READ IS THE NIGHT AUTO-DRIVER AND IT IS LEFT ALONE ON PURPOSE. Pointing that one at the
+   meter changes WHEN NIGHT FALLS, which is a feel change on two pinned vantages and a playtest call
+   rather than an overnight one. TODO 35 still holds it, and the last assertion here PINS today's
+   behaviour so that the day somebody takes option (a) this section goes red and says so. */
+{
+  try{
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6); park();
+    G.chaosPeak=0; G.score=0;
+    ok((G.chaosPeak||0)===0,'a fresh career starts at nothing ('+G.chaosPeak+')');
+
+    // 1. IT FOLLOWS THE METER, which is the whole fix.
+    X.award(120,'A BIG ONE',{x:0,y:1,z:0}); tick(4);
+    ok(G.score>=120,'points land on the meter ('+G.score+')');
+    ok(G.chaosPeak===G.score,'and the peak is the meter at its highest ('+G.chaosPeak+' vs '+G.score+')');
+    X.award(60,'ANOTHER',{x:0,y:1,z:0}); tick(4);
+    ok(G.chaosPeak===G.score,'it rises with it ('+G.chaosPeak+')');
+
+    /* 2. AND IT IS A PEAK, not a mirror: the meter can go down - the fix verb pays less every cycle
+       and a match reads differences - and the high-water mark does not follow it. */
+    { const high=G.chaosPeak; G.score=Math.round(high/2); tick(6);
+      ok(G.chaosPeak===high,'the meter falling leaves the peak where it was ('+G.chaosPeak+
+         ' with the meter at '+G.score+')');
+      X.award(5,'A SMALL ONE',{x:0,y:1,z:0}); tick(4);
+      ok(G.chaosPeak===high,'and a small score after a big one does not lower it ('+G.chaosPeak+')'); }
+
+    /* 3. IT IS A CAREER NUMBER, so it lives at the top of the blob rather than in a map slot - which
+       is the piece 37 schema rule, and this is the first number that has ever been able to test it. */
+    { const realLS=globalThis.localStorage, _m=new Map();
+      globalThis.localStorage={getItem:k=>_m.has(k)?_m.get(k):null,
+                               setItem:(k,v)=>_m.set(k,String(v)),removeItem:k=>_m.delete(k)};
+      try{
+        const high=G.chaosPeak;
+        X.SAVE.write();
+        const blob=X.SAVE.migrate(X.SAVE.load())||{};
+        ok(blob.peak===high,'the write puts the peak at the top of the blob ('+blob.peak+' vs '+high+')');
+        const slots=blob.biomes||{};
+        ok(Object.keys(slots).length>0&&Object.keys(slots).every(id=>slots[id].peak===undefined),
+           'and not in any map slot, because it is the player and not the map ('+
+           Object.keys(slots).join(',')+')');
+        G.chaosPeak=0; X.boot({biome:'carpark'}); X.startGame(1); tick(12);
+        ok(G.chaosPeak===high,'and a fresh run hydrates it back ('+G.chaosPeak+')');
+      } finally { globalThis.localStorage=realLS; } }
+
+    /* 4. THE TWO PLACES A PLAYER READS IT ARE DOM STRINGS - the to-do footer and the win screen -
+       and renderTodo returns immediately under HEADLESS, so what is asserted here is the number they
+       are both built from. The footer is read in a real browser by journey.mjs. */
+    ok(Math.round(G.chaosPeak)>0,'the number the footer and the win screen are built from is no longer zero ('+
+       Math.round(G.chaosPeak)+')');
+
+    /* 5. AND THE NIGHT DRIVER IS STILL EXACTLY AS DEAD AS IT WAS. This is the assertion that goes red
+       the day somebody takes TODO 35 option (a), which is the point of writing it: night is allowed
+       to fall on WANTED and on nothing else, and a quiet five thousand chaos does not bring it. */
+    { G.night=false; G.nightManual=false; G.nightT=0; G.wanted=0; const was=G.score; G.score=5000;
+      tick(10);
+      ok(G.night===false,'a huge quiet score still does not bring the night on ('+G.score+' chaos, night '+
+         G.night+') - TODO 35 option (a) is still open and this line is its tripwire');
+      G.wanted=3; tick(10);
+      ok(G.night===true,'while WANTED 3 brings it on, which is the half that was ever wired ('+G.night+')');
+      G.night=false; G.nightManual=false; G.nightT=0; G.wanted=0; G.score=was; X.nightApply(0); tick(2); }
+  } finally {
+    G.night=false; G.nightManual=false; G.nightT=0; X.nightApply(0);
+    X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+  }
+}
+
 C.section('PERF FLOOR');
 X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;

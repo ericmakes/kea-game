@@ -2732,3 +2732,27 @@ TWICE: props rest where placed, no rail or rack or line holds anything.
   11_trailhead moved 0.0004 and was left alone.
 - EYEBALL: gauntlet/capture/10_skifield.png (RE-PINNED - the skis are in the rack) and
   gauntlet/capture/29_lodge_deck.png (three skis standing in the near rack, first pin, unpinned).
+
+### PIECE 65 — peak-chaos-is-alive — CERTIFIED 9dfe7f3d147d65b4dc639df8775ab575
+Verdict: green. TODO 35, the half of it that needed no judgement - and it turned out to be worth more
+than the half that does.
+- ONE LINE IN update READ G.chaos, which nothing in the file has ever assigned. The meter is G.score
+  and the HUD says so out loud: it renders CHAOS plus G.score. So (undefined||0) > (peak||0) was
+  0 > 0 on every frame of every run since the line was written.
+- WHICH MEANS EVERY PLAYER HAS ALWAYS BEEN SHOWN PEAK 0, in three places: the to-do footer (the
+  journey instrument printed 0/8 PEAK 0 0:00 on the mountain tonight and I read straight past it),
+  the win screen, and the save blob that carries the number between maps. Not modesty - a dead read.
+- SESSION 5 FOUND THE READ AND DID NOT KNOW THE COST. TODO 35 describes the night auto-driver clause
+  and treats the peak line as the same item; it is not. The night clause is a FEEL change on two
+  pinned vantages and a playtest call. The peak is a statistic that has never once been right.
+- THE NIGHT CLAUSE IS UNTOUCHED, and the last assertion in the section PINS today behaviour: a quiet
+  five thousand chaos still does not bring the night on, and WANTED 3 still does. That line goes red
+  the day somebody takes TODO 35 option (a), which is the point of writing it.
+- IT IS A PEAK, NOT A MIRROR, and that is asserted both ways: the meter can fall - the fix verb pays
+  less every cycle - and the high-water mark does not follow it down.
+- AND IT IS A CAREER NUMBER, so it lives at the TOP of the blob rather than in a map slot, which is
+  the piece 37 schema rule. This is the first number that has ever been able to test that rule: the
+  sabotage that writes it into the carpark slot lands three findings.
+- FOUR SABOTAGES, all caught, including the tripwire one.
+- CAPTURE: 25 compared, 0 flagged. The two places a player reads the peak are DOM strings and
+  renderTodo returns immediately under HEADLESS, so no pinned frame could move.
