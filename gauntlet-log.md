@@ -2778,3 +2778,40 @@ journey instrument printed the footer at me twice tonight and I read straight pa
   multiplies by G.combo, so a 240 landed 960 and my first assertion compared the footer against a
   number I had typed. It reads the meter now, which is the claim anyway.
 - CAPTURE: 25 compared, 0 flagged. QUIET hides the to-do panel, and the frame guard needs it open.
+
+## SESSION END — 2026-09-02, session 11, six pieces and the tour is reachable
+Stop condition on the 6-piece rule. Tip 8232590523658dfc3f5a1fe59a916de0, gate CERTIFIED-SHIP, 25
+pinned vantages 0 flagged, three new vantages shot AND MEASURED and deliberately unpinned, working
+tree clean, SESSION.lock released.
+    39 skifield-biome          aff1fa389a8e8ed138299474e77dc028
+    40 skifield-missions       1ba30ea41fe5df6e624f3919ad4cfad9
+    62 build-handles-swept     789c9056e7c0e0d96007888e4aa22389
+    63 props-rest-on-rails     b541758aae2631001ea2a397106fbffc
+    65 peak-chaos-is-alive     9dfe7f3d147d65b4dc639df8775ab575
+    66 the-footer-is-a-clock   8232590523658dfc3f5a1fe59a916de0
+- ERIC ORDER WAS 39 FIRST, ADDITIVE ONLY, NO GRADUATION, THEN THE NUMBERED QUEUE, and that is exactly
+  what happened. 41-44 are gated on the judged graduation and were not touched; 56 is blocked art; 60
+  is a judgement; 61 was excluded by name. So the queue after 40 was 62 (filed by 39 the same night),
+  then OPPORTUNITIES Tier 3 item 2 as 63, then the two halves of TODO 35 as 65 and 66.
+- THE HEADLINE IS THAT A PLAYER CAN GO THERE. M, six stars, GO, and the flyover lands you on a club
+  field whose to-do list is about a mountain. 37 and 38 were unreachable for two sessions.
+- THE SAME BUG FOUR LAYERS DEEP, and every layer hid the one below it: the cast (a live throw on
+  G.ladder), the nest site, the snow envelope, the road (seven hatchbacks across the snow, found by a
+  soak test and not by a brief), and underneath all of them TODO 62 - twenty-one build handles left
+  pointing at a discarded scene, which is WHY the ladder throw looked safe in every battery for two
+  sessions. Dave found the last map ladder and climbed that.
+- THE BATTERY ITSELF HAD THREE SECTIONS THAT ENCODED THERE IS ONE MAP, and the tour one was dangerous:
+  its finally deleted TABLE[1] by index, which as of piece 39 would have deleted the real ski field
+  out of the registry for every section after it. Nobody weakened an assertion tonight; three of them
+  got MORE precise, and two of those were law 10 - a bound read off the engine instead of off the
+  number one world happened to produce.
+- THIRTY-SIX SABOTAGES, ALL CAUGHT, and two were my own broken sabotages: a no-op edit that returned
+  zero findings (law 14 met from the other side - the tell is real in both directions), and a finder
+  written as find(...&&!c.solid), which let the property under test decide whether the assertion ran.
+- WHAT IT COST: piece 63 raised the skis onto the rack and broke s_binding and the whole of piece 18
+  fix-verb section, because interact() measures from the beak and a ski at rack height sat 0.395 away
+  against the tear at 0.410. Somebody else test found my regression. Every prop placed on a surface
+  joins that nearest-thing race, and that is worth remembering before the next collider pass.
+- WHAT THE NEXT SHIFT SHOULD READ FIRST: REPORT.md and the three decisions in it, then TODO 40b (the
+  tray-slide is the signature act of the map and the feel is Eric), then FLAKES 14 before writing a
+  single assertion.
