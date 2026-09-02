@@ -183,7 +183,7 @@ points on the drop.
 PROOF: displace, carry, drop in radius → points + restored; drop outside
 radius → nothing.
 
-### 21. consumable-replace  (VS)
+### 21. consumable-replace  (VS)  — DONE session 9 (6b4c21db02a72392d733500958471896)
 Scoffed food cannot be un-eaten: each consumable class gets a SOURCE (the
 picnic spread / the chilly bin). Restorer fetches a replacement and places
 it at the home spot → restored + ORDER points. Travel time is the price of

@@ -2043,3 +2043,40 @@ assumed, and the third one is a good FLAKES law 3 story.
   ignoring the cycles.
 - CAPTURE: 25 shots, 0 flagged, worst 0.9900. Nothing re-pinned - the verb only fires in a match.
 - EYEBALL: nothing in the set. Press 4, take a cone somewhere it should not be, then bring it back.
+
+### PIECE 21 — consumable-replace — CERTIFIED 6b4c21db02a72392d733500958471896
+Verdict: green. One staging round on the code, three on my own assertions - and two of those three
+are the more useful half of the piece.
+- THE ASYMMETRY IS THE DESIGN. A scoffed sandwich cannot be un-eaten: the menace undoes the
+  management with one bite and the management cannot answer it in place, it has to WALK to a source.
+  The price of the snack strategy is paid in travel, which is exactly what the brief asks for, and
+  the source runs out, which is what stops it being a treadmill.
+- THE SOURCE FOR A CONSUMABLE IS DERIVED, NOT TABULATED: the nearest registered source to where that
+  consumable LIVES. A food added to the picnic table tomorrow is replaceable from the picnic table
+  without anybody adding a row to a map.
+- THE REPLACEMENT IS THE EATEN PROP, RE-INSTANTIATED, and that is a deliberate call rather than a
+  shortcut. Nothing observes object identity - a scoffed prop is banked with its mesh hidden - so
+  un-banking it at the source IS a replacement, and it means the home, the learned pristine value and
+  the shared cycle count come along instead of being copied onto a new object and drifting from it.
+  The fiction stays in the fiction and out of the state.
+- IT RIDES PIECE 20 HOME. Fetching sets _wasAway and puts the thing in the beak; everything after
+  that is the carry-back verb already certified - same ORDER value, same decay, same botch, same
+  counter. No second restore path exists, which was the whole reason 19 and 20 were built as one
+  entry point each.
+- A COUNT WAS THE WRONG ASSERTION, and this piece proved it. Adding G.foodSrc to WORLDREGS broke my
+  own piece-48 assertion that six registries are cleared - a magic number that failed on a correct
+  change and said nothing about what was missing. It now NAMES the registries, which is what the
+  claim was always about.
+- THREE OF MY OWN ASSERTIONS WERE WRONG AND ALL THREE WERE CAUGHT BY SABOTAGE, NOT BY LUCK:
+    1. Two sabotages CRASHED the battery on rep.banked when a refused fetch returned null - the same
+       unguarded-happy-path read that has now bitten in four consecutive pieces. Guarded.
+    2. The second-source assertion sat BEFORE the food was eaten, so both sources answered null and
+       it passed against a sabotage that had broken the rule outright. Moved after the meal.
+    3. One sabotage was unobservable for an honest reason rather than a test bug: falling back to
+       foodSrc[0] hands over nothing when the order belongs to the OTHER source. Replaced with the
+       sabotage that actually states the rule - proximity does not matter - which fails immediately.
+- VERIFIED ADVERSARIALLY, FIVE WAYS, all caught: a source that never runs out, the menace fetching,
+  proximity not mattering, the replacement not counting as away, and any source answering any order.
+- CAPTURE: 25 shots, 0 flagged, worst 0.9904. Nothing re-pinned.
+- EYEBALL: nothing in the set. Press 4, eat the sandwich as kea 1, then walk kea 2 to the picnic
+  table and back to where it was.

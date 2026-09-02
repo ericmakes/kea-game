@@ -1521,7 +1521,11 @@ C.section('ONE BUILD, ONE WORLD - the second boot replaces the country, it does 
 {
   const now=r=>(G[r]||[]).length;
   const root=m=>{ let n=m; while(n&&n.parent)n=n.parent; return n; };
-  ok(X.WORLDREGS.length===6,'six registries are filled by a build ('+X.WORLDREGS.join(', ')+')');
+  /* A COUNT WAS THE WRONG ASSERTION HERE and piece 21 proved it by adding a seventh registry: the
+     magic number failed on a correct change and said nothing about what was missing. The claim that
+     matters is that every registry a build fills is IN the list, so name them. */
+  for(const r of ['props','inter','colliders','cars','sheep','strips','foodSrc'])
+    ok(X.WORLDREGS.indexOf(r)>=0,'the build clears G.'+r+' ('+X.WORLDREGS.join(', ')+')');
 
   // 1. NOTHING IN THE REGISTRIES BELONGS TO A SCENE THAT NO LONGER EXISTS. This is the bug itself:
   //    the first world survived in the lists while its meshes hung off the discarded scene.
@@ -2106,6 +2110,105 @@ C.section('THE CARRY-BACK - pick it up where it does not belong, drop it where i
     ok(paid===0,'it pays nothing, because undoing something worthless is worthless ('+paid+')');
     ok((q.cycles||0)===1,'but it still COUNTS as a restore ('+q.cycles+')');
     ok(Math.hypot(q.x-q.home.x,q.z-q.home.z)<=B.BAND.off+1e-9,'and it still lands home, botched'); }
+
+  X.startGame(1); tick(6);
+}
+
+C.section('THE SOURCE - a scoffed sandwich cannot be un-eaten, so the management walks');
+// TODO 21. The asymmetry is the point: the menace undoes the management with one bite and the
+// management cannot answer it in place. Every consumable is replaceable from a SOURCE, the source
+// for a consumable is the nearest one to where that consumable LIVES (derived, not tabulated), and
+// the source runs out - which is what stops it being a treadmill.
+{
+  const FD=X.FOOD, CY=X.CARRY, B=X.BOTCH, V=X.VS, P2=H.P2;
+  X.startGame(2,{vs:true}); tick(6); park(); G.paused=false;
+  const a=G.keas[0], b=G.keas[1];
+  G.vs.roles={menace:0,management:1};
+  const free=k=>{ if(k.held){k.held.heldBy=null;k.held=null;} };
+  const standAt=(k,x,z)=>{ const yy=Math.max(0.25,X.groundHeightAt(x,z,3)+0.02);
+    for(let i=0;i<3;i++){ k.x=x; k.z=z; k.y=yy; k.vy=0; k.grounded=true; X.update(1/60); } };
+  const dropAt=(k,map,x,z)=>{ standAt(k,x,z); G.combo=0; G.comboT=0;
+    const s0=V.scores()[k.idx]; tap(map.grab); tick(4); return V.scores()[k.idx]-s0; };
+
+  ok((G.foodSrc||[]).length===2,'two sources in the world ('+(G.foodSrc||[]).map(s=>s.id).join(', ')+')');
+  ok((G.foodSrc||[]).every(s=>s.stock===FD.STOCK),'each starts with the stock constant ('+FD.STOCK+')');
+
+  const food=G.props.find(p=>p.food&&p.home&&!p.banked);
+  ok(!!food,'a consumable with a home ('+(food?food.name:'none')+')');
+  const src=FD.near(food.home.x,food.home.z);
+  ok(!!src,'and a nearest source to where it lives ('+(src?src.id:'none')+')');
+
+  // ---- THE MENACE EATS IT ----
+  food.banked=true; food.heldBy=null; if(food.mesh)food.mesh.visible=false;
+  food.paid=50; food.cycles=0;              // staged pristine value, so the payment is a number
+  ok(FD.orders().indexOf(food)>=0,'a scoffed consumable is an outstanding order');
+  ok(FD.orderFor(src)===food,'and the source that can answer it is the one nearest its home');
+  /* THE OTHER SOURCE MUST NOT ANSWER IT, which is the half of "derived, not tabulated" a
+     single-source assertion cannot see - and it has to be asked AFTER the food is eaten, which is
+     what the first version of this got wrong: with no outstanding order both sources answered null
+     and the assertion passed on a sabotage that had broken the rule. */
+  { const other=(G.foodSrc||[]).find(t=>t!==src);
+    ok(!!other,'there is a second source to be wrong with ('+(other?other.id:'none')+')');
+    ok(FD.orderFor(other)!==food,'and it does NOT answer an order that belongs to the first'); }
+
+  /* IT CANNOT BE UN-EATEN. There is no verb anywhere that puts a banked consumable back where it
+     was - the only route is the source - and that is asserted rather than assumed. */
+  ok(food.banked===true&&(!food.mesh||food.mesh.visible===false),'it is gone from the world');
+  ok(CY.at(food)===false||food.banked,'and nothing has quietly restored it');
+
+  // ---- WRONG BIRD AT THE SOURCE ----
+  { standAt(a,src.x,src.z); free(a);
+    const got=FD.fetch(a);
+    ok(got===null,'the MENACE gets nothing from the source');
+    ok(src.stock===FD.STOCK,'and takes no stock ('+src.stock+')'); }
+
+  // ---- RIGHT BIRD, WRONG PLACE ----
+  { standAt(b,src.x+9,src.z+9); free(b);
+    ok(FD.at(b)===null,'standing nowhere near a source is not being at one');
+    ok(FD.fetch(b)===null,'so nothing is handed over'); }
+
+  // ---- THE MANAGEMENT WALKS TO THE SOURCE AND FETCHES ONE ----
+  { standAt(b,src.x,src.z); free(b);
+    const stock0=src.stock;
+    const rep=FD.fetch(b), R=()=>rep||{};   // a refused fetch must FAIL an assertion, never throw
+    ok(!!rep,'the management is handed a replacement at the '+src.id);
+    ok(!!rep&&b.held===rep,'straight into the beak');
+    ok(R().banked===false,'it is a real prop in the world again');
+    ok(src.stock===stock0-1,'and the source is one down ('+src.stock+' of '+FD.STOCK+')');
+    ok(R()._wasAway===true,'it counts as away, because it is standing at the source and not at home');
+    ok(!!R().home&&Math.hypot(src.x-R().home.x,src.z-R().home.z)>0.5,'which is not where it lives'); }
+
+  // ---- AND CARRYING IT HOME RESTORES IT, THROUGH PIECE 20 AND NOT A SECOND PATH ----
+  { const rep=b.held, R=()=>rep||{};
+    ok(!!rep,'the management is still carrying the replacement');
+    const want=CY.value(rep);
+    const home=R().home?{x:R().home.x,z:R().home.z}:{x:0,z:0};
+    ok(want===50,'the order value is the pristine value of what was eaten ('+want+')');
+    const paid=dropAt(b,P2,home.x,home.z);
+    ok(paid===want,'placing it at the home spot pays ORDER ('+paid+')');
+    ok(R().banked===false&&(!R().mesh||R().mesh.visible===true),'the prop is present again');
+    ok(!!rep&&CY.at(rep),'and it is home ('+(rep?Math.hypot(rep.x-home.x,rep.z-home.z).toFixed(3):'-')+'m)');
+    ok(!!rep&&Math.hypot(rep.x-home.x,rep.z-home.z)>1e-6,'but botched, not exact');
+    ok(!!rep&&Math.abs(rep.x-home.x)<=B.BAND.off+1e-9&&Math.abs(rep.z-home.z)<=B.BAND.off+1e-9,
+       'and inside the same band every other restore uses');
+    ok((R().cycles||0)===1,'one cycle counted, on the same counter ('+R().cycles+')');
+    ok(!!rep&&FD.orders().indexOf(rep)<0,'and it is no longer an outstanding order'); }
+
+  // ---- DEPLETION ----
+  { const s=FD.near(food.home.x,food.home.z);
+    let handed=0;
+    for(let i=0;i<6;i++){
+      food.banked=true; food.heldBy=null; if(food.mesh)food.mesh.visible=false;
+      standAt(b,s.x,s.z); free(b);
+      if(FD.fetch(b))handed++; }
+    ok(handed===FD.STOCK-1,'the source hands over what it had left and no more ('+handed+
+       ' after one was already taken, stock constant '+FD.STOCK+')');
+    ok(s.stock===0,'the source is empty ('+s.stock+')');
+    free(b);
+    food.banked=true; food.heldBy=null; if(food.mesh)food.mesh.visible=false;
+    standAt(b,s.x,s.z);
+    ok(FD.fetch(b)===null,'and an empty source hands over nothing at all');
+    ok(FD.orderFor(s)===food,'while the order is still outstanding - the menace is ahead, which is the point'); }
 
   X.startGame(1); tick(6);
 }
