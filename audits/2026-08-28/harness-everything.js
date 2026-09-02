@@ -7,10 +7,13 @@ X.boot();
 
 /* TODO 17: THE BUILD-TIME TRUTH ABOUT PROP HOMES, captured here and nowhere else. The sections below
    spend three hundred assertions carrying props around, and one of them boots the game a SECOND time
-   (the snow section, which needs a fresh world for its resolver sweep) - which rebuilds the world and
-   leaves TWO of every prop in G.props from that point on. So no later moment can speak for the build,
-   and the home-positions section asserts against this snapshot for anything build-shaped. The double
-   boot is filed as TODO 48; it is not this piece to fix. */
+   (the snow section, which needs a fresh world for its resolver sweep). The snapshot is still the
+   only thing that can speak for the FIRST build, so the home-positions section keeps asserting
+   against it - a rebuild is a different world even when it is the only one in the registries.
+   TODO 48 IS FIXED (session 7): buildWorld now empties the registries it fills, so the second boot
+   replaces the world instead of adding a second copy of it on top. The counts below are what one
+   world costs, and the section at the end of this file holds them to it. */
+const BOOTCOUNTS=Object.fromEntries(X.WORLDREGS.map(r=>[r,(G[r]||[]).length]));
 const HOMESATBOOT=G.props.map(p=>({id:p.id,name:p.name,home:Object.assign({},p.home),
   mx:p.mesh?p.mesh.position.x:null, my:p.mesh?p.mesh.position.y:null, mz:p.mesh?p.mesh.position.z:null,
   mrx:p.mesh?p.mesh.rotation.x:null, mry:p.mesh?p.mesh.rotation.y:null, mrz:p.mesh?p.mesh.rotation.z:null,
@@ -1502,6 +1505,48 @@ C.section('SCORE ATTRIBUTION - every point lands on exactly one book, and they a
     ok(L.total()===t0&&G.score===sc,'startGame leaves both the score and the books where they were ('+
        L.total()+' vs '+t0+')');
     ok(G.score===L.total(),'so they still add up after it'); }
+}
+
+C.section('ONE BUILD, ONE WORLD - the second boot replaces the country, it does not add another');
+// TODO 48. boot() calls initScene, which throws the old scene away and makes a new one - so a second
+// boot used to leave the registries describing meshes that are in no scene, on top of the ones that
+// are. This battery is where it lived: the snow section boots again for a fresh resolver sweep, and
+// from that line on every section ran against two of every prop, interactable and collider.
+//
+// THE PROOF THE BRIEF ASKED FOR CANNOT BE WRITTEN AS THE BRIEF WROTE IT. "G.props.length after the
+// last section equals the count after the first boot" is false on a healthy build and always was:
+// play SPAWNS props. The GoPro out of the backpack, the aerial, the mirror, the spikes, the nail,
+// the ranger cap - twenty-three of them by the time the sections above are done, all legitimate.
+// So the claim is split into the three things that were actually wrong, each asserted directly.
+{
+  const now=r=>(G[r]||[]).length;
+  const root=m=>{ let n=m; while(n&&n.parent)n=n.parent; return n; };
+  ok(X.WORLDREGS.length===6,'six registries are filled by a build ('+X.WORLDREGS.join(', ')+')');
+
+  // 1. NOTHING IN THE REGISTRIES BELONGS TO A SCENE THAT NO LONGER EXISTS. This is the bug itself:
+  //    the first world survived in the lists while its meshes hung off the discarded scene.
+  const orphans=G.props.filter(p=>p.mesh&&root(p.mesh)!==G.scene);
+  ok(orphans.length===0,'no prop in G.props hangs off a discarded scene ('+orphans.length+' orphans of '+
+     G.props.length+')');
+  const oc=G.colliders.filter(c=>c.mesh&&root(c.mesh)!==G.scene);
+  ok(oc.length===0,'and no collider does either ('+oc.length+' of '+G.colliders.length+')');
+
+  // 2. THE SINGLETONS ARE SINGULAR, which is what a doubled registry breaks first: a find() that
+  //    expects the only one of something gets whichever copy sorts first.
+  const latches=G.inter.filter(it=>it.label==='PECK THE LATCH').length;
+  ok(latches===1,'exactly ONE latch to peck, not one per boot ('+latches+')');
+  const keys=G.props.filter(p=>p.name==='ute keys').length;
+  ok(keys===1,'exactly one set of ute keys, so a mission prop cannot be shadowed by its own copy ('+keys+')');
+  ok(G.sheep.length===3,'three sheep in the paddock, not six ('+G.sheep.length+')');
+  ok(G.cars.length===6,'six cars on the road, not twelve ('+G.cars.length+')');
+
+  // 3. AND A BUILD COSTS THE SAME EVERY TIME. Booting again here is the direct statement of the fix,
+  //    against the counts taken at the very first boot of this file.
+  X.boot();
+  for(const r of X.WORLDREGS)
+    ok(now(r)===BOOTCOUNTS[r],'a fresh boot leaves G.'+r+' exactly one world ('+now(r)+
+       ' against '+BOOTCOUNTS[r]+' at the first boot)');
+  X.startGame(1); tick(6);
 }
 
 C.section('PERF FLOOR');

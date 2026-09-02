@@ -586,7 +586,11 @@ like something that works - _ryUnused, or a comment at minimum. (b) is free and 
 PROOF once built: for (a), assert every prop mesh rotation.y equals its own p.ry after build, and
 re-pin every vantage with props in it. For (b), nothing to prove but the md5 and the unchanged frames.
 
-### 48. harness-everything BOOTS THE GAME TWICE, so half its sections run against a doubled world
+### 48. harness-everything BOOTS THE GAME TWICE, so half its sections run against a doubled world  — DONE session 7 (20ee30e813a75df2f132024da35c35b3)
+Fixed with option (b), the one the note calls the real answer: buildWorld empties the registries it
+fills, so a second boot replaces the world instead of stacking another on it. Option (c) was not
+taken - moving the snow section would have hidden the bug rather than fixed it, and left the next
+battery to rediscover it. The proof could not be written as this note wrote it: see the log.
 NOT STRUCK - see the note under 47. Still live, and independent of the travel beat: the double boot
 is in the snow section, which the revert did not touch, and it still doubles every registry from
 that line on. Session 7 confirmed it survives the revert - the battery is 182 lines shorter and the

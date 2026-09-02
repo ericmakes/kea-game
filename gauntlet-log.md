@@ -1586,3 +1586,44 @@ Verdict: green. One staging round, and it was the test that was wrong rather tha
 - NOTHING VISIBLE CHANGES, which is what the brief asked for outside VS: no HUD, no save field, no
   popup, no rnd draw. Capture 25/25, 0 flagged, worst 0.9845, nothing re-pinned.
 - EYEBALL: nothing. This one is judged by the VS pieces that spend it.
+
+### PIECE 48 — one-build-one-world — CERTIFIED 20ee30e813a75df2f132024da35c35b3
+Verdict: green first pass on the fix; one staging round on the proof, because the proof the brief
+asked for is false on a healthy build.
+- OPTION (b), THE ONE ERIC CALLED THE REAL ANSWER. buildWorld now empties the six registries it
+  fills before it fills them. Option (c) - move the snow section to the top - was available and free
+  and I did not take it: it hides the bug rather than fixing it, and leaves the next battery to
+  rediscover it the hard way, which is what piece 17 already had to do.
+- WHY THE REGISTRIES AND NOT THE SCENE: boot() calls initScene, which throws the old THREE.Scene away
+  and makes a new one. So the meshes were never doubled - the old ones simply stopped being in any
+  scene, while the registries went on describing them. The registries have to be emptied for exactly
+  the reason the scene is replaced. Put in buildWorld rather than boot so the guarantee belongs to
+  the function that fills them, however it is called - and nothing else in the tree calls it: every
+  battery and every capture goes through boot().
+- MEASURED BEFORE AND AFTER on a plain double boot: cars 6 to 12, props 21 to 42, colliders 26 to 52,
+  sheep 3 to 6, strips 2 to 4, inter 64 to 131. The three extra on inter are the sheep pecks, one per
+  sheep, registered for six sheep the second time - which is the kind of detail that tells you the
+  second pass really did run over the first.
+- THE BRIEF ASKED FOR A PROOF THAT CANNOT BE WRITTEN. "assert G.props.length after the last section
+  equals the count after the first boot" is false on a HEALTHY build, and always was: play spawns
+  props. Twenty-three of them by the end of the sections above - the GoPro out of the backpack, the
+  aerial, the mirror, the spikes, the nail, the ranger cap. The first version of the section asserted
+  it anyway and failed 44 against 21, which is the honest way to find that out. Split into the three
+  things that were actually wrong:
+    1. NO REGISTRY ENTRY HANGS OFF A DISCARDED SCENE. This is the bug itself, stated directly - walk
+       each prop mesh to its root and require it to be the live scene. On the sabotage that restores
+       the old behaviour it reads 61 orphans of 105.
+    2. THE SINGLETONS ARE SINGULAR - one latch, one set of ute keys, three sheep, six cars. That is
+       what a doubled registry breaks first: a find() that expects the only one of something gets
+       whichever copy sorts first.
+    3. A BUILD COSTS THE SAME EVERY TIME - boot again, and all six registries come back to their
+       first-boot counts exactly.
+- VERIFIED ADVERSARIALLY: restoring the original bug fails 11 assertions; clearing only three of the
+  six registries fails 4, including the one that names the list.
+- THE TODO-17 SNAPSHOT STAYS, and its comment is corrected rather than deleted. HOMESATBOOT is still
+  the only thing that can speak for the FIRST build - a rebuild is a different world even when it is
+  the only one in the registries, because the second pass draws from further along the same seeded
+  stream.
+- NO BROWSER CHANGE BY CONSTRUCTION: boot() runs once in the browser, so the clear is a no-op there.
+  Capture 25/25, 0 flagged, worst 0.9815, nothing re-pinned - which is the evidence, not the argument.
+- EYEBALL: nothing. This one is judged by every count assertion written from here on.

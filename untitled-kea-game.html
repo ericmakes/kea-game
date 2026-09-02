@@ -1059,7 +1059,19 @@ function snowSpot(x,z,r){
   for(const [dx,dz] of SNOWSLIDE){ const nx=x+dx, nz=z+dz;
     if(!snowBlocked(nx,nz,r))return {x:nx,z:nz,r,slid:Math.hypot(dx,dz)}; }
   return {x,z,r,slid:0,stuck:true}; }                  // nowhere to go: leave it where it was, and say so
+/* ONE BUILD, ONE WORLD (TODO 48, 2026-09-02). boot() calls initScene, which throws the old
+   THREE.Scene away and makes a new one - so a second boot leaves the registries describing meshes
+   that are no longer in any scene, on top of the ones that are. The registries have to be emptied
+   for exactly the reason the scene is replaced, and they were not. Measured on a plain double boot:
+   cars 6 to 12, props 21 to 42, colliders 26 to 52, sheep 3 to 6, strips 2 to 4, and inter 64 to 131
+   (the extra three are the sheep pecks, one per sheep, registered for six sheep the second time).
+   Nothing asserted before today depended on a count, which is the only reason it never bit, but
+   every count written from here would have been silently wrong and every find() would have got
+   whichever duplicate came first. Emptied HERE rather than in boot() so that the guarantee belongs
+   to the function that fills them, however it is called. */
+const WORLDREGS=['props','inter','colliders','cars','sheep','strips'];
 function buildWorld(){
+  for(const r of WORLDREGS)if(Array.isArray(G[r]))G[r].length=0;
   // terrain
   const gg=new THREE.PlaneGeometry(240,240,48,48);
   const pos=gg.attributes.position;
@@ -3775,6 +3787,7 @@ if(typeof globalThis!=='undefined'){
     HOMES:{R:HOMER,cls:homeClass,register:homesRegister,dist:homeDist,at:atHome},
     JAIL:{SQUAWK,coop:coopCell,dir:squawkDir,fire:squawkFire,ping:squawkUpdate},
     LEDGER:{actorOf,add:ledgerAdd,of:ledgerOf,total:ledgerTotal},
+    WORLDREGS,
     grassBlade,plateLines,hudReflow,setPrompt,PROMPTS,PREEN,P1MAP,P2MAP,CASEFILES,checkCaseFiles,setSeed,SAVE,rnd,MAPKIND,grassTint,grassTintReset,smoothFacetNormals,SMOOTHSTAT,SMOOTH_DEG,roundedBoxGeo};
 }
 if(!HEADLESS)boot();
