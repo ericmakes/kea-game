@@ -440,6 +440,47 @@ const GRASS={
      cannot be settled here. Given that, the tier that costs 2.7x the ALREADY-ACCEPTED baseline is
      the defensible one to ship, and `high` is measured, kept, and one env var away
      (KEAGRASS='{"tier":"high"}') on the machine that can actually judge it. */
+  /* ---- THE COVER LAYER — REPLAT P4b ----
+     Eric played P4 and the field read as ISLANDS IN BARE SAND: the clumps were right and the
+     ground between them was naked. Real tussock country has a continuous low mat under the mounds
+     — nz_tussock_01's ground is never bare between clumps, it is short growth with the mounds
+     rising out of it. So a second layer, same shader and same geometry, different numbers: short,
+     wide, dense, laid nearly UNIFORMLY (clumpPull 0.10, bare 0) so it fills every gap the clump
+     layer deliberately leaves.
+     IT IS SHORT ENOUGH NOT TO COST THE BIRD. 45-105 mm against a kea that stands about 300 mm —
+     the cover reaches its ankles. The readability trade P4 tuned is in the CLUMP layer's height,
+     and this layer is deliberately below it.
+     AND SMALL ENOUGH IN RADIUS TO BE AFFORDABLE. It only has to cure bare ground you can SEE the
+     ground of, which is close range; past 9 m the clump layer and the P3 scanned ground carry it.
+     Its measured cost is in ARTBIBLE. */
+  /* near 16 AND NOT 9. The first cut covered a 9 m disc, and the play camera looks at ground from
+     five to twenty metres out — so the cover cured bare ground exactly where none was visible and
+     stopped short of everywhere it was. Its cost is measured in ARTBIBLE; it is the cheapest layer
+     in the game per blade because every blade is 45-105 mm tall and mostly sub-pixel past ten
+     metres, which is also why it can afford the radius. */
+  /* THE COVER KEEPS FULL DENSITY ALMOST TO ITS EDGE (lodFrac 0.88) where the clump layer starts
+     thinning at 0.55 of its radius. They are doing different jobs: the clumps are a SHAPE and can
+     afford to fade early because the eye reads their silhouette, while the cover's entire purpose
+     is that no ground shows — and a cover that has already half-faded at nine metres leaves
+     exactly the bare sand it was added to cure, which is what the play camera photographed. */
+  /* THE COVER IS A NEAR-FIELD LAYER AND ITS RADIUS WAS CUT BACK TO SAY SO. At 340,000 blades over
+     16 m it cost 21.9 ms — MORE than the clump layer — and it still did not cure the bare ground
+     the play camera sees at ten to twenty metres, because a 100 mm blade at fifteen metres is two
+     pixels tall and the ground behind it wins. That is not a density problem and no amount of
+     geometry solves it: what reads as naked sand at that range is THE GROUND'S OWN COLOUR, which
+     measured out at #9b9787 — a desaturated grey-beige. `groundTint` below is the fix for the
+     distance; this layer is the fix for the foreground, where it genuinely works and is cheap. */
+  cover:{count:150000, near:10, h:[0.055,0.130], w:[0.013,0.026], lean:[0.28,0.66],
+         bare:0.0, clumpM:0.55, clumpPull:0.10, clumpPullVar:0.06, taper:0.45, lodFrac:0.88, seg:2},
+  /* ---- THE GROUND UNDER THE FIELD ----
+     Eric's note said the monochrome yellow-beige runs across grass AND GROUND, and the ground was
+     the half no blade can fix. The terrain is a vertex-colour blend that averages to #9b9787 at the
+     play camera — pale, grey and sandy, which is what shows between every clump. This is a
+     MULTIPLIER on the grass-family terrain material only: it darkens it and pulls it off grey
+     toward soil and short growth, so ground between mounds reads as ground rather than as sand.
+     It costs nothing — it is one colour on one material — and it is the single largest thing in
+     P4b that the play camera actually sees. */
+  groundTint:0xA8B078,
   tier:'mid', snap:0.5,
   tiers:{
     low:  {count: 60000, near:14},
@@ -450,7 +491,11 @@ const GRASS={
   /* BLADE GEOMETRY. seg is the number of segments up the blade, and it is what lets a blade ARC
      rather than stand up like a fence paling — ref_bow_02's blades are long curves, not spikes.
      seg 4 gives 9 vertices and 7 triangles per blade. */
-  seg:4, taper:0.72, bend:0.34,
+  /* seg/bend are shared; TAPER IS PER LAYER. A tussock LEAF stays wide most of its length and
+     only narrows near the tip — that is what makes it catch the light along its whole edge — where
+     0.72 tapered almost from the base and read as a strand of hair. P4b widened both the taper
+     exponent and the width range toward a leaf. */
+  seg:4, bend:0.34,
   /* CLUMPING. The country in nz_tussock_01 is not a carpet: it is discrete tussock mounds with
      open ground between them, and that is the single biggest reason the old triangle carpet read
      as a lawn. Blades are scattered around clump centres drawn on a jittered grid, `bare` of the
@@ -462,7 +507,13 @@ const GRASS={
      reads B.clumpM and B.bare — so tuning them did exactly nothing. Found by a sabotage that set
      the top-level `bare` to zero and stayed GREEN. A dead constant in a recipe block is worse than
      no constant: it is a knob that lies about being connected. */
-  clumpJit:0.55, clumpPull:0.42,
+  /* clumpJit AT 0.95, NOT 0.55, AND THE PULL VARIES PER MOUND. The clump cell is a SQUARE grid
+     (floor(w/clumpM)), and at half a cell of jitter with one fixed pull the field photographed as
+     a visible checkerboard of rectangular patches on bare ground — a grid is exactly what a grid
+     looks like from the play camera, however good the blades in it are. Nearly a full cell of
+     jitter breaks the rows, and varying the pull per cell breaks the rhythm: some mounds are tight
+     and some are spread, which is what stops the eye finding the lattice. */
+  clumpJit:0.95, clumpPull:0.42, clumpPullVar:0.30,
   /* THE COMB. The whole field leans ONE WAY, wandering slowly across the flats — that is what a
      breeze looks like on tussock and it is the difference between a field and a scatter. The
      amplitude BOUNDS the spread (twice `amp` radians, end to end), which is what lets the gate
@@ -508,10 +559,30 @@ const GRASS={
        as isolated brushes with bare ground between them. Some occlusion is authentic — ref_bow_03's
        bin is half-buried and it looks right — but a bird you cannot see is not a trade, it is a
        bug, and the floors are the instrument that said so. */
-    carpark:  {h:[0.20,0.48], w:[0.0055,0.0125], lean:[0.10,0.34], bare:0.18, clumpM:1.35,
-               tint:[0xB8901F,0x8A7C2E,0xD9B84A]},
-    skifield: {h:[0.26,0.62], w:[0.0035,0.0080], lean:[0.05,0.19], bare:0.34, clumpM:1.75,
-               tint:[0xC9992F,0xA07C24,0xE0C25A]},
+    /* ---- COLOUR, FROM nz_tussock_03 ----
+       The foreground mound in that photograph is the whole brief in one object: an OLIVE-GREEN
+       heart, an OCHRE body, and RUST-BROWN outer leaves, all in the SAME mound — and P4 shipped
+       three golds that differed by a few percent, which is why Eric read the whole country as
+       monochrome yellow-beige. Four colours per biome now, and they are used along the blade as
+       well as between blades:
+         base   the green at the foot of a leaf, where it is alive and shaded
+         a,b,c  the body: three genuinely different draws, ochre / tawny / pale dry stalk
+         tip    the rust-brown of an old outer leaf, and the seed head
+       A blade mixes base -> its own body colour over the first half, then toward tip over the top
+       — and the AMOUNT of tip it takes is per-blade, so some leaves are green to the end and
+       others are rust from halfway. The clump weight leans the whole mound one way on top of that,
+       which is what stops a field of individually-varied blades averaging back to one colour. */
+    /* THE SEPARATION HAD TO BE PUSHED, AND A CONTROL SAID SO. The first cut of this palette was
+       base 0x5E6B30 / body 0xB98F42,0xA87C2C,0xD8C288 / tip 0x8A5A2B — four colours inside about
+       twenty degrees of hue and half a stop of value, which photographed as the same monochrome
+       gold P4b was sent to fix. Forcing base to pure red and tip to pure blue showed the gradient
+       working perfectly, so the mechanism was never the problem: the colours were. Widened to a
+       real green, a genuinely deep tawny, a bleached stalk and a dark rust, which is the spread
+       nz_tussock_03's foreground mound actually has. */
+    carpark:  {h:[0.20,0.48], w:[0.009,0.020], lean:[0.10,0.34], bare:0.18, clumpM:1.35, taper:0.55,
+               base:0x4C6B22, tint:[0xC58E31,0x8E6118,0xE6D6A2], tip:0x7A3F16},
+    skifield: {h:[0.26,0.62], w:[0.006,0.014], lean:[0.05,0.19], bare:0.34, clumpM:1.75, taper:0.50,
+               base:0x46661F, tint:[0xD09B2C,0x94661C,0xEADCAC], tip:0x8A4A18},
   },
 };
 /* ITS OWN IGNORED LIST, not MATS's. matMerge pushes rejected paths into whatever array it is
@@ -1032,7 +1103,13 @@ function matState(){
 }
 function matGround(fam,rough){
   const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:rough,metalness:0,envMapIntensity:0.3});
-  m.userData.matFamily=fam; m.userData.matBase=new THREE.Color(1,1,1); m.userData.matRough=rough;
+  /* REPLAT P4b: the GRASS-family terrain wears GRASS.groundTint. Only the grass one — the ski
+     field's ground is the snow family and snow is not supposed to look like soil. The tint rides
+     in matBase so matDress's paint-mode exposure compensation applies to it exactly as it does to
+     the white it replaces, rather than being multiplied in afterwards where the two would fight. */
+  const base=fam==='grass'?new THREE.Color(GRASS.groundTint).convertSRGBToLinear()
+                          :new THREE.Color(1,1,1);
+  m.userData.matFamily=fam; m.userData.matBase=base; m.userData.matRough=rough;
   { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF); }
   matFam(fam).mats.push(m); matDress(m); return m;
 }
@@ -2141,14 +2218,18 @@ attribute vec2 aOff;
 uniform vec2 uAnchor;
 uniform float uTime, uNear, uLodNear, uLodFar, uBand, uComp;
 uniform float uGust, uFlutter, uGustHz, uFlutterHz, uGustM;
-uniform float uClumpM, uClumpJit, uClumpPull, uBare;
+uniform float uClumpM, uClumpJit, uClumpPull, uClumpPullVar, uBare;
 uniform vec2 uHmul; uniform float uHamp;
 uniform vec4 uCut0, uCut1, uCut2, uCut3;      // xz centre, xz half-extent; w<=0 disables
 uniform vec2 uHrange, uWrange, uLrange;
-uniform vec3 uTintA, uTintB, uTintC;
+uniform vec3 uTintA, uTintB, uTintC, uTintBase, uTintTip;
+uniform float uSeed;
 varying float vGrassT;
 varying vec3 vGrassW;
 varying vec3 vGrassTint;
+varying vec3 vGrassBase;
+varying vec3 vGrassTip;
+varying float vGrassSeed;
 float keaGH(vec2 p){
   vec3 q=fract(vec3(p.xyx)*0.1031);
   q+=dot(q,q.yzx+33.33);
@@ -2175,7 +2256,11 @@ void keaGrass(inout vec3 t){
      cells are dropped so the ground between mounds is genuinely bare. */
   vec2 cell=floor(w/uClumpM);
   vec2 cc=(cell+0.5+(keaGH2(cell)-0.5)*uClumpJit)*uClumpM;
-  w=mix(w,cc,uClumpPull);
+  /* the pull varies PER MOUND, so some are tight and some are spread and the square cell grid
+     stops being findable — a fixed pull draws every cell into the same shape and the eye reads the
+     lattice straight through the blades */
+  float pull=clamp(uClumpPull+(keaGH(cell*2.9+5.3)-0.5)*2.0*uClumpPullVar,0.0,0.9);
+  w=mix(w,cc,pull);
   float alive=step(uBare,keaGH(cell*1.7+3.1));
 
   /* the places grass does not grow: road, carpark, hut slab, pen — or piste, tow line, lodge */
@@ -2228,7 +2313,18 @@ void keaGrass(inout vec3 t){
   t=p+vec3(w.x,gy,w.y)-vec3(0.0,0.0,0.0);
   vGrassT=clamp(position.y,0.0,1.0);
   vGrassW=vec3(w.x,gy,w.y);
-  vGrassTint=mix(mix(uTintA,uTintB,step(0.5,h2.x)),uTintC,h1.x*0.55);
+  /* ---- COLOUR, PER BLADE AND PER CLUMP ----
+     Three genuinely different body colours picked per blade, then leaned toward the pale draw by
+     the MOUND's own weight — without that second term a field of individually varied blades
+     averages straight back to one colour at any distance, which is exactly what P4 shipped. */
+  vec3 body=mix(mix(uTintA,uTintB,step(0.5,h2.x)),uTintC,h1.x*0.85);
+  body=mix(body,uTintC,cw*0.30);
+  vGrassTint=body;
+  vGrassBase=uTintBase;
+  vGrassTip=uTintTip;
+  /* how much rust this particular leaf has gone. Some are green to the end and some are brown from
+     halfway, which is what the foreground mound in nz_tussock_03 actually looks like. */
+  vGrassSeed=uSeed*smoothstep(0.25,0.95,keaGH(w*3.7+19.3));
 }
 `;
 const GRASS_GLSL_F=`
@@ -2237,6 +2333,20 @@ uniform vec3 uTransColor, uSunDir;
 varying float vGrassT;
 varying vec3 vGrassW;
 varying vec3 vGrassTint;
+varying vec3 vGrassBase;
+varying vec3 vGrassTip;
+varying float vGrassSeed;
+/* GREEN AT THE FOOT, BODY THROUGH THE MIDDLE, RUST AT THE TIP. A leaf is alive and shaded where it
+   leaves the ground and bleached where it has been in the wind longest; one flat colour along the
+   whole blade is most of why the old field read as plastic, and all of why it read as monochrome.
+   nz_tussock_03's foreground mound is green at its heart and rust at its outer leaves AT THE SAME
+   TIME, so the gradient has to be per blade and not a global tint. */
+vec3 keaGrassColour(){
+  /* the green reaches further up than half a leaf: at 0.42 the base was buried under its own
+     neighbours and never appeared in a frame at all */
+  vec3 c=mix(vGrassBase,vGrassTint,smoothstep(0.0,0.58,vGrassT));
+  return mix(c,vGrassTip,smoothstep(0.46,1.0,vGrassT)*vGrassSeed);
+}
 /* ---- LIGHT THROUGH THE BLADE ----
    ref_bow_02 and ref_bow_15 are both backlit and the blades GLOW; an opaque Lambert blade cannot
    do that at any density, which is why the old carpet read as plastic however many triangles went
@@ -2247,7 +2357,7 @@ vec3 keaGrassTrans(){
   vec3 V=normalize(vGrassW-cameraPosition);
   float lobe=pow(max(0.0,dot(V,uSunDir)),uTransPow);
   float thin=vGrassT*vGrassT;
-  return uTransColor*vGrassTint*(uTransAmt*lobe*thin + uWrap*thin*0.35);
+  return uTransColor*keaGrassColour()*(uTransAmt*lobe*thin + uWrap*thin*0.35);
 }
 `;
 /* THE CUT-OUTS, as four boxes the vertex shader can test: centre xz, half-extent xz. The CPU used
@@ -2267,7 +2377,7 @@ function grassCuts(biome){
           [-24,-9,4.2,3.4],          // hut slab
           [28,-14,3.4,2.4]];         // pen core
 }
-function grassShader(m,B,tier,biome){
+function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or the cover layer
   if(GRASS_OK!==true)return m;
   const C=grassCuts(biome), V4=(c)=>new THREE.Vector4(c[0],c[1],c[2],c[3]);
   const lin=h=>new THREE.Color(h).convertSRGBToLinear();
@@ -2284,13 +2394,16 @@ function grassShader(m,B,tier,biome){
     uGust:{value:GRASS.windGust}, uFlutter:{value:GRASS.windFlutter},
     uGustHz:{value:GRASS.gustHz}, uFlutterHz:{value:GRASS.flutterHz}, uGustM:{value:GRASS.gustM},
     uClumpM:{value:B.clumpM}, uClumpJit:{value:GRASS.clumpJit},
-    uClumpPull:{value:GRASS.clumpPull}, uBare:{value:B.bare},
+    uClumpPull:{value:B.clumpPull===undefined?GRASS.clumpPull:B.clumpPull},
+    uClumpPullVar:{value:B.clumpPullVar===undefined?GRASS.clumpPullVar:B.clumpPullVar},
+    uBare:{value:B.bare},
     uHmul:{value:new THREE.Vector2(H.mul[0],H.mul[1])}, uHamp:{value:H.amp},
     uCut0:{value:V4(C[0])}, uCut1:{value:V4(C[1])}, uCut2:{value:V4(C[2])}, uCut3:{value:V4(C[3])},
     uHrange:{value:new THREE.Vector2(B.h[0],B.h[1])},
     uWrange:{value:new THREE.Vector2(B.w[0],B.w[1])},
     uLrange:{value:new THREE.Vector2(B.lean[0],B.lean[1])},
     uTintA:{value:V3(B.tint[0])}, uTintB:{value:V3(B.tint[1])}, uTintC:{value:V3(B.tint[2])},
+    uTintBase:{value:V3(B.base)}, uTintTip:{value:V3(B.tip)}, uSeed:{value:B.seed},
     uTransAmt:{value:GRASS.transAmt}, uTransPow:{value:GRASS.transPow}, uWrap:{value:GRASS.wrap},
     uTransColor:{value:lin(GRASS.transColor)},
     uSunDir:{value:new THREE.Vector3(0,1,0)},
@@ -2310,7 +2423,7 @@ function grassShader(m,B,tier,biome){
        the one line three declares diffuse on — validated in GRASS_OK, because it is a line in
        meshphysical_frag's body rather than a chunk and cannot be checked the same way. */
     sh.fragmentShader=sh.fragmentShader.replace(GRASS_DIFFUSE_LINE,
-      'vec4 diffuseColor = vec4( vGrassTint, opacity );');
+      'vec4 diffuseColor = vec4( keaGrassColour(), opacity );');
   };
   return m;
 }
@@ -2358,43 +2471,76 @@ function grassLattice(n){
   return off;
 }
 
+/* ONE LAYER OF THE FIELD. Called twice: once for the COVER — short, wide, dense, laid nearly
+   uniformly so there is no naked ground anywhere — and once for the CLUMPS that rise out of it.
+   Same geometry builder, same shader, different numbers; a second shader for the second layer
+   would be two things to keep in step for no gain. */
+function grassLayer(biome,L,name){
+  /* seg IS PER LAYER: a 100 mm cover blade does not need four segments to arc, it needs to exist.
+     Two segments is 3 triangles against 7 and the curve is invisible at that height. */
+  const geo0=grassBladeGeo(L.seg===undefined?GRASS.seg:L.seg,L.taper,GRASS.bend);
+  const geo=new THREE.InstancedBufferGeometry();
+  geo.index=geo0.index;
+  geo.setAttribute('position',geo0.attributes.position);
+  geo.setAttribute('normal',geo0.attributes.normal);
+  geo.setAttribute('uv',geo0.attributes.uv);
+  geo.setAttribute('aOff',new THREE.InstancedBufferAttribute(grassLattice(L.count),2));
+  geo.instanceCount=L.count;
+  /* A BOUNDING SPHERE BIG ENOUGH TO NEVER BE THE ANSWER. The vertex shader moves every blade to
+     wherever the camera is, so three's idea of where this geometry lives is wrong by construction
+     — and frustumCulled=false alone is not enough, because an empty bounding sphere makes three
+     skip the draw outright. Given explicitly rather than computed. */
+  geo.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,0,0),1e5);
+  const m=new THREE.MeshStandardMaterial({color:0xFFFFFF,roughness:0.92,metalness:0,
+    side:THREE.DoubleSide,envMapIntensity:0.3});
+  const lf=L.lodFrac===undefined?GRASS.lodFrac:L.lodFrac;
+  grassShader(m,L,{near:L.near,lodNear:L.near*lf,lodFar:L.near},biome);
+  const mesh=new THREE.Mesh(geo,m);
+  mesh.frustumCulled=false; mesh.receiveShadow=true;
+  /* NOT A SHADOW CASTER, and that is a budget decision rather than an oversight: a shadow pass
+     over this many blades is a second full vertex pass for a contribution the transmission term
+     and the ground's ambient occlusion already stand in for. */
+  mesh.castShadow=false;
+  mesh.name='grass_'+name;
+  G.scene.add(mesh);
+  return {mesh,mat:m,tris:geo0.userData.tris,count:L.count,
+          density:L.count/(Math.PI*L.near*L.near)};
+}
+
+/* THE LAYER SPECS. The clump layer takes the biome profile; the cover layer takes GRASS.cover and
+   BORROWS the biome's colours, so the two layers cannot drift into different countries. */
+function grassSpecs(biome){
+  const B=GRASS.biomes[biome]||GRASS.biomes.carpark, T=grassTier(), C=GRASS.cover;
+  const clump=Object.assign({},B,{count:T.count, near:T.near, seed:1.0});
+  const cover=Object.assign({},C,{tint:B.tint, base:B.base, tip:B.tip,
+    /* the cover is YOUNGER growth: greener, and it does not go rust at the tip the way a long
+       outer leaf does. One number says that, rather than a second palette to keep in step. */
+    seed:0.25});
+  return {clump,cover,B,T};
+}
+
 function buildGrass(biome){
-  const B=GRASS.biomes[biome]||GRASS.biomes.carpark, tier=grassTier();
+  const {clump,cover,B,T}=grassSpecs(biome);
   if(HEADLESS){
     G.grass={tier:GRASS.tier,instances:0,perBladeTris:2*GRASS.seg-1,headless:true,
              ignored:GRASSIGNORED.slice(), shader:GRASS_OK===true?true:GRASS_OK,
-             lodNear:tier.lodNear,lodFar:tier.lodFar,near:tier.near,count:tier.count,
-             density:tier.density,clumpM:B.clumpM,bare:B.bare,biome:biome}; return; }
-  const base=grassBladeGeo(GRASS.seg,GRASS.taper,GRASS.bend);
-  const geo=new THREE.InstancedBufferGeometry();
-  geo.index=base.index;
-  geo.setAttribute('position',base.attributes.position);
-  geo.setAttribute('normal',base.attributes.normal);
-  geo.setAttribute('uv',base.attributes.uv);
-  geo.setAttribute('aOff',new THREE.InstancedBufferAttribute(grassLattice(tier.count),2));
-  geo.instanceCount=tier.count;
-  /* A BOUNDING SPHERE BIG ENOUGH TO NEVER BE THE ANSWER. The vertex shader moves every blade to
-     wherever the camera is, so three's idea of where this geometry lives is wrong by construction
-     — and frustumCulled=false alone is not enough, because a NaN or empty bounding sphere makes
-     three skip the draw outright. Given explicitly rather than computed. */
-  geo.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,0,0),1e5);
-
-  const m=new THREE.MeshStandardMaterial({color:0xFFFFFF,roughness:0.92,metalness:0,
-    side:THREE.DoubleSide,envMapIntensity:0.3});
-  grassShader(m,B,tier,biome);
-  const mesh=new THREE.Mesh(geo,m);
-  mesh.frustumCulled=false;
-  mesh.receiveShadow=true;
-  /* NOT A SHADOW CASTER, and that is a budget decision rather than an oversight: a shadow pass
-     over 420,000 blades is a second full vertex pass for a contribution that the grass's own
-     transmission term and the ground's ambient occlusion already stand in for. Recorded in
-     ARTBIBLE with the measured cost of turning it on. */
-  mesh.castShadow=false;
-  G.scene.add(mesh); G.grassMesh=mesh; G.grassMat=m;
-  G.grass={tier:GRASS.tier, instances:tier.count, shader:GRASS_OK===true?true:GRASS_OK,
-           ignored:GRASSIGNORED.slice(), perBladeTris:base.userData.tris,
-           tris:tier.count*base.userData.tris, near:tier.near, density:tier.density,
-           lodNear:tier.lodNear, lodFar:tier.lodFar, clumpM:B.clumpM, bare:B.bare, biome:biome};
+             lodNear:T.lodNear,lodFar:T.lodFar,near:T.near,count:T.count,density:T.density,
+             clumpM:B.clumpM,bare:B.bare,biome:biome,
+             cover:{count:cover.count,near:cover.near,bare:cover.bare,
+                    density:cover.count/(Math.PI*cover.near*cover.near),
+                    hi:cover.h[1],instances:0}}; return; }
+  /* THE COVER GOES DOWN FIRST so the clumps are drawn over it — not that depth testing cares, but
+     the reading order of the code should match the reading order of the ground. */
+  const cv=grassLayer(biome,cover,'cover');
+  const cl=grassLayer(biome,clump,'clump');
+  G.grassMesh=cl.mesh; G.grassMat=cl.mat;
+  G.grassCoverMat=cv.mat;
+  G.grass={tier:GRASS.tier, instances:cl.count, shader:GRASS_OK===true?true:GRASS_OK,
+           ignored:GRASSIGNORED.slice(), perBladeTris:cl.tris,
+           tris:cl.count*cl.tris+cv.count*cv.tris, near:T.near, density:cl.density,
+           lodNear:T.lodNear, lodFar:T.lodFar, clumpM:B.clumpM, bare:B.bare, biome:biome,
+           cover:{count:cv.count,near:cover.near,bare:cover.bare,density:cv.density,
+                  hi:cover.h[1],instances:cv.count}};
 }
 function nightTint(m){ // foliage and bark go dark by construction: L_night is 0.30 x L_day
   if(!m)return m; G.nightMats=G.nightMats||[];
@@ -2813,22 +2959,15 @@ function buildCarpark(){
       wm.rotation.x=-Math.PI/2; wm.position.set(wx,wy,wz); wm.receiveShadow=!HEADLESS; G.scene.add(wm);
       G.wear.push({x:wx,z:wz,r:wr,y:wy,color:col,paint:!!pa}); }
   }
-  // tussock (instanced)
+  /* THE OLD TUSSOCK CONES ARE GONE — REPLAT P4b. 260 five-sided ConeGeometry cones, 0.9 m tall,
+     scattered across the country as a stand-in for tussock mounds. P4 built a real blade field and
+     LEFT THESE IN, on the reasoning that removing them shifts the seeded stream. Eric played it and
+     named the result exactly: both grass systems live at once, so the ground read as sand with
+     party hats. A superseded system is not a fallback. The blades do this job now.
+     THE STREAM DOES NOT MOVE. This whole block was inside `if(!HEADLESS)`, so node never made
+     these draws and no battery ever saw them — deleting it changes the browser world and nothing
+     the gate reads. */
   if(!HEADLESS){
-    const tg=new THREE.ConeGeometry(0.34,0.9,5);
-    const im=new THREE.InstancedMesh(tg,mat(PAL.tussock),260);
-    const m4=new THREE.Matrix4(), q=new THREE.Quaternion(), s=new THREE.Vector3(), p=new THREE.Vector3();
-    const qy=new THREE.Quaternion(), qt=new THREE.Quaternion();
-    const ax=new THREE.Vector3(), UPV=new THREE.Vector3(0,1,0);
-    let n=0;
-    while(n<260){ const x=rnd(-52,52),z=rnd(-52,52);
-      if(Math.abs(z-34)<6.5||(Math.abs(x-2)<21&&Math.abs(z-17)<12)||dist2(x,z,-24,-9)<7||dist2(x,z,15,-13)<5||dist2(x,z,-38,4)<7||dist2(x,z,G.nestPos.x,G.nestPos.z)<5)continue;
-      const b=grassTuftPose(x,z);                              // the tufts take the same comb as the blades
-      qy.setFromAxisAngle(UPV,b.yaw); ax.set(Math.sin(b.dir),0,-Math.cos(b.dir));
-      qt.setFromAxisAngle(ax,b.lean*0.75); q.copy(qt).multiply(qy);
-      s.set(b.w,b.h*0.95,b.w);                                 // the tuft is one blade writ large
-      p.set(x,0.35,z); m4.compose(p,q,s); im.setMatrixAt(n,m4); n++; }
-    im.castShadow=true; G.scene.add(im);
     // snow patches — the only ground decal that used to ignore what was already built there
     for(let i=0;i<10;i++){ const x=rnd(SNOWFIELD.x0,SNOWFIELD.x1),z=rnd(SNOWFIELD.z0,SNOWFIELD.z1),r=rnd(1.5,3.6);
       const q=snowSpot(x,z,r);
@@ -3121,8 +3260,9 @@ function buildSkifield(){
   /* THE LAST DRAWS IN THE BUILDER ARE THE BROWSER-ONLY ONES, on purpose: a !HEADLESS block consumes
      seeded draws that node never makes, so anything after it lands somewhere else in the two worlds.
      Everything a battery reads back - the drifts above especially - is drawn before this line. */
-  if(!HEADLESS)for(let i=0;i<26;i++){ const tx=rnd(-50,50), tz=rnd(34,50);
-    const tf=cyl(0.02,0.3,0.85,PAL.tussock,tx,0.42,tz,null,5); tf.rotation.z=rnd(-0.2,0.2); }
+  /* AND THE SKI FIELD'S 26 TUFT CYLINDERS WITH THEM — REPLAT P4b, same reason. These were the
+     "tufts of hair" in the snow: 0.85 m cones standing in the tussock band. buildGrass('skifield')
+     grows real blades there now. Also inside `if(!HEADLESS)`, so the seeded stream is untouched. */
 }
 /* THE CAST BELONGS TO THE MAP TOO, and this is the TODO 58 finding one layer up. startGame pushed
    four humans by hand with CARPARK coordinates baked into them - Trish on a carpark patrol, Tom
@@ -3745,7 +3885,10 @@ function buildNest(x,z){
   const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
   const knoll=sph(3.2,PAL.rock,0,-1.4,0,g,12); knoll.scale.y=0.75;
   const moss=sph(3.0,PAL.mint,0,-1.15,0,g,12); moss.scale.y=0.62;
-  for(let i=0;i<5;i++){ const tuft=cyl(0.02,0.05,rnd(0.25,0.45),PAL.tussock,rnd(-1.6,1.6),1.05,rnd(-1.6,1.6),g,5); tuft.rotation.z=rnd(-0.3,0.3); }
+  /* the five cone tufts on the knoll went with the rest of the old grass at P4b. THIS ONE WAS NOT
+     HEADLESS-GUARDED, so unlike the other two it DOES move the seeded stream — which is why it is
+     called out here rather than quietly removed: everything built after buildNest lands somewhere
+     slightly different, and that is a deliberate, recorded cost of "remove it entirely". */
   addBoxCollider(x,z,4.6,4.6,1.0,false);
   const ring=new THREE.Mesh(new THREE.TorusGeometry(0.85,0.22,7,14),mat(PAL.woodD));
   ring.position.y=1.05; ring.rotation.x=1.57; ring.castShadow=!HEADLESS; g.add(ring);
@@ -4790,7 +4933,7 @@ function updateFX(dt){
      deterministic under the capture rig's clock pin (it holds G.time at 12.0 every frame). The
      sun direction rides along because the transmission term needs it and the sun crosses the sky
      on the day/night roll — reading it here keeps one author for it. */
-  if(G.grassMat&&G.grassMat.userData.keaG){ const U=G.grassMat.userData.keaG;
+  for(const _gm of [G.grassMat,G.grassCoverMat]) if(_gm&&_gm.userData.keaG){ const U=_gm.userData.keaG;
     U.uTime.value=G.time;
     if(G.sun)U.uSunDir.value.copy(G.sun.position).normalize();
     /* THE ANCHOR IS THE WHOLE POINT OF A CAMERA-FOLLOWING FIELD and it has to be written EVERY

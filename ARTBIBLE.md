@@ -415,6 +415,78 @@ WHAT IS STILL SHORT, HONESTLY, AND WHY IT IS NOT P4's
     scan carries the distance. That is correct behaviour and it is also the thing to look at first
     if the field ever reads as a circle following the bird.
 
+## REPLAT P4b - THE FIELD ERIC PLAYED   [LOCKED 2026-09-03, session 19; LOOK FLAGGED, NOT JUDGED]
+Eric played P4 and named the fault exactly: BOTH GRASS SYSTEMS WERE LIVE AT ONCE. The P4 blade
+field and the procedural cone grass it superseded were both in the world, so the ground read as
+sand with party hats and tufts of hair. Four fixes, all four here. Judged against nz_tussock_01 and
+nz_tussock_03. Fourteen sabotages, all fourteen red.
+
+(1) THE OLD PROCEDURAL GRASS IS DELETED, NOT DISABLED.
+  260 five-sided ConeGeometry cones in the carpark, 26 tuft cylinders in the ski field, 5 on the
+  nest knoll. P4 left the 260 in on the reasoning that removing them shifts the seeded stream -
+  which was true of the nest five and FALSE of the other two, because both of those blocks sat
+  inside `if(!HEADLESS)` and node never made their draws. A superseded system is not a fallback.
+  A battery now asserts PAL.tussock survives only as a terrain vertex colour: no scattered geometry
+  may wear it again.
+
+(2) A CONTINUOUS COVER LAYER, AND WHAT IT CAN AND CANNOT FIX.
+  cover: 150,000 blades in a 10 m radius, h 55-130 mm, w 13-26 mm, bare 0.0, clumpPull 0.10,
+  seg 2, lodFrac 0.88. Same shader and same geometry builder as the clumps, different numbers.
+  It is SHORTER than the shortest clump blade by construction, so the clumps rise out of it and the
+  bird readability P4 tuned is untouched. It holds full density almost to its edge (0.88 against
+  the clump layer's 0.55) because a clump is a silhouette that can fade early and a cover that has
+  half-faded leaves exactly the bare ground it was added to cure.
+  THE FIRST CUT OF IT WAS 340,000 BLADES OVER 16 m AND COST 21.9 ms - more than the clump layer -
+  AND STILL DID NOT WORK at the play camera. A 100 mm blade at fifteen metres is two pixels tall
+  and the ground behind it wins; that is not a density problem and no amount of geometry solves it.
+  Cut back to a near-field layer, where it genuinely works and is cheap.
+
+(3) COLOUR, PER BLADE AND PER CLUMP - AND THE GROUND, WHICH WAS THE HALF NO BLADE COULD FIX.
+  From nz_tussock_03's foreground mound: an olive-green heart, an ochre body, rust-brown outer
+  leaves, ALL IN THE SAME MOUND. A blade mixes base -> its own body colour over the first 58% of
+  its length, then toward tip over the top, and HOW MUCH tip it takes is per blade - so some leaves
+  are green to the end and others are rust from halfway. The mound's own weight leans the whole
+  clump on top of that, without which a field of individually varied blades averages straight back
+  to one colour at any distance.
+     carpark   base 0x4C6B22  body 0xC58E31 / 0x8E6118 / 0xE6D6A2  tip 0x7A3F16
+     skifield  base 0x46661F  body 0xD09B2C / 0x94661C / 0xEADCAC  tip 0x8A4A18
+  THE FIRST PALETTE WAS FOUR COLOURS INSIDE TWENTY DEGREES OF HUE and photographed as exactly the
+  monochrome it was sent to fix. Forcing base to pure red and tip to pure blue showed the gradient
+  working perfectly - the mechanism was never the problem, the colours were. The battery asserts
+  SEPARATION now (the base must be a real green by hue, the tip must be darker than the body, the
+  three body draws must span a real value range), not merely that the mechanism is present.
+  AND THE GROUND. Measured at the play camera, the terrain averaged #9b9787 - a desaturated
+  grey-beige - and that is what showed between every clump. `GRASS.groundTint` (0xA8B078) is a
+  multiplier on the GRASS-family terrain material only; the ski field's ground is the snow family
+  and snow is not supposed to look like soil. It costs nothing and it is the single largest thing
+  in P4b that the play camera actually sees.
+
+(4) THE BLADE IS A LEAF, NOT A STRAND.
+  taper is PER LAYER now (carpark 0.55, skifield 0.50, cover 0.45) where it was a global 0.72 that
+  narrowed almost from the base. Widths 9-20 mm on the carpark clump, 6-14 mm on the alpine one. A
+  tussock leaf stays wide most of its length and only narrows near the tip - that is what makes it
+  catch light along its whole edge instead of reading as hair.
+
+THE FRAME COST OF THE COVER LAYER, MEASURED AS ERIC ASKED.
+Loop-timed scene cost, GPU synced, at the Retina framebuffer (2304x1296). Baseline 8.978 ms.
+     clumps only                  19.863 ms   2.2x baseline
+     clumps + cover               25.165 ms   2.8x baseline
+     THE COVER LAYER              +5.302 ms
+For comparison the first, failed cut of the cover was +21.9 ms. P4 shipped at 23.878 ms, so P4b
+buys the whole of the above for 1.3 ms over what was already accepted.
+
+WHAT IS STILL SHORT, HONESTLY
+  - THE GROUND TINT IS ONE FLAT MULTIPLIER. It cures the sand; it does not give the ground its own
+    variation. A second macro layer on the terrain, or splat-blending the P3 gravel family into the
+    grass one, is the real answer and is P3's territory rather than P4b's.
+  - THE COVER STOPS AT 10 m. Past that the ground tint carries it. That is the correct division of
+    labour and it is also the first thing to look at if the field ever reads as a disc.
+  - STABILITY IS CLEAN BUT THE MACHINE IS NOT. A four-vantage sweep flagged 05 on one run and
+    21/03 on the next; run alone with four takes each, all three read 0.9997 or better and 05 reads
+    1.0000. A flagged vantage that MOVES between runs is measuring machine load, not the code -
+    the same finding session 17 recorded for 22_torch_beam. Load averaged ~6 from this session's
+    own capture passes.
+
 ## PHASE 1 - LIGHT & AIR   [not yet run]
 TARGETS: ugg_shadows_01/02, swag_shadows_01, nz_mist_01, kea_social_02.
 GAPS: no cast shadows anywhere; no AO; pale tarmac ellipses read as

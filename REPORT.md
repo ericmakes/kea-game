@@ -1,99 +1,84 @@
-# REPORT — REPLAT P4, instanced grass (session 18, 2026-09-03)
+# REPORT — REPLAT P4b, the field you played (session 19, 2026-09-03)
 
-Branch `replat-b`. Gate **CERTIFIED-SHIP** at specimen `3793c3c45fb34fbac82e506b3e4697d3`.
-**Nothing re-pinned. 25 of 28 vantages flagged and waiting on you.**
+Branch `replat-b`. **CERTIFIED-SHIP** at specimen `758d82092e337f53141c607a8e0390d7`.
+**Nothing re-pinned. 27 of 28 vantages flagged.**
 
-## WHAT SHIPPED
+## YOUR DIAGNOSIS WAS RIGHT, AND I HAD WRITTEN IT DOWN MYSELF
 
-A GPU-instanced blade field that **follows the camera**. 120,000 blades in a 14 m radius —
-**195 blades/m²** — with per-blade vertex wind, distance thinning that fades rather than pops,
-clumping into mounds with real bare ground between, and a transmission term so the blades glow when
-you look down-sun through them. The ski field has grass for the first time: its terrain has always
-lerped to tussock below z=34 and there was never a blade standing in it.
+P4's own ARTBIBLE entry says, under what is still short: *"the 260 tuft cones are still there,
+standing among the real blades... left because removing 260 rnd draws shifts the seeded stream."*
+That was my reasoning and **it was also wrong on its own terms** — that block and the ski field's
+26 tufts both sat inside `if(!HEADLESS)`, so node never made those draws and no battery could have
+seen them. I had a real-sounding reason not to delete them and never checked whether it applied.
 
-**The camera-following design is a measurement, not a preference.** A static field over the
-playable world can afford **33 blades/m²** at this budget, which photographs as stubble; and
-shrinking its radius to raise density just moves the grass away from the bird — the r20 frame in
-that sweep came back with an empty foreground. Same budget, six times the density, everywhere the
-bird actually goes.
+## THE FOUR FIXES
 
-## THE FRAME BUDGET, MEASURED AT THREE TIERS
+**(1) The old procedural grass is deleted.** 260 cones in the carpark, 26 tuft cylinders in the ski
+field, 5 on the nest knoll. A battery now asserts `PAL.tussock` survives only as a terrain vertex
+colour, so nothing can scatter it as geometry again.
 
-Loop-timed scene cost, GPU synced with a readPixels, best of six passes of forty renders, at the
-Retina framebuffer the game actually runs at — 2304×1296, because `setPixelRatio` caps at 1.8 and a
-Mac reports 2. Pre-P4 baseline (the 42,000-blade triangle carpet): **8.978 ms**.
+**(2) A continuous cover layer** — 150,000 blades in a 10 m radius, shorter than the shortest clump
+blade by construction so the clumps rise out of it and your readability trade is untouched.
 
-| tier | blades | radius | blades/m² | scene ms | vs baseline |
-|---|---|---|---|---|---|
-| low | 60,000 | 14 m | 97 | 16.710 | 1.9× |
-| **mid** | **120,000** | **14 m** | **195** | **23.878** | **2.7×** |
-| high | 240,000 | 17 m | 264 | 39.360 | 4.4× |
+**(3) Real colour, per blade and per clump** — green base, ochre/tawny/bleached body, rust tips,
+from `nz_tussock_03`'s foreground mound. Plus the half no blade could fix: **the ground itself**.
 
-Beyond the tiers: 420,000 → 62.4 ms; 1,900,000 → 259.5 ms at 26.9M triangles, all genuinely drawn.
+**(4) Blades widened toward a leaf** — taper is per-layer now (0.55 where it was a global 0.72),
+widths 9–20 mm, so a leaf stays wide along its length and catches light instead of reading as hair.
 
-**Why mid, and the honest limit on that choice.** I could not measure a true frame rate from this
-machine and you should know it. I wrote a RAF-based fps mode and it reported **59.9 fps for 120,000
-blades, for 1,900,000 blades, and for the pre-P4 build — all identical** — because headless Chrome
-drives requestAnimationFrame on a fixed cadence. A number that doesn't move when the work grows
-tenfold isn't measuring the work. So "holds a playable frame rate on your Mac" is the one part of
-the brief I cannot settle. What I can say: 8.978 ms was the already-accepted cost of the build you
-have been judging, mid is 2.7× that and high is 4.4×, and the four densities photograph close
-enough that above 240k the difference is barely visible while the cost doubles again. Shipping the
-2.7× tier is the defensible call. **high is measured, kept, and one env var away on the machine
-that can actually judge it:**
+## THE COVER LAYER'S COST, AS YOU ASKED
 
-    KEAGRASS='{"tier":"high"}' npm run dev
+Loop-timed scene cost, GPU synced, at the Retina framebuffer (2304×1296). Baseline **8.978 ms**.
 
-## THE ONE THING I WANT YOUR EYE ON FIRST
+    clumps only        19.863 ms   2.2x baseline
+    clumps + cover     25.165 ms   2.8x baseline
+    THE COVER LAYER     +5.302 ms
 
-**The first tuning buried the bird.** At the heights I picked by eye, the kea portrait read
-**465 pixels against a floor of 1600** and the preen vantage 414 against 900 — three bird
-classifiers red at once. Blade height is the dominant lever; five tunings measured; locked at
-0.20–0.48 m, which reads 1663/1600 and 1604/900 and puts the set back to exactly the two known
-TODO 75 reds. **No floor was touched.** Some occlusion is authentic — ref_bow_03's bin is
-half-buried and looks right — but that is the trade I most want you to check, because it is the
-line between "a field" and "where did the bird go".
+P4 shipped at 23.878 ms, so all of the above costs **1.3 ms over what you already accepted**.
+
+## TWO THINGS WORTH KNOWING
+
+**My first cover layer was wrong in a way only measurement shows.** 340,000 blades over 16 m,
+**21.9 ms — more than the clump layer itself** — and it still did not cure the bare ground at the
+play camera. A 100 mm blade at fifteen metres is two pixels tall and the ground behind it wins.
+So I measured the ground instead of adding more blades: the terrain averages **#9b9787**, a
+desaturated grey-beige. That is the sand. One tint multiplier on the grass-family terrain costs
+nothing and is **the single largest thing in P4b that the play camera actually sees.**
+
+**My colour work did nothing at first, and I proved the mechanism before touching it.** The
+gradient was in and the field came back exactly as monochrome. Rather than read the shader, I
+forced base to pure red and tip to pure blue through `KEAGRASS` — red bases, blue tips, working
+perfectly. The palette was four colours inside twenty degrees of hue. The battery asserts colour
+*separation* now, not the presence of a mechanism, because presence was already true.
 
 ## FRAMES TO EYEBALL
 
-- `gauntlet/capture/05_tussock_ground.png` — the field at bird height, against **nz_tussock_01**
-- `gauntlet/capture/03_kea_plate.png` — the bird IN the grass; the readability trade
-- `gauntlet/reference/pairs/05_tussock_ground__ref_bow_02.png` — density and light through blades
-- `gauntlet/capture/24_verge_paddle.png` — the cut-outs: road and car park bare, verge grassed
-
-## WHAT IS STILL SHORT, AND WHY IT IS NOT P4's
-
-- **The 260 tuft cones are still standing among the real blades** (the small gold triangles at 05).
-  The blades do their job now, but removing 260 `rnd` draws shifts the seeded stream for everything
-  built after them, and that is a re-pin of its own rather than a side effect of this piece.
-- **The grass casts no shadow.** A shadow pass over 120,000 blades is a second full vertex pass;
-  the transmission term and the ground's AO stand in for it.
-- **No ground-texture tint on the blades.** Sampling the P3 scanned ground and tinting each blade by
-  the ground it grows from would tie the field to the terrain at the macro scale. Good idea, not in
-  the brief.
+- `gauntlet/capture/14_player_view.png` — the play camera, which is the one you played
+- `gauntlet/capture/05_tussock_ground.png` — bird height, against **nz_tussock_01/03**
+- `gauntlet/capture/03_kea_plate.png` — the bird reads **2632** against a floor of 1600, better
+  than P4 shipped, because the tinted ground gives it something to sit against
 
 ## VERIFIED
 
-Nine batteries ALL PASS; gate CERTIFIED-SHIP; gate-selftest ALL PASS; **fifteen P4 sabotages, all
-fifteen red**; 30/30 vantages shoot with no retakes; sidebyside 33 pairs.
+Nine batteries ALL PASS; **fourteen P4b sabotages, all fourteen red**; 30/30 vantages shoot clean;
+sidebyside 33 pairs; subjects 16 checked, **2 missing — the two known TODO 75 reds, no new
+regression**. diff 27 of 28 flagged, boxdiff 7 of 12 changed, pxdiff 28 over band.
 
-    stability  4 vantages x 3 takes, 0 unstable (worst 0.9956)
-    diff       28 compared, 25 flagged (worst 0.4866)
-    boxdiff    12 compared, 5 changed
-    pxdiff     28 compared, 27 over band
-    subjects   16 checked, 2 missing — the two known TODO 75 reds, no new regression
+**Stability is clean; the machine is not.** A four-vantage sweep flagged 05 at 0.9859 — the frame
+P4b changed most, so I suspected the field's anchor snap. Run alone at four takes it reads
+**1.0000**. Re-running flagged 21 and 03 instead and left 05 clean; alone those read 0.9998 and
+0.9997. A flagged vantage that *moves between runs* is measuring load, not code — the same finding
+session 17 recorded for 22_torch_beam. Load averaged ~6 from this session's own capture passes.
+No threshold was touched.
 
-**05_tussock_ground, the grassiest frame in the set, reshoots at exactly 1.0000** — the cleanest
-available proof that the wind is deterministic under the capture clock pin, which is the third
-claim in P4's proof contract.
+## WHAT IS STILL SHORT
 
-Four things I got wrong are in the log with their causes: the anchor was never written (the field
-sat at the world origin and photographed as "no grass"), blade width was in the wrong units (metre-
-wide shards), the fps instrument measured the browser idling, and a battery edit of mine shifted
-the seeded stream and broke six unrelated hint assertions.
+- **The ground tint is one flat multiplier.** It cures the sand; it does not give the ground its own
+  variation. Splat-blending the P3 gravel family into the grass one is the real answer, and that is
+  P3's territory.
+- **The cover stops at 10 m**; past that the ground tint carries it. First thing to look at if the
+  field ever reads as a disc following the bird.
 
 ## SUGGESTED NEXT
 
-P5 — the kea as an asset. It is the last thing still made of primitives in a world that is now
-scanned ground, real materials and a real field, and REPLAT calls it the end of "blocks taped
-together".
+P5 — the kea as an asset. It is now the only thing in frame still made of primitives.

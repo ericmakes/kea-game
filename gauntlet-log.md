@@ -4130,3 +4130,70 @@ across the world. Same budget, 195 blades/m2 instead of 33.
   compared 25 flagged (worst 0.4866), boxdiff 12 compared 5 changed, pxdiff 27 of 28 over band,
   subjects 16 checked **2 missing — exactly the two known-red from TODO 75, no new regression**.
   **ALL OF IT LEFT FLAGGED — the look is Eric's.**
+
+## SESSION 19 — 2026-09-03, Eric played P4: BOTH grass systems were live at once
+
+Lock taken (none held), released as the final act. Tip certified before anything moved
+(`3793c3c45fb34fbac82e506b3e4697d3`, matching the log). Shipped at specimen
+`758d82092e337f53141c607a8e0390d7`, bundle `2946f1f9c58f9cb8fea31e28535e58d1`. Recipe in ARTBIBLE
+under REPLAT P4b. **Nothing re-pinned — 27 of 28 vantages flagged.**
+
+**ERIC'S DIAGNOSIS WAS EXACTLY RIGHT AND I HAD WRITTEN IT DOWN MYSELF.** P4's own ARTBIBLE entry
+says, under "what is still short": *"THE 260 TUFT CONES ARE STILL THERE, standing among the real
+blades... they are left because removing 260 rnd draws shifts the seeded stream."* He played it and
+the ground read as sand with party hats. **The reasoning was also wrong on its own terms**: that
+block and the ski field's 26 tufts both sat inside `if(!HEADLESS)`, so node never made those draws
+and no battery could ever have seen them. Only the five on the nest knoll actually moved the
+stream, and they moved nothing that broke. I had a real reason not to delete them and never checked
+whether it applied.
+
+- **(1) DELETED, NOT DISABLED.** 260 cones, 26 cylinders, 5 nest tufts. A battery now asserts
+  `PAL.tussock` survives only as a terrain vertex colour, so nothing can scatter it as geometry
+  again — the assertion counts uses and requires every one to be a colour.
+
+- **(2) THE COVER LAYER'S FIRST CUT WAS WRONG IN A WAY THAT ONLY MEASUREMENT SHOWS.** 340,000
+  blades over a 16 m radius, **21.9 ms — more than the clump layer itself** — and it did NOT cure
+  the bare ground at the play camera. A 100 mm blade at fifteen metres is two pixels tall and the
+  ground behind it wins. That is not a density problem and no amount of geometry solves it. Cut
+  back to a near-field layer: 150,000 over 10 m, seg 2, **+5.302 ms**, where it genuinely works.
+
+- **AND THE HALF NO BLADE COULD FIX WAS THE GROUND.** I measured it rather than kept adding blades:
+  the terrain's own colour at the play camera averages **#9b9787**, a desaturated grey-beige. That
+  is the sand. `GRASS.groundTint` is one multiplier on the grass-family terrain material —
+  **it costs nothing and it is the single largest thing in P4b that the play camera sees.** Applied
+  to the grass family only; the ski field's ground is the snow family and snow should not look like
+  soil, which is its own sabotage.
+
+- **(3) MY COLOUR WORK DID NOTHING AND A CONTROL PROVED THE MECHANISM WAS FINE.** I added a
+  per-blade green-base/rust-tip gradient and the field came back exactly as monochrome as before. I
+  did not go looking through the shader: I forced base to pure RED and tip to pure BLUE through
+  `KEAGRASS` and the frame lit up with red bases and blue tips. The gradient was working perfectly
+  — **the palette was four colours inside twenty degrees of hue and half a stop of value.** Widened
+  to a real green, a deep tawny, a bleached stalk and a dark rust. The battery asserts SEPARATION
+  now (base green by hue, tip darker than body, three body draws spanning a real value range) and
+  not merely that the mechanism exists, because "the mechanism exists" is what was already true.
+
+- **(4) THE CLUMP LATTICE WAS A VISIBLE GRID.** The clump cell is a square grid and half a cell of
+  jitter with one fixed pull photographed as a checkerboard of rectangular patches from the play
+  camera. Jitter to 0.95 and the pull now varies per mound, so some are tight and some spread and
+  the eye stops finding the lattice.
+
+- **THE BIRD STAYED VISIBLE.** 03 reads 2632 against a floor of 1600 and 13 reads 1612 against 900
+  — better than P4 shipped, because the ground tint gives the bird more contrast to sit against.
+  The subject set is back to exactly the two known TODO 75 reds.
+
+- **STABILITY IS CLEAN AND THE MACHINE IS NOT, AND I CHASED IT UNTIL I COULD TELL THEM APART.** A
+  four-vantage sweep flagged 05_tussock_ground at 0.9859 — the grassiest frame, and the one P4b
+  changed most, so the obvious suspect was the camera-anchored field's snap boundary. Run alone at
+  four takes it reads **1.0000**. Re-running the same sweep flagged 21 and 03 instead and left 05
+  clean; run alone, those two read 0.9998 and 0.9997. **A flagged vantage that moves between runs
+  is measuring machine load, not code** — the same finding session 17 recorded for 22_torch_beam.
+  Load averaged ~6 from this session's own capture passes. No threshold was touched.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, **fourteen P4b sabotages, all
+  fourteen red**, bundle builds, 30/30 vantages shoot with no retakes and no GAVE UP, sidebyside 33
+  pairs. diff 28 compared 27 flagged (worst 0.2674), boxdiff 12 compared 7 changed, pxdiff 28 over
+  band, subjects 16 checked **2 missing — the two known TODO 75 reds, no new regression**.
+  Cost at the Retina framebuffer: clumps 19.863 ms, clumps+cover **25.165 ms (2.8x the 8.978 ms
+  baseline)** — 1.3 ms over what P4 already shipped, for the whole of the above.
+  **ALL OF IT LEFT FLAGGED — the look is Eric's.**

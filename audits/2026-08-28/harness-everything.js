@@ -544,8 +544,14 @@ C.section('THE GRASS TINT IS SEEDED, NOT A LOTTERY');
   const vs=src.slice(src.indexOf('const GRASS_GLSL_V='), src.indexOf('const GRASS_GLSL_F='));
   ok(vs.length>800,'the blade vertex shader is where it is expected to be ('+vs.length+' chars)');
   ok(vs.indexOf('vGrassTint=')>0,'the blade computes its own tint in the vertex shader');
-  ok(vs.indexOf('vGrassTint=mix(mix(uTintA,uTintB')>0&&vs.indexOf(',uTintC,')>0,
+  ok(vs.indexOf('mix(mix(uTintA,uTintB')>0&&vs.indexOf('uTintC,h1.x')>0&&vs.indexOf('vGrassTint=body')>0,
      'and it mixes the biome three-tint the recipe supplies, not a literal');
+  /* P4b: AND THE BLADE IS NOT ONE FLAT COLOUR. Green at the foot, body through the middle, rust at
+     the tip — the thing that was missing when Eric read the whole country as monochrome. */
+  ok(vs.indexOf('uTintBase')>0&&vs.indexOf('uTintTip')>0,
+     'the blade carries a base and a tip colour as well as a body');
+  ok(vs.indexOf('body=mix(body,uTintC,cw*')>0,
+     'and the MOUND leans its own way, or a field of varied blades averages back to one colour');
   /* THE TINT IS A FUNCTION OF WORLD POSITION, WHICH IS THE WHOLE POINT. The hash inputs must be
      the world position `w`, never the instance index — an index-derived tint would travel WITH the
      blade as the field follows the camera, so a patch of ground would change colour as you walked
@@ -4936,7 +4942,10 @@ C.section('REPLAT P4: instanced grass');
        'one thing rather than shimmering'); }
 
   // ---- THE BLADE IS A BLADE ----
-  { const g=X.grassBladeGeo(GR.seg,GR.taper,GR.bend);
+  /* TAPER IS PER LAYER AT P4b — a cover blade is blunter than a clump leaf — so the probe takes
+     the clump layer's taper off the biome profile rather than a top-level constant that no longer
+     exists. Reading GR.taper here returned undefined and the width came back NaN. */
+  { const g=X.grassBladeGeo(GR.seg,GR.biomes.carpark.taper,GR.bend);
     const pos=g.attributes.position, n=pos.count;
     ok(n===2*GR.seg+1,'the blade is a strip with a POINTED tip — '+n+' vertices for '+GR.seg+
        ' segments, not a squared-off ribbon');
@@ -5036,6 +5045,116 @@ C.section('REPLAT P4: instanced grass');
     ok(sec.indexOf('ms')>=0,'in milliseconds'); }
 
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
+}
+
+/* ============================================================
+   REPLAT P4b — Eric played it. Four fixes, four contracts.
+   ============================================================ */
+C.section('REPLAT P4b: the field Eric played');
+{
+  const GR=X.GRASS, near=(a,b,eps,what)=>ok(Math.abs(a-b)<=(eps||1e-6),what+' ('+a+' vs '+b+')');
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+  const src=require('../2026-08-26/keasrc').specimenSource();
+
+  /* ---- (1) THE OLD PROCEDURAL GRASS IS GONE, NOT DISABLED ----
+     Eric's diagnosis was that BOTH systems were live: the P4 blade field and the cone/tuft grass it
+     superseded, so the ground read as sand with party hats. A superseded system left in the tree is
+     not a fallback, it is a second answer to the same question — and this is the assertion that
+     stops it coming back, because the shape it came back as last time was "harmless, and it keeps
+     the seeded stream still". */
+  ok(!/new THREE\.ConeGeometry\(0\.34,0\.9,5\)/.test(src),
+     'the 260 five-sided tussock cones are GONE from the carpark');
+  ok(!/cyl\(0\.02,0\.3,0\.85,PAL\.tussock/.test(src),
+     'and the 26 tuft cylinders are gone from the ski field');
+  ok(!/cyl\(0\.02,0\.05,rnd\(0\.25,0\.45\),PAL\.tussock/.test(src),
+     'and the five on the nest knoll');
+  /* nothing may quietly re-scatter PAL.tussock as geometry again; it survives only as a TERRAIN
+     vertex colour, which is the ground and not a blade */
+  { const uses=(src.match(/PAL\.tussock/g)||[]).length;
+    const colourUses=(src.match(/Color\(PAL\.tussock\)/g)||[]).length;
+    /* the +1 in the first cut was for the palette declaration, which is written `tussock:0xC9992F`
+       and does not match `PAL.tussock` at all — so the bound was one too high and went red on
+       correct code. EVERY use must be a vertex colour; none may be geometry. */
+    ok(uses===colourUses&&uses>0,'PAL.tussock survives only as a terrain vertex colour — no '+
+       'scattered geometry wears it ('+uses+' uses, '+colourUses+' of them colours)'); }
+
+  /* ---- (2) A CONTINUOUS COVER LAYER, WITH NO BARE GROUND BY CONSTRUCTION ---- */
+  const CV=GR.cover;
+  ok(!!CV&&CV.count>0,'there is a cover layer at all ('+(CV?CV.count:0)+' blades)');
+  ok(CV.bare===0,'IT LEAVES NO CELL EMPTY — bare must be exactly zero or the layer whose whole job '+
+     'is that no ground shows has holes in it by design ('+CV.bare+')');
+  ok(CV.clumpPull<0.2,'and it is laid nearly uniformly rather than gathered into mounds ('+
+     CV.clumpPull+')');
+  ok(CV.h[1]<GR.biomes.carpark.h[0],'the cover is SHORTER than the shortest clump blade, so the '+
+     'clumps rise out of it ('+CV.h[1]+' m against '+GR.biomes.carpark.h[0]+' m)');
+  ok(CV.h[1]<0.20,'and short enough not to cost the bird the readability P4 tuned ('+CV.h[1]+' m)');
+  { const d=CV.count/(Math.PI*CV.near*CV.near);
+    ok(d>GR.tiers[GR.tier].count/(Math.PI*GR.tiers[GR.tier].near*GR.tiers[GR.tier].near),
+       'the cover is DENSER than the clump layer ('+Math.round(d)+' vs '+
+       Math.round(GR.tiers[GR.tier].count/(Math.PI*GR.tiers[GR.tier].near*GR.tiers[GR.tier].near))+
+       '/m2) — it has to fill what the clumps deliberately leave'); }
+  /* IT HOLDS FULL DENSITY ALMOST TO ITS EDGE, unlike the clump layer. They do different jobs: a
+     clump is a silhouette and can fade early, a cover that has half-faded leaves the bare ground it
+     was added to cure. */
+  ok(CV.lodFrac>GR.lodFrac,'the cover thins later than the clumps do ('+CV.lodFrac+' vs '+
+     GR.lodFrac+' of radius)');
+  ok(CV.seg<GR.seg,'and its blades are cheaper, because a 100 mm blade does not need to arc ('+
+     CV.seg+' segments against '+GR.seg+')');
+  ok(!!G.grass.cover&&G.grass.cover.count===CV.count,
+     'and scene state reports it, so a pass can tell whether it was built ('+
+     (G.grass.cover||{}).count+')');
+
+  /* ---- (3) REAL COLOUR, PER BLADE AND PER CLUMP ----
+     The failure was not the mechanism, it was the palette: four colours inside twenty degrees of
+     hue photographed as one. So the assertion is about SEPARATION, measured, not about the
+     mechanism being present. */
+  { const lum=h=>{const c=new H.THREE.Color(h);return 0.2126*c.r+0.7152*c.g+0.0722*c.b;};
+    const hue=h=>{const c=new H.THREE.Color(h),o={};c.getHSL(o);return o.h*360;};
+    for(const [b,B] of Object.entries(GR.biomes)){
+      ok(B.base!==undefined&&B.tip!==undefined,b+' declares a base and a tip colour');
+      /* the base must be GREEN and the tip must be BROWN — a green base that is merely a duller
+         gold is the thing that shipped and did not read */
+      const hb=hue(B.base);
+      ok(hb>60&&hb<140,b+' base is a real green, not a duller gold (hue '+hb.toFixed(0)+' deg)');
+      ok(lum(B.tip)<lum(B.tint[0]),b+' tip is DARKER than the body, so a rust tip reads against it');
+      /* and the three body draws must actually differ */
+      const ls=B.tint.map(lum);
+      ok(Math.max.apply(null,ls)/Math.min.apply(null,ls)>1.8,
+         b+' the three body colours span a real value range ('+
+         ls.map(v=>v.toFixed(3)).join(' / ')+')');
+      ok(Math.abs(lum(B.base)-lum(B.tint[2]))>0.15,
+         b+' and the green base is nowhere near the pale stalk it has to read against'); } }
+  { const vs=X.GRASS_GLSL_V;
+    ok(vs.indexOf('vGrassSeed=uSeed*')>0,'how rust a leaf has gone is PER BLADE, so some are green '+
+       'to the end and some are brown from halfway'); }
+
+  /* ---- (4) THE BLADE IS A LEAF, NOT A STRAND ---- */
+  for(const [b,B] of Object.entries(GR.biomes)){
+    ok(B.taper!==undefined,b+' carries its own taper (a cover blade is blunter than a clump leaf)');
+    ok(B.taper<0.65,b+' the leaf stays wide most of its length rather than tapering from the base ('+
+       B.taper+')');
+    ok(B.w[1]>=0.012,b+' and it is wide enough to catch light along its edge ('+
+       (B.w[1]*1000).toFixed(1)+' mm)');
+    ok(B.w[1]<0.03,b+' while still being a blade and not a strap ('+(B.w[1]*1000).toFixed(1)+' mm)'); }
+
+  /* ---- THE GROUND, WHICH IS THE HALF NO BLADE COULD FIX ----
+     Measured at the play camera, the terrain averaged #9b9787 — a desaturated grey-beige, and that
+     is what showed between every clump. No density of sub-pixel blades covers it; the ground's own
+     colour had to change. It is a multiplier on the GRASS-family terrain only. */
+  ok(GR.groundTint!==undefined,'the terrain under the field carries a tint of its own');
+  { const c=new H.THREE.Color(GR.groundTint), o={}; c.getHSL(o);
+    ok(o.h*360>60&&o.h*360<140,'and it pulls the ground toward green rather than sand (hue '+
+       (o.h*360).toFixed(0)+' deg)');
+    ok(o.s>0.15,'with real saturation, because grey is what it is curing ('+o.s.toFixed(3)+')'); }
+  ok(/fam==='grass'\?new THREE\.Color\(GRASS\.groundTint\)/.test(src),
+     'it is applied to the GRASS family terrain only — the ski field ground is snow and snow is '+
+     'not supposed to look like soil');
+
+  /* ---- AND THE BIRD IS STILL VISIBLE, WHICH IS THE TRADE NOT TO UNDO ---- */
+  ok(GR.biomes.carpark.h[1]<=0.50,'the clump blade height is still inside the readability tune P4 '+
+     'measured against the subject floors ('+GR.biomes.carpark.h[1]+' m)');
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);
 }
 
 process.exitCode=C.report()?1:0;
