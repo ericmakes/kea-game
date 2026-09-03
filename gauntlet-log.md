@@ -3504,3 +3504,32 @@ scaffold, port, harness, capture rig, film camera. Every one ended CERTIFIED-SHI
   and all thirty frames have moved. `07_jam` carblue stands red at 2950 against a floor of 3000 —
   98% of an r128-calibrated floor, with four blue cars plainly in the frame. Lowering it to get
   green is the thing FLAKES forbids. The whole set is Eric's look and Eric's judgement.
+
+## SESSION 14b — 2026-09-03, Eric order: RE-PIN THE WHOLE SET AS THE replat-b BASELINES
+
+Eric judged all thirty frames in Preview first: "everything present, no breakage, reads as a working
+game." Nothing was pinned that he had not looked at.
+
+- **28 VANTAGES RE-PINNED** on specimen `dfbbb247aaadf0b6db06c2c38da31ee8`, bundle
+  `f087df18379a73a8c2ba4cbd91c77856`. 26_tour_brochure and 27_travel_card were NOT pinned: they shoot
+  every pass but have never been in the set, and adding them is a new-vantage decision rather than a
+  side effect of a re-pin. Flagged in BASELINE.md rather than done quietly.
+- **VERIFIED ON A FRESH SWEEP, NOT THE SWEEP THE PINS CAME FROM** — the TODO 73 protocol, which
+  exists because two vantages were silently mis-pinned from an outlier sweep last session. A full
+  reshoot against the pins just laid: diff 28 compared 0 flagged worst 0.9991, pxdiff 28 compared 0
+  over band 0 over churn, boxdiff 12 compared 0 changed worst 0.9971, gate CERTIFIED-SHIP. The pins
+  came from a consensus state, not a lucky one.
+- **THE r128-CALIBRATED CHURN BANDS HELD, so they were left alone.** pxdiff's per-vantage bands were
+  cut on the old renderer and nothing went over them on the new one — the ported stack is at least as
+  deterministic as the one they were measured from. Re-fitting bands that already pass would have
+  been noise dressed as diligence.
+- **BASELINE.md NOW CARRIES THE PARITY FINDING AT THE TOP OF THE ENTRY**, because it is the thing a
+  future session will otherwise re-derive the hard way: r128 draws 10,570 randoms at boot and r185
+  draws 10,738, the stream diverges, and the pre-port baselines are NOT a target the ported build can
+  be steered onto. The acceptance criterion from here is world-structure invariants plus the nine
+  batteries; SSIM remains the tripwire WITHIN a stack and is not evidence across one.
+- **ONE CHECK LEFT RED, BY ORDER, AND FILED AS TODO 74.** subjects.mjs 07_jam carblue 2950 against an
+  r128-calibrated floor of 3000. Every subject floor is in the same position; 07_jam surfaced first
+  only because its colour is STAGED and therefore tightly bounded, so it had the least margin. The
+  check fails CONSERVATIVELY — it under-reports presence and so cannot pass a frame whose subject is
+  really gone — which is why it is safe to leave red. No floor was lowered.

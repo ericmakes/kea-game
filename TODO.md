@@ -1472,3 +1472,44 @@ UNTIL THEN, THE MANUAL PROTOCOL IS: re-pin, then reshoot and diff against what y
 mis-pins here were caught that way and would have been invisible without it. That check is now the
 last line of the session-13c re-pin note in BASELINE.md.
 
+
+## FOUND IN SESSION 14 (appended 2026-09-03 by the REPLAT P1 run)
+
+### 74. EVERY SUBJECT FLOOR IS CALIBRATED IN r128 PIXEL COUNTS, AND 07_jam IS ONLY THE FIRST TO SURFACE
+Found while certifying REPLAT P1. `subjects.mjs` reads 07_jam carblue at **2950 against a floor of
+3000** and calls the subject MISSING, while the frame plainly carries four blue cars, the traffic
+cone and the bird standing its ground. Nothing is wrong with the photograph.
+
+WHAT IS ACTUALLY WRONG: every floor in subjects.mjs was calibrated by counting pixels on the r128
+renderer, and the ported build does not produce r128's pixel counts. Two independent reasons, both
+measured and neither a defect:
+  1. THE FILM CAMERA MOVES PIXEL STATISTICS GLOBALLY. Bloom, GTAO and the depth of field shift
+     brightness and saturation across the whole frame, and every classifier in subjects.mjs is an
+     HSV window — `carblue` is h 195-225, s 0.35-0.75, v 0.30-0.70. Pixels near a window edge fall
+     out of it. Measured on 01_carpark_wide, the film camera alone moved SATAVG 21.9 -> 21.3 at the
+     shipped setting and 22.0 -> 5.0 at the first (rejected) bloom threshold.
+  2. THE WORLD RNG STREAM DIVERGED. r128 consumes 10,570 Math.random draws at boot and r185 10,738,
+     so randomised placement differs and a subject can legitimately occupy a slightly different
+     pixel area. See the re-pin note in BASELINE.md.
+
+WHY 07_jam SURFACED FIRST AND THE OTHER FIFTEEN DID NOT: it sat closest to its floor. carblue is a
+STAGED colour (capture.mjs paints the queue 0x3E6484 per piece 4 of session 12), so its count is
+tightly bounded rather than generous — the others clear their floors by multiples. That is luck of
+margin, not a property of 07_jam, and the next look change moves whichever check is closest then.
+
+DO NOT LOWER A FLOOR TO GET GREEN — Eric's order, and it is the FLAKES law stated for this
+instrument: a floor moved to clear a red is that check deleted, and subjects.mjs exists precisely
+because diff.mjs cannot see a birdless frame. The 2950 stands red until this piece runs.
+
+THE PIECE: recalibrate all sixteen floors against the ported renderer, the way piece 4 originally
+cut them — measure each subject present AND against its `absent` reference frame, and keep the
+separation ratio the calibration was chosen for rather than shaving the floor to fit today's count.
+The reference-frame scores (the `absent:` column) must be re-measured too; they are r128 numbers as
+well. Report the before/after separation for each check so a weakened one cannot hide in the batch.
+WORTH DOING IN THE SAME BREATH: 07_jam's carblue window may simply be too tight for a post-processed
+frame. Widening the HSV window with the separation ratio HELD is a recalibration; widening it until
+the red goes away is not. Prove which by re-measuring against the absent reference.
+
+NOT URGENT, AND SAFE TO LEAVE RED: the check is failing conservatively — it under-reports presence,
+so it cannot pass a frame whose subject is genuinely gone. The instrument is still trustworthy in
+the direction that matters.

@@ -186,3 +186,64 @@ silently. Both were re-pinned from the consensus run and verified. Filed as TODO
 VERIFIED ON A FRESH SWEEP, not on the one the pins came from: diff 28 compared 0 flagged, pxdiff 2
 over band and both of them the held-open drifts, boxdiff 12 compared 2 changed and the same two,
 subjects 16 checked 0 missing, gate CERTIFIED-SHIP, three selftests ALL PASS.
+
+## FULL RE-PIN 2026-09-03 — THE REPLAT-B BASELINES (specimen dfbbb247aaadf0b6db06c2c38da31ee8)
+Branch `replat-b`. REPLAT.md P1: the game is a Vite project on three 0.185.1 with a film camera.
+Bundle `f087df18379a73a8c2ba4cbd91c77856`. All 28 vantages re-pinned, judged by Eric first —
+"everything present, no breakage, reads as a working game."
+
+**PIXEL PARITY WITH THE r128 BASELINES IS IMPOSSIBLE BY CONSTRUCTION. READ THIS BEFORE COMPARING
+ANY FRAME ACROSS THE RE-PLATFORM.** Measured at boot in the browser, same seed 20260828, same
+generator, the two stacks consume a DIFFERENT NUMBER OF Math.random draws building the same world:
+
+        r128 (frozen single-file build)   10,570 draws
+        r185 (ported bundle)              10,738 draws      +168
+
+three's own internals take those 168, so the stream parts company partway through buildWorld and
+every randomised placement AFTER that point lands somewhere else — grass, tussock, scatter, the
+throw on every dropped prop. The world STRUCTURE is identical on both (402 scene children, 64
+interactables, 21 props, 29 colliders, the same four named humans). This is exactly the property
+rig.js has always recorded between node and the browser — "one seed and two reproducible worlds,
+not one world" — now true across three versions as well.
+
+No seed, no lighting compensation and no capture setting closes that gap. The pre-port baselines
+are therefore NOT a target the ported build can be steered back onto, and any drift measured
+against them is uninterpretable. They are history from here.
+
+**THE ACCEPTANCE CRITERION FROM HERE IS WORLD-STRUCTURE INVARIANTS PLUS THE NINE BATTERIES.** SSIM
+against a baseline answers "did this frame change since the last pin", which is still the tripwire
+of record WITHIN this stack. It cannot answer "is this the same game" across a renderer change, and
+it was never asked to. What carries that claim instead:
+  - the nine batteries, ALL PASS, ~500 assertions against the ported logic
+  - the structure counts above, identical on both stacks under the one gauntlet seed
+  - subjects.mjs for presence, boxdiff.mjs for the subject box, pxdiff.mjs for churn
+A future re-platform piece that moves the renderer again should expect every baseline to move and
+should re-pin deliberately, exactly as this one did, rather than hunting a diff it cannot win.
+
+**HOW THE GROUND WAS ESTABLISHED, because 26 of 28 flagged on the first ported pass and something
+had to say whether the port had moved or the machine had.** `gauntlet/verify/frozen.mjs` reshoots
+the FROZEN r128 build through the pre-port path — it checks the pre-port capture rig out of git
+verbatim rather than copying its staging table, so the staging is always the staging that pinned
+the old set. Against the old baselines it read **0.99998** and **1.00000**. The machine, the GPU
+and the rig were never the variable. Keep that tool through P2-P6.
+
+**VERIFIED ON A FRESH SWEEP, not on the sweep the pins came from** (the TODO 73 protocol, and the
+reason both mis-pins last session were caught):
+    diff      28 compared, 0 flagged, worst 0.9991
+    pxdiff    28 compared, 0 over band, 0 over churn (loudest 437 px, 12_seal_midpeel)
+    boxdiff   12 subjects compared, 0 changed, worst 0.9971
+    subjects  16 checked, 1 missing — see below, deliberately red
+    gate      CERTIFIED-SHIP
+NOTE: the per-vantage churn bands in pxdiff.mjs were calibrated on the r128 renderer and were NOT
+recalibrated here. They held with room to spare on the new stack, so the ported renderer is at
+least as deterministic as the one they were cut from. Left alone rather than re-fitted.
+
+**ONE CHECK IS RED ON PURPOSE AND WAS NOT PINNED GREEN.** subjects.mjs reads 07_jam carblue at
+**2950 against a floor of 3000** — 98% of a floor calibrated in r128 pixel counts, while the frame
+plainly carries four blue cars, the cone and the bird. EVERY subject floor is in that position;
+07_jam is simply the first to surface because it sat closest to its floor. Filed as TODO 74. No
+floor was lowered to clear it: a floor moved to get green is that check deleted.
+
+**NOT IN THE SET, AND STILL NOT:** 26_tour_brochure and 27_travel_card shoot every pass but have
+never been pinned, so diff.mjs cannot see them. That gap predates the re-platform and is unchanged
+by it; adding them is a new-vantage decision for Eric, not a side effect of a re-pin.
