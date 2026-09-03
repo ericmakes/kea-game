@@ -6,6 +6,18 @@
    by content, never by file position, and that law did not change with the stack. */
 import * as THREE from 'three';
 
+/* r128 COLOUR PARITY — REPLAT P1 step 2, and a deliberate holding position.
+   Modern three enables ColorManagement by default, so `new THREE.Color(hex)` converts sRGB ->
+   linear working space on construction. r128 did no such thing: it stored the raw value, and this
+   game compensated BY HAND in exactly one place — the three grass tints, which call
+   convertSRGBToLinear() at source. Turn management on and those three tints convert TWICE (muddy
+   grass), while every other colour in the game, none of which converts by hand, shifts the other
+   way. Both states are defensible; what is not is changing the module system, the renderer AND the
+   colour pipeline in one step and then trying to read the pixel diff.
+   So: parity here. P1 step 5 turns this on deliberately, with the film camera, as ONE judged look
+   change. DO NOT flip it without re-pinning the whole set. */
+THREE.ColorManagement.enabled = false;
+
 /* ============================================================
    KEA-LOGIC-START  · untitled kea game · single-file build
    state root: G · tick: update(dt) · input seam: KEYS/press()
@@ -30,7 +42,7 @@ const M={}; // shared materials (2026-08-28: detail-mapped by family via MAPKIND
 /* texture families: every big surface gets quiet grain (registered post-PAL, read inside mat) */
 const TOONGRAD=(()=>{ // 4-tone ramp: deep shade -> lit
   const d=new Uint8Array([120,168,214,255]);
-  const t=new THREE.DataTexture(d,4,1,THREE.LuminanceFormat);
+  const t=new THREE.DataTexture(d,4,1,THREE.RedFormat);
   t.minFilter=THREE.NearestFilter; t.magFilter=THREE.NearestFilter; t.needsUpdate=true; return t; })();
 const STYLE={outlines:false}; // v4 'lawn' look; v6 realism (2026-08-26): NZ palette + IBL + scalloped kea
 let KEASCALMAT=null;
@@ -44,7 +56,7 @@ function keaWing(){ // folded wing: smooth olive, lengthwise shafts, dark tip ba
   for(let i=0;i<6;i++){ c.beginPath(); c.moveTo(0,7+i*10); c.lineTo(128,9+i*10); c.stroke(); }
   c.fillStyle='#2E3216'; c.fillRect(112,0,16,64); // dark tip
   c.fillStyle='#3E6B5A'; c.fillRect(0,58,128,6);  // teal trailing edge
-  const t=new THREE.CanvasTexture(cv); t.encoding=THREE.sRGBEncoding;
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace;
   KEAWINGMAT=new THREE.MeshStandardMaterial({map:t,roughness:0.85,metalness:0,envMapIntensity:0.3});
   return KEAWINGMAT;
 }
@@ -82,7 +94,7 @@ function keaScal(){ // every feather edged in dark olive — fine, dense, field-
       c.strokeStyle='#2A2D14'; c.lineWidth=1.5; c.beginPath(); c.arc(x+8,y+9,7.6,0.12*Math.PI,0.88*Math.PI); c.stroke();
       c.strokeStyle='rgba(42,45,20,0.55)'; c.lineWidth=0.8; c.beginPath(); c.moveTo(x+8,y+3.4); c.lineTo(x+8,y+11.5); c.stroke(); // feather shaft
     } }
-  const t=new THREE.CanvasTexture(cv); t.encoding=THREE.sRGBEncoding; t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.wrapS=t.wrapT=THREE.RepeatWrapping;
   KEASCALMAT=new THREE.MeshStandardMaterial({map:t,roughness:0.85,metalness:0,envMapIntensity:0.3,side:THREE.DoubleSide});
   return KEASCALMAT;
 }
@@ -108,7 +120,7 @@ function detailTex(kind){ // subtle multiply-maps: texture without killing the t
     for(let i=0;i<260;i++){ c.fillStyle='rgba(255,255,255,'+(0.02+r()*0.03).toFixed(3)+')'; c.fillRect(r()*128,r()*128,1.5,1.5); } }
   else if(kind==='snowtex'){ for(let i=0;i<300;i++){ const a=r(); c.fillStyle=a<0.5?'rgba(150,180,210,'+(0.05+r()*0.06).toFixed(3)+')':'rgba(255,255,255,0.10)';
       c.beginPath(); c.arc(r()*128,r()*128,0.8+r()*1.8,0,6.3); c.fill(); } }
-  const t=new THREE.CanvasTexture(cv); t.encoding=THREE.sRGBEncoding; t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(2,2);
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(2,2);
   return DTEX[kind]=t;
 }
 const MAPKIND={};
@@ -1321,7 +1333,7 @@ function buildCarpark(){
       dctx.fillStyle=a<0.5?'rgba(70,60,20,0.10)':'rgba(255,246,214,0.09)';
       const rr=1+dr()*3.2; dctx.beginPath();
       dctx.arc(dr()*256,dr()*256,rr,0,6.3); dctx.fill(); }
-    const dt=new THREE.CanvasTexture(dc); dt.encoding=THREE.sRGBEncoding;
+    const dt=new THREE.CanvasTexture(dc); dt.colorSpace=THREE.SRGBColorSpace;
     dt.wrapS=dt.wrapT=THREE.RepeatWrapping; dt.repeat.set(9,9);
     gMat=new THREE.MeshStandardMaterial({vertexColors:true,map:dt,roughness:0.95,metalness:0,envMapIntensity:0.3});
   } else gMat=mat(0xFFFFFF,{vertexColors:true});
@@ -2378,7 +2390,7 @@ function mkKeaSign(x,z,ry){ // the classic yellow diamond: kea silhouette + CAUT
   const half=176/2; c.fillStyle='#F2B705'; c.fillRect(-half,-half,176,176);
   c.lineWidth=9; c.strokeStyle='#1E1B14'; c.strokeRect(-half+7,-half+7,162,162); c.restore();
   drawKeaSil(c,128,130,1.12,'#1E1B14');
-  const tx=new THREE.CanvasTexture(cv); tx.encoding=THREE.sRGBEncoding;
+  const tx=new THREE.CanvasTexture(cv); tx.colorSpace=THREE.SRGBColorSpace;
   const plate=new THREE.Mesh(new THREE.PlaneGeometry(1.34,1.34),
     new THREE.MeshLambertMaterial({map:tx,transparent:true,side:THREE.DoubleSide}));
   plate.position.set(0,2.25,0.03); g.add(plate);
@@ -4449,7 +4461,7 @@ function flashTodo(){
 function initRenderer(){
   const cv=document.getElementById('c');
   G.renderer=new THREE.WebGLRenderer({preserveDrawingBuffer:true,canvas:cv,antialias:true});
-  G.renderer.outputEncoding=THREE.sRGBEncoding;
+  G.renderer.outputColorSpace=THREE.SRGBColorSpace;
   G.renderer.toneMapping=THREE.ACESFilmicToneMapping;
   G.renderer.toneMappingExposure=0.95;
   G.renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
