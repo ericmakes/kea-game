@@ -1,99 +1,130 @@
-# REPORT — REPLAT P3, scanned materials (session 16, 2026-09-03)
+# REPORT — REPLAT P3b, Eric's three P3 verdicts (session 17, 2026-09-03)
 
-Branch `replat-b`. Gate **CERTIFIED-SHIP** at specimen `c48aced312c8966239a340c6f1c0391a`,
-bundle `6159d4e8cdb54fb2aa038a3a472c336d`. SESSION.lock taken and released.
-**Nothing was re-pinned. 27 of 28 vantages are flagged and waiting on you.**
+Branch `replat-b`. Tip certified before anything moved. **P4 not started, as ordered.**
 
-## SHIPPED
+## THE THREE VERDICTS
 
-**REPLAT P3 — scanned materials.** Seven CC0 PBR sets from Poly Haven replace the procedural
-canvas textures on grass, gravel, asphalt, weatherboard, corrugated iron, brick and snow. Full
-albedo + normal + roughness on every family. 21 files, 16 MB, every one md5-verified against the
-publisher's API at import and recorded in `assets/LICENCES.md` before a line of code was written.
+**(1) The carpark tiling repetition — fixed with breakup, not a bigger texture.** Both halves you
+asked for: a large-scale variation layer that never aligns with the tile (two octaves of value
+noise in *world* metres at 17.3 m, driving albedo **and** roughness), plus per-tile rotation and
+offset by stochastic tiling on a triangle lattice, three taps blended by barycentric weight, each
+sampled with explicit gradients so a cell border cannot collapse the mip.
 
-| family | set | tile | mode | texel |
-|---|---|---|---|---|
-| grass | withered_grass | 2.000 m | paint | 1.95 mm |
-| gravel | gravel_floor_02 | 2.000 m | scan | 1.95 mm |
-| asphalt | asphalt_02 | 3.000 m | scan | 2.93 mm |
-| weatherboard | dark_planks | 2.000 m | paint | 1.95 mm |
-| corrugate | corrugated_iron_02 | 2.700 m | paint | 2.64 mm |
-| brick | brick_wall_09 | 2.010 m | scan | 1.96 mm |
-| snow | snow_02 | 2.000 m | scan | 1.95 mm |
+Applied to every large flat family surface — which turns out to be a fact about the material, not
+about size. The four **isotropic** ground families (grass, gravel, asphalt, snow) get the rotation.
+The four **directional** ones do not, and must not: weatherboard laps run level, corrugate ribs run
+down the slope, brick courses stay horizontal, concrete form lines stay level. Rotating those would
+be a worse defect than the repetition. A battery reads that gate off the family and checks it in
+both maps.
 
-Snow is the seventh and was not in your six: the game has a whole ski field and `PAL.snow` was
-carrying a procedural canvas exactly like the other six.
+**(2) The four tints — kept, and now pinned.** gravel 0.35, asphalt 0.45, brick 0.20, snow 0.55.
+They are asserted at your accepted values, so a later session has to change that line to move them.
 
-**Texel density is derived, not dialled.** `tileM` is the publisher's own published real-world
-size, and a battery cross-checks it against the millimetres in LICENCES.md. Geometry UVs are
-rescaled into metres and the textures repeat at 1/tileM, so a texel is ~2 mm across on every
-surface in the game — which is the right number for a game played at bird height, since
-ref_bow_02 and ref_bow_03 are both shot from about 300 mm up.
+**(3) The anchor block — it is concrete now.** An eighth family, `concrete_layers_02` (Poly Haven,
+CC0, licensed and md5-verified before any code), board-formed rather than plain because that is
+what a poured-in-place footing looks like. It has a hex of its own so one family's colour can no
+longer speak for another object's material — the second time in two sessions that was the defect.
 
-## FRAMES TO EYEBALL — the three you named
+## THE STRIP THAT SETTLED IT — `strip_breakup.png`
 
-- `gauntlet/reference/pairs/01_carpark_wide__ref_bow_00.png` — brick/weatherboard target
-- `gauntlet/reference/pairs/02_hut_snow__ref_bow_00.png`
-- `gauntlet/reference/pairs/07_jam__ref_bow_06.png` — metal/asphalt target
-- `gauntlet/reference/pairs/12_seal_midpeel__ref_bow_06.png`
-- `gauntlet/reference/pairs/05_tussock_ground__ref_bow_02.png` — grass, at bird height
-- `gauntlet/reference/pairs/24_verge_paddle__ref_bow_02.png`
+Four frames at 01_carpark_wide, tarmac at 2x:
 
-And the two that show the most new material per pixel:
+| | | |
+|---|---|---|
+| **A** | off | the repetition you flagged — long parallel cracks marching in step |
+| **B** | sharp 1.0 / var 0 | repetition gone, slightly soft |
+| **C** | sharp 4.0 / var 0 | repetition gone, contrast held — **SHIPPED** |
+| **D** | sharp 1.0 / var 1.0 | **the lattice drawn as dark hexagons across the whole car park** |
 
-- `gauntlet/capture/19_roof_follow.png` — corrugated iron at true 79 mm pitch, brick chimney,
-  red weatherboard laps, scanned stones in the tussock. The single best frame in the set.
-- `gauntlet/capture/07_jam.png` — the road, at bird height, reading as a road.
+D is the interesting one. Three-tap blending removes contrast — that is arithmetic, not taste — and
+the standard correction puts back exactly the variance it removed. It made things *worse*, because
+it boosts contrast hardest where the blend is widest, which is precisely on the seams it was meant
+to hide. The proper pairing needs a histogram-preserving transform (a precomputed texture per
+family); without it, weight sharpening alone is the answer, because it makes most of the surface a
+single tap at full native contrast. The rejected knob is kept at 0 and pinned there.
 
-## THREE THINGS I WANT YOUR CALL ON
+## COST, MEASURED IN PLACE
 
-1. **Tiling repetition on the car park.** `asphalt_02`'s tar cracks repeat every 3 m, about 13
-   times across the 40 m slab. On the road they read as expansion joints and are almost a gain; on
-   the slab they are a repeat. Every fix is bigger than P3 — a breakup layer, a stochastic or
-   triplanar sample, or a 4 m tile at coarser texel — and every one is a taste call, so I measured
-   it and left it. Visible at 01.
-2. **The tints.** Four `scan` families wear the NZ palette as a luminance-neutral hue push:
-   asphalt 0.45, snow 0.55, gravel 0.35, brick 0.20. 0 is the raw scan and 1 is the full palette
-   hue at the scan's own brightness. They are shootable without a rebuild —
-   `KEAMATS='{"families":{"asphalt":{"tint":0.8}}}'` — if you want a strip.
-3. **The ski tow-top anchor block** is an old concrete block that shares `PAL.gravel`, so it now
-   wears driveway gravel. Defensible on a weathered aggregate block, and the alternative is
-   inventing a concrete family P3 was not asked for. Visible at 28. Say the word either way.
+Nine texture fetches where the breakup runs. Against a control built by swapping the same 72 meshes
+to a plain material carrying identical maps and lights, GPU flushed each pass, best of five runs of
+forty renders at 1280×720:
 
-## WHAT IS STILL SHORT, AND WHY IT IS NOT P3's
+    breakup 3.692 ms/render    plain 3.240 ms/render    +0.452 ms, +14% of scene render
 
-- The grass scan is barely visible at the wide vantages, because 42,000 cone blades stand on top
-  of it. That is P4's brief exactly, and the scan is what P4's blades will stand in.
-- Brick rests on two chimneys. ref_bow_00 is a brick HOUSE and the game has no masonry wall — the
-  gap is geometry, which is P6. The family is sourced, licensed, tiled and proven so P6 opens with
-  it working instead of discovering on the day that it has no brick.
-- Not one prop changed. ref_bow_03's bin plastic is a MODEL question: P6.
-- The pale tarmac ellipses still read as puddles at 01. Pre-existing PHASE 1 gap, untouched.
+2.7% of a 60 fps frame; still vsync-locked. Recorded so P4 starts from a number.
+
+## FRAMES TO EYEBALL
+
+- `strip_breakup.png` (in the scratch dir, path in the log) — the four-variant strip above
+- `gauntlet/capture/01_carpark_wide.png` — the tarmac, which is the verdict
+- `gauntlet/capture/07_jam.png` — the road at bird height
+- `gauntlet/reference/pairs/01_carpark_wide__ref_bow_00.png` and `07_jam__ref_bow_06.png`
+
+## FOUR THINGS I GOT WRONG, BECAUSE THEY COST TIME AND ARE WORTH KNOWING
+
+- **The breakup shipped as a silent no-op.** `onBeforeCompile` hands you the shader with its
+  `#include` directives *unresolved*, so surgery against expanded chunk text matches nothing and
+  throws nothing. Every uniform read correctly and the frame looked almost right. Only a runtime
+  on/off A/B returning byte-identical screenshots caught it. It is now validated at module scope
+  against the three that is installed, and a chunk rename turns into a red gate.
+- **My own A/B harness lied first.** It called `renderer.render` while the game draws through the
+  post composer, so the screenshot never showed my render. I found that only by adding a control
+  that *must* be visible (forcing the asphalt red) and watching it change nothing.
+- **A whole variant strip was shot and nearly judged on four identical frames** — twice, from two
+  different causes: `breakup` missing from the rig's key list (and I had silenced stderr), then an
+  override loop that assigned the block wholesale so every other leaf went `undefined` and the
+  uniforms went NaN. A NaN uniform still renders something, and it looks deliberate. The merge is
+  leaf-wise and type-checked now, and the strip shooter prints an md5 per frame.
+- **I ran sabotages while a capture pass was shooting**, which rebuilt `dist/` underneath it and
+  contaminated the fourth sweep of the first re-pin. Killed it, restored the committed baselines
+  from git, and re-ran the whole thing with nothing else touching the tree. Same lesson as
+  SESSION.lock, one level down: a capture pass owns the tree while it runs.
 
 ## VERIFIED
 
-Nine batteries ALL PASS; gate CERTIFIED-SHIP; gate-selftest ALL PASS; **fourteen P3 sabotages, 13
-red and the 14th recorded in ARTBIBLE rather than hidden**; bundle builds; 30/30 vantages shoot
-with no retakes and no GAVE UP; stability 4 vantages x 3 takes, 0 unstable (worst 0.9998), so seven
-async texture fetches add no variance; sidebyside 33 pairs.
+Nine batteries ALL PASS; gate CERTIFIED-SHIP; gate-selftest ALL PASS; **sixteen P3b sabotages, all
+sixteen red**; bundle builds; 30/30 vantages shoot with no retakes and no GAVE UP; sidebyside 33
+pairs; all 24 texture files re-verified against their ledger md5s.
 
-    diff       28 compared, 27 flagged, worst 0.7439
-    boxdiff    12 compared, 10 changed
-    pxdiff     28 compared, 27 over band
-    subjects   16 checked, 2 missing — exactly the two known-red from TODO 75, no new regression
+**THE RE-PIN — four sweeps, medoid per vantage, by instrument.** `gauntlet/verify/repin.mjs` is
+new: it shoots N sweeps, scores each run's frame by its total pixel distance to the same frame in
+every other run, pins the lowest, and prints provenance. TODO 73 was a hand procedure in a scratch
+script that no longer existed; you have now ordered it twice, so it is a tool.
 
-The one frame `diff` did **not** flag is `04_flight_underwing` at **ssim 1.0000** — the only
-vantage with no family surface in it, byte for byte unchanged. That is the cleanest statement
-available that the swap moved what it should and nothing else.
+    PIN PROVENANCE   run1 10, run2 7, run3 7, run4 4
 
-Two things worth knowing that are not defects: `harness-smoke` now prints 98 interactables where it
-printed 100, and I proved that is a seeded-stream artefact rather than a regression — adding a
-single empty `Object3D` to the untouched baseline moves the same number to 99, with chaos and every
-boot count identical. And my first instrument run was garbage because I re-shot the whole set with
-`BIOME=skifield` and overwrote the carpark pass; caught it by opening a frame, re-shot from an
-emptied directory, and every number above is from the clean pass.
+Spread across all four, which is the whole point — the outlier is a property of a (run, vantage)
+PAIR, not of a run. On this set it was run 2 on 02_hut_snow, run 1 on 14_player_view, run 3 on
+18_rear_close and run 4 on 17_flight. Third independent confirmation.
+
+**VERIFIED ON A FRESH FIFTH SWEEP**, not on the sweeps the pins came from:
+
+    diff       28 compared, 0 flagged, worst 0.9952
+    pxdiff     28 compared, 3 over band
+    boxdiff    12 compared, 1 changed (25_preen_follow beak, 0.9625)
+    subjects   16 checked, 2 missing — the two known-red from TODO 75, no new regression
+    stability  4 vantages x 3 takes, 1 unstable — 22_torch_beam at 0.9830
+
+## TWO THINGS FLAGGED FOR YOU, NEITHER OF THEM A REGRESSION
+
+**22_torch_beam does not reshoot the same twice right now (0.9830, bar 0.995), and it is not P3b.**
+I attributed it rather than guessing: re-run at five takes it reads 0.9826, and re-run at five takes
+with `NOMATS=1` — no scanned materials at all, same build — it reads **0.9805, slightly worse**. So
+the materials are not implicated; this is the vantage FLAKES law 12 already names as the hardest
+(night easing, follow-cam lerp, the campfire's random spit), on a machine currently at load 8.7
+from these very sweeps. Session 16 read 0.9998 on a quiet machine. **I did not touch the threshold.**
+
+**The churn ceilings were not re-fit, and the reason is now much stronger.** Measured the way
+session 15b measured it (outlier run dropped per vantage, then the worst remaining pair), 5 of 28
+exceed their recorded ceiling — and they are a *different five*. Session 15b's three now hold
+comfortably: 01_carpark_wide 13 against 104, 04_flight_underwing 20 against 69, 28_skifield_base 156
+against 1291, every one of which was over last session. A set of ceilings whose violators change
+completely between two sessions is measuring the machine, not the vantages, so re-fitting them
+inside a re-pin would pin today's noise as tomorrow's contract. TODO 77 stands and this is the
+evidence for it.
 
 ## SUGGESTED NEXT
 
-P4 — instanced grass. It is the piece the P3 ground was built to sit under, and it is the biggest
-remaining gap to ref_bow_02 and ref_bow_03.
+P4 — instanced grass, as briefed. The breakup and the scanned ground are what its blades will stand
+in, and the frame budget now has a measured starting number (+0.45 ms for the breakup, still
+vsync-locked).

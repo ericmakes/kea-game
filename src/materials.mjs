@@ -78,6 +78,24 @@ function toPaintDetail(img, paintMean) {
   return { canvas: cv, mean, gain };
 }
 
+/* THE MEAN OF A MAP, MEASURED RATHER THAN ASSUMED. The breakup's variance restore needs to know
+   what value to rescale each blended sample's deviation AROUND, and that is the texture's own
+   average. Measured on a 64x64 downscale — 4096 samples is far more than enough for a mean and
+   costs about a millisecond, against a full-resolution pass that would buy three more decimals
+   nobody can see. Same sRGB-bytes-as-linear seam the paint pass documents: ColorManagement is off
+   in this codebase, so the number is taken in the encoding the shader will actually read. */
+function imageMean(img) {
+  const N = 64, cv = document.createElement('canvas');
+  cv.width = cv.height = N;
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  cx.drawImage(img, 0, 0, N, N);
+  const px = cx.getImageData(0, 0, N, N).data;
+  let r = 0, g = 0, b = 0;
+  for (let i = 0; i < px.length; i += 4) { r += px[i]; g += px[i + 1]; b += px[i + 2]; }
+  const n = px.length / 4;
+  return [r / n / 255, g / n / 255, b / n / 255];
+}
+
 export async function installMaterials(KEAGAME) {
   const G = KEAGAME.G, MATS = KEAGAME.MATS;
   if (!G.scene) throw new Error('materials: no scene to dress');
@@ -122,6 +140,16 @@ export async function installMaterials(KEAGAME) {
         t.needsUpdate = true;
       }
 
+      /* THE MEAN IS ONLY NEEDED WHERE THE BREAKUP RUNS, so it is only measured there. A paint
+         family's albedo mean is not measured at all — it is MATS.paintMean BY CONSTRUCTION, since
+         toPaintDetail just normalised the map to exactly that. Measuring it again would be a
+         second, worse copy of a number this file already guarantees. */
+      if (F.iso) {
+        const a = F.mode === 'paint'
+          ? [MATS.paintMean, MATS.paintMean, MATS.paintMean]
+          : imageMean(map.image);
+        S.mean = { albedo: a, rough: imageMean(arm.image)[1] };   // roughness is the GREEN channel
+      }
       S.maps = { map, normalMap: nor, roughnessMap: arm };
       S.failed = false;
       for (const m of S.mats) KEAGAME.matDress(m);
@@ -130,6 +158,8 @@ export async function installMaterials(KEAGAME) {
                       px: map.image.width,
                       paintMean: paint ? +paint.mean.toFixed(4) : null,
                       paintGain: paint ? +paint.gain.toFixed(4) : null,
+                      mean: S.mean ? { albedo: S.mean.albedo.map(v => +v.toFixed(4)),
+                                       rough: +S.mean.rough.toFixed(4) } : null,
                       materials: S.mats.length };
     } catch (e) {
       /* ONE FAMILY FAILING MUST NOT COST THE OTHER SIX. Its materials keep the palette colour and

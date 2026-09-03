@@ -4083,7 +4083,16 @@ C.section('REPLAT P3: scanned materials');
   X.boot({biome:'carpark'}); tick(4);
 
   ok(!!MATS&&!!FAM,'the material recipe is exported as one named block (KEAGAME.MATS)');
-  ok(NAMES.length===7,'seven families, which is REPLAT P3 six plus snow ('+NAMES.join(', ')+')');
+  /* THE COUNT IS DERIVED FROM THE LEDGER, not typed. It was `===7` and went red the moment P3b
+     added concrete on Eric's verdict — a bound fitted to the number of the day, which is law 15's
+     time bomb and the third time this section has been caught by it. What is actually worth
+     asserting is that the recipe and the ledger agree about HOW MANY families there are. */
+  { const fs=require('fs'), path=require('path');
+    const lic=fs.readFileSync(path.join(__dirname,'../../assets/LICENCES.md'),'utf8');
+    const listed=(lic.match(/^### [a-z]+ — `/gm)||[]).length;
+    ok(NAMES.length===listed,'the recipe and the licence ledger agree on the family count ('+
+       NAMES.length+' in MATS, '+listed+' in LICENCES.md: '+NAMES.join(', ')+')');
+    ok(NAMES.length>=7,'and it is at least REPLAT P3 six plus snow ('+NAMES.length+')'); }
 
   // ---- EVERY FAMILY RESOLVES A REAL TEXTURE SET ----
   /* The strongest claim a headless battery can make about a file it cannot decode: the file is
@@ -4103,7 +4112,8 @@ C.section('REPLAT P3: scanned materials');
         ok(!!st&&st.size>20000,f+': '+rel+' is on disk and is a real image ('+
            (st?st.size+' bytes':'MISSING')+')');
         if(st){files++;bytes+=st.size;} } }
-    ok(files===21,'all 21 map files present — seven families x albedo, normal, ARM ('+files+'/21)');
+    ok(files===NAMES.length*3,'every family has all three maps on disk — albedo, normal, ARM ('+
+       files+'/'+(NAMES.length*3)+')');
     /* AND THEY ARE THE JPEGS THEY CLAIM TO BE. A zero-length or half-downloaded file passes a size
        check on a bad day; the SOI marker does not. Cheap, and it is the difference between "a file
        exists" and "a texture will decode". */
@@ -4145,9 +4155,15 @@ C.section('REPLAT P3: scanned materials');
     const claimed={}; for(const c of Object.keys(X.MATFAM))claimed[X.MATFAM[c]]=(claimed[X.MATFAM[c]]||0)+1;
     /* grass and snow also reach the terrain planes, which do not go through mat() at all, so the
        colour registry is not where their claim lives — G.mats is. Assert through the state. */
-    for(const f of NAMES) ok((G.mats.families[f]||{}).materials>0,
-      f+' actually claims a surface in the built world ('+((G.mats.families[f]||{}).materials|0)+
-      ' material(s))');
+    /* A FAMILY MAY LIVE IN EITHER BIOME, so the claim is checked across BOTH. `concrete` exists
+       only at the ski field — it is one poured footing at the top of the rope tow — and asserting
+       it against the carpark alone would have made a correct assignment look like a dead family. */
+    { const seen={};
+      for(const b of ['carpark','skifield']){ X.boot({biome:b}); X.startGame(1); tick(4); park();
+        for(const f of NAMES) seen[f]=(seen[f]||0)+((G.mats.families[f]||{}).materials|0); }
+      X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+      for(const f of NAMES) ok(seen[f]>0,
+        f+' actually claims a surface in one of the two maps ('+(seen[f]|0)+' material(s))'); }
     const src=require('../2026-08-26/keasrc').specimenSource();
     for(const dead of ['asphalt','corrugate','snowtex'])
       ok(src.indexOf("kind==='"+dead+"'")<0,
@@ -4468,6 +4484,262 @@ C.section('REPLAT P3: scanned materials');
     ok(!!gnd&&gnd.material.userData.matFamily==='snow',
        'and the ski ground itself is the snow scan, not the carpark grass ('+
        (gnd?gnd.material.userData.matFamily:'-')+')'); }
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
+}
+
+/* ============================================================
+   REPLAT P3b — THE TILING BREAKUP, and Eric's other two P3 verdicts.
+   ============================================================
+   The shader itself cannot be run in node, so what this section proves is everything AROUND it
+   that can be: that it INSTALLED, that its constants are the pinned ones, that it is scoped to the
+   surfaces where rotating a tile is safe, and that the override seam every variant strip rides on
+   cannot silently drop a leaf. Each one of those is a bug this piece actually shipped and had to
+   photograph its way back out of, which is why they are assertions and not comments. */
+C.section('REPLAT P3b: the tiling breakup');
+{
+  const MATS=X.MATS, FAM=MATS.families, NAMES=Object.keys(FAM), B=MATS.breakup;
+  const near=(a,b,eps,what)=>ok(Math.abs(a-b)<=(eps||1e-6),what+' ('+a+' vs '+b+')');
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+
+  /* ---- IT INSTALLED AT ALL ----
+     THE FIRST CUT OF THE BREAKUP WAS A SILENT NO-OP FOR ITS WHOLE FIRST LIFE. onBeforeCompile
+     hands you the shader with its `#include <...>` directives UNRESOLVED, so surgery written
+     against the expanded chunk text matched nothing, replaced nothing and threw nothing: the
+     uniforms all read correctly, the frame looked almost right, and a runtime A/B of breakup-on
+     against breakup-off came back BYTE-IDENTICAL. That is the only reason it was caught.
+     So the substrings are validated against the three that is actually installed, once, at module
+     scope — and this is the assertion that turns a three upgrade renaming a chunk into a RED GATE
+     instead of a car park that quietly goes back to looking tiled. */
+  ok(!!G.mats.breakup,'the breakup reports its own install state in scene state (G.mats.breakup)');
+  ok(G.mats.breakup.ok===true,'THE BREAKUP INSTALLED — every shader chunk it rewrites still '+
+     'contains the line it rewrites ('+(G.mats.breakup.ok===true?'ok':G.mats.breakup.why)+')');
+  { const C2=H.THREE.ShaderChunk||{};
+    for(const n of ['map_fragment','roughnessmap_fragment','normal_fragment_maps'])
+      ok(typeof C2[n]==='string'&&C2[n].length>0,'three still has ShaderChunk.'+n);
+    /* and the three lines by name, so a rename says WHICH one moved */
+    ok((C2.map_fragment||'').indexOf('texture2D( map, vMapUv )')>=0,
+       'map_fragment still samples map at vMapUv');
+    ok((C2.roughnessmap_fragment||'').indexOf('texelRoughness.g')>=0,
+       'roughnessmap_fragment still reads roughness from the GREEN channel');
+    ok((C2.normal_fragment_maps||'').indexOf('vec3 mapN = texture2D( normalMap, vNormalMapUv )')>=0,
+       'normal_fragment_maps still builds mapN from a tangent-space sample'); }
+
+  /* ---- THE CONSTANTS ARE THE PINNED ONES, AND THE REJECTED KNOB IS PINNED AT ZERO ----
+     varRestore is the one that matters. Run at 1.0 alongside blendSharp 4 it drew the lattice as
+     dark hexagonal cell borders across the whole car park — photographed, on the strip, variant D.
+     It is correct arithmetic (it restores exactly the variance three-tap blending removes) and it
+     is perceptually wrong without a histogram-preserving transform, because it boosts contrast
+     hardest precisely where the blend is widest, which is on the seams. Kept at 0 rather than
+     deleted, and PINNED at 0 here so it cannot drift back up by accident. */
+  ok(B.varRestore===0,'the variance restore is pinned OFF — measured, it draws the lattice it was '+
+     'meant to hide (varRestore '+B.varRestore+', see the strip in ARTBIBLE)');
+  ok(B.blendSharp>1,'the blend weights ARE sharpened, which is what actually recovers the contrast '+
+     'a 3-tap blend costs — most of the surface becomes one tap at native contrast (blendSharp '+
+     B.blendSharp+')');
+  ok(B.macroAmount>0&&B.macroRough>0,'the macro variation layer drives BOTH albedo and roughness — '+
+     'weathering changes how a surface scatters, not only how dark it is ('+B.macroAmount+' / '+
+     B.macroRough+')');
+  /* THE MACRO SCALE MUST NOT BE A TILE MULTIPLE, which is the whole point of "never aligns with
+     the tile". Asserted against EVERY family's tile, derived, not eyeballed. */
+  /* SCOPED TO THE ISOTROPIC FAMILIES, because they are the only ones the lattice and the macro
+     layer ever touch. The first cut of this checked all eight and went red on corrugate at 2.7 m
+     against a 2.6 m patch — a true statement about two numbers and a meaningless one about the
+     game, since a corrugate roof is never rotated per tile. The bound has to be scoped to where
+     the mechanism runs, or it fails on facts that do not matter. */
+  { const ISOT=NAMES.filter(f=>FAM[f].iso).map(f=>FAM[f].tileM);
+    for(const f of NAMES.filter(f=>FAM[f].iso)){ const r=B.macroM/FAM[f].tileM;
+      ok(Math.abs(r-Math.round(r))>0.15,'the macro layer does not align with the '+f+' tile ('+
+         B.macroM+'m / '+FAM[f].tileM+'m = '+r.toFixed(3)+' tiles, and a whole number would lock)');
+      ok(Math.abs(B.patchM-FAM[f].tileM)>0.2,
+         'and the patch lattice is not the same size as the '+f+' tile either ('+B.patchM+' vs '+
+         FAM[f].tileM+') — a lattice on the tile grid would draw a second grid'); }
+    ok(B.macroM>3*Math.max(...ISOT),
+       'the macro layer is well ABOVE the largest tile it runs on, so it reads as weathering '+
+       'rather than as more texture ('+B.macroM+'m against a largest iso tile of '+
+       Math.max(...ISOT)+'m)'); }
+
+  /* ---- IT IS SCOPED TO THE SURFACES WHERE ROTATING A TILE IS SAFE ----
+     This is the assertion with the most teeth in the section. Rotating a tile is only safe on an
+     ISOTROPIC material: gravel, asphalt, dry grass and snow have no grain, so a rotated patch is
+     the same material. Weatherboard laps, corrugate ribs, brick courses and concrete form lines
+     are DIRECTIONAL — rotating those would tilt the laps and lean the courses, which is a worse
+     defect than the repetition being cured. */
+  { const ISO=NAMES.filter(f=>FAM[f].iso), DIR=NAMES.filter(f=>!FAM[f].iso);
+    ok(ISO.length>=4&&DIR.length>=4,'the families split into isotropic and directional ('+
+       ISO.join(',')+' | '+DIR.join(',')+')');
+    for(const f of ISO) ok(FAM[f].iso===true,f+' is isotropic, so a rotated tile is the same material');
+    /* the four DIRECTIONAL ones by name and by REASON, so a future session cannot flip one
+       without meeting the sentence that says why it must not */
+    for(const [f,why] of [['weatherboard','its laps must run level'],
+                          ['corrugate','its ribs must run down the slope'],
+                          ['brick','its courses must stay horizontal'],
+                          ['concrete','its form lines must stay level']])
+      ok(FAM[f]&&FAM[f].iso===false,f+' is NOT rotated per tile, because '+why);
+    /* and the gate is read from the FAMILY, not from a list kept here: every material carrying
+       breakup uniforms must belong to an iso family, in both maps. */
+    const bad=[];
+    for(const b of ['carpark','skifield']){ X.boot({biome:b}); X.startGame(1); tick(4); park();
+      G.scene.traverse(o=>{ const m=o.material;
+        if(!(o.isMesh&&m&&m.userData))return;
+        const f=m.userData.matFamily; if(!f)return;
+        const hasU=!!m.userData.keaU;
+        if(hasU!==!!FAM[f].iso)bad.push(b+':'+f+(hasU?' HAS':' LACKS')+' breakup'); }); }
+    X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+    ok(bad.length===0,'EVERY breakup material is an isotropic family and every isotropic family '+
+       'material has it — in both maps'+(bad.length?' — '+[...new Set(bad)].slice(0,4).join(' | '):'')); }
+
+  /* ---- A DIRECTIONAL FAMILY CANNOT BE HANDED THE BREAKUP'S COMPILED PROGRAM ----
+     three caches compiled programs, and the cache key includes `material.customProgramCacheKey()`,
+     whose default return value is `this.onBeforeCompile.toString()`. That is the ONLY thing
+     standing between a brick wall and the rotation shader: asphalt and brick can otherwise have
+     identical program parameters — same maps, same uv channel, same lights, no vertex colours — so
+     if the key did not separate them, three would be free to hand one the other's program and a
+     brick wall would render with its courses rotated per tile. It would look like a material
+     choice, not a bug.
+     TWO CLAIMS, because they fail in opposite directions. Every ISO material must share ONE key
+     (they run identical source and differ only in uniform values, so a per-family key would
+     silently quadruple the compiles), and NO iso key may equal a NON-iso key. Both are read off
+     the real materials rather than reasoned about. */
+  { const iso=new Map(), dir=new Map();
+    for(const b of ['carpark','skifield']){ X.boot({biome:b}); X.startGame(1); tick(4); park();
+      G.scene.traverse(o=>{ const m=o.material;
+        if(!(o.isMesh&&m&&m.userData&&m.userData.matFamily))return;
+        const k=typeof m.customProgramCacheKey==='function'?m.customProgramCacheKey():'(none)';
+        (m.userData.keaU?iso:dir).set(m.userData.matFamily+'|'+k,k); }); }
+    X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+    const isoKeys=new Set([...iso.values()]), dirKeys=new Set([...dir.values()]);
+    ok(isoKeys.size===1,'every breakup material shares ONE program cache key, so the shader is '+
+       'compiled once and not once per family ('+isoKeys.size+' distinct)');
+    ok(dirKeys.size>=1,'the directional families have a key of their own ('+dirKeys.size+')');
+    const shared=[...isoKeys].filter(k=>dirKeys.has(k));
+    ok(shared.length===0,'and NO directional family shares a key with the breakup — that key is '+
+       'the only thing stopping three handing a brick wall the rotation shader');
+    /* AND THE KEY IS ACTUALLY THE ONE three DERIVES, not a stub. The default
+       customProgramCacheKey returns onBeforeCompile.toString(), so a breakup material's key must
+       contain the injected source and a directional one's must not — which is the mechanism
+       spelled out, rather than a restatement of the two set comparisons above.
+       (The first cut of this line was `ok(A && B || true, ...)`, which always passes. A vacuous
+       assertion is worse than no assertion, so it is written properly or not at all.) */
+    ok([...isoKeys][0].indexOf('MATBREAK')>=0||[...isoKeys][0].indexOf('keaTiles')>=0||
+       [...isoKeys][0].indexOf('sh.fragmentShader')>=0,
+       'the breakup key IS the injected onBeforeCompile source ('+
+       [...isoKeys][0].slice(0,44).replace(/\s+/g,' ')+'...)');
+    for(const k of dirKeys) ok(k.indexOf('fragmentShader')<0,
+       'and a directional family key carries no shader surgery at all ('+
+       k.slice(0,44).replace(/\s+/g,' ')+')'); }
+
+  /* ---- THE PER-FAMILY PATCH UNIFORM IS DERIVED FROM THAT FAMILY'S OWN TILE ----
+     uKeaPatch converts UV (which arrives in TILES, because repeat is 1/tileM) into the lattice's
+     own units, so it has to carry tileM/patchM or the patch size would silently differ per family
+     — 2.6 m on asphalt and 1.7 m on grass, from one constant that reads as if it were metres. */
+  { let checked=0, bad=[];
+    G.scene.traverse(o=>{ const m=o.material;
+      if(!(o.isMesh&&m&&m.userData&&m.userData.keaU))return;
+      const F=FAM[m.userData.matFamily], U=m.userData.keaU;
+      checked++;
+      if(Math.abs(U.uKeaPatch.value-F.tileM/B.patchM)>1e-9)
+        bad.push(m.userData.matFamily+' '+U.uKeaPatch.value);
+      if(Math.abs(U.uKeaMacro.value-1/B.macroM)>1e-12)bad.push(m.userData.matFamily+' macro'); });
+    ok(checked>0,'breakup materials found to check ('+checked+')');
+    ok(bad.length===0,'every one converts ITS OWN tile into lattice units, so the patch is the '+
+       'same size in metres on every family'+(bad.length?' — '+bad.slice(0,3).join(' | '):'')); }
+
+  /* ---- THE OVERRIDE SEAM CANNOT SILENTLY DROP A LEAF ----
+     A whole variant strip was shot, composed and nearly judged on FOUR IDENTICAL FRAMES because
+     the old override loop assigned `breakup` wholesale: KEAMATS='{"breakup":{"blendSharp":4}}'
+     left patchM, macroM and both macro amounts undefined, the uniforms went NaN, and every variant
+     was equally broken. A NaN uniform still renders something, and what it renders looks like a
+     deliberate look. So the merge is depth-limited and leaf-wise, and it REPORTS what it ignored.
+     Driven here through the real seam - the module-scope global the rig sets - by re-evaluating
+     the specimen, which is the only honest way to test a module-scope merge. */
+  { const {evalSpecimen}=require('../2026-08-26/keasrc');
+    /* LAW 14, AND A SABOTAGE PROVED IT WAS NEEDED. The first cut of this let a throw out of
+       evalSpecimen: sabotaging the merge back to a wholesale assign wiped seven of the eight
+       family records, boot died on `undefined.iso`, and the battery printed A STACK TRACE AND NO
+       VERDICT — so the sabotage came back with zero findings and read as a gap in the test rather
+       than as the defect it was. It catches now, and the throw becomes a FINDING: no override
+       should be able to stop the world from building, which is a claim worth making on its own. */
+    const run=(over)=>{ const prev=globalThis.__KEA_MATS__;
+      globalThis.__KEA_MATS__=over;
+      let out={threw:null,MATS:null,ignored:[]};
+      try{ const Y=evalSpecimen(H.THREE); Y.boot({biome:'carpark'});
+           out={threw:null,MATS:Y.MATS,ignored:Y.G.mats.ignored.slice()}; }
+      catch(e){ out={threw:(e&&e.message)||String(e),MATS:null,ignored:[]}; }
+      finally{ globalThis.__KEA_MATS__=prev; }
+      ok(!out.threw,'the override "'+JSON.stringify(over).slice(0,52)+'" does not stop the world '+
+         'from building ('+(out.threw||'built')+')');
+      return out; };
+    const leaf=(r,path,dflt)=>{ let v=r.MATS; for(const k of path.split('.')){ if(!v)return dflt; v=v[k]; }
+      return v===undefined?dflt:v; };
+
+    { const r=run({breakup:{blendSharp:2.5}});
+      ok(!!r,'the specimen re-evaluates under an override');
+      near(leaf(r,'breakup.blendSharp',NaN),2.5,1e-9,'a nested leaf override takes');
+      near(leaf(r,'breakup.patchM',NaN),B.patchM,1e-9,'AND ITS SIBLINGS SURVIVE — patchM is still there');
+      near(leaf(r,'breakup.macroM',NaN),B.macroM,1e-9,'and macroM');
+      near(leaf(r,'breakup.macroAmount',NaN),B.macroAmount,1e-9,'and macroAmount');
+      ok(r.ignored.length===0,'and nothing was ignored ('+r.ignored.join(',')+')'); }
+
+    { const r=run({families:{asphalt:{tint:0.9}}});
+      near(leaf(r,'families.asphalt.tint',NaN),0.9,1e-9,'a two-level family override takes');
+      near(leaf(r,'families.asphalt.tileM',NaN),FAM.asphalt.tileM,1e-9,'and its siblings survive too');
+      near(leaf(r,'families.grass.tileM',NaN),FAM.grass.tileM,1e-9,'and the other families are untouched');
+      ok(Object.keys(leaf(r,'families',{})).length===NAMES.length,
+         'and ALL '+NAMES.length+' family records survive a one-family override — a wholesale '+
+         'assign here is what sent four identical frames to a variant strip ('+
+         Object.keys(leaf(r,'families',{})).length+')'); }
+
+    /* EVERY SHAPE OF TYPO IS REPORTED BY PATH, because webrig refuses a pass that ignored
+       something and the message has to say what. Four shapes, all of which have actually
+       happened or nearly did. */
+    for(const [over,want] of [
+      [{nosuch:1},'nosuch'],
+      [{breakup:{blendSharpp:9}},'breakup.blendSharpp'],
+      [{families:{asfalt:{tint:0.8}}},'families.asfalt'],
+      [{families:{asphalt:{tnit:0.8}}},'families.asphalt.tnit'],
+    ]){ const r=run(over);
+      ok(r.ignored.indexOf(want)>=0,'a misspelled override is REPORTED by path, not silently '+
+         'dropped ('+want+' -> ['+r.ignored.join(',')+'])'); }
+
+    /* AND A NaN CANNOT GET IN. This is the one that cost the strip: the value has to be a finite
+       number of the same type as the leaf it replaces, or it is refused and reported. */
+    for(const [over,want] of [
+      [{breakup:{patchM:'2.6'}},'breakup.patchM (not a finite number: 2.6)'],
+      [{breakup:{macroM:null}},'breakup.macroM (not a finite number: null)'],
+    ]){ const r=run(over);
+      ok(r.ignored.some(x=>x.indexOf(want.split(' (')[0])===0),
+         'a non-numeric override is refused, so no uniform can go NaN ('+want.split(' (')[0]+
+         ' -> ['+r.ignored.join(',')+'])');
+      ok(isFinite(leaf(r,'breakup.patchM',NaN))&&isFinite(leaf(r,'breakup.macroM',NaN)),
+         'and every breakup constant is still a finite number afterwards'); } }
+
+  /* ---- ERIC'S THIRD VERDICT: THE ANCHOR BLOCK IS CONCRETE, NOT GRAVEL ---- */
+  { X.boot({biome:'skifield'}); X.startGame(1); tick(4); park();
+    let blk=null;
+    G.scene.traverse(o=>{ const m=o.material;
+      if(!(o.isMesh&&m&&m.userData&&m.userData.matFamily==='concrete'))return;
+      if(o.geometry.type!=='BoxGeometry')return; blk=o; });
+    ok(!!blk,'the ski tow top anchor is a CONCRETE-family mesh, not gravel — Eric called the '+
+       'gravel a mis-assignment and a poured footing is what it is');
+    if(blk){ const p=blk.geometry.parameters;
+      ok(Math.abs(p.width-1.8)<1e-6&&Math.abs(p.depth-1.4)<1e-6,
+         'and it is the same 1.8 x 1.4 m block it always was — the MATERIAL changed, not the world ('+
+         p.width+' x '+p.height+' x '+p.depth+')');
+      ok(!blk.material.userData.keaU,
+         'and it does NOT get per-tile rotation, because concrete form lines must stay level'); }
+    /* nothing else may have quietly joined the gravel family's old colour */
+    ok(X.MATFAM[0x9B9891]==='gravel','PAL.gravel still means gravel');
+    ok(X.MATFAM[0xA9A7A2]==='concrete','and the footing has a hex of its own, so one family\'s '+
+       'colour cannot speak for another object\'s material');
+    X.boot({biome:'carpark'}); X.startGame(1); tick(4); park(); }
+
+  /* ---- ERIC'S SECOND VERDICT: THE FOUR TINTS PASS AS-IS ----
+     Recorded as a pin rather than left implicit. These are Eric's accepted taste values; a session
+     that wants to move one is welcome to, and should have to change this line to do it. */
+  { const WANT={gravel:0.35,asphalt:0.45,brick:0.20,snow:0.55};
+    for(const [f,v] of Object.entries(WANT))
+      near(FAM[f].tint,v,1e-9,f+' keeps the tint Eric accepted at the P3 judgement'); }
 
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
 }

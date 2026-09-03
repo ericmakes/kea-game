@@ -104,7 +104,13 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
   'fillIntensityDay','fillIntensityNight','rimIntensityDay','rimIntensityNight',
   'hazeOpacityDay','hazeOpacityNight'];
 
-const MATS_KEYS = ['dir','res','paintMean','normalScale','roughScale','families'];
+/* REPLAT P3b added `breakup` and leaving it out of this list cost a whole variant strip: every
+   KEAMATS in it was REFUSED, the four shots died, and four copies of one stale frame got compared
+   as though they were four variants. The list is the price of catching typos and it has to be kept
+   up to date with MATS itself — which is exactly why game.mjs ALSO reports what it ignored, and
+   why the strip shooter now verifies the frame on disk actually changed. Two independent guards,
+   because this one is a list a human has to remember. */
+const MATS_KEYS = ['dir','res','paintMean','normalScale','roughScale','families','breakup'];
 
 export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
   const nopost = !!process.env.NOPOST;
@@ -239,7 +245,7 @@ export async function assertBooted(page, { biome, iblTimeout = 8000, matsTimeout
      authored roughness — so a pass with two families missing photographs a world that is complete,
      plausible, and wearing 1990s flat colour on the car park while the hut is scanned. Nobody
      eyeballing thirty frames would catch that; the difference is a shade of grey, not a black
-     page. G.mats.mode is 'scanned' only when all seven landed, so this is the assertion that
+     page. G.mats.mode is 'scanned' only when EVERY family landed, so this is the assertion that
      makes "the look Eric judged" and "the look the code describes" the same thing.
      IT NAMES THE FAMILIES THAT FAILED, because "partial" is useless on its own and the whole point
      of the provenance block is that the answer is readable rather than inferred from pixels. */
@@ -248,7 +254,8 @@ export async function assertBooted(page, { biome, iblTimeout = 8000, matsTimeout
     const bad = Object.entries(state.mats.families || {})
       .filter(([, v]) => !v.maps).map(([k, v]) => k + ' (' + v.asset + ')');
     throw new Error('webrig: the scanned materials did not land — G.mats.mode is "' + state.mats.mode +
-      '" (expected "scanned"), ' + state.mats.loaded + '/7 families dressed' +
+      '" (expected "scanned"), ' + state.mats.loaded + '/' +
+      Object.keys(state.mats.families || {}).length + ' families dressed' +
       (bad.length ? '; missing: ' + bad.join(', ') : '') +
       '. Those surfaces keep flat palette colour, so this pass would photograph a half-dressed ' +
       'world. Set NOMATS=1 to shoot the pre-P3 look deliberately.');

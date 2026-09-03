@@ -3883,3 +3883,138 @@ category.
   `04_flight_underwing` at **ssim 1.0000** — the one vantage with no family surface in it, byte
   for byte unchanged, which is the cleanest available statement that the swap moved what it should
   and nothing else. **ALL OF IT LEFT FLAGGED — the look is Eric's.**
+
+## SESSION 17 — 2026-09-03, Eric order: act on the three P3 verdicts, then re-pin from consensus
+
+Lock taken (none held), released as the final act. Tip certified before anything moved
+(`c48aced312c8966239a340c6f1c0391a`, matching the log). Recipe in ARTBIBLE.md under REPLAT P3b.
+**P4 NOT STARTED, as ordered.**
+
+**ERIC'S THREE VERDICTS, ALL THREE DONE.** (1) The carpark tiling repetition is fixed with breakup
+and not a bigger texture: a large-scale variation layer plus per-tile rotation and offset, applied
+to every large flat family surface, which is the four ISOTROPIC ground families and not the four
+directional ones. (2) The four tints pass as-is and are now PINNED at Eric's values by a battery, so
+a later session has to change that line to move them. (3) The ski tow's top anchor block is a
+poured-concrete footing: an eighth family, `concrete_layers_02`, CC0, licensed before any code.
+
+- **THE BREAKUP SHIPPED AS A SILENT NO-OP AND ONLY A RUNTIME A/B CAUGHT IT.** `onBeforeCompile`
+  hands you the shader with its `#include <...>` directives **UNRESOLVED** — three expands them
+  afterwards — so my surgery, written against the expanded chunk text, matched nothing, replaced
+  nothing and threw nothing. Every uniform read back correctly. The frame looked *almost* right. I
+  had already shot it and was forming an opinion about the look. What broke it open was toggling
+  the breakup on and off at runtime and getting **byte-identical screenshots**. The includes are
+  expanded from `THREE.ShaderChunk` now, and every substring this file depends on is validated at
+  module scope against the three that is actually installed: `MATBREAK_OK` goes false with a
+  reason, the breakup does not install, `G.mats.breakup` says so, and a battery goes red in the
+  gate. A look feature must not be able to take the game down — and it must not be able to quietly
+  stop working either.
+
+- **MY OWN A/B HARNESS LIED TO ME FIRST, AND A CONTROL IS WHAT FOUND IT.** Before the above, the
+  same on/off test also returned identical frames — because my ad-hoc probe called
+  `renderer.render(scene, cams[0])` while the game draws through the post-processing composer, so
+  the screenshot never showed my render at all. I only learned that by adding a control that MUST
+  be visible: forcing the asphalt material to bright red. It changed nothing, so the harness was
+  the suspect, not the shader. **A negative result from an unvalidated instrument is not a
+  result.** The real A/B went through `capture.mjs`, the proven path, and immediately showed a
+  difference.
+
+- **A WHOLE VARIANT STRIP WAS SHOT, COMPOSED AND NEARLY JUDGED ON FOUR IDENTICAL FRAMES.** Two
+  independent causes, stacked. `breakup` was missing from webrig's `MATS_KEYS`, so every `KEAMATS`
+  in the strip was REFUSED — and I had piped stderr to /dev/null, so the refusal was invisible and
+  I copied one stale frame four times. Then, with that fixed, the override loop **assigned
+  `breakup` wholesale**: `{"breakup":{"blendSharp":4}}` left patchM, macroM and both macro amounts
+  `undefined`, the uniforms went NaN, and all four variants were equally broken — which again looks
+  like four identical frames. **A NaN uniform still renders something, and what it renders looks
+  like a deliberate look.** Three fixes, all of them structural: the merge is depth-limited and
+  leaf-wise so no block can lose a sibling; it type- and finiteness-checks every leaf; and the strip
+  shooter now prints the md5 of every frame it takes, so identical variants cannot be judged as
+  different ones. Both guards are asserted, and eight override-typo shapes are proven to be
+  reported by path.
+
+- **I SHIPPED A FIX THAT MADE THE FRAME WORSE AND THE STRIP CAUGHT IT.** Three-tap blending cured
+  the repetition and cost CONTRAST — the aggregate grain went visibly soft, which is not taste, it
+  is variance reduced by the sum of the squared weights. So I added both standard corrections at
+  once, weight sharpening and a variance restore, and **the lattice became visible as dark
+  hexagonal cell borders across the whole car park.** The cause is worth writing down: the restore
+  boosts contrast hardest where the blend is widest, which is exactly on the seams it was meant to
+  hide. Heitz and Neyret pair sharpening with a histogram-preserving transform; without that,
+  sharpening ALONE is the answer, because it makes most of the surface a single tap at full native
+  contrast. `varRestore` is kept at 0 and pinned there by a battery — a knob that was measured and
+  rejected is worth more written down than deleted.
+
+- **THE COST IS MEASURED IN PLACE, NOT ESTIMATED.** Nine texture fetches where the breakup runs. A
+  first attempt read 16.6 ms and told me nothing, because it was vsync-locked. Measured properly —
+  against a control built by swapping the same 72 meshes to a plain material carrying the IDENTICAL
+  maps and lights, GPU flushed with a readPixels, best of five runs of forty renders at 1280x720 —
+  it is **3.692 ms/render against 3.240, so +0.452 ms and +14% of scene render**: 2.7% of a 60 fps
+  frame, still vsync-locked. Recorded so P4 starts from a number.
+
+- **I READ A FRAME AS A BUG AGAIN AND IT WAS RIGHT AGAIN.** Last session it was the corrugations;
+  this time `10_skifield` and `28_skifield_base` looked flat and I suspected the macro layer had
+  done nothing on snow. It had — snow is high-albedo, so a 16% swing genuinely reads softer there
+  than on tarmac. Recorded as a known short with the honest reason rather than chased.
+
+- **FOURTEEN SABOTAGES, ALL FOURTEEN RED — AND ONE WAS A FUSE FIRST.** Restoring the wholesale
+  merge made boot die on `undefined.iso`, so the battery printed a stack trace and NO VERDICT, and
+  the sabotage came back with zero findings — FLAKES law 14 exactly, the tell being that a sabotage
+  which obviously breaks the feature returns nothing. The override probe catches now and turns a
+  throw into a finding ("no override should stop the world from building"), and `mat()` reads the
+  family record through a guard. Re-run: 13 findings.
+
+- **THE CONCRETE FIX IS CORRECT AND VERY NEARLY INVISIBLE, AND I MEASURED THAT RATHER THAN
+  HEDGING IT.** I first wrote "may not be in any pinned vantage", which is the kind of sentence
+  that sounds careful and tells nobody anything. Projected properly: the only vantage that can see
+  the anchor block is `30_groomed_band`, which looks up the hill — the block lands 66.7 m out, 5.5
+  degrees off axis against a 45.7 degree horizontal half-FOV, so it IS in frame, at **12.6 px of
+  960**. Whether it earns a vantage of its own is Eric's call.
+
+- **THE CONSENSUS RE-PIN IS AN INSTRUMENT NOW, NOT A HAND PROCEDURE.** TODO 73's fix was done by
+  hand in session 15b in a scratch script that no longer exists, which means the next re-pin either
+  repeats the reasoning out of the log or quietly goes back to one sweep. Eric has now ordered it
+  twice. `gauntlet/verify/repin.mjs` shoots N runs, scores each run's frame by its total pixel
+  distance to the same frame in every other run, pins the lowest — the medoid, **per vantage, never
+  per run** — and prints pin provenance. It REFUSES fewer than three runs (two frames are
+  equidistant from each other and the "winner" is just whichever was listed first), refuses a
+  vantage without a baseline, and names the unpinned vantages every single run so
+  26_tour_brochure/27_travel_card cannot be forgotten a fourth time.
+
+- **THE RE-PIN, AND I CONTAMINATED THE FIRST ATTEMPT MYSELF.** I ran two sabotages — which rewrite
+  `src/game.mjs` and trigger `npm run build` — while the four-sweep re-pin was shooting its fourth
+  sweep, so run 4 was photographed off a sabotaged bundle. Killed it, and it had ALREADY PINNED
+  part of the set, so `git checkout -- gauntlet/capture/baseline/` put the session-16 pins back and
+  the whole thing started again with nothing else touching the tree. **A capture pass owns the tree
+  while it runs** — the same law SESSION.lock states between sessions, one level down.
+  The re-run then died at run 1 for an unrelated reason and threw away a good sweep, which is what
+  made the instrument's real shape obvious: `repin.mjs` now has `SHOOT=<dir>` (one sweep, then
+  stop) and `DIRS=<d1>,<d2>,...` (form the consensus from directories already on disk). Each sweep
+  is its own short command, a sweep that dies costs one sweep, and the frames a pin came from are
+  still there to be audited afterwards.
+  **PIN PROVENANCE: run1 10, run2 7, run3 7, run4 4.** The three-agree-one-stands-clear shape again,
+  with the outlier being a DIFFERENT run per vantage — run 2 on 02_hut_snow, run 1 on
+  14_player_view, run 3 on 18_rear_close, run 4 on 17_flight. Third independent confirmation that
+  the outlier is a (run, vantage) pair.
+
+- **VERIFIED ON A FRESH FIFTH SWEEP:** diff 28 compared **0 flagged** (worst 0.9952), pxdiff 3 over
+  band, boxdiff 1 of 12 changed, subjects 16 checked 2 missing — exactly the two known-red from
+  TODO 75, no new regression. Nine batteries ALL PASS, gate CERTIFIED-SHIP, gate-selftest ALL PASS,
+  sidebyside 33 pairs, all 24 texture files re-verified against their ledger md5s.
+
+- **22_torch_beam GOES UNSTABLE AND IT IS NOT P3b — ATTRIBUTED, NOT GUESSED.** Stability read
+  0.9830 against a 0.995 bar where session 16 read 0.9998. The tempting move is to blame the new
+  ground shader, since the torch cone falls on ground the breakup now varies. So I ran the control:
+  five takes with `NOMATS=1` — no scanned materials at all, same build — and it reads **0.9805,
+  slightly WORSE than with them**. The materials are not implicated. This is the vantage FLAKES law
+  12 already names as the hardest (night easing back, follow-cam lerp, the campfire's Math.random
+  spit), on a machine sitting at load 8.7 from these very sweeps. **The threshold was not touched.**
+
+- **THE CHURN CEILINGS WERE NOT RE-FIT, AND THE CASE AGAINST RE-FITTING IS NOW MUCH STRONGER.**
+  Measured across all six pairs of the four sweeps, 18 of 28 vantages exceed their ceiling — but
+  that number is not comparable to anything, because it is dominated by the outlier pair on every
+  vantage. Measured the way session 15b measured it (drop the outlier run per vantage, then the
+  worst remaining pair), it is **5 of 28 — and a DIFFERENT five**: 21_night_camp 1844/32,
+  13_idle_preen 2658/347, 23_paddock_gate 1927/328, 22_torch_beam 7864/1299, 07_jam 318/23.
+  **Session 15b's three now hold comfortably** — 01_carpark_wide 13 against 104, 04_flight_underwing
+  20 against 69, 28_skifield_base 156 against 1291, every one of which was over last session.
+  A set of ceilings whose violators change completely between two sessions is measuring the machine
+  and not the vantages, so re-fitting them inside a re-pin would pin today's noise as tomorrow's
+  contract. TODO 77 stands and this is the evidence for it.

@@ -269,14 +269,83 @@ const MATS={
      records the same number in millimetres straight from the API. A battery asserts the two agree,
      because the failure this guards is somebody re-tiling a surface by eye and leaving the ledger
      saying something else. */
+  /* ---- THE BREAKUP, added 2026-09-03 (session 17) on Eric's P3 verdict ----
+     P3 shipped with visible tiling repetition on the car park: asphalt_02's tar cracks land every
+     3 m, about thirteen times across the 40 m slab, and the eye locks onto the pattern. Eric's
+     call was explicit — fix it with BREAKUP, NOT A BIGGER TEXTURE — in two halves, and both are
+     here:
+
+       1. A LARGE-SCALE VARIATION LAYER that never aligns with the tile. Two octaves of value
+          noise in WORLD metres, driving albedo and roughness together, at `macroM` metres per
+          cell. It is procedural rather than a scanned grunge map ON PURPOSE and this is not a
+          retreat from P3's law: a breakup layer that is itself a texture HAS ITS OWN REPEAT
+          PERIOD, so it would solve the problem by adding a second, slower copy of it. Noise from
+          a position hash has no period at all, which is the only version of this that cannot
+          re-introduce what it was sent to remove.
+       2. PER-TILE ROTATION AND OFFSET so no two tiles match, by stochastic tiling: the surface is
+          cut into a triangle lattice, each vertex draws its own rotation and offset from a hash of
+          its lattice coordinate, and the three nearest are blended by barycentric weight. Three
+          taps, so it costs three fetches per map where it is on.
+          IT NEEDS EXPLICIT GRADIENTS AND IT HAS THEM. A per-cell offset makes the UV jump at a
+          cell border, so hardware auto-derivatives would read that jump as an enormous rate of
+          change and collapse to the smallest mip — the classic dark seam that `fract()` in a UV
+          produces. Each tap therefore samples with textureGrad, handed the ORIGINAL derivatives
+          rotated by that tap's own rotation, which is what the chain rule says they are. three
+          emits `#version 300 es` for every built-in material, so textureGrad is simply available.
+
+     `iso` IS THE GATE AND IT IS A FACT ABOUT THE MATERIAL, NOT A PREFERENCE. Rotating a tile is
+     only safe on an ISOTROPIC surface — gravel, asphalt, dry grass, snow have no grain, so a
+     rotated patch is still the same material. Weatherboard laps, corrugate ribs, brick courses and
+     concrete form lines are all DIRECTIONAL: rotating those tiles would tilt the laps and lean the
+     courses, which is a far worse defect than the repetition being cured. So the four ground
+     families are `iso:true` and the four built ones are not, and a battery asserts that a
+     directional family never gets the rotation.
+
+     WHY THESE NUMBERS. patchM is deliberately NOT equal to any tileM: a patch lattice the same
+     size as the tile grid would lock to it and produce a visible second grid. macroM is 17.3 m
+     because it has to be well above the largest tile (3 m) to read as weathering rather than as
+     more texture, and well below the 40 m slab so more than one macro feature is in frame. */
+  /* blendSharp AND THE VARIANCE RESTORE ARE BOTH THERE BECAUSE OF WHAT THE FIRST A/B SHOWED.
+     Three-tap blending fixed the repetition and cost CONTRAST: the aggregate grain went visibly
+     soft, because averaging three independent samples of a stochastic texture reduces its variance
+     by the sum of the squared weights. That is not a matter of taste, it is arithmetic, and it has
+     two standard corrections and both are cheap:
+       blendSharp  raises the barycentric weights to a power and renormalises, so most of the
+                   surface is ONE tap at full contrast and only narrow bands blend. 1.0 is the
+                   plain barycentric blend.
+       varRestore  rescales each blended value's deviation from the texture's own MEAN by
+                   1/sqrt(sum of squared weights) — exactly the factor the blend removed. At a
+                   lattice vertex the weight vector is (1,0,0), the factor is 1, and the sample is
+                   untouched; at a triangle centre it is sqrt(3). The mean is MEASURED per map at
+                   load time and passed in, not guessed.
+     AND THEY FIGHT EACH OTHER, WHICH IS WHY varRestore SHIPPED AT ZERO. Run together at
+     blendSharp 4, the lattice became VISIBLE — dark hexagonal cell borders across the whole car
+     park, photographed and unmistakable. The cause is not subtle once seen: sharpening
+     concentrates all the blending into narrow bands, and the restore then boosts contrast hardest
+     exactly where the blend is widest, so the correction lands precisely on the seams it was
+     supposed to hide and draws them instead. Heitz and Neyret pair weight sharpening with a
+     histogram-preserving transform, which needs a precomputed decorrelated texture and an inverse
+     CDF per map; without that the restore is statistically right and perceptually wrong.
+     THE STRIP SETTLED IT. Sharpening ALONE fixes the softness for the reason that matters: it
+     makes most of the surface a SINGLE tap at full native contrast, leaving only narrow slightly
+     soft bands. varRestore is kept, at 0, because it is the correct arithmetic and the right thing
+     to reach for on the day somebody adds the histogram transform — and because a knob that was
+     measured and rejected is worth more written down than deleted. */
+  breakup:{
+    patchM:2.6, macroM:17.3, macroAmount:0.16, macroRough:0.10, blendSharp:4.0, varRestore:0.0,
+  },
   families:{
-    grass:        {asset:'withered_grass',     tileM:2.000, mode:'paint'},
-    gravel:       {asset:'gravel_floor_02',    tileM:2.000, mode:'scan', tint:0.35},
-    asphalt:      {asset:'asphalt_02',         tileM:3.000, mode:'scan', tint:0.45},
-    weatherboard: {asset:'dark_planks',        tileM:2.000, mode:'paint'},
-    corrugate:    {asset:'corrugated_iron_02', tileM:2.700, mode:'paint'},
-    brick:        {asset:'brick_wall_09',      tileM:2.010, mode:'scan', tint:0.20},
-    snow:         {asset:'snow_02',            tileM:2.000, mode:'scan', tint:0.55},
+    grass:        {asset:'withered_grass',     tileM:2.000, mode:'paint', iso:true },
+    gravel:       {asset:'gravel_floor_02',    tileM:2.000, mode:'scan', tint:0.35, iso:true },
+    asphalt:      {asset:'asphalt_02',         tileM:3.000, mode:'scan', tint:0.45, iso:true },
+    snow:         {asset:'snow_02',            tileM:2.000, mode:'scan', tint:0.55, iso:true },
+    weatherboard: {asset:'dark_planks',        tileM:2.000, mode:'paint', iso:false},
+    corrugate:    {asset:'corrugated_iron_02', tileM:2.700, mode:'paint', iso:false},
+    brick:        {asset:'brick_wall_09',      tileM:2.010, mode:'scan', tint:0.20, iso:false},
+    /* THE EIGHTH FAMILY, on Eric's verdict that the ski tow's top anchor block wearing driveway
+       gravel is a mis-assignment. It is a poured-concrete footing. NOT iso: concrete_layers_02
+       carries the horizontal lines a timber form leaves, and those must stay level. */
+    concrete:     {asset:'concrete_layers_02', tileM:2.000, mode:'scan', tint:0.30, iso:false},
   },
 };
 /* AND IT REPORTS WHAT IT IGNORED. Unknown keys are skipped by design — a leaf merge that invented
@@ -288,15 +357,31 @@ const MATS={
    where the names actually live, and the list of what was ignored travels out in G.mats for the rig
    to refuse. One source of truth, checked at both levels. */
 const MATSIGNORED=[];
-for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_MATS__)||{})){
-  if(!(k in MATS)){ MATSIGNORED.push(k); continue; }
-  if(k==='families'){ for(const [f,over] of Object.entries(v||{})){
-      if(!MATS.families[f]){ MATSIGNORED.push('families.'+f); continue; }
-      for(const ok2 of Object.keys(over||{}))
-        if(!(ok2 in MATS.families[f]))MATSIGNORED.push('families.'+f+'.'+ok2);
-      Object.assign(MATS.families[f],over); } }
-  else MATS[k]=v;
+/* ONE MERGE FOR BOTH NESTED BLOCKS, and it only ever writes a leaf that already exists.
+   THE FIRST CUT SPECIAL-CASED `families` AND WHOLESALE-ASSIGNED EVERYTHING ELSE, which turned
+   KEAMATS='{"breakup":{"blendSharp":4}}' into a breakup block with ONE key in it: patchM, macroM
+   and both macro amounts became undefined, the uniforms became NaN, and four variants of a strip
+   came back byte-identical because every one of them was equally broken. The merge is generic and
+   depth-limited now, so `breakup` and `families` behave the same way and neither can lose a leaf.
+   THE TYPE AND THE FINITENESS ARE BOTH CHECKED, because the failure above was silent: a NaN
+   uniform renders SOMETHING, and what it renders looks like a deliberate look. */
+function matMerge(dst,src,path,depth){
+  for(const [k,v] of Object.entries(src||{})){
+    const at=path?path+'.'+k:k;
+    if(!(k in dst)){ MATSIGNORED.push(at); continue; }
+    const cur=dst[k];
+    const plain=o=>o&&typeof o==='object'&&!Array.isArray(o);
+    if(plain(cur)&&plain(v)){
+      if(depth<=0){ MATSIGNORED.push(at+' (too deep)'); continue; }
+      matMerge(cur,v,at,depth-1); continue; }
+    if(typeof cur==='number'&&(typeof v!=='number'||!isFinite(v))){
+      MATSIGNORED.push(at+' (not a finite number: '+v+')'); continue; }
+    if(typeof cur==='boolean'&&typeof v!=='boolean'){
+      MATSIGNORED.push(at+' (not a boolean: '+v+')'); continue; }
+    dst[k]=v;
+  }
 }
+matMerge(MATS,(typeof globalThis!=='undefined'&&globalThis.__KEA_MATS__)||{},'',2);
 
 /* ============================================================
    KEA-LOGIC-START  · untitled kea game · single-file build
@@ -443,11 +528,15 @@ _mk(PAL.ranger,'weave'); _mk(PAL.hiviz,'weave'); _mk(0xE8946A,'weave'); _mk(0xD3
                    instead of the palette name. Grep the HEX as well as the name.
      PAL.hutRoof + 0x4A545C  the hut gable, the veranda eave, the shelter, the tow shed, the lodge
                    roof, and the ridge battens.
-     0x8C8F93      the hut chimney. THE ONLY MASONRY IN THE GAME, and so the only honest home for
-                   the brick family today. ref_bow_00 is a brick HOUSE and this is a brick chimney;
-                   the gap between those two is geometry, which is P6, and the family is sourced,
-                   licensed, tiled and proven here so that P6 opens with it working rather than
-                   discovering on the day that it has no brick.
+     0x8C8F93      the hut chimney AND the ski lodge chimney. The masonry in the game. ref_bow_00
+                   is a brick HOUSE and these are two brick chimneys; the gap between those is
+                   geometry, which is P6, and the family is sourced, licensed, tiled and proven here
+                   so that P6 opens with it working rather than discovering on the day it has no
+                   brick.
+     0xA9A7A2      the ski tow's top anchor block, and the reason this colour exists at all: it
+                   used to be PAL.gravel, which made P3 render a poured footing in driveway gravel.
+                   A hex of its own is what stops one family's colour speaking for another object's
+                   material - which is this table's whole failure mode, twice over now.
      PAL.snow + PAL.snowShade   every snow surface in both biomes.
    THE TERRAIN IS NOT IN THIS TABLE. Both ground planes build their own material (vertex colours),
    so the grass family is attached to them directly in buildCarpark/buildSkifield. */
@@ -458,6 +547,7 @@ _mf(PAL.tarmac,'asphalt');   _mf(PAL.road,'asphalt');
 _mf(PAL.gravel,'gravel');    _mf(0x9AA0A6,'gravel');    _mf(0x8E8B84,'gravel');
 _mf(PAL.hutRoof,'corrugate');_mf(0x4A545C,'corrugate');
 _mf(0x8C8F93,'brick');
+_mf(0xA9A7A2,'concrete');
 _mf(PAL.snow,'snow');        _mf(PAL.snowShade,'snow');
 
 /* THE FAMILY RUNTIME. One record per family: the three texture objects once they land, and every
@@ -471,9 +561,15 @@ const _lumOf=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
 function matDress(m){
   const fam=m.userData.matFamily, F=MATS.families[fam], S=MATSET[fam], base=m.userData.matBase;
   if(!F||!base)return m;
+  const U=m.userData.keaU;
   if(!S||!S.maps){                      // pre-install, or a fetch that never landed: the old look
     m.color.copy(base); m.roughness=m.userData.matRough;
+    if(U){ U.uKeaMacroAmt.value=0; U.uKeaMacroRough.value=0; }
     m.map=null; m.normalMap=null; m.roughnessMap=null; m.needsUpdate=true; return m; }
+  if(U){ U.uKeaMacroAmt.value=MATS.breakup.macroAmount; U.uKeaMacroRough.value=MATS.breakup.macroRough;
+    U.uKeaSharp.value=MATS.breakup.blendSharp; U.uKeaVar.value=MATS.breakup.varRestore;
+    const mn=S.mean;                       // measured off the real images by src/materials.mjs
+    if(mn){ U.uKeaMeanA.value.set(mn.albedo[0],mn.albedo[1],mn.albedo[2]); U.uKeaMeanR.value=mn.rough; } }
   if(F.mode==='scan'){
     /* luminance-neutral tint: the authored hex divided by its own luminance pushes hue without
        touching exposure, then `tint` lerps white -> that hue. See the recipe note. */
@@ -584,11 +680,201 @@ function matUVSweep(){
    'paint' mode, and the recipe note says why at length — the plane is a vertex-colour BLEND of
    three or four surfaces and no single albedo can be four materials at once, so what it takes from
    the scan is relief and roughness over the palette it already had. */
+/* ---------- REPLAT P3b: THE BREAKUP SHADER ----------
+   Injected into MeshStandardMaterial by onBeforeCompile for the four ISOTROPIC ground families.
+   It lives in game.mjs, as a string, because the recipe belongs where the batteries can read it -
+   the same argument that keeps the SKY and MATS blocks here - and because a GLSL string adds no
+   import to the file whose single import the specimen loader asserts.
+
+   THE HASH IS SINE-FREE ON PURPOSE. The usual fract(sin(dot(p,k))*43758.5) is precision-dependent
+   across GPU vendors, and this project photographs its own output and diffs it against a pinned
+   baseline: a hash that resolves differently on a different driver would make the ground itself a
+   source of capture drift. This is Dave Hoskins' integer-style hash, which is exact float
+   arithmetic and gives the same answer everywhere. */
+const MATBREAK_GLSL=`
+float keaH1(vec2 p){
+  vec3 q=fract(vec3(p.xyx)*0.1031);
+  q+=dot(q,q.yzx+33.33);
+  return fract((q.x+q.y)*q.z);
+}
+vec2 keaH2(vec2 p){
+  vec3 q=fract(vec3(p.xyx)*vec3(0.1031,0.1030,0.0973));
+  q+=dot(q,q.yzx+33.33);
+  return fract((q.xx+q.yz)*q.zy);
+}
+float keaVal(vec2 p){
+  vec2 i=floor(p), f=fract(p);
+  vec2 u=f*f*(3.0-2.0*f);
+  float a=keaH1(i), b=keaH1(i+vec2(1.0,0.0)), c=keaH1(i+vec2(0.0,1.0)), d=keaH1(i+vec2(1.0,1.0));
+  return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
+}
+/* two octaves, weighted so the mean stays near 0.5 - the macro layer must not shift exposure */
+float keaMacroField(vec2 pm){
+  return keaVal(pm)*0.68 + keaVal(pm*2.31+7.3)*0.32;
+}
+/* the triangle lattice of Heitz and Neyret: the three nearest lattice vertices and their
+   barycentric weights, which sum to exactly 1 */
+void keaLattice(vec2 p, out vec3 w, out vec2 v1, out vec2 v2, out vec2 v3){
+  vec2 sk=vec2(p.x - p.y*0.57735027, p.y*1.15470054);
+  vec2 b=floor(sk);
+  vec3 t=vec3(fract(sk),0.0);
+  t.z=1.0-t.x-t.y;
+  if(t.z>0.0){ w=vec3(t.z,t.y,t.x); v1=b;                v2=b+vec2(0.0,1.0); v3=b+vec2(1.0,0.0); }
+  else       { w=vec3(-t.z,1.0-t.y,1.0-t.x); v1=b+vec2(1.0,1.0); v2=b+vec2(1.0,0.0); v3=b+vec2(0.0,1.0); }
+  /* sharpen and renormalise: most of the surface becomes one tap at full contrast */
+  w=pow(w,vec3(uKeaSharp));
+  w/=max(1e-6,w.x+w.y+w.z);
+}
+/* one tap: this vertex's rotation and offset, and the rotation matrix so the caller can rotate
+   the derivatives and the tangent-space normal by the same amount */
+vec2 keaTap(vec2 uv, vec2 cell, out mat2 R){
+  vec2 h=keaH2(cell);
+  float a=h.x*6.28318531, c=cos(a), sn=sin(a);
+  R=mat2(c,-sn,sn,c);
+  return R*uv + h*37.19;
+}
+struct KeaTiles { vec3 w; vec2 u1; vec2 u2; vec2 u3; mat2 R1; mat2 R2; mat2 R3; vec2 dx; vec2 dy; };
+KeaTiles keaTiles(vec2 uv){
+  KeaTiles k;
+  k.dx=dFdx(uv); k.dy=dFdy(uv);
+  vec2 v1,v2,v3;
+  keaLattice(uv*uKeaPatch, k.w, v1, v2, v3);
+  k.u1=keaTap(uv,v1,k.R1); k.u2=keaTap(uv,v2,k.R2); k.u3=keaTap(uv,v3,k.R3);
+  return k;
+}
+/* the variance the blend removed, put back: see the blendSharp note in MATS.breakup */
+vec4 keaBlend(sampler2D tex, KeaTiles k, vec4 mean){
+  vec4 s=k.w.x*textureGrad(tex,k.u1,k.R1*k.dx,k.R1*k.dy)
+        +k.w.y*textureGrad(tex,k.u2,k.R2*k.dx,k.R2*k.dy)
+        +k.w.z*textureGrad(tex,k.u3,k.R3*k.dx,k.R3*k.dy);
+  return mean + (s-mean)*mix(1.0,inversesqrt(dot(k.w,k.w)),uKeaVar);
+}
+/* THE NORMAL NEEDS ITS OWN BLEND, because a tangent-space normal is a GRADIENT IN TEXTURE SPACE.
+   Sampling at R*uv means a gradient g' read from the texture corresponds to R^T*g' in the
+   surface's own uv frame, so each tap's xy must be rotated BACK by its own rotation before the
+   three are combined. Skip that and the relief lights as though every patch were lit from its own
+   private direction - which reads as "noisy" rather than as "wrong", and is the reason this is
+   spelled out here instead of being left to be rediscovered. */
+vec3 keaBlendN(sampler2D tex, KeaTiles k){
+  vec3 s1=textureGrad(tex,k.u1,k.R1*k.dx,k.R1*k.dy).xyz*2.0-1.0;
+  vec3 s2=textureGrad(tex,k.u2,k.R2*k.dx,k.R2*k.dy).xyz*2.0-1.0;
+  vec3 s3=textureGrad(tex,k.u3,k.R3*k.dx,k.R3*k.dy).xyz*2.0-1.0;
+  vec3 n = k.w.x*vec3(s1.xy*k.R1, s1.z)
+         + k.w.y*vec3(s2.xy*k.R2, s2.z)
+         + k.w.z*vec3(s3.xy*k.R3, s3.z);
+  /* A TANGENT-SPACE NORMAL'S xy HAS A MEAN OF EXACTLY ZERO, so the same variance restore applies
+     with no measured mean at all — and it is needed for the same reason: averaging three normals
+     shortens the slope and reads as flattened relief. z is left alone and the result renormalised,
+     so nothing here can produce a normal that is not a unit vector. */
+  n.xy *= mix(1.0,inversesqrt(dot(k.w,k.w)),uKeaVar);
+  return n;
+}
+`;
+
+/* WHICH THREE CHUNKS GET REWRITTEN, AND THE EXACT LINE IN EACH.
+   THE FIRST CUT OF THIS SHIPPED AS A SILENT NO-OP and that is the reason this table exists.
+   onBeforeCompile hands you the shader with its `#include <...>` directives STILL UNRESOLVED —
+   three expands them afterwards — so surgery against the expanded chunk text finds nothing,
+   changes nothing, and throws nothing. The frame came back looking almost right, the uniforms all
+   read correctly, and a runtime A/B of breakup-on against breakup-off returned BYTE-IDENTICAL
+   screenshots. That last test is the only reason it was caught.
+   So the includes are now expanded HERE, from THREE.ShaderChunk itself rather than from a copy,
+   and every substring this file expects is CHECKED AT MODULE SCOPE, once, against the three that
+   is actually installed. If an upgrade renames a chunk or rewrites a line, MATBREAK_OK goes false
+   with a reason, the breakup does not install, G.mats says so, and a battery goes red in the gate.
+   A look feature must not be able to take the game down — and it must not be able to quietly
+   stop working either, which is the failure this one already had once. */
+const MATBREAK_PATCH=[
+  ['map_fragment',[
+    ['vec4 sampledDiffuseColor = texture2D( map, vMapUv );',
+     'KEA_G = keaTiles( vMapUv );\n\tvec4 sampledDiffuseColor = clamp( keaBlend( map, KEA_G, '+
+     'vec4(uKeaMeanA,1.0) ), 0.0, 1.0 );\n'+
+     '\tsampledDiffuseColor.rgb *= 1.0 + (keaMacroField(vKeaWorld.xz*uKeaMacro)-0.5)*2.0*uKeaMacroAmt;']]],
+  ['roughnessmap_fragment',[
+    ['vec4 texelRoughness = texture2D( roughnessMap, vRoughnessMapUv );',
+     'vec4 texelRoughness = clamp( keaBlend( roughnessMap, KEA_G, vec4(uKeaMeanR) ), 0.0, 1.0 );'],
+    ['roughnessFactor *= texelRoughness.g;',
+     'roughnessFactor *= texelRoughness.g;\n\troughnessFactor *= 1.0 + '+
+     '(keaMacroField(vKeaWorld.xz*uKeaMacro+11.7)-0.5)*2.0*uKeaMacroRough;\n'+
+     '\troughnessFactor = clamp(roughnessFactor,0.04,1.0);']]],
+  ['normal_fragment_maps',[
+    ['vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
+     'vec3 mapN = keaBlendN( normalMap, KEA_G );']]],
+];
+const MATBREAK_OK=(()=>{
+  const C=THREE.ShaderChunk||{};
+  for(const [name,pairs] of MATBREAK_PATCH){
+    if(typeof C[name]!=='string')return 'three has no ShaderChunk.'+name;
+    for(const [from] of pairs)
+      if(C[name].indexOf(from)<0)return 'ShaderChunk.'+name+' no longer contains: '+from;
+  }
+  return true;
+})();
+if(MATBREAK_OK!==true&&typeof console!=='undefined')
+  console.error('materials: the tiling breakup did not install — '+MATBREAK_OK);
+
+function matChunk(src,name,pairs){
+  const inc='#include <'+name+'>';
+  let body=THREE.ShaderChunk[name];
+  for(const [from,to] of pairs) body=body.split(from).join(to);
+  return src.split(inc).join(body);
+}
+
+/* THE INJECTION. Installed at material CREATION rather than when the textures land, so the family
+   compiles ONCE with its final shader: the amounts are uniforms starting at zero, so an
+   undressed material is pixel-for-pixel the game it was, and matDress only writes numbers.
+   THE UNIFORM OBJECTS ARE KEPT ON THE MATERIAL and the SAME objects are handed to the shader, so a
+   later write reaches the GPU. Assigning fresh objects into sh.uniforms is the classic
+   onBeforeCompile mistake - it works until the first time you try to change a value. */
+function matBreakup(m,F){
+  if(MATBREAK_OK!==true)return m;
+  const B=MATS.breakup;
+  const U=m.userData.keaU={
+    uKeaPatch:{value:F.tileM/B.patchM},
+    uKeaMacro:{value:1/B.macroM},
+    uKeaSharp:{value:B.blendSharp},
+    uKeaVar:{value:B.varRestore},
+    /* the MEASURED means, written by matDress from what materials.mjs read off the actual images.
+       They start at a neutral mid-grey so a material that somehow renders before the measurement
+       lands is merely un-restored, never wrong. */
+    uKeaMeanA:{value:new THREE.Vector3(0.5,0.5,0.5)},
+    uKeaMeanR:{value:0.5},
+    uKeaMacroAmt:{value:0},          // matDress lifts these when the maps arrive
+    uKeaMacroRough:{value:0},
+  };
+  m.onBeforeCompile=(sh)=>{
+    Object.assign(sh.uniforms,U);
+    /* WORLD POSITION, NOT MODEL POSITION, and it matters. The macro field has to be continuous
+       ACROSS meshes: the carpark slab, its entrance apron and the road are three separate boxes
+       lying in the same plane, and a wear field that restarted at each mesh origin would draw a
+       visible join exactly where the geometry joins. XZ because every family this runs on is
+       ground. `#include <project_vertex>` is appended to rather than expanded — the directive is
+       what is present at this point, and that is all this one needs. */
+    sh.vertexShader='varying vec3 vKeaWorld;\n'+sh.vertexShader.replace(
+      '#include <project_vertex>',
+      '#include <project_vertex>\n  vKeaWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    sh.fragmentShader='varying vec3 vKeaWorld;\nuniform float uKeaPatch;\nuniform float uKeaMacro;\n'+
+      'uniform float uKeaMacroAmt;\nuniform float uKeaMacroRough;\nuniform float uKeaSharp;\n'+
+      'uniform vec3 uKeaMeanA;\nuniform float uKeaMeanR;\nuniform float uKeaVar;\n'+MATBREAK_GLSL+
+      'KeaTiles KEA_G;\n'+sh.fragmentShader;
+    /* THE TAPS ARE COMPUTED ONCE, in the albedo chunk, and reused by the other two. The order is
+       three's and is not an assumption: meshphysical_frag runs map_fragment, then
+       roughnessmap_fragment, then normal_fragment_maps. All three maps arrive together or not at
+       all (matDress sets them as a set), so USE_MAP being on is what guarantees KEA_G is filled
+       before the other two read it. */
+    for(const [name,pairs] of MATBREAK_PATCH) sh.fragmentShader=matChunk(sh.fragmentShader,name,pairs);
+  };
+  return m;
+}
+
 /* THE PROVENANCE BLOCK. Rebuilt on demand rather than mutated, so it can never disagree with the
    registry it describes: every field is read straight off MATS and MATSET. */
 function matState(){
   const out={mode:'none',dir:MATS.dir,res:MATS.res,families:{},loaded:0,failed:0,
-             ignored:MATSIGNORED.slice()};
+             ignored:MATSIGNORED.slice(),
+             /* REPLAT P3b: whether the tiling breakup could install at all. true, or the reason
+                it could not — see MATBREAK_PATCH on why this is a reported fact and not a hope. */
+             breakup:MATBREAK_OK===true?Object.assign({ok:true},MATS.breakup):{ok:false,why:MATBREAK_OK}};
   for(const [f,F] of Object.entries(MATS.families)){
     const S=MATSET[f]||{};
     out.families[f]={asset:F.asset,tileM:F.tileM,mode:F.mode,tint:F.tint===undefined?null:F.tint,
@@ -601,6 +887,7 @@ function matState(){
 function matGround(fam,rough){
   const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:rough,metalness:0,envMapIntensity:0.3});
   m.userData.matFamily=fam; m.userData.matBase=new THREE.Color(1,1,1); m.userData.matRough=rough;
+  { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF); }
   matFam(fam).mats.push(m); matDress(m); return m;
 }
 function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshStandardMaterial(Object.assign({color:col,roughness:0.82,metalness:0.0,envMapIntensity:0.3},extra||{}));
@@ -618,6 +905,7 @@ function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=ne
        roughness note in the recipe. */
     if(MATFAM[c]){ M[k].userData.matFamily=MATFAM[c]; M[k].userData.matBase=col.clone();
       M[k].userData.matRough=M[k].roughness;
+      { const FF=MATS.families[MATFAM[c]]; if(FF&&FF.iso)matBreakup(M[k],FF); }
       matFam(MATFAM[c]).mats.push(M[k]); matDress(M[k]); }
     else if(!HEADLESS&&MAPKIND[c]&&!M[k].map){ const t=detailTex(MAPKIND[c]); if(t)M[k].map=t; } }return M[k];}
 function bmat(c,extra){const k='b'+c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshBasicMaterial(Object.assign({color:col},extra||{}));}return M[k];}
@@ -2274,7 +2562,11 @@ function buildSkifield(){
       cyl(0.12,0.15,3.6,PAL.metal,T.x+0.7,1.8,z,null,8).rotation.z=-0.18;
       const rw=new THREE.Mesh(new THREE.CylinderGeometry(0.8,0.8,0.16,14),mat(PAL.metal));
       rw.rotation.x=Math.PI/2; rw.position.set(T.x,T.rope,z); G.scene.add(rw);
-      box(1.8,0.5,1.4,0x9B9891,T.x,0.25,z+1.2); addBoxCollider(T.x,z+1.2,1.8,1.4,0.5,true); }
+      /* REPLAT P3b: THE OLD ANCHOR IS POURED CONCRETE, NOT GRAVEL. It carried PAL.gravel, so P3
+         rendered a 1.8 m footing in driveway gravel; Eric called it a mis-assignment. Its own grey
+         now, registered to the concrete family. The colour changes by a couple of levels and the
+         MATERIAL changes completely, which is the whole point. */
+      box(1.8,0.5,1.4,0xA9A7A2,T.x,0.25,z+1.2); addBoxCollider(T.x,z+1.2,1.8,1.4,0.5,true); }
     for(let i=0;i<stops.length-1;i++){ const a=stops[i], b=stops[i+1], mid=(a+b)/2, L=Math.abs(b-a);
       for(const [y,rr,ox] of [[T.rope,0.035,0],[T.ret,0.03,0.5]]){
         const rope=cyl(rr,rr,L,PAL.dark,T.x+ox,y,mid,null,6); rope.rotation.x=Math.PI/2; }

@@ -165,3 +165,26 @@ Published real-world size: **2000.0 x 2000.0 mm** — this is the number the tex
 | `tex/snow_02_nor_gl_1k.jpg` | 1081858 | `f16b5701f9ad521cdd6af10c1d6d2b48` |
 | `tex/snow_02_arm_1k.jpg` | 88100 | `701fa0f0fa36bc69f3a8f3cde0ad2d95` |
 
+### concrete — `concrete_layers_02` (Concrete Layers 02)
+
+Author(s): Rob Tuytel.  Licence: **CC0**.  Publisher category: Concrete/Plaster & Stucco/Bare Plaster.
+Published real-world size: **2000.0 x 2000.0 mm** — this is the number the texel density is derived from, not a guess.
+
+| file | bytes | md5 (publisher API, verified against the file at import) |
+|---|---|---|
+| `tex/concrete_layers_02_diff_1k.jpg` | 598800 | `d308cd7bb23bcf1208d37d4ba670c2e6` |
+| `tex/concrete_layers_02_nor_gl_1k.jpg` | 734532 | `7706ee74f02099fda216a1815cf037eb` |
+| `tex/concrete_layers_02_arm_1k.jpg` | 509499 | `41cf57c26706eaa048ea639c7b18b90f` |
+
+**THE EIGHTH FAMILY, ADDED 2026-09-03 (session 17) ON ERIC'S P3 VERDICT.** The ski tow's top
+anchor block is a poured-concrete footing and it was sharing `PAL.gravel`, so P3 rendered it in
+driveway gravel. Eric called it a mis-assignment; this is the material it should have had.
+**WHY THE BOARD-FORMED ONE.** Six candidates went to a contact sheet. `concrete_floor_02` is a
+plain weathered slab and would have done, but it carries a green moss cast that is wrong above the
+snowline. `concrete_layers_02` is plain weathered grey with the faint horizontal lines a timber
+FORM leaves in concrete poured in place — which is exactly what a club field's anchor block is.
+`concrete_floor_worn_02` and `concrete_wall_005` are both brown and read as exposed aggregate or
+rock rather than as a casting.
+**IT IS A DIRECTIONAL SET, so it is NOT in the isotropic group** that gets per-tile rotation — see
+the `iso` flag in the MATS block. Form lines must stay level, for the same reason weatherboard laps
+and corrugate ribs must.

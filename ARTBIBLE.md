@@ -212,6 +212,93 @@ WHAT IS STILL SHORT OF THE REFERENCE, HONESTLY, AND WHY IT IS NOT P3's
     terrain reports a 57600 m UV span. The inner guard is kept as defence in depth and is labelled
     as such in the source rather than left looking load-bearing.
 
+## REPLAT P3b - THE TILING BREAKUP   [LOCKED 2026-09-03, session 17, on Eric's P3 verdicts]
+Eric's three verdicts on P3: (1) the carpark tarmac shows visible tiling repetition, fix it with
+BREAKUP and not a bigger texture; (2) the four tints pass as-is; (3) the ski tow anchor block
+wearing gravel is a mis-assignment, it is a poured-concrete footing. All three are here.
+THE RECIPE IS THE `MATS.breakup` BLOCK AND THE `iso` FLAGS IN src/game.mjs, frozen by the REPLAT
+P3b section of audits/2026-08-28/harness-everything.js. Fourteen sabotages, all fourteen red.
+
+  patchM 2.6 m   macroM 17.3 m   macroAmount 0.16   macroRough 0.10   blendSharp 4.0
+  varRestore 0.0  (measured and REJECTED - see below)
+
+TWO HALVES, BOTH OF THEM ERIC'S BRIEF VERBATIM.
+  1. A LARGE-SCALE VARIATION LAYER THAT NEVER ALIGNS WITH THE TILE. Two octaves of value noise in
+     WORLD metres at 17.3 m per cell, driving albedo (0.16) and roughness (0.10) together, because
+     weathering changes how a surface scatters and not only how dark it is.
+     IT IS PROCEDURAL NOISE AND NOT A SCANNED GRUNGE MAP, ON PURPOSE, and that is not a retreat
+     from P3's law. A breakup layer that is itself a texture HAS ITS OWN REPEAT PERIOD, so it would
+     cure the problem by adding a second slower copy of it. A position hash has no period at all.
+     WORLD space and not model space: the slab, its apron and the road are three separate boxes in
+     one plane, and a wear field that restarted at each mesh origin would draw a join exactly where
+     the geometry joins. A battery asserts macroM is not a whole multiple of any iso tile.
+  2. PER-TILE ROTATION AND OFFSET SO NO TWO TILES MATCH. Stochastic tiling on a triangle lattice
+     (Heitz and Neyret): each lattice vertex hashes its own rotation and offset, the three nearest
+     are blended by barycentric weight, and each tap samples with textureGrad handed the ORIGINAL
+     derivatives rotated by that tap's own rotation. Explicit gradients are not optional - a
+     per-cell offset makes the UV jump at a cell border, and hardware auto-derivatives read that
+     jump as an enormous rate of change and collapse to the smallest mip, which is the classic dark
+     seam that fract() in a UV produces. three emits `#version 300 es` for every built-in material,
+     so textureGrad is simply available.
+     THE TANGENT-SPACE NORMAL IS ROTATED BACK per tap before blending. A normal map is a GRADIENT IN
+     TEXTURE SPACE, so sampling at R*uv means the gradient read must be carried back by R^T. Skip
+     it and the relief lights as though every patch had its own private sun - which reads as
+     "noisy" rather than as "wrong", and would have been very hard to attribute later.
+
+`iso` IS THE GATE, AND IT IS A FACT ABOUT THE MATERIAL RATHER THAN A PREFERENCE.
+  isotropic, rotated:      grass, gravel, asphalt, snow
+  directional, NOT rotated: weatherboard (laps run level), corrugate (ribs run down the slope),
+                            brick (courses stay horizontal), concrete (form lines stay level)
+Rotating a directional tile would tilt the laps and lean the courses, which is a worse defect than
+the repetition being cured. A battery reads the gate off the FAMILY and checks, in both maps, that
+every material carrying breakup uniforms belongs to an iso family and every iso material has it.
+
+THE VARIANCE RESTORE IS CORRECT ARITHMETIC AND IS SHIPPED OFF. Measured on a four-frame strip at
+01_carpark_wide:
+  A  off                    the repetition Eric flagged: long parallel cracks marching in step
+  B  sharp 1.0 / var 0      repetition gone, slightly soft
+  C  sharp 4.0 / var 0      repetition gone, contrast held            LOCKED
+  D  sharp 1.0 / var 1.0    THE LATTICE DRAWN AS DARK HEXAGONS across the whole car park
+Three-tap blending removes variance by the sum of the squared weights, and `varRestore` puts back
+exactly that - so it is not wrong, it is misplaced: it boosts contrast HARDEST where the blend is
+widest, which is precisely on the seams it was meant to hide. Heitz and Neyret pair weight
+sharpening with a histogram-preserving transform, which needs a precomputed decorrelated texture
+and an inverse CDF per map. Without that, `blendSharp` alone is the answer, and it works for the
+reason that matters: it makes most of the surface a SINGLE tap at full native contrast and leaves
+only narrow slightly soft bands. varRestore is KEPT at 0 - it is the right thing to reach for the
+day somebody adds the histogram transform, and a knob that was measured and rejected is worth more
+written down than deleted. A battery pins it at 0.
+
+THE COST, MEASURED IN PLACE AND NOT ESTIMATED. Three taps on three maps is nine texture fetches
+where the breakup runs. At 1280x720, against a control built by swapping the same 72 meshes to a
+plain MeshStandardMaterial carrying the IDENTICAL maps and lights, with the GPU flushed by a
+readPixels each pass and the best of five runs of forty renders taken:
+  breakup 3.692 ms/render     plain 3.240 ms/render     +0.452 ms, +14% of scene render
+That is 2.7% of a 16.67 ms frame, and the game stays vsync-locked at 60. Recorded here so P4 starts
+from a number rather than from a guess.
+
+THE CONCRETE FAMILY, Eric's third verdict. `concrete_layers_02` (CC0, Poly Haven, 2.000 m,
+mode scan, tint 0.30, NOT iso). The ski tow's top anchor block carried PAL.gravel, so P3 rendered a
+poured footing in driveway gravel. It has a hex of its own now (0xA9A7A2) - which is the second
+time in two sessions that one family's colour speaking for another object's material has been the
+defect, and the reason MATFAM's note now says GREP THE HEX AS WELL AS THE NAME.
+Board-formed rather than plain: six candidates went to a sheet, and `concrete_floor_02` would have
+done but carries a green moss cast that is wrong above the snowline.
+
+WHAT IS STILL SHORT, HONESTLY, AND WHY IT IS NOT P3b's
+  - THE ANCHOR BLOCK IS 12.6 PIXELS WIDE, AND THAT IS MEASURED RATHER THAN GUESSED. It sits at the
+    TOP of the rope tow, and the only pinned vantage that can see it is 30_groomed_band, which
+    looks up the hill: projecting the block through that vantage's camera puts it 66.7 m out, 5.5deg
+    off axis (well inside the 45.7deg horizontal half-FOV), and 1.8 m at that range is 12.6 px of
+    960. So the fix is correct, asserted, and very nearly invisible. Whether it deserves a vantage
+    of its own is Eric's call and not a side effect of this piece.
+  - THE MACRO LAYER IS SUBTLE ON SNOW at 0.16, because snow is high-albedo and a 16% swing reads
+    much softer there than on tarmac. One amount serves four families; a per-family amount is a
+    real idea and is not in the brief.
+  - THE BLEND BANDS ARE STILL SLIGHTLY SOFT at blendSharp 4. The histogram-preserving transform is
+    the real fix and it is a piece of its own, with a precomputed texture per family.
+  - THE GRASS SCAN IS STILL UNDER 42,000 CONE BLADES. P4, unchanged.
+
 ## PHASE 1 - LIGHT & AIR   [not yet run]
 TARGETS: ugg_shadows_01/02, swag_shadows_01, nz_mist_01, kea_social_02.
 GAPS: no cast shadows anywhere; no AO; pale tarmac ellipses read as

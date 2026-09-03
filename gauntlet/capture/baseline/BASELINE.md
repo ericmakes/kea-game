@@ -347,3 +347,61 @@ retakes, a GAVE UP that says why, and zero orphans.
 26_tour_brochure and 27_travel_card shoot every pass and have still never been pinned, so diff.mjs
 cannot see them. Unchanged by this re-pin and flagged for the third time: adding a vantage is a
 new-vantage decision for Eric, not a side effect of a re-pin.
+
+## Full re-pin 2026-09-03 (session 17, REPLAT P3b — the tiling breakup + concrete)
+
+All 28 vantages re-pinned from a **four-sweep measured consensus**, per TODO 73 — and this time by
+an instrument rather than by hand: `gauntlet/verify/repin.mjs`. It shoots N sweeps, scores each
+run's frame by its total pixel distance to the same frame in every other run, and pins the medoid —
+**per vantage, never per run**. It refuses fewer than three runs, refuses a vantage with no
+baseline, and names the unpinned ones every time it runs.
+
+**PIN PROVENANCE: run1 10, run2 7, run3 7, run4 4.** No run was disqualified wholesale, and the
+spread across all four is the point: the outlier is a property of a (run, vantage) PAIR. On this
+sweep set the outlier was run 2 on 02_hut_snow, run 1 on 14_player_view, run 3 on 18_rear_close and
+run 4 on 17_flight — four different runs being the odd one out on four different frames. That is
+the third independent confirmation of it.
+
+The shape recurs: three runs agreeing almost exactly and one standing clear.
+
+    02_hut_snow      [1:861  3:861  4:861  | 2:2567]
+    14_player_view   [2:771  4:771  3:773  | 1:2311]
+    18_rear_close    [1:487  2:487  4:487  | 3:1461]
+    17_flight        [3:6324 2:6366 1:6371 | 4:18647]
+
+Four vantages are perfectly reproducible across all four sweeps (spread 0): 21_night_camp,
+24_verge_paddle, 29_lodge_deck, 30_groomed_band.
+
+### VERIFIED ON A FRESH FIFTH SWEEP, not on the sweeps the pins came from
+
+    diff       28 compared, 0 flagged, worst 0.9952
+    pxdiff     28 compared, 3 over band (20_dead_rear, 23_paddock_gate, 25_preen_follow)
+    boxdiff    12 subjects compared, 1 changed (25_preen_follow beak, 0.9625)
+    subjects   16 checked, 2 missing — the two known-red from TODO 75, no new regression
+    stability  see the session 17 log entry
+
+### THE CHURN CEILINGS WERE NOT RE-FIT, AND THE REASON IS NOW STRONGER THAN IT WAS
+
+Measured the same way session 15b measured it — the outlier run dropped per vantage, then the worst
+pair of the remaining three, so the two numbers are comparable — **5 of 28 exceed their recorded
+ceiling, and they are a DIFFERENT FIVE:**
+
+    21_night_camp      1844  against    32     07_jam            318  against    23
+    13_idle_preen      2658  against   347     22_torch_beam    7864  against  1299
+    23_paddock_gate    1927  against   328
+
+**Session 15b's three now hold, and hold comfortably:** 01_carpark_wide 13 against 104,
+04_flight_underwing 20 against 69, 28_skifield_base 156 against 1291. Every one of them was over
+last session.
+
+A set of ceilings whose violators change completely between two sessions is not measuring the
+vantages, it is measuring the machine. That makes re-fitting them here worse than useless: it would
+pin today's noise as tomorrow's contract. Left exactly as they are, which is also what session 15b
+decided for a weaker version of the same reason. **TODO 77 stands, and this is the evidence for
+it** — a real recalibration wants `crossrun` with RUNS=5 on a quiet machine and is its own piece.
+
+### NOT IN THE SET, AND STILL NOT
+
+26_tour_brochure and 27_travel_card shoot every pass and have still never been pinned. Unchanged by
+this re-pin and flagged for the fourth time — `repin.mjs` now prints them by name on every run, so
+this can stop depending on somebody remembering. Adding a vantage is a decision for Eric.
