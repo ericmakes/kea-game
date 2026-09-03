@@ -4,8 +4,12 @@
 import fs from 'fs'; import path from 'path'; import url from 'url'; import os from 'os';
 const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..');
 const OUT=path.join(ROOT,'gauntlet/capture'); fs.mkdirSync(OUT,{recursive:true});
-const THREE_LOCAL=fs.readFileSync(path.join(ROOT,'node_modules/three/build/three.min.js'));
-const HTML='file://'+path.join(ROOT,'untitled-kea-game.html');
+/* REPLAT P1 step 4: three is BUNDLED now (modern three ships no UMD build to intercept) and the
+   page is served over loopback (ES modules will not load over file://). Both live in webrig.mjs,
+   shared with probe/motion/journey so the four cannot drift apart again. */
+import {ensureBuild,serve,preparePage,assertBooted,launch,GAUNTLETSEED} from './webrig.mjs';
+let SRV=null;
+const origin=async()=>{ if(!SRV){ ensureBuild(); SRV=await serve(); console.log('capture: built and serving '+SRV.origin); } return SRV.origin; };
 // SEEDED WORLD (2026-08-28): the game seeds nothing, so every load builds a different country.
 // three draws 12 randoms per mesh from the same stream, so a global Math.random seed alone lets any
 // added object reshuffle the whole world. Seed the game rng at its own boot instead.
@@ -17,43 +21,33 @@ const HTML='file://'+path.join(ROOT,'untitled-kea-game.html');
    shot that says nothing lands exactly where it always did and no pinned frame moves. One seeded
    temp copy per biome, written once and reused. */
 const BIOME=(process.env.BIOME||'carpark').replace(/[^a-z0-9_]/gi,'');
-const RAWSRC=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
-const seeded=(()=>{ const cache={}; return b=>{
-  if(!cache[b]){ const anchor='if(!HEADLESS)boot();';
-    if(RAWSRC.split(anchor).length!==2) throw new Error('capture: boot anchor missing from the game file');
-    const p=path.join(os.tmpdir(),'kea-seeded-capture-'+b+'.html');
-    fs.writeFileSync(p,RAWSRC.replace(anchor,"if(!HEADLESS){setSeed(20260828);boot({biome:'"+b+"'});}"));
-    cache[b]='file://'+p; }                 // a real navigation, so evaluateOnNewDocument still fires
-  return cache[b]; }; })();
+/* THE SEEDED TEMP COPY IS GONE. It string-replaced `if(!HEADLESS)boot();` in the HTML and threw
+   if that anchor was not found exactly once — correctly, because a silent miss photographs an
+   unseeded world that looks fine and drifts every baseline underneath everyone. The anchor cannot
+   survive bundling, so the guarantee moved rather than lapsed: webrig sets __KEA_BOOT__ before any
+   module on the page runs, and assertBooted() checks per page that the seed and the biome actually
+   took. Same single gauntlet seed (20260828), proven instead of injected. */
 const ONLY=(process.env.SHOTS||'').split(',').filter(Boolean);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-async function launch(){
-  try{ const p=await import('puppeteer');
-    try{ return await p.default.launch({headless:true,args:['--no-sandbox']}); }
-    catch(e){ return await p.default.launch({headless:true,channel:'chrome',args:['--no-sandbox']}); } } // bundled chrome is unsigned on some macs
-  catch(e){ const chromium=(await import('@sparticuz/chromium')).default;
-    const p=await import('puppeteer-core');
-    return p.default.launch({executablePath:await chromium.executablePath(),
-      args:[...chromium.args,'--no-sandbox'],headless:true}); }
-}
+/* launch() now comes from webrig.mjs — same three fallbacks, one copy. */
 const BOOT=`window.AudioContext=undefined; KEAGAME.startGame(1);`;
 const BOOTCOL=`window.AudioContext=undefined; KEAGAME.startGame(1,{colossal:true});`;
 
 async function shot(name,stage,opts){
   if(ONLY.length&&!ONLY.some(o=>name.startsWith(o)))return;
   const o=opts||{};
+  const url0=await origin();
   const browser=await launch();
   const page=await browser.newPage();
-  // DETERMINISM (2026-08-28): the world is built from Math.random at page load, before any
-  // evaluate can seed it. Without this the same build reshoots at ssim 0.82 and the tripwire is noise.
-  await page.evaluateOnNewDocument(()=>{ let t=20260828>>>0;
-    Math.random=()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t); r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; });
   await page.setViewport({width:o.w||960,height:o.h||540,deviceScaleFactor:1});
-  await page.setRequestInterception(true);
-  page.on('request',r=>{ if(/three(\.min)?\.js/.test(r.url()))r.respond({contentType:'application/javascript',body:THREE_LOCAL});
-    else if(/fonts\./.test(r.url()))r.respond({contentType:'text/css',body:''}); else r.continue(); });
-  await page.goto(seeded(o.biome||BIOME),{waitUntil:'load'}); await sleep(1000);
+  // DETERMINISM (2026-08-28, moved to webrig 2026-09-03): the world is built from Math.random at
+  // page load, before any evaluate can seed it. Without this the same build reshoots at ssim 0.82
+  // and the tripwire is noise. preparePage installs the seed AND __KEA_BOOT__ before any module runs.
+  const want=o.biome||BIOME;
+  await preparePage(page,{seed:GAUNTLETSEED,biome:want});
+  await page.goto(url0,{waitUntil:'load'}); await sleep(1000);
+  await assertBooted(page,{biome:want});   // the seed and the map took, or this shot does not happen
   await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
   await page.evaluate(QUIET);
   if(o.colossal){ await page.evaluate(`window.__keaFeedKeep=true; for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
@@ -63,10 +57,17 @@ async function shot(name,stage,opts){
   console.log('shot',name);
 }
 async function shotR(name,stage,opts){ // SwiftShader is moody: up to 3 takes per photograph
+  // 2026-09-03: SAY WHY. This swallowed the exception and printed a bare 'retake', so a stage that
+  // could NEVER succeed looked exactly like a flaky GPU — three silent retakes and GAVE UP. After
+  // the port every stage touching `THREE` threw ReferenceError (the bundle has no global THREE) and
+  // the pass reported only that vantage 07 gave up. A retake that hides its reason costs a session.
+  let last=null;
   for(let a=1;a<=3;a++){ try{ await shot(name,stage,opts); return; }
-    catch(e){ console.log('retake',name,a); await sleep(400); } }
-  console.log('GAVE UP',name);
+    catch(e){ last=e; console.log('retake',name,a,'—',String(e&&e.message||e).split('\n')[0].slice(0,160)); await sleep(400); } }
+  console.log('GAVE UP',name,'—',String(last&&last.message||last).split('\n')[0].slice(0,200));
+  GAVEUP.push(name);
 }
+const GAVEUP=[];
 // SUBJECT STAGING (2026-08-31): four showcase vantages had no subject in them. The bird flies
 // out of frame during the settle, so a one-shot stage cannot hold it. PIN re-applies the pose
 // every animation frame for as long as the page lives - the harness-side perch idiom (law 7).
@@ -411,4 +412,6 @@ await shotR('29_lodge_deck',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
 await shotR('30_groomed_band',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=17.0;k.z=19.0;k.y=0.11;k.vy=0;k.grounded=true;k.ry=3.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
   ${CAM(19.5,3.2,26.0, 15.0,1.2,-6.0)}`,SKI);
-console.log('CAPTURE COMPLETE');
+if(SRV)await SRV.close();
+if(GAVEUP.length){ console.log('CAPTURE INCOMPLETE — gave up on: '+GAVEUP.join(', ')); process.exitCode=1; }
+else console.log('CAPTURE COMPLETE');

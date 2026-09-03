@@ -3,17 +3,12 @@
 import fs from 'fs'; import path from 'path'; import url from 'url';
 const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..');
 const OUT=path.join(ROOT,'gauntlet/motion'); fs.mkdirSync(OUT,{recursive:true});
-const THREE_LOCAL=fs.readFileSync(path.join(ROOT,'node_modules/three/build/three.min.js'));
-const HTML='file://'+path.join(ROOT,'untitled-kea-game.html');
+/* REPLAT P1 step 4: see webrig.mjs. three is bundled, the page is served, the seed is a seam. */
+import {ensureBuild,serve,preparePage,assertBooted,launch as webLaunch} from './webrig.mjs';
+ensureBuild(); const SRV=await serve(); const HTML=SRV.origin+'/';
 const ONLY=(process.env.MOTS||'').split(',').filter(Boolean);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function launch(){
-  try{ const p=await import('puppeteer'); return p.default.launch({headless:true,args:['--no-sandbox']}); }
-  catch(e){ const chromium=(await import('@sparticuz/chromium')).default;
-    const p=await import('puppeteer-core');
-    return p.default.launch({executablePath:await chromium.executablePath(),
-      args:[...chromium.args,'--no-sandbox'],headless:true}); }
-}
+const launch=webLaunch;   // one copy of the three fallbacks, in webrig.mjs
 const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getElementById('todo'); if(td)td.style.display='none'; KEAGAME.G.cfOpen=false; KEAGAME.G.paused=false;
   KEAGAME.G.humans.forEach(h=>{h.x=46;h.z=46;h.home={x:46,z:46};h.patrol=null;});
   KEAGAME.G.sheep.forEach(s=>{s.x=-48;s.z=-48;s.home={x:-48,z:-48};});
@@ -39,10 +34,9 @@ for(const m of MOTIONS){
   const browser=await launch();
   const page=await browser.newPage();
   await page.setViewport({width:640,height:360,deviceScaleFactor:1});
-  await page.setRequestInterception(true);
-  page.on('request',r=>{ if(/three(\.min)?\.js/.test(r.url()))r.respond({contentType:'application/javascript',body:THREE_LOCAL});
-    else if(/fonts\./.test(r.url()))r.respond({contentType:'text/css',body:''}); else r.continue(); });
+  await preparePage(page);
   await page.goto(HTML,{waitUntil:'load',timeout:20000});
+  await assertBooted(page);
   await page.evaluate(`window.AudioContext=undefined; KEAGAME.startGame(1);`);
   await sleep(300);
   await page.evaluate(QUIET);
