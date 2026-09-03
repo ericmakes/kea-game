@@ -93,6 +93,125 @@ WHAT IS STILL SHORT OF THE REFERENCE, HONESTLY, AND WHY IT IS NOT P2's
   - EVERYTHING ELSE in the gap to ref_bow_00 is MATERIAL and GEOMETRY: flat untextured colour,
     primitive shapes, no leafy casters to throw dappled shade. That is P3 through P6.
 
+## REPLAT P3 - SCANNED MATERIALS   [CONSTANTS LOCKED 2026-09-03, session 16; THE LOOK IS FLAGGED, NOT JUDGED]
+Judged against ref_bow_00 (brick and weatherboard), ref_bow_03 (bin plastic and grass) and
+ref_bow_06 (metal, asphalt, foliage), per Eric's brief. THE RECIPE IS THE `MATS` BLOCK IN
+src/game.mjs. Every number below is a named constant there and is frozen by assertions in the
+REPLAT P3 section of audits/2026-08-28/harness-everything.js. Fourteen sabotages were run against
+those assertions; thirteen go red and the fourteenth is recorded below because it does not.
+NOTHING WAS RE-PINNED. 27 of 28 vantages are flagged and the look is Eric's.
+
+THE SEVEN FAMILIES. All Poly Haven, all CC0, all 21 files md5-verified against the publisher's API
+at import and listed in assets/LICENCES.md.
+  family        set                   tile      mode    tint   texel
+  grass         withered_grass        2.000 m   paint   -      1.95 mm
+  gravel        gravel_floor_02       2.000 m   scan    0.35   1.95 mm
+  asphalt       asphalt_02            3.000 m   scan    0.45   2.93 mm
+  weatherboard  dark_planks           2.000 m   paint   -      1.95 mm
+  corrugate     corrugated_iron_02    2.700 m   paint   -      2.64 mm
+  brick         brick_wall_09         2.010 m   scan    0.20   1.96 mm
+  snow          snow_02               2.000 m   scan    0.55   1.95 mm
+SNOW IS THE SEVENTH AND WAS NOT IN THE BRIEF. REPLAT P3 names six; the game has a whole ski field
+and PAL.snow was carrying a procedural canvas exactly like the other six, so leaving it would have
+shipped one biome half-done.
+
+WHY THESE SEVEN SETS AND NOT THE OTHER 848. Every family went to a six-candidate contact sheet
+rendered from Poly Haven's own preview spheres and judged against the wall, not picked off a name.
+The reasoning that decided each:
+  withered_grass    the ground under ref_bow_03's bin is DRY STRAW LITTER, not green lawn, and the
+                    country here is Lindis tussock gold. leafy_grass and sparse_grass are both
+                    green and both wrong for this palette; dry_decay_leaves is a forest floor.
+  gravel_floor_02   NZ carpark gravel is pale crushed greywacke. gravel_stones is near-black
+                    basalt and bicolour_gravel is green-cast; this one is the grey.
+  asphalt_02        grey, coarse aggregate, subtle tar cracks - the closest of six to ref_bow_06's
+                    driveway. asphalt_04 is a 4 m tile and would repeat less, and is too smooth
+                    and too pale to read as a surface at bird height.
+  dark_planks       the only candidate that is genuinely WEATHERBOARD - overlapping boards with a
+                    real shadow line at each lap - and its 2 m tile puts a lap every ~140 mm,
+                    which is what a weatherboard is. The brown_planks_* family is butt-jointed
+                    and 1 m, so its laps land at 80 mm.
+  corrugated_iron_02  galvanised, screw fixings visible, and 2.7 m over ~34 ribs is a 79 mm pitch
+                    against a real sheet's 76 mm. corrugated_iron_03 is finer than any real sheet.
+  brick_wall_09     ref_bow_00's brick is CLEAN AND REGULAR with crisp mortar courses, and the
+                    first six candidates were all rustic or crumbling. This is the running-bond
+                    red-brown one, at ~77 mm courses against a real brick's 86 mm.
+  snow_02           smooth, wind-packed, powdery. PAL.snow is "hard alpine snow"; snow_03/04/05
+                    are all trampled or muddy and snow_01 carries footprints.
+
+TEXEL DENSITY IS DERIVED, NOT DIALLED, AND THAT IS THE POINT OF THE PIECE.
+`tileM` is the publisher's own published real-world size, in metres, cross-checked by a battery
+against the millimetres recorded in LICENCES.md. The chain is: geometry UVs are rescaled into
+METRES, then the family's textures repeat at 1/tileM, so a texel is tileM/1024 across on every
+surface in the game. THE UVs CARRY THE METRES AND THE TEXTURE'S REPEAT DOES NOT, because a
+BoxGeometry's UVs run 0..1 PER FACE - one shared repeat would give a 40 m carpark slab and a 0.7 m
+chimney the same number of tiles, which is the difference between gravel and a photograph of gravel
+stretched over a car park. The alternative is a material clone per (family, size) pair, which
+multiplies draw calls to solve a geometry problem.
+2 mm PER TEXEL IS NOT EXCESSIVE, IT IS THE VANTAGE. This game is played at bird height and
+ref_bow_02 and ref_bow_03 are both shot from about 300 mm off the ground. At that range 2 mm/texel
+resolves; at the wide vantages it mips to a mean, which is what it should do.
+
+TWO MODES, BECAUSE A PAINTED SURFACE AND A MATERIAL SURFACE ARE NOT THE SAME PROBLEM.
+ref_bow_00 is the whole argument in one frame: the brick is BRICK-COLOURED and the weatherboard
+trim beside it is CREAM BECAUSE SOMEBODY PAINTED IT.
+  scan    the scan's albedo IS the colour. The palette colour survives as a LUMINANCE-NEUTRAL
+          tint - the authored hex divided by its own luminance, so it pushes hue without touching
+          exposure - and `tint` lerps white toward that hue. Same energy-neutral trick P2 used on
+          the environment, for the same reason: a look decision must not smuggle in an exposure
+          change. A battery asserts the dressed colour's luminance is 1.000 for all four.
+  paint   the palette colour IS the paint and the scan supplies the SURFACE. All three maps are
+          still consumed: the albedo is reduced to its own luminance and renormalised in a canvas
+          pass until its mean is `paintMean` (0.75), and the material colour is scaled by
+          1/paintMean to put the exposure back. What the albedo then contributes is the thing that
+          was missing - the shadow in every weatherboard lap, the dark in every corrugation valley,
+          the mottle of dry grass - and the hut stays the red it has always been.
+          paintMean IS 0.75 AND NOT 1.0 because an 8-bit albedo cannot hold a value above 1, so a
+          map normalised to a mean of 1 has no headroom and clips every lit plank flat.
+THE TERRAIN IS 'paint' FOR A THIRD REASON. Both ground planes are vertex-colour BLENDS of three or
+four surfaces - grass, tussock, gravel, scree on the carpark; snow, wind-scour, rock, tussock on the
+field - and one albedo cannot be four materials at once. A splat-blended scanned terrain is P4's
+problem. So the planes take the scan's relief and roughness at full strength over the palette blend
+they already had. The carpark plane takes grass; the ski field's takes snow.
+
+ROUGHNESS COMES FROM THE SCAN, SO THE MATERIAL'S OWN ROUGHNESS GOES TO 1.
+three MULTIPLIES material.roughness by roughnessMap.g. mat()'s authored 0.82 times a map averaging
+about 0.6 is 0.49, and a wet-looking car park is not a scanned car park. `roughScale` is the named
+home for a future tune and is deliberately 1.0 today. Until the textures land a family material
+keeps its authored roughness, so a browser whose fetch failed looks like the game it was.
+METALNESS IS ZERO ON ALL SEVEN, ON PURPOSE. The ARM map carries it in blue and P3 reads only green.
+The two metal-ish surfaces here are a PAINTED corrugate roof and a painted lodge, and painted steel
+is a dielectric. Bare galvanised metal is a P6 question, when there are props that are bare metal.
+
+THE COLOUR IS THE KEY, WHICH WORKS AND ALMOST DIDN'T. mat() caches by colour, so registering a
+family against a hex claims every surface painted that hex. Three call sites write the raw
+`0x9B9891` instead of `PAL.gravel`, so the first grep found two of five and the material census
+found the rest: half the loose-stone scatter would have stayed on the procedural speckle canvas
+while its siblings went scanned, and the LODGE CHIMNEY would have been rendered in driveway gravel.
+GREP THE HEX AS WELL AS THE NAME. Both fixed: 0x8E8B84 joined the gravel family so both scatters
+are uniform, and the lodge chimney took the hut chimney's grey, which made brick two surfaces
+instead of one.
+
+WHAT IS STILL SHORT OF THE REFERENCE, HONESTLY, AND WHY IT IS NOT P3's
+  - TILING REPETITION IS VISIBLE on the car park and the road. asphalt_02's tar cracks repeat every
+    3 m, about 13 times across the 40 m slab. On the road they read as expansion joints and are
+    almost a gain; on the slab they are a repeat. The fixes are all bigger than P3: a second
+    breakup layer, a triplanar or stochastic sample, or a 4 m tile at a coarser texel. NOT chased,
+    because every one of them is a taste call and Eric has not seen the frames yet.
+  - THE GRASS SCAN IS BARELY VISIBLE at the wide vantages, because 42,000 cone blades stand on top
+    of it. That is P4's brief exactly, and the scan is what P4's blades will stand in.
+  - BRICK RESTS ON TWO CHIMNEYS. ref_bow_00 is a brick HOUSE; the game has no masonry wall. The gap
+    is GEOMETRY, which is P6. The family is sourced, licensed, tiled and proven so that P6 opens
+    with it working rather than discovering on the day it has no brick.
+  - THE PALE TARMAC ELLIPSES still read as puddles at 01. Pre-existing, listed as a PHASE 1 gap,
+    untouched here.
+  - NOT ONE PROP CHANGED. Bins, cars, signs and the picnic set are still primitives wearing flat
+    colour - ref_bow_03's bin plastic is a MODEL question, and that is P6.
+  - THE ONE SABOTAGE THAT SURVIVED. Deleting uvMetres' own idempotence guard leaves the battery
+    green, because matUVSweep checks the same mark before it calls, so nothing reaches it twice
+    today. Deleting BOTH guards goes red with the squaring visible in the numbers - the 240 m
+    terrain reports a 57600 m UV span. The inner guard is kept as defence in depth and is labelled
+    as such in the source rather than left looking load-bearing.
+
 ## PHASE 1 - LIGHT & AIR   [not yet run]
 TARGETS: ugg_shadows_01/02, swag_shadows_01, nz_mist_01, kea_social_02.
 GAPS: no cast shadows anywhere; no AO; pale tarmac ellipses read as

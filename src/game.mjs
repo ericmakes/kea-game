@@ -192,6 +192,113 @@ for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis._
 }
 
 /* ============================================================
+   SCANNED MATERIALS — REPLAT P3 (2026-09-03). THE RECIPE, IN NAMED CONSTANTS.
+   ============================================================
+   P3's proof contract is three claims: every material family resolves a REAL texture set, the
+   licences are recorded, and no procedural canvas is left on a swapped family. This block is the
+   pin for all three. Every set is CC0 from Poly Haven and every file is listed in
+   assets/LICENCES.md with the publisher's own md5 — see that file for the licence law this tier
+   lands under and for why nor_gl, why the packed arm, and why 1k.
+
+   __KEA_MATS__ OVERRIDES ANY LEAF, exactly like __KEA_SKY__ and for the same reason: a material is
+   judged AT THE VANTAGE, so every tint and tile in this piece has to be shootable without a
+   rebuild. Nested one level, so KEAMATS='{"families":{"asphalt":{"tint":0.8}}}' reaches a family
+   without restating the other six.
+
+   ---- TEXEL DENSITY IS THE POINT OF THIS BLOCK, AND IT IS DERIVED, NOT DIALLED ----
+   `tileM` is the PUBLISHER'S OWN real-world size for the scan, in metres, straight off the Poly
+   Haven API and recorded per set in LICENCES.md. It is not a taste number and it is not fitted by
+   eye. The whole density chain is:
+
+       geometry UVs are rescaled to METRES  (uvMetres, below)
+       the family's textures repeat at 1/tileM
+       so a texel lands tileM/1024 metres across, everywhere, on every surface
+
+   WHY THE UVs MOVED AND THE TEXTURE'S REPEAT DID NOT. A BoxGeometry's UVs run 0..1 PER FACE, so a
+   shared texture with one repeat gives a 40 m carpark slab and a 0.7 m chimney the same number of
+   tiles — which is not a small error, it is the difference between gravel and a photograph of
+   gravel stretched over a car park. The alternative fix is a material clone per (family, size)
+   pair, and that multiplies draw calls for a problem that is really about geometry. So the UVs
+   carry the metres and ONE material per family serves every mesh in it.
+
+   ---- TWO MODES, BECAUSE A PAINTED SURFACE AND A MATERIAL SURFACE ARE NOT THE SAME PROBLEM ----
+   Look at ref_bow_00 and this is the whole distinction: the brick is BRICK-COLOURED and the
+   weatherboard trim beside it is CREAM BECAUSE SOMEBODY PAINTED IT. Feeding one pipeline both
+   gives you either a red-brown hut (a red palette colour multiplied by a brown plank albedo) or a
+   country that has lost its palette.
+
+     mode 'scan'   the scan's albedo IS the colour. asphalt, gravel, brick, snow. The palette
+                   colour survives as a LUMINANCE-NEUTRAL TINT: the authored hex is divided by its
+                   own luminance, so it pushes hue without touching exposure, and `tint` lerps
+                   white -> that hue. tint 0 is the raw scan; tint 1 is the scan wearing the NZ
+                   palette's hue at the scan's own brightness. This is the same energy-neutral
+                   trick P2 used on the environment, for the same reason: a look decision should
+                   not smuggle in an exposure change.
+     mode 'paint'  the palette colour IS the paint, and the scan supplies the SURFACE. grass,
+                   weatherboard, corrugate. All three maps are still consumed — the albedo is
+                   reduced to its own luminance and renormalised so its mean is `paintMean`, and
+                   the material colour is scaled by 1/paintMean to put the exposure back. What the
+                   albedo then contributes is the thing that was actually missing: the shadow in
+                   every weatherboard lap, the dark in every corrugation valley, the mottle of dry
+                   grass. Chroma is dropped ON PURPOSE, and the hut stays the red it has always
+                   been.
+   THE GROUND IS 'paint' FOR A THIRD REASON. The terrain plane is a vertex-colour BLEND of grass,
+   tussock, gravel and scree — one albedo cannot serve four families at once, and a splat-blended
+   scanned terrain is P4's problem, not a thing to fake here. So the terrain takes the grass scan's
+   relief and roughness at full strength over the palette blend it already had.
+
+   ---- ROUGHNESS COMES FROM THE SCAN, SO THE MATERIAL'S OWN ROUGHNESS GOES TO 1 ----
+   three MULTIPLIES material.roughness by roughnessMap.g. mat()'s authored 0.82 times a map that
+   averages around 0.6 is 0.49, and a wet-looking car park is not a scanned car park. A family
+   material therefore holds roughness 1.0 once its maps land and lets the scan own it outright;
+   `roughScale` exists as the named home for a future tune and is deliberately 1.0 today, so
+   nothing here is a fudge waiting to be discovered. UNTIL the maps land the material keeps the
+   authored 0.82, because a browser that never finishes the fetch must look like the game it was,
+   not like a mirror. */
+const MATS={
+  dir:'tex/', res:'1k',
+  /* THE MEAN THE PAINT MODE NORMALISES TO. 0.75 and not 1.0 because an 8-bit albedo cannot hold a
+     value above 1, so a map normalised to a mean of 1 would have no headroom for the highlights
+     and would clip every lit plank flat. 0.75 leaves a third of a stop above the mean, which
+     covers the brightest lap on all three paint-mode scans, and the material colour carries the
+     reciprocal so the surface lands back on its authored luminance. */
+  paintMean:0.75,
+  normalScale:1.0,
+  roughScale:1.0,
+  /* tileM IS THE PUBLISHER'S PUBLISHED SIZE IN METRES. Cross-checked against LICENCES.md, which
+     records the same number in millimetres straight from the API. A battery asserts the two agree,
+     because the failure this guards is somebody re-tiling a surface by eye and leaving the ledger
+     saying something else. */
+  families:{
+    grass:        {asset:'withered_grass',     tileM:2.000, mode:'paint'},
+    gravel:       {asset:'gravel_floor_02',    tileM:2.000, mode:'scan', tint:0.35},
+    asphalt:      {asset:'asphalt_02',         tileM:3.000, mode:'scan', tint:0.45},
+    weatherboard: {asset:'dark_planks',        tileM:2.000, mode:'paint'},
+    corrugate:    {asset:'corrugated_iron_02', tileM:2.700, mode:'paint'},
+    brick:        {asset:'brick_wall_09',      tileM:2.010, mode:'scan', tint:0.20},
+    snow:         {asset:'snow_02',            tileM:2.000, mode:'scan', tint:0.55},
+  },
+};
+/* AND IT REPORTS WHAT IT IGNORED. Unknown keys are skipped by design — a leaf merge that invented
+   constants would be worse — but a SILENTLY ignored override is how a variant strip gets shot,
+   judged and locked with one frame quietly on the default, which is the same class of failure as an
+   unseeded capture pass. webrig already refuses a misspelled KEASKY leaf; it cannot do the same for
+   a misspelled FAMILY NAME without keeping a second copy of the seven names, and it kept one
+   briefly and let `{"families":{"asfalt":{...}}}` straight through. So the knowledge stays here,
+   where the names actually live, and the list of what was ignored travels out in G.mats for the rig
+   to refuse. One source of truth, checked at both levels. */
+const MATSIGNORED=[];
+for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_MATS__)||{})){
+  if(!(k in MATS)){ MATSIGNORED.push(k); continue; }
+  if(k==='families'){ for(const [f,over] of Object.entries(v||{})){
+      if(!MATS.families[f]){ MATSIGNORED.push('families.'+f); continue; }
+      for(const ok2 of Object.keys(over||{}))
+        if(!(ok2 in MATS.families[f]))MATSIGNORED.push('families.'+f+'.'+ok2);
+      Object.assign(MATS.families[f],over); } }
+  else MATS[k]=v;
+}
+
+/* ============================================================
    KEA-LOGIC-START  · untitled kea game · single-file build
    state root: G · tick: update(dt) · input seam: KEYS/press()
    ============================================================ */
@@ -272,6 +379,11 @@ function keaScal(){ // every feather edged in dark olive — fine, dense, field-
   return KEASCALMAT;
 }
 const DTEX={};
+/* REPLAT P3 DELETED THREE KINDS FROM THIS FUNCTION: 'asphalt', 'corrugate' and 'snowtex'. Their
+   families are scanned now, nothing registers them, and a dead branch in a texture builder is a
+   trap — the next person to add a road would have found a plausible-looking asphalt kind sitting
+   here and used it. What is left is the four families REPLAT P3 does NOT name: wood grain,
+   greywacke speckle, brushed alloy, painted panel and woven fabric. */
 function detailTex(kind){ // subtle multiply-maps: texture without killing the toon read
   if(HEADLESS)return null; if(DTEX[kind])return DTEX[kind];
   const cv=document.createElement('canvas'); cv.width=cv.height=128; const c=cv.getContext('2d');
@@ -280,35 +392,234 @@ function detailTex(kind){ // subtle multiply-maps: texture without killing the t
   if(kind==='grain'){ for(let i=0;i<44;i++){ c.strokeStyle='rgba(58,40,16,'+(0.05+r()*0.07).toFixed(3)+')'; c.lineWidth=1+r()*1.4;
       const y=r()*128; c.beginPath(); c.moveTo(0,y); c.bezierCurveTo(42,y+r()*8-4,86,y+r()*8-4,128,y+r()*6-3); c.stroke(); }
     for(let i=0;i<5;i++){ c.strokeStyle='rgba(58,40,16,0.10)'; c.beginPath(); const x=r()*128,y=r()*128; c.ellipse(x,y,2+r()*3,4+r()*5,0,0,6.3); c.stroke(); } }
-  else if(kind==='asphalt'){ for(let i=0;i<850;i++){ const a=r(); c.fillStyle=a<0.55?'rgba(18,20,24,'+(0.05+r()*0.08).toFixed(3)+')':'rgba(255,255,255,'+(0.03+r()*0.05).toFixed(3)+')';
-      c.fillRect(r()*128,r()*128,1+r()*2,1+r()*2); } }
   else if(kind==='speckle'){ for(let i=0;i<420;i++){ const a=r(); c.fillStyle=a<0.5?'rgba(30,32,34,'+(0.06+r()*0.09).toFixed(3)+')':'rgba(255,255,255,'+(0.05+r()*0.06).toFixed(3)+')';
       const q=1+r()*3; c.beginPath(); c.arc(r()*128,r()*128,q,0,6.3); c.fill(); } }
   else if(kind==='brushed'){ for(let x=0;x<128;x+=2){ c.strokeStyle='rgba(40,44,50,'+(0.03+r()*0.05).toFixed(3)+')'; c.beginPath(); c.moveTo(x+r(),0); c.lineTo(x+r(),128); c.stroke(); } }
-  else if(kind==='corrugate'){ for(let x=0;x<128;x+=8){ c.fillStyle='rgba(20,26,32,0.10)'; c.fillRect(x,0,2,128); c.fillStyle='rgba(255,255,255,0.07)'; c.fillRect(x+4,0,2,128); } }
   else if(kind==='weave'){ for(let i=-128;i<128;i+=5){ c.strokeStyle='rgba(30,26,20,0.05)'; c.beginPath(); c.moveTo(i,0); c.lineTo(i+128,128); c.stroke();
       c.strokeStyle='rgba(255,255,255,0.04)'; c.beginPath(); c.moveTo(i+128,0); c.lineTo(i,128); c.stroke(); } }
   else if(kind==='panel'){ for(let i=0;i<4;i++){ const y=18+i*30+r()*8; c.strokeStyle='rgba(60,66,74,0.10)'; c.lineWidth=1.4;
       c.beginPath(); c.moveTo(0,y); c.lineTo(128,y); c.stroke(); }
     for(let i=0;i<260;i++){ c.fillStyle='rgba(255,255,255,'+(0.02+r()*0.03).toFixed(3)+')'; c.fillRect(r()*128,r()*128,1.5,1.5); } }
-  else if(kind==='snowtex'){ for(let i=0;i<300;i++){ const a=r(); c.fillStyle=a<0.5?'rgba(150,180,210,'+(0.05+r()*0.06).toFixed(3)+')':'rgba(255,255,255,0.10)';
-      c.beginPath(); c.arc(r()*128,r()*128,0.8+r()*1.8,0,6.3); c.fill(); } }
   const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(2,2);
   return DTEX[kind]=t;
 }
 const MAPKIND={};
 function _mk(c,k){ MAPKIND[c]=k; }
 _mk(PAL.wood,'grain'); _mk(PAL.woodD,'grain'); _mk(0x9C7B52,'grain'); _mk(0x7E6644,'grain'); _mk(0x6E5334,'grain');
-_mk(PAL.tarmac,'asphalt'); _mk(PAL.road,'asphalt');
-_mk(PAL.rock,'speckle'); _mk(PAL.rockD,'speckle'); _mk(0x8C8F93,'speckle'); _mk(0x7A7468,'speckle'); _mk(0x8E8B84,'speckle'); _mk(0x9B9891,'speckle'); _mk(0x9AA0A6,'speckle');
+_mk(PAL.rock,'speckle'); _mk(PAL.rockD,'speckle'); _mk(0x7A7468,'speckle');
 _mk(PAL.metal,'brushed');
-_mk(PAL.hutRoof,'corrugate'); _mk(0x4A545C,'corrugate');
 _mk(PAL.white,'panel'); _mk(0x596068,'panel');
 _mk(PAL.ranger,'weave'); _mk(PAL.hiviz,'weave'); _mk(0xE8946A,'weave'); _mk(0xD3805A,'weave'); _mk(0x2F6E5E,'weave'); _mk(0x3E8272,'weave');
-_mk(PAL.snow,'snowtex'); _mk(PAL.snowShade,'snowtex');
-_mk(PAL.hut,'grain');
+
+/* ---------- REPLAT P3: WHICH PALETTE COLOUR BELONGS TO WHICH SCANNED FAMILY ----------
+   The registry above says "this colour gets that procedural canvas"; this one says "this colour IS
+   that scanned material", and the two are mutually exclusive by construction — a battery asserts
+   no colour appears in both, because a colour in both would silently get whichever branch mat()
+   happened to test first.
+
+   FIVE ENTRIES WERE MOVED OUT OF _mk RATHER THAN ADDED ALONGSIDE IT, and that is the "no
+   procedural canvas left on the swapped families" half of P3's proof. Three whole detailTex kinds
+   are now gone from the file — 'asphalt', 'corrugate' and 'snowtex' — because nothing claims them
+   any more. 'grain', 'speckle', 'brushed', 'panel' and 'weave' stay: wood trim, greywacke rock,
+   brushed alloy, painted panel and fabric are not families REPLAT P3 names, and swapping them on
+   the way past would be four unbriefed art decisions riding along with seven briefed ones.
+
+   THE COLOUR IS THE KEY, AND IT IS ONLY SAFE BECAUSE IT WAS CHECKED. `mat()` caches by colour, so
+   registering a family against a hex claims EVERY surface painted that hex. Each of these was
+   grepped before it was registered:
+     PAL.hut       ONE site, the hut wall. Weatherboard claims it and nothing else.
+     PAL.tarmac    the carpark slab and its apron.     PAL.road    the road deck.
+     PAL.gravel + 0x9AA0A6 + 0x8E8B84   the 26 carpark grit pebbles, the 26 loose greywacke stones
+                   on the country, and the hut step stone. EVERY grey in a scatter lands in ONE
+                   family, and the third entry is here because the first pass MISSED IT and the
+                   battery found it. The grit pebbles alternate 0x9AA0A6/PAL.gravel and the loose
+                   stones alternate 0x8E8B84/PAL.gravel — so registering PAL.gravel alone put half
+                   of the loose scatter on a scanned set and left the other half on the procedural
+                   speckle canvas, which is EXACTLY the defect the grit-pebble assertion in
+                   harness-everything was written to catch, reappearing in a different scatter one
+                   registry later. Both scatters are uniform again.
+                   HOW IT WAS MISSED IS WORTH RECORDING: PAL.gravel was grepped and came back with
+                   two sites, because three of its five call sites write the raw hex 0x9B9891
+                   instead of the palette name. Grep the HEX as well as the name.
+     PAL.hutRoof + 0x4A545C  the hut gable, the veranda eave, the shelter, the tow shed, the lodge
+                   roof, and the ridge battens.
+     0x8C8F93      the hut chimney. THE ONLY MASONRY IN THE GAME, and so the only honest home for
+                   the brick family today. ref_bow_00 is a brick HOUSE and this is a brick chimney;
+                   the gap between those two is geometry, which is P6, and the family is sourced,
+                   licensed, tiled and proven here so that P6 opens with it working rather than
+                   discovering on the day that it has no brick.
+     PAL.snow + PAL.snowShade   every snow surface in both biomes.
+   THE TERRAIN IS NOT IN THIS TABLE. Both ground planes build their own material (vertex colours),
+   so the grass family is attached to them directly in buildCarpark/buildSkifield. */
+const MATFAM={};
+function _mf(c,f){ MATFAM[c]=f; }
+_mf(PAL.hut,'weatherboard');
+_mf(PAL.tarmac,'asphalt');   _mf(PAL.road,'asphalt');
+_mf(PAL.gravel,'gravel');    _mf(0x9AA0A6,'gravel');    _mf(0x8E8B84,'gravel');
+_mf(PAL.hutRoof,'corrugate');_mf(0x4A545C,'corrugate');
+_mf(0x8C8F93,'brick');
+_mf(PAL.snow,'snow');        _mf(PAL.snowShade,'snow');
+
+/* THE FAMILY RUNTIME. One record per family: the three texture objects once they land, and every
+   material that belongs to it. Both halves are needed because materials are built lazily during
+   buildWorld and the textures arrive from the network AFTER that — and because travel builds the
+   ski field long after the first install, so a material created LATER must dress itself
+   immediately. matDress is therefore called from both directions and is idempotent. */
+const MATSET={};
+function matFam(f){ return MATSET[f]||(MATSET[f]={maps:null,mats:[],failed:false}); }
+const _lumOf=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+function matDress(m){
+  const fam=m.userData.matFamily, F=MATS.families[fam], S=MATSET[fam], base=m.userData.matBase;
+  if(!F||!base)return m;
+  if(!S||!S.maps){                      // pre-install, or a fetch that never landed: the old look
+    m.color.copy(base); m.roughness=m.userData.matRough;
+    m.map=null; m.normalMap=null; m.roughnessMap=null; m.needsUpdate=true; return m; }
+  if(F.mode==='scan'){
+    /* luminance-neutral tint: the authored hex divided by its own luminance pushes hue without
+       touching exposure, then `tint` lerps white -> that hue. See the recipe note. */
+    const L=_lumOf(base)||1, hue=base.clone().multiplyScalar(1/L);
+    m.color.setRGB(1,1,1).lerp(hue,F.tint===undefined?0:F.tint);
+  } else {
+    m.color.copy(base).multiplyScalar(1/MATS.paintMean);
+  }
+  m.map=S.maps.map; m.normalMap=S.maps.normalMap; m.roughnessMap=S.maps.roughnessMap;
+  m.normalScale.set(MATS.normalScale,MATS.normalScale);
+  m.roughness=MATS.roughScale;
+  m.needsUpdate=true; return m;
+}
+
+/* ---------- REPLAT P3: UVs IN METRES ----------
+   The one job here is that a texel is the same size in the world on every surface. Each geometry
+   kind knows its own UV convention, so each gets its own branch and every branch is asserted
+   headless in harness-everything.js — this is pure arithmetic on a BufferAttribute and runs in
+   node exactly as it runs in a browser, which is the only reason texel density can be LAW here
+   rather than an eyeball.
+
+   IT IS DRIVEN OFF geometry.parameters, NOT off the caller's arguments, so a geometry that was
+   built with non-default segments cannot be silently mis-scaled: the branch reads the same numbers
+   three built the UVs from, and bails if it does not recognise the type. */
+function uvMetres(g){
+  const uv=g.attributes&&g.attributes.uv, p=g.parameters;
+  if(!uv||!p)return g;
+  /* IDEMPOTENT, AND THAT IS LOAD-BEARING RATHER THAN TIDY. Two things call this: the geometry
+     helpers, eagerly, and the post-build sweep below, which exists because meshes built with
+     `new THREE.Mesh(new THREE.BoxGeometry(...))` never pass through a helper at all. A geometry can
+     therefore arrive here twice, and scaling metre UVs by metres again would square the tile count
+     — a silent, plausible-looking error, and exactly the kind that is only ever found in a
+     photograph. The mark is on the GEOMETRY because that is what gets shared: `rl.clone()` in
+     buildHut hands one BoxGeometry to two roof panels.
+     AND IT IS DEFENCE IN DEPTH RATHER THAN THE LOAD-BEARING GUARD TODAY, which is worth saying
+     out loud because a sabotage proved it: deleting this line alone leaves the battery GREEN,
+     because matUVSweep checks the same mark before it calls and so nothing reaches here twice.
+     Deleting BOTH goes red with the squaring visible in the numbers — the 240 m terrain reports a
+     57600 m UV span. Kept anyway: the sweep is not the only future caller, and a guard that costs
+     one property read is the cheapest possible insurance against an error whose signature is a
+     texture that renders perfectly at the wrong scale. */
+  if(g.userData.uvMetres)return g;
+  if(g.type==='BoxGeometry'){
+    /* three lays a box down as six planes in a FIXED order — px, nx, py, ny, pz, nz — and each
+       plane's u runs along the first extent it was handed and v along the second. So the u/v
+       extents per face are (d,h) (d,h) (w,d) (w,d) (w,h) (w,h), and nothing here is guesswork:
+       the order is buildPlane's call order in BoxGeometry and the assertion reads it back. */
+    const per=(p.widthSegments+1)*(p.heightSegments+1);
+    if(p.widthSegments!==1||p.heightSegments!==1||p.depthSegments!==1)return g;
+    const ext=[[p.depth,p.height],[p.depth,p.height],[p.width,p.depth],
+               [p.width,p.depth],[p.width,p.height],[p.width,p.height]];
+    if(uv.count!==24)return g;
+    for(let f=0;f<6;f++)for(let i=0;i<4;i++){ const k=f*4+i;
+      uv.setXY(k, uv.getX(k)*ext[f][0], uv.getY(k)*ext[f][1]); }
+  } else if(g.type==='PlaneGeometry'){
+    for(let i=0;i<uv.count;i++) uv.setXY(i, uv.getX(i)*p.width, uv.getY(i)*p.height);
+  } else if(g.type==='CylinderGeometry'){
+    /* torso first, then the top cap, then the bottom cap. The torso's u goes once around, so it
+       spans the MEAN circumference (these are truncated cones as often as cylinders); its v spans
+       the height. A cap's uv is a 0..1 disc, so it spans that end's diameter. */
+    const rs=p.radialSegments, hs=p.heightSegments;
+    const torso=(rs+1)*(hs+1), circ=Math.PI*(p.radiusTop+p.radiusBottom);
+    for(let i=0;i<torso&&i<uv.count;i++) uv.setXY(i, uv.getX(i)*circ, uv.getY(i)*p.height);
+    let k=torso;
+    for(const r of [p.radiusTop,p.radiusBottom]){
+      if(p.openEnded||r<=0)continue;
+      const n=2*rs+1;
+      for(let i=0;i<n&&k<uv.count;i++,k++) uv.setXY(k, uv.getX(k)*2*r, uv.getY(k)*2*r); }
+  } else if(g.type==='SphereGeometry'||g.type==='DodecahedronGeometry'||
+            g.type==='IcosahedronGeometry'||g.type==='PolyhedronGeometry'){
+    /* equirectangular by construction — u once around the equator, v pole to pole — and a
+       three polyhedron uses the same azimuth/inclination mapping, which is why the loose stones
+       belong in this branch rather than being left at one whole gravel tile per rock face. */
+    for(let i=0;i<uv.count;i++) uv.setXY(i, uv.getX(i)*2*Math.PI*p.radius, uv.getY(i)*Math.PI*p.radius);
+  } else return g;
+  g.userData.uvMetres=true; uv.needsUpdate=true; return g;
+}
+
+/* THE GATE ON ALL OF IT. A mesh gets metre UVs only if its material belongs to a scanned family;
+   nothing else in the game is touched, so a surface P3 was not asked about cannot move. Called
+   from box/cyl/sph AFTER the material is resolved and BEFORE the mesh is parented. */
+function matUV(m){
+  if(!m||!m.material||!m.material.userData||!m.material.userData.matFamily)return m;
+  uvMetres(m.geometry); return m;
+}
+/* AND THE SWEEP THAT MAKES IT COMPLETE RATHER THAN CONSCIENTIOUS. Putting matUV in box/cyl/sph
+   covers the overwhelming majority of the world and MISSED THE HUT ROOF, because the two gable
+   panels and their twelve ridge battens are built with `new THREE.Mesh(new THREE.BoxGeometry(...))`
+   directly — as are a handful of others. Found by the battery, which measured 7 family boxes where
+   it should have found more and printed a 1.000x1.000 span on a 7.8 m roof panel.
+   A "remember to call the helper" rule is the wrong shape of fix for that: the next direct
+   construction would miss it again, and the failure renders perfectly and looks like a texture
+   choice. So the sweep walks what was actually BUILT. The eager calls stay, because a mesh made
+   after buildWorld — spawned loot, traffic — is past the sweep and still needs its metres. */
+function matUVSweep(){
+  let n=0;
+  G.scene.traverse(o=>{ if(!o.isMesh||!o.material||!o.material.userData)return;
+    if(!o.material.userData.matFamily||!o.geometry)return;
+    if(o.geometry.userData.uvMetres)return;
+    if(uvMetres(o.geometry).userData.uvMetres)n++; });
+  return n;
+}
+
+/* THE TWO TERRAIN PLANES DO NOT GO THROUGH mat(). They are vertex-coloured, one per biome, and
+   they must not share a cached material with anything else — so they enrol in a family directly.
+   WHICH FAMILY IS A FACT ABOUT THE MAP, not a default: the carpark's ground is the Lindis tussock
+   blend, so it takes the grass scan; the ski field's is a snowfield, so it takes snow. Both are
+   'paint' mode, and the recipe note says why at length — the plane is a vertex-colour BLEND of
+   three or four surfaces and no single albedo can be four materials at once, so what it takes from
+   the scan is relief and roughness over the palette it already had. */
+/* THE PROVENANCE BLOCK. Rebuilt on demand rather than mutated, so it can never disagree with the
+   registry it describes: every field is read straight off MATS and MATSET. */
+function matState(){
+  const out={mode:'none',dir:MATS.dir,res:MATS.res,families:{},loaded:0,failed:0,
+             ignored:MATSIGNORED.slice()};
+  for(const [f,F] of Object.entries(MATS.families)){
+    const S=MATSET[f]||{};
+    out.families[f]={asset:F.asset,tileM:F.tileM,mode:F.mode,tint:F.tint===undefined?null:F.tint,
+                     materials:(S.mats||[]).length,maps:!!S.maps,failed:!!S.failed};
+    if(S.maps)out.loaded++; if(S.failed)out.failed++; }
+  const n=Object.keys(MATS.families).length;
+  out.mode=out.loaded===n?'scanned':(out.loaded?'partial':(out.failed?'failed':'none'));
+  return out;
+}
+function matGround(fam,rough){
+  const m=new THREE.MeshStandardMaterial({vertexColors:true,roughness:rough,metalness:0,envMapIntensity:0.3});
+  m.userData.matFamily=fam; m.userData.matBase=new THREE.Color(1,1,1); m.userData.matRough=rough;
+  matFam(fam).mats.push(m); matDress(m); return m;
+}
 function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshStandardMaterial(Object.assign({color:col,roughness:0.82,metalness:0.0,envMapIntensity:0.3},extra||{}));
-    if(!HEADLESS&&MAPKIND[c]&&!M[k].map){ const t=detailTex(MAPKIND[c]); if(t)M[k].map=t; } }return M[k];}
+    /* REPLAT P3: a scanned family claims the colour BEFORE the procedural branch gets a look at
+       it, and the two are exclusive by registration rather than by this ordering — see MATFAM.
+       THE FAMILY BRANCH IS NOT BEHIND `!HEADLESS`, on purpose and unlike the branch below it.
+       detailTex has to be, because it paints on a canvas; this one only records a family, a base
+       colour and a roughness, so node can read the whole registry back and P3's contract can be a
+       battery instead of a photograph. matDress with no maps yet leaves the material exactly as
+       mat() built it, so a headless world is byte-identical to the one it was before.
+       AND IT DOES NOT CARE ABOUT `extra`. No family colour is called with an extra today (grepped,
+       all ten of them), and a future one that is — a DoubleSide snow cap, say — should still be
+       snow. matDress writes roughness LAST, so an extra that sets roughness on a family colour
+       loses to the scan deliberately rather than by accident; that is the whole point of the
+       roughness note in the recipe. */
+    if(MATFAM[c]){ M[k].userData.matFamily=MATFAM[c]; M[k].userData.matBase=col.clone();
+      M[k].userData.matRough=M[k].roughness;
+      matFam(MATFAM[c]).mats.push(M[k]); matDress(M[k]); }
+    else if(!HEADLESS&&MAPKIND[c]&&!M[k].map){ const t=detailTex(MAPKIND[c]); if(t)M[k].map=t; } }return M[k];}
 function bmat(c,extra){const k='b'+c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshBasicMaterial(Object.assign({color:col},extra||{}));}return M[k];}
 
 /* ---------- tiny utils ---------- */
@@ -1047,6 +1358,13 @@ function initScene(){
      src/sky.mjs marks it 'hdri' when the real file lands, so `G.ibl.mode` distinguishes the
      three states — unclaimed, degraded, and correct — instead of collapsing them into one. */
   G.ibl={mode:'none',source:SKY.hdri,intensity:SKY.envIntensityDay,rotationY:SKY.envRotationY,pmrem:false};
+  /* REPLAT P3: MATERIAL PROVENANCE IN SCENE STATE, the same shape and for the same reason as
+     G.ibl above. A capture pass and a battery both need to find out WHICH of the two possible
+     worlds they are looking at — the scanned one or the palette-coloured fallback — and the answer
+     has to be readable rather than inferred from pixels. `mode` is 'none' until something installs
+     the textures; the browser sets it to 'scanned' (or leaves it and records the failure) exactly
+     as installSky does, and webrig refuses to photograph the wrong one. */
+  G.mats=matState();
   const hemi=new THREE.HemisphereLight(SKY.hemiSkyDay,SKY.hemiGroundDay,SKY.hemiIntensityDay*LX_HEMI); G.scene.add(hemi); G.hemi=hemi;
   const sun=new THREE.DirectionalLight(SKY.sunDay,SKY.sunIntensityDay*LX_DIR);
   sun.position.set(SKY.sunPosDay[0],SKY.sunPosDay[1],SKY.sunPosDay[2]);
@@ -1144,18 +1462,21 @@ function pushOut(k,rad){ // horizontal separation from solid boxes below their t
 /* ---------- geometry helpers ---------- */
 function box(w,h,d,c,x,y,z,parent,opts){
   const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), (opts&&opts.mats)||mat(c));
+  matUV(m);                                   // REPLAT P3: texel density, per face, in metres
   m.position.set(x||0,y||0,z||0);
   if(!HEADLESS && !(opts&&opts.noshadow)){m.castShadow=true;m.receiveShadow=true;}
   (parent||G.scene).add(m); return m;
 }
 function cyl(rt,rb,h,c,x,y,z,parent,seg){
   const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg||10),mat(c));
+  matUV(m);
   m.position.set(x||0,y||0,z||0);
   if(!HEADLESS){m.castShadow=true;m.receiveShadow=true;}
   (parent||G.scene).add(m); return m;
 }
 function sph(r,c,x,y,z,parent,seg){
   const m=new THREE.Mesh(new THREE.SphereGeometry(r,seg||12,seg||10),mat(c));
+  matUV(m);
   m.position.set(x||0,y||0,z||0);
   if(!HEADLESS){m.castShadow=true;}
   (parent||G.scene).add(m); return m;
@@ -1206,8 +1527,26 @@ function smoothFacetNormals(g){
   SMOOTHSTAT.geos++; SMOOTHSTAT.verts+=pos.count;
   return g;
 }
-function roundedBoxGeo(w,h,d,r){
-  const k=[w,h,d,r].join('_'); if(RBG[k])return RBG[k];
+/* REPLAT P3 gave this function ONE new argument and no new behaviour by default.
+   `uvY` asks for a variant whose UVs put WORLD Y ON V ON EVERY FACE, cached under its own key so
+   the plain geometry every other caller shares cannot be poisoned by it (glassRamp learned that
+   lesson the hard way and clones; a second cache key is cheaper and cannot be forgotten).
+
+   WHY IT IS NEEDED, AND IT IS THE SAME DEFECT glassRamp's COMMENT GAVE UP ON. An ExtrudeGeometry's
+   UVs are in MODEL UNITS already, which is exactly what texel density wants — no rescale at all.
+   But three's WorldUVGenerator lays the cap faces down as (x,y) and the side walls as (y,-z) or
+   (x,-z), so world Y lands on V on the caps and on U on the two end walls. For an untextured
+   colour that is invisible. For a WEATHERBOARD it is not: the laps run horizontally across the
+   hut's front and back and then turn ninety degrees and run vertically down its gable ends. Same
+   for a corrugate rib. So the end walls get u and v swapped, which is the one thing that makes
+   world Y land on V everywhere, and the branch is chosen from the VERTEX NORMAL rather than from
+   the vertex position — a swapped wall is one whose normal points along x.
+   THE BEVEL CORNERS ARE THE HONEST LIMIT. smoothFacetNormals blends the normals in the corner
+   radius, so a handful of vertices inside a 100 mm fillet take whichever branch their blended
+   normal falls on. That is a sub-centimetre smear on a rounded corner, and it is a much smaller
+   error than a wall of vertical weatherboard. */
+function roundedBoxGeo(w,h,d,r,uvY){
+  const k=[w,h,d,r].join('_')+(uvY?'_uvY':''); if(RBG[k])return RBG[k];
   r=Math.min(r,w/2-0.001,h/2-0.001);
   const sh=new THREE.Shape();
   const hw=w/2-r,hh=h/2-r;
@@ -1216,10 +1555,42 @@ function roundedBoxGeo(w,h,d,r){
   sh.lineTo(-hw,h/2); sh.absarc(-hw,hh,r,Math.PI/2,Math.PI,false);
   sh.lineTo(-w/2,-hh); sh.absarc(-hw,-hh,r,Math.PI,Math.PI*1.5,false);
   const g=new THREE.ExtrudeGeometry(sh,{depth:d-r*2,bevelEnabled:true,bevelThickness:r,bevelSize:r*0.92,bevelSegments:3,curveSegments:5});
-  g.translate(0,0,-(d-r*2)/2); smoothFacetNormals(g); RBG[k]=g; return g;
+  g.translate(0,0,-(d-r*2)/2); smoothFacetNormals(g);
+  if(uvY){ const uv=g.attributes.uv, ps=g.attributes.position;
+    /* THE SWAP READS THE UV ITSELF, PER TRIANGLE. Two earlier cuts of this got it wrong and the
+       battery caught both, which is the whole reason the check measures spans instead of trusting
+       the helper:
+         CUT 1 filtered on the vertex normal over the WHOLE geometry, and swapped LID vertices —
+           smoothFacetNormals blends normals across the corner fillets, so cap vertices near the
+           wall's vertical edges come out x-dominant. A 7 m wall face read 7.07 on V.
+         CUT 2 scoped that filter to the side-wall group, which fixed the lids and NOT the walls:
+           measured, all three normal-dominance buckets inside group 1 span the same 7.07, because
+           three bevel segments of blended normal contaminate every bucket with its neighbours.
+           The normal is simply not a discriminator on a rounded box.
+       WHAT IS EXACT IS THE UV. three's WorldUVGenerator writes side-wall u as the RAW local
+       coordinate it chose — a_y on a wall of constant x, a_x on a wall of constant y — so a vertex
+       whose u equals its own position.y is on a vertical end wall and wants the swap, and one
+       whose u equals its position.x is already horizontal and does not. No tolerance stack, no
+       blended anything: it is the same float. Decided per TRIANGLE by majority because the
+       generator assigns per quad, and because a vertex that happens to sit at x === y is ambiguous
+       on its own and is not ambiguous alongside its two neighbours. */
+    const wall=(g.groups||[]).find(gr=>gr.materialIndex===1);
+    const lo=wall?wall.start:0, hi=Math.min(wall?wall.start+wall.count:0,uv.count);
+    for(let t=lo;t+2<hi;t+=3){
+      let yv=0,xv=0;
+      for(let k=0;k<3;k++){ const u=uv.getX(t+k);
+        if(Math.abs(u-ps.getY(t+k))<1e-6)yv++; if(Math.abs(u-ps.getX(t+k))<1e-6)xv++; }
+      if(yv<=xv)continue;                       // already horizontal, or genuinely ambiguous
+      for(let k=0;k<3;k++) uv.setXY(t+k,uv.getY(t+k),uv.getX(t+k)); }
+    uv.needsUpdate=true; }
+  RBG[k]=g; return g;
 }
 function rbox(w,h,d,r,c,x,y,z,parent,opts){
-  const m=new THREE.Mesh(roundedBoxGeo(w,h,d,r),(opts&&opts.mats)||mat(c,opts&&opts.extra));
+  /* the material is resolved FIRST, because whether this is a scanned family decides which
+     geometry variant to ask for — and an ExtrudeGeometry needs no UV rescale either way, its
+     units are already metres. */
+  const mt=(opts&&opts.mats)||mat(c,opts&&opts.extra);
+  const m=new THREE.Mesh(roundedBoxGeo(w,h,d,r,!!(mt.userData&&mt.userData.matFamily)),mt);
   m.position.set(x||0,y||0,z||0);
   if(!HEADLESS&&!(opts&&opts.noshadow)){m.castShadow=true;m.receiveShadow=true;}
   (parent||G.scene).add(m); return m;
@@ -1496,6 +1867,12 @@ function buildWorld(biome){
   for(const l of WORLDLISTS)G[l]=[];
   for(const k in WORLDFLAGS)G[k]=WORLDFLAGS[k];
   b.build();
+  matUVSweep();
+  /* REPLAT P3: the provenance block is REBUILT once the map has built its materials, not mutated,
+     so it can never drift from the registry. initScene declares the slot before anything exists
+     (mode 'none', zero materials, exactly like G.ibl); this is where the material counts become
+     real, and travel through the map screen refreshes them for the biome it just built. */
+  G.mats=matState();
 }
 function buildCarpark(){
   /* THE MAP OWNS ITS NEST SITE (TODO 39). buildNest is called below off G.nestPos, which was a G
@@ -1520,19 +1897,15 @@ function buildCarpark(){
       const d=Math.hypot(x,y); if(d>55)c.lerp(cR,Math.min(0.85,(d-55)/38)); // scree toward the ring
       cols.push(c.r,c.g,c.b); }
     gg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-  let gMat;
-  if(!HEADLESS){
-    const dc=document.createElement('canvas'); dc.width=dc.height=256; const dctx=dc.getContext('2d');
-    dctx.fillStyle='#FFFFFF'; dctx.fillRect(0,0,256,256);
-    let ds=90210; const dr=()=>{ ds=(ds*16807)%2147483647; return ds/2147483647; }; // fixed-seed speckle
-    for(let i=0;i<2600;i++){ const a=dr();
-      dctx.fillStyle=a<0.5?'rgba(70,60,20,0.10)':'rgba(255,246,214,0.09)';
-      const rr=1+dr()*3.2; dctx.beginPath();
-      dctx.arc(dr()*256,dr()*256,rr,0,6.3); dctx.fill(); }
-    const dt=new THREE.CanvasTexture(dc); dt.colorSpace=THREE.SRGBColorSpace;
-    dt.wrapS=dt.wrapT=THREE.RepeatWrapping; dt.repeat.set(9,9);
-    gMat=new THREE.MeshStandardMaterial({vertexColors:true,map:dt,roughness:0.95,metalness:0,envMapIntensity:0.3});
-  } else gMat=mat(0xFFFFFF,{vertexColors:true});
+  /* REPLAT P3: THE LAST PROCEDURAL CANVAS ON A SWAPPED FAMILY DIED HERE. This was 2600 fixed-seed
+     speckles on a 256px canvas repeated 9x9 over 240 m — which is one dot every 400 mm, a
+     resolution that could only ever read as noise, and it was the only "texture" the ground of the
+     whole opening biome had. It is the grass scan now, at the publisher's own 2 m tile, which is
+     ~120 tiles across the plane and about 2 mm per texel where the bird actually stands. The
+     HEADLESS branch is gone with it: matGround allocates no canvas, so node and the browser build
+     the same material and a battery can read it. */
+  const gMat=matGround('grass',0.95);
+  uvMetres(gg);
   const ground=new THREE.Mesh(gg,gMat); ground.rotation.x=-Math.PI/2;
   if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
   buildGrass(); buildTrees();
@@ -1865,7 +2238,8 @@ function buildSkifield(){
       const d=Math.hypot(x,zw); if(d>52)c.lerp(cR,Math.min(0.8,(d-52)/30));
       cols.push(c.r,c.g,c.b); }
     gg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-  const ground=new THREE.Mesh(gg,mat(0xFFFFFF,{vertexColors:true}));
+  uvMetres(gg);                                     // REPLAT P3: metre UVs before it is laid down
+  const ground=new THREE.Mesh(gg,matGround('snow',0.82));
   ground.rotation.x=-Math.PI/2; if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
   G.skiGround=ground;
 
@@ -1920,7 +2294,13 @@ function buildSkifield(){
       pane.position.set(wx,2.2,L.d/2+0.02); g.add(pane);
       box(2.4,0.1,0.08,PAL.paper,wx,1.58,L.d/2+0.03,g,{noshadow:true}); }
     box(1.0,2.0,0.1,PAL.woodD,-L.w/2+1.2,1.4,L.d/2+0.03,g);            // the door, out onto the deck
-    cyl(0.22,0.26,1.2,0x9B9891,2.0,L.h+1.5,-0.4,g,8); cyl(0.16,0.16,0.5,PAL.dark,2.0,L.h+2.3,-0.4,g,7);
+    /* REPLAT P3: THE LODGE CHIMNEY IS BRICK, and it was wearing the gravel grey. 0x9B9891 is
+       PAL.gravel, so once that colour became the scanned gravel family this chimney would have
+       been rendered in driveway gravel — the same colour-as-a-key hazard MATFAM's note describes,
+       found by the material census rather than by eye. It takes the hut chimney's own grey, which
+       is the brick family: two chimneys, one material, and the brick family stops resting on a
+       single 0.7 m surface. */
+    cyl(0.22,0.26,1.2,0x8C8F93,2.0,L.h+1.5,-0.4,g,8); cyl(0.16,0.16,0.5,PAL.dark,2.0,L.h+2.3,-0.4,g,7);
     const dz=z+L.d/2+L.deck/2;
     box(L.w,0.18,L.deck,PAL.wood,x,0.62,dz);
     for(const px of [-L.w/2+0.4,0,L.w/2-0.4])for(const pz of [-L.deck/2+0.3,L.deck/2-0.3])
@@ -2394,7 +2774,12 @@ const PB={
 function buildHut(x,z){
   const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
   const wall=rbox(7,2.6,5.4,0.1,PAL.hut,0,1.3,0,g);
-  for(let i=0;i<5;i++){ box(7.02,0.02,5.42,0x9E5442,0,0.45+i*0.48,0,g,{noshadow:true}); } // weatherboard lines
+  /* THE FIVE FAKE WEATHERBOARD LINES ARE GONE — REPLAT P3. They were 20 mm slabs standing proud of
+     the wall every 480 mm, standing in for a lap line. The scan has real ones, at the real
+     spacing: dark_planks is a 2 m tile of overlapping boards, so a lap lands every ~140 mm, which
+     is what a weatherboard actually is. Leaving both would have put a second, wrong, three-times-
+     too-coarse set of lines on top of the right ones. Nothing else referenced them: no collider,
+     no mission anchor, and 0x9E5442 had exactly one site in the file. */
   for(const cx of [-3.45,3.45])for(const cz of [-2.65,2.65]) rbox(0.16,2.6,0.16,0.05,0x8E4A3A,cx,1.3,cz,g,{noshadow:true});
   rbox(1.2,2.0,0.06,0.04,0x8E4A3A,0,1.0,2.74,g,{noshadow:true}); // door frame
   rbox(1.02,1.86,0.14,0.05,PAL.woodD,0,0.95,2.76,g); sph(0.045,PAL.metal,0.36,0.95,2.85,g,7); // door + knob
@@ -5032,6 +5417,11 @@ if(typeof globalThis!=='undefined'){
        re-typing the numbers, and so src/sky.mjs reads one source of truth for the HDRI path,
        the env intensity and the measured rotation instead of keeping a second copy. */
     SKY,
+    /* REPLAT P3. MATS is the recipe, MATFAM the colour->family registry, and MATSET the runtime
+       the browser installer fills; matState/matDress/uvMetres are exported because the battery
+       proves the ARITHMETIC (texel density, the tint, the paint normalisation) rather than
+       photographing its consequences, and src/materials.mjs needs the runtime to install into. */
+    MATS, MATFAM, MATSET, matState, matDress, uvMetres, matFam,
     /* PAL travels with SKY for one reason: "the fog is tuned to the sky" is only checkable if a
        battery can read BOTH numbers, and the dome's colours live here. Exported as the palette it
        is, not as a favour to one assertion. */

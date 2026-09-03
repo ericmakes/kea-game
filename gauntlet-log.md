@@ -3736,3 +3736,150 @@ spike field. The whole set accepted and re-pinned.
   flagged worst 0.9997, pxdiff 28 compared 0 over band 0 over churn (loudest 123 px), boxdiff 12
   compared 0 changed worst 0.9990, subjects 16 checked 2 missing (deliberately red, TODO 75), gate
   CERTIFIED-SHIP, sidebyside 33 pairs. Working tree clean, SESSION.lock released.
+
+## SESSION 16 — 2026-09-03, Eric order: run REPLAT P3 (scanned materials) on replat-b
+
+Lock taken (none held), released as the final act. Tip certified before anything moved
+(`6a6aac54d7a3d3dff61de5f634052082`, matching the log). Shipped at specimen
+`c48aced312c8966239a340c6f1c0391a`. **Nothing re-pinned — 27 of 28 vantages flagged, the look is
+Eric's.** Recipe in ARTBIBLE.md under REPLAT P3; licences in assets/LICENCES.md.
+
+**SEVEN FAMILIES, SEVEN CC0 SETS, 21 FILES, ALL md5-VERIFIED AGAINST THE PUBLISHER'S API AT
+IMPORT.** grass `withered_grass`, gravel `gravel_floor_02`, asphalt `asphalt_02`, weatherboard
+`dark_planks`, corrugate `corrugated_iron_02`, brick `brick_wall_09`, snow `snow_02` — all Poly
+Haven, all albedo + nor_gl + packed ARM at 1k, 16 MB. Snow is the seventh and was not in the brief:
+the game has a whole ski field and PAL.snow was carrying a procedural canvas exactly like the other
+six. Every family went to a SIX-CANDIDATE CONTACT SHEET judged against the wall rather than picked
+off a name — the reasoning per family is in ARTBIBLE. The one that took two rounds was brick:
+searching "brick" returns rustic and crumbling walls, and ref_bow_00's brick is clean, regular and
+crisply mortared, so the first sheet was thrown away and a second cut from the clean end of the
+category.
+
+- **TEXEL DENSITY IS THE PIECE, AND IT IS DERIVED RATHER THAN DIALLED.** `tileM` is the publisher's
+  own published real-world size, cross-checked by a battery against the millimetres in LICENCES.md
+  — two independent records of one fact, on purpose, because "no asset lands without its licence
+  line" is only worth something if the line and the code cannot drift apart. THE UVs CARRY THE
+  METRES AND THE TEXTURE'S REPEAT DOES NOT: a BoxGeometry's UVs run 0..1 PER FACE, so one shared
+  repeat gives a 40 m carpark slab and a 0.7 m chimney the same tile count. The alternative fix is
+  a material clone per (family, size) pair, which multiplies draw calls to solve a geometry
+  problem. Result: a texel is tileM/1024 metres across everywhere, ~2 mm, which is the right number
+  for a game played at bird height — ref_bow_02 and _03 are both shot from about 300 mm up.
+
+- **AND BECAUSE IT IS ARITHMETIC, IT IS A BATTERY AND NOT AN EYEBALL.** The instinct is that "the
+  gravel is the right size" can only be judged in a photograph. It cannot: the UV half of the chain
+  runs in node exactly as it runs on a GPU. So every family mesh the real world builds is walked
+  and measured — per face on boxes against that face's own extents, torso-and-caps on cylinders,
+  equator-and-meridian on spheres and polyhedra, and the terrain plane — plus the other half of the
+  claim, that **every non-family box still carries three's unit UVs**, because P3 was asked to swap
+  seven families and not to re-tile the whole game.
+
+- **TWO MODES, AND ref_bow_00 IS THE WHOLE ARGUMENT IN ONE FRAME:** the brick is BRICK-COLOURED and
+  the weatherboard trim beside it is CREAM BECAUSE SOMEBODY PAINTED IT. `scan` families take the
+  albedo as colour with the palette surviving as a LUMINANCE-NEUTRAL tint (the authored hex divided
+  by its own luminance, so a hue choice cannot smuggle in an exposure change — the same
+  energy-neutral trick P2 used on the environment). `paint` families keep the palette as paint and
+  take the SURFACE from the scan: all three maps still consumed, the albedo reduced to luminance
+  and renormalised to a mean of 0.75 with the material colour carrying the reciprocal. The hut is
+  the red it has always been and now has a lap shadow every 140 mm.
+
+- **THE COLOUR IS THE CACHE KEY, WHICH WORKS AND ALMOST DIDN'T — GREP THE HEX, NOT JUST THE NAME.**
+  `mat()` caches by colour, so registering a family against a hex claims every surface painted that
+  hex, and I said so in the design note and then grepped `PAL.gravel` and got two sites. There are
+  five: three of them write the raw `0x9B9891`. The material census caught both consequences —
+  **half the 26-stone loose scatter would have gone scanned while its siblings stayed on the
+  procedural speckle canvas**, which is precisely the defect the grit-pebble assertion was written
+  to catch reappearing in a different scatter one registry later; and **the ski lodge chimney would
+  have been rendered in driveway gravel.** Fixed both ways: `0x8E8B84` joined the gravel family so
+  both scatters are uniform, and the lodge chimney took the hut chimney's grey — which also took
+  brick from one surface to two.
+
+- **MY OWN ASSERTIONS WERE WRONG THREE TIMES BEFORE THE CODE WAS, AND ALL THREE WERE LAW 15.**
+  A sphere's u does NOT span 1.0 — three offsets the pole rows by half a segment — so "want 2*pi*r"
+  failed on correct geometry. A source check for `0x9E5442` matched THE COMMENT EXPLAINING ITS
+  REMOVAL. And `boxes>=8` was a bound fitted to a number one build happened to produce; it is a
+  coverage check now (every family box measured, none skipped) rather than a count. Derive the
+  bound from how the value is CONSTRUCTED — and where three's own layout is the convention, build a
+  pristine geometry with the same parameters and multiply its span by the metre factor, because
+  that cannot be wrong about a convention it IS.
+
+- **THE rbox WEATHERBOARD FIX, AND TWO WRONG CUTS AT IT.** An ExtrudeGeometry's UVs are already in
+  model units, which is what texel density wants — but three lays the cap faces down as (x,y) and
+  the side walls as (y,-z), so world Y lands on V on the caps and on U on the two end walls.
+  glassRamp's comment records that defect and works around it. For a flat colour it is invisible;
+  for WEATHERBOARD it turns the laps ninety degrees on the hut's gable ends. Cut one filtered on
+  vertex normal over the whole geometry and swapped LID vertices (a 7 m wall face read 7.07 on V).
+  Cut two scoped that to the side-wall group and fixed nothing, because **measured, all three
+  normal-dominance buckets inside that group span the same 7.07** — three bevel segments of blended
+  normal contaminate every bucket with its neighbours. The normal is simply not a discriminator on
+  a rounded box. What IS exact is the UV: three writes side-wall u as the RAW local coordinate, so
+  a vertex whose u equals its own position.y is on a vertical end wall. Decided per triangle by
+  majority. Audited: 924 verts reoriented, 924 already horizontal, **zero wrong**, lids identical
+  to the float.
+
+- **I READ A FRAME AS A BUG AND IT WAS RIGHT.** 19_roof_follow looked to me like the corrugations
+  ran ALONG the ridge, which would be a roof that does not drain — the loudest possible way to get
+  a scanned material wrong. Measured instead of squinted: U runs along world X (the ridge) and V
+  runs down the pitched slope, so the ribs run down the slope, correctly, at a 79 mm pitch against
+  a real sheet's 76 mm. It is an assertion now, on every pitched panel, because the direction is a
+  fact about roofs and not a thing to re-litigate by eye.
+
+- **THE SWEEP, BECAUSE "REMEMBER TO CALL THE HELPER" IS THE WRONG SHAPE OF FIX.** Putting the UV
+  rescale in box/cyl/sph covered the overwhelming majority of the world and MISSED THE HUT ROOF —
+  the two gable panels and their twelve ridge battens are built with `new THREE.Mesh(new
+  THREE.BoxGeometry(...))` directly. The battery found it: 7 family boxes where there should have
+  been more, and a 1.000x1.000 span printed on a 7.8 m roof panel. It is a post-build sweep over
+  what was actually BUILT now, idempotent via a mark on the geometry, with the eager calls kept for
+  meshes made after buildWorld (spawned loot, traffic).
+
+- **THE RIG REFUSES A HALF-DRESSED PAGE, and this failure is WORSE than the HDRI one it copies.** A
+  family whose three jpgs 404 keeps its authored palette colour and its authored roughness — so a
+  pass with two families missing photographs a world that is complete, plausible, and wearing flat
+  1990s colour on the car park while the hut is scanned. Nobody eyeballing thirty frames catches
+  that; the difference is a shade of grey, not a black page. `G.mats.mode` is 'scanned' only when
+  all seven land, assertBooted names the families that did not, and `NOMATS=1` asks for the pre-P3
+  look deliberately. Proven: pointing brick at a missing asset gives
+  `"partial" ... 6/7 families dressed; missing: brick (brick_wall_10)`.
+  **AND A MISSPELLED KNOB CANNOT LOOK LIKE A TUNING THAT DID NOTHING.** webrig kept a copy of the
+  seven family names for about ten minutes and let `{"families":{"asfalt":{"tint":0.8}}}` straight
+  through — `tint` is a valid KEY and `asfalt` is not a family. A list kept in two files is a list
+  that drifts, so game.mjs reports what it IGNORED and the rig refuses the pass. Both typo classes
+  now throw; a real override still shoots.
+
+- **FOURTEEN SABOTAGES, THIRTEEN RED, AND THE FOURTEENTH IS RECORDED RATHER THAN HIDDEN.** Deleting
+  uvMetres' own idempotence guard leaves the battery GREEN, because matUVSweep checks the same mark
+  before it calls, so nothing reaches it twice today. Deleting BOTH goes red with the squaring
+  visible in the numbers — the 240 m terrain reports a 57600 m UV span. The inner guard is kept as
+  defence in depth and is now LABELLED as such in the source rather than left looking load-bearing.
+  The other thirteen: a tile retuned by eye against the ledger, box UVs left at unit, an asset
+  renamed, the procedural canvas returning, a scatter split across two registries, a tint that is
+  not luminance-neutral, paint mode losing its exposure compensation, the authored roughness
+  beating the scan, ribs turned along the ridge, weatherboard turned vertical, a licence line
+  deleted, the sweep removed, and both UV guards removed.
+
+- **"98 INTERACTABLES" IS NOT A REGRESSION AND I PROVED IT RATHER THAN ASSERTING IT.** harness-smoke
+  printed 100 before and 98 after, with `final chaos 580` and the boot counts (64/21/29) identical.
+  Adding a SINGLE EMPTY `new THREE.Object3D()` to the untouched baseline moves the same printout
+  100 -> 99, also at chaos 580. three draws Math.random for every object's uuid, so the end-of-run
+  count is stream-sensitive by construction (FLAKES law 15) and carries no information about
+  correctness. The invariants that do — chaos, boot counts, every assertion in nine batteries —
+  are unmoved.
+
+- **I POLLUTED MY OWN PASS AND CAUGHT IT IN THE FRAMES.** I ran `BIOME=skifield node capture.mjs`
+  as a spot check, forgetting that capture.mjs has ASSIGNED PER-VANTAGE BIOMES since TODO 39 — so
+  it re-shot all thirty vantages in the ski field and overwrote the carpark pass on disk. The first
+  instrument run was therefore against a mixed directory and reported 5 missing subjects including
+  a hard zero on `09_colossal kea`; opening the frame showed a ski field where the baseline is a
+  car park. Re-shot from an emptied directory. **Every number below is from the clean pass.** This
+  is BASELINE.md's stale-composite lesson in a different folder: a stale frame is worse than a
+  missing one, because a missing frame is obviously missing.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP at
+  `c48aced312c8966239a340c6f1c0391a`, gate-selftest ALL PASS, fourteen P3 sabotages (13 red, 1
+  recorded above), bundle builds, 30/30 vantages shoot with no retakes and no GAVE UP, stability 4
+  vantages x 3 takes 0 unstable (worst 0.9998) so seven async texture fetches add no variance,
+  sidebyside 33 pairs. diff 28 compared **27 flagged** (worst 0.7439), boxdiff 12 compared 10
+  changed, pxdiff 28 compared 27 over band, subjects 16 checked **2 missing — exactly the two
+  known-red from TODO 75, no new subject regression**. The single frame diff did NOT flag is
+  `04_flight_underwing` at **ssim 1.0000** — the one vantage with no family surface in it, byte
+  for byte unchanged, which is the cleanest available statement that the swap moved what it should
+  and nothing else. **ALL OF IT LEFT FLAGGED — the look is Eric's.**

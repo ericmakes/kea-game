@@ -1,131 +1,99 @@
-# REPORT — session 15, 2026-09-03: REPLAT P2, sky and sun
+# REPORT — REPLAT P3, scanned materials (session 16, 2026-09-03)
 
-**P2 is built and certified. Every frame is flagged and nothing is re-pinned, as ordered.**
+Branch `replat-b`. Gate **CERTIFIED-SHIP** at specimen `c48aced312c8966239a340c6f1c0391a`,
+bundle `6159d4e8cdb54fb2aa038a3a472c336d`. SESSION.lock taken and released.
+**Nothing was re-pinned. 27 of 28 vantages are flagged and waiting on you.**
 
-Branch `replat-b`. Lock taken at start, released as the final act. The tip was certified BEFORE
-anything moved — gate CERTIFIED-SHIP and diff 28 compared 0 flagged — so this piece was built on a
-known-good ground rather than an assumed one.
+## SHIPPED
 
-| | |
-|---|---|
-| nine batteries | ALL PASS |
-| gate | CERTIFIED-SHIP · gate-selftest ALL PASS |
-| P2 sabotages | 6 written, 6 go red |
-| captures | 30/30, no retakes, no give-ups |
-| stability | 4 vantages x 4 takes, 0 unstable (worst 0.9981) |
-| plays | journey drives carpark → map → GO → load → ski field → to-do → ticking footer |
-| diff | 25 of 28 flagged — **for you, not re-pinned** |
-| subjects | 16 checked, 2 red **on purpose** (and one old red fixed itself) |
-| specimen | `6a6aac54d7a3d3dff61de5f634052082` src/game.mjs |
-| bundle | `372f1b98408a424e2a621b0d7f048d85` dist/kea.js |
-| frozen | `8232590523658dfc3f5a1fe59a916de0` **unchanged** |
+**REPLAT P3 — scanned materials.** Seven CC0 PBR sets from Poly Haven replace the procedural
+canvas textures on grass, gravel, asphalt, weatherboard, corrugated iron, brick and snow. Full
+albedo + normal + roughness on every family. 21 files, 16 MB, every one md5-verified against the
+publisher's API at import and recorded in `assets/LICENCES.md` before a line of code was written.
 
-## WHAT TO LOOK AT FIRST
+| family | set | tile | mode | texel |
+|---|---|---|---|---|
+| grass | withered_grass | 2.000 m | paint | 1.95 mm |
+| gravel | gravel_floor_02 | 2.000 m | scan | 1.95 mm |
+| asphalt | asphalt_02 | 3.000 m | scan | 2.93 mm |
+| weatherboard | dark_planks | 2.000 m | paint | 1.95 mm |
+| corrugate | corrugated_iron_02 | 2.700 m | paint | 2.64 mm |
+| brick | brick_wall_09 | 2.010 m | scan | 1.96 mm |
+| snow | snow_02 | 2.000 m | scan | 1.95 mm |
 
-`gauntlet/reference/pairs/` — 25 sidebyside composites, and **eight of them are new because that
-tool had no Birds of War pair in it at all.** The one instrument whose entire job is "closer to
-THAT?" could not put the wall you named beside the game. Start with:
+Snow is the seventh and was not in your six: the game has a whole ski field and `PAL.snow` was
+carrying a procedural canvas exactly like the other six.
 
-- `01_carpark_wide__ref_bow_00.png` — daylight
-- `06_skyline__ref_bow_04.png` and `11_trailhead__ref_bow_04.png` — warmth and haze
-- `07_jam__ref_bow_06.png` and `12_seal_midpeel__ref_bow_06.png` — shadow softness
+**Texel density is derived, not dialled.** `tileM` is the publisher's own published real-world
+size, and a battery cross-checks it against the millimetres in LICENCES.md. Geometry UVs are
+rescaled into metres and the textures repeat at 1/tileM, so a texel is ~2 mm across on every
+surface in the game — which is the right number for a game played at bird height, since
+ref_bow_02 and ref_bow_03 are both shot from about 300 mm up.
 
-`gauntlet/reference/pairs/p2-strips/` — 24 frames, every taste call I made, each labelled with the
-numbers that produced it and `LOCKED` on the one I shipped. Nothing here was shipped unseen.
+## FRAMES TO EYEBALL — the three you named
 
-## MY HONEST READ ON YOUR THREE FRAMES
+- `gauntlet/reference/pairs/01_carpark_wide__ref_bow_00.png` — brick/weatherboard target
+- `gauntlet/reference/pairs/02_hut_snow__ref_bow_00.png`
+- `gauntlet/reference/pairs/07_jam__ref_bow_06.png` — metal/asphalt target
+- `gauntlet/reference/pairs/12_seal_midpeel__ref_bow_06.png`
+- `gauntlet/reference/pairs/05_tussock_ground__ref_bow_02.png` — grass, at bird height
+- `gauntlet/reference/pairs/24_verge_paddle__ref_bow_02.png`
 
-**ref_bow_00, daylight.** Warmth and coloured shade have moved genuinely toward it. The remaining
-gap is overwhelmingly **material and geometry**, not light: the reference puts its daylight on
-brick, weatherboard and foliage, and throws dappled shadow off a leafy caster. We have flat
-untextured colour on rounded primitives and no leafy caster anywhere. That is P3–P6.
+And the two that show the most new material per pixel:
 
-**ref_bow_04, warmth.** The closest of the three. Distance now hazes on an exponential curve with
-no near plane to give it away — the old linear fog put the whole carpark inside a hard no-haze zone
-and then ramped, which is why the hills read as pasted on.
+- `gauntlet/capture/19_roof_follow.png` — corrugated iron at true 79 mm pitch, brick chimney,
+  red weatherboard laps, scanned stones in the tussock. The single best frame in the set.
+- `gauntlet/capture/07_jam.png` — the road, at bird height, reading as a road.
 
-**ref_bow_06, shadow softness.** The softness is right; **the contrast is not.** Shadows are real,
-soft-edged and correctly placed, and they are gentler than the reference. Ratio variant C is the
-closer answer and it is already shot — `p2-strips/ratio_C_stronger__*.png`. That is a one-constant
-change if you want it.
+## THREE THINGS I WANT YOUR CALL ON
 
-## THE DECISION I WANT FROM YOU
+1. **Tiling repetition on the car park.** `asphalt_02`'s tar cracks repeat every 3 m, about 13
+   times across the 40 m slab. On the road they read as expansion joints and are almost a gain; on
+   the slab they are a repeat. Every fix is bigger than P3 — a breakup layer, a stochastic or
+   triplanar sample, or a 4 m tile at coarser texel — and every one is a taste call, so I measured
+   it and left it. Visible at 01.
+2. **The tints.** Four `scan` families wear the NZ palette as a luminance-neutral hue push:
+   asphalt 0.45, snow 0.55, gravel 0.35, brick 0.20. 0 is the raw scan and 1 is the full palette
+   hue at the scan's own brightness. They are shootable without a rebuild —
+   `KEAMATS='{"families":{"asphalt":{"tint":0.8}}}'` — if you want a strip.
+3. **The ski tow-top anchor block** is an old concrete block that shares `PAL.gravel`, so it now
+   wears driveway gravel. Defensible on a weathered aggregate block, and the alternative is
+   inventing a concrete family P3 was not asked for. Visible at 28. Say the word either way.
 
-**The sky dome is now the only thing in the frame that is not lit** (TODO 76). It is
-MeshBasicMaterial with `fog:false` — authored art, a saturated blue tuned to the palette your
-vividness law names. Everything else is lit by a measured HDRI and hazed by real fog, so the seam
-shows precisely where the reference is least like us: ref_bow_00 and _04 both have a blown, pale,
-warm sky, and the dome stays a confident blue.
+## WHAT IS STILL SHORT, AND WHY IT IS NOT P3's
 
-**REPLAT §3 and ARTBIBLE's vividness law genuinely disagree here, and a real NZ alpine sky IS deep
-blue.** No tuning satisfies both, so I did not pick. Three options are in TODO 76; my
-recommendation is the middle one — tune only the dome's LOW band toward the fog colour so the
-horizon stops being a seam, keep `skyTop` saturated. Small, reversible, and it does not touch the
-vividness law at altitude. Worth a strip at 06 and 11.
+- The grass scan is barely visible at the wide vantages, because 42,000 cone blades stand on top
+  of it. That is P4's brief exactly, and the scan is what P4's blades will stand in.
+- Brick rests on two chimneys. ref_bow_00 is a brick HOUSE and the game has no masonry wall — the
+  gap is geometry, which is P6. The family is sourced, licensed, tiled and proven so P6 opens with
+  it working instead of discovering on the day that it has no brick.
+- Not one prop changed. ref_bow_03's bin plastic is a MODEL question: P6.
+- The pale tarmac ellipses still read as puddles at 01. Pre-existing PHASE 1 gap, untouched.
 
-## THE FINDINGS THAT MATTER
+## VERIFIED
 
-**The carpark could not receive a shadow, and never has.** `{noshadow:true}` turns off cast AND
-receive. The slab, its apron and its bay markings all used it, so every car in 01, 07 and 12 has
-been casting dutifully into a surface that could not take a shadow. ARTBIBLE lists "no cast shadows
-anywhere" as a GAP and treats it as work not yet done — it was one flag per surface. The road and
-the ski-field slab already did this correctly; the carpark was simply missed.
+Nine batteries ALL PASS; gate CERTIFIED-SHIP; gate-selftest ALL PASS; **fourteen P3 sabotages, 13
+red and the 14th recorded in ARTBIBLE rather than hidden**; bundle builds; 30/30 vantages shoot
+with no retakes and no GAVE UP; stability 4 vantages x 3 takes, 0 unstable (worst 0.9998), so seven
+async texture fetches add no variance; sidebyside 33 pairs.
 
-**`sun.shadow.radius=3` has been decorative since the day it was written.** PCFSoftShadowMap
-ignores `shadow.radius` outright. VSM is the only three shadow map whose softness is a parameter,
-and at zero ambient its penumbra is clean where PCFSoft's is dithered.
+    diff       28 compared, 27 flagged, worst 0.7439
+    boxdiff    12 compared, 10 changed
+    pxdiff     28 compared, 27 over band
+    subjects   16 checked, 2 missing — exactly the two known-red from TODO 75, no new regression
 
-**Your fill and rim lights were the thing erasing the shadows.** They are directional lights that
-do not cast — authored to fake directional interest back when nothing cast — so every unit they
-carried filled a real shadow straight back in. Their energy moved to the sun, which does cast.
-Exposure lands on the P1 baseline to within a third of a level while YLOW falls 25.
+The one frame `diff` did **not** flag is `04_flight_underwing` at **ssim 1.0000** — the only
+vantage with no family surface in it, byte for byte unchanged. That is the cleanest statement
+available that the swap moved what it should and nothing else.
 
-**TODO 74 fixed itself, and its diagnosis was wrong.** `07_jam` carblue went 2950 → **10655**
-against an untouched floor of 3000. No floor was lowered. The real cause of every subject-classifier
-movement is not r128 pixel counts — it is that **P2 made shade coloured instead of grey**, and every
-window in `subjects.mjs` was cut on frames where shade was neutral. Measured per clause: the lodge's
-green rotates out of its HUE window (15877 → 5479 on that clause alone, saturation held, value
-improved), and the beak's `dark AND grey` conjunction is empty because the mean saturation of its
-dark pixels went **0.154 → 0.569**. Written up as TODO 75, which supersedes 74's diagnosis but
-keeps its piece.
+Two things worth knowing that are not defects: `harness-smoke` now prints 98 interactables where it
+printed 100, and I proved that is a seeded-stream artefact rather than a regression — adding a
+single empty `Object3D` to the untouched baseline moves the same number to 99, with chaos and every
+boot count identical. And my first instrument run was garbage because I re-shot the whole set with
+`BIOME=skifield` and overwrote the carpark pass; caught it by opening a frame, re-shot from an
+emptied directory, and every number above is from the clean pass.
 
-## RED ON PURPOSE — TWO SUBJECT CHECKS
+## SUGGESTED NEXT
 
-`25_preen_follow beak` 3/12 and `29_lodge_deck hutgreen` 4645/8000. **No floor and no window was
-touched.** I verified both by eye: the lodge fills a third of its frame and the preening bird is
-centre-frame. Both fail conservatively — they under-report presence, so they still cannot pass a
-frame whose subject is genuinely gone. Recalibration is TODO 75 and it needs your authority,
-because the windows encode an assumption P2 deliberately retired.
-
-## FOUR MISTAKES OF MINE, ALL CAUGHT BY MEASURING AGAIN
-
-Recorded because each one nearly shipped a wrong number or a wrong story.
-
-1. A 600s capture "hang" was **124 leaked Chrome processes** from earlier killed runs starving the
-   machine — not a code fault. One shot alone ran in 5.9s. Your own Chrome was left alone; the test
-   browsers were told apart by `--headless`, not by name.
-2. A shadow probe measured 252,475 px of "shadow" that was **the to-do panel**, which opened
-   because the probe did not replicate QUIET. Void; re-run properly it is 40,601 px.
-3. I first diagnosed the subject failures as the subjects *brightening* out of a value ceiling.
-   Both had got **darker**. Splitting each window into its conjuncts gave the real cause.
-4. My own `(fill+rim)/sun` guard was first written loose enough to **forbid nothing** — a sabotage
-   restoring the old fill came back with zero findings. Re-derived from the two measured states.
-
-## ASSETS — THE FIRST BINARIES IN THE REPO
-
-Three Poly Haven HDRIs, all CC0, 4.7MB, `assets/LICENCES.md` written as REPLAT requires. **Each
-was verified against the publisher's own md5 taken from the API, not from the downloaded file**, and
-the hash is recorded so a later session can re-verify rather than trust. Three because the sky was a
-taste call and went to a strip; `KEASKY='{"hdri":"..."}'` reshoots any of them without needing this
-session's network access back. `dry_field` looked warmest and is measurably the worst fit — its sun
-sits at 20.2° elevation against the game's 39.5°, so its light would contradict the shadows.
-
-## SUGGESTED NEXT THREE
-
-1. **Judge this set and re-pin it** (or ask for ratio variant C first, then re-pin). Everything is
-   flagged and waiting; P3 should not be built on an unjudged light model.
-2. **TODO 76, the sky dome** — the last P2-shaped gap, and the one call I could not make for you.
-3. **P3, scanned materials.** It is where the rest of the ref_bow_00 gap actually lives, and the
-   asset tier, the licence ledger and the `publicDir` pipeline this piece built are exactly what it
-   needs. TODO 75 (subject recalibration) is best done in the same breath, since P3 moves surface
-   colour again and the windows will need cutting once, not twice.
+P4 — instanced grass. It is the piece the P3 ground was built to sit under, and it is the biggest
+remaining gap to ref_bow_02 and ref_bow_03.

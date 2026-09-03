@@ -454,14 +454,30 @@ C.section('THE WHITE THING BEHIND THE BIRD IS CARPARK GRIT');
   ok(level.length===g.length,'and NOTHING else unparented is loose on the carpark slab - '+
      level.length+' spheres there, all 26 of them named grit');
 
-  // TEXTURE: the scatter alternates two greys, and only one of them was registered for the
-  // speckle detail map, so half the pebbles rendered flat and smooth while their siblings were
-  // stone. Read the registry rather than restating it (law 10).
+  /* TEXTURE: the scatter alternates two greys, and only one of them was registered for the
+     speckle detail map, so half the pebbles rendered flat and smooth while their siblings were
+     stone. Read the registry rather than restating it (law 10).
+     RECALIBRATED AT REPLAT P3, WITH EVIDENCE, AND THE CONTRACT IS THE SAME CONTRACT. Both greys
+     left MAPKIND together and arrived in MATFAM together: they are the scanned `gravel` family
+     now (gravel_floor_02, CC0, licensed in assets/LICENCES.md) instead of two registrations of one
+     procedural speckle canvas. The claim this assertion was written to defend has not moved one
+     inch — BOTH greys carry the SAME surface treatment, so no pebble renders as flat smooth putty
+     next to a textured sibling — so what changed is the registry it reads, not the bar it sets.
+     It is also strictly stronger than it was, because it now checks the two greys agree with EACH
+     OTHER rather than each matching a hardcoded kind name: half the scatter quietly landing in a
+     different family is the modern shape of the original defect, and the old form could not see
+     it. The MAPKIND half is kept as an exclusion — a colour in both registries would take
+     whichever branch mat() tested first, which is the one way this could go wrong silently. */
   const tints=[...new Set(g.map(p2=>p2.color))];
   ok(tints.length===2,'the scatter uses two greys ('+tints.map(c=>'0x'+c.toString(16).toUpperCase()).join(' ')+')');
-  let mapped=0; for(const c of tints) if(X.MAPKIND[c]==='speckle')mapped++;
-  ok(mapped===2,'and BOTH are registered speckle now, so no pebble renders as flat smooth putty ('+
-     mapped+'/2)');
+  const famOf=c=>X.MATFAM[c];
+  let mapped=0; for(const c of tints) if(famOf(c)==='gravel')mapped++;
+  ok(mapped===2,'and BOTH are the scanned gravel family now, so no pebble renders as flat smooth '+
+     'putty ('+mapped+'/2, families '+tints.map(c=>famOf(c)||'none').join(' + ')+')');
+  ok(tints.every(c=>X.MAPKIND[c]===undefined),
+     'and NEITHER is still registered for a procedural canvas — one colour in both registries '+
+     'would take whichever branch mat() happened to test first ('+
+     tints.map(c=>X.MAPKIND[c]||'-').join(' + ')+')');
 }
 
 C.section('THE GRASS TINT IS SEEDED, NOT A LOTTERY');
@@ -4037,6 +4053,421 @@ C.section('REPLAT P2: sky and sun');
   { const ratio=(SKY.fillIntensityDay+SKY.rimIntensityDay)/SKY.sunIntensityDay;
     ok(ratio<0.12,'the non-casting fills stay under 0.12 of the sun, so cast shadows still read '+
        '(ratio '+ratio.toFixed(3)+', flat was 0.207, ceiling 0.12)'); }
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
+}
+
+/* ============================================================
+   REPLAT P3 — SCANNED MATERIALS. The recipe becomes law.
+   ============================================================
+   P3's proof contract is three claims: every material family resolves a REAL texture set, the
+   licences are recorded, and no procedural canvas is left on a swapped family. Plus the thing the
+   brief puts first and no earlier piece could assert at all — CORRECT TEXEL DENSITY PER SURFACE.
+
+   THIS SECTION EXISTS BECAUSE THE DENSITY MATHS IS ARITHMETIC, NOT A PHOTOGRAPH. A texture only
+   lands in a browser, so the obvious instinct is that "the gravel is the right size" is an eyeball
+   judgement. It is not: the density chain is (UVs rescaled to metres) x (repeat = 1/tileM), and
+   the first half runs in node exactly as it runs on a GPU. So the tiling can be PROVEN, per
+   geometry kind, on the real meshes the real world builds — and what is left for Eric's eye is
+   whether 2 m of gravel is the right LOOK, which is the only half that was ever taste.
+
+   IT READS THE RECIPE, NEVER A SECOND COPY OF IT (law 10). Not one tile size or tint is retyped
+   below. The one deliberate exception is the LICENCE CROSS-CHECK, which compares MATS.tileM
+   against the millimetres written in assets/LICENCES.md — two independent records of the same
+   fact, on purpose, because "no asset lands without its licence line" is only worth something if
+   the line and the code cannot drift apart. */
+C.section('REPLAT P3: scanned materials');
+{
+  const MATS=X.MATS, FAM=MATS.families, NAMES=Object.keys(FAM);
+  const near=(a,b,eps,what)=>ok(Math.abs(a-b)<=(eps||1e-6),what+' ('+a+' vs '+b+')');
+  X.boot({biome:'carpark'}); tick(4);
+
+  ok(!!MATS&&!!FAM,'the material recipe is exported as one named block (KEAGAME.MATS)');
+  ok(NAMES.length===7,'seven families, which is REPLAT P3 six plus snow ('+NAMES.join(', ')+')');
+
+  // ---- EVERY FAMILY RESOLVES A REAL TEXTURE SET ----
+  /* The strongest claim a headless battery can make about a file it cannot decode: the file is
+     THERE, on disk, at the exact path the browser will ask for, and it is not a stub. Three maps
+     per family, so a family that quietly shipped with two is red here rather than flat in a
+     photograph nobody ablated. */
+  { const fs=require('fs'), path=require('path');
+    const root=path.resolve(__dirname,'../..');
+    let files=0, bytes=0;
+    for(const f of NAMES){ const F=FAM[f];
+      ok(typeof F.asset==='string'&&F.asset.length>0,f+' names a real asset ('+F.asset+')');
+      ok(F.mode==='scan'||F.mode==='paint',f+' declares a mode the pipeline knows ('+F.mode+')');
+      for(const suf of ['diff','nor_gl','arm']){
+        const rel='assets/'+MATS.dir+F.asset+'_'+suf+'_'+MATS.res+'.jpg';
+        const p=path.join(root,rel);
+        const st=fs.existsSync(p)?fs.statSync(p):null;
+        ok(!!st&&st.size>20000,f+': '+rel+' is on disk and is a real image ('+
+           (st?st.size+' bytes':'MISSING')+')');
+        if(st){files++;bytes+=st.size;} } }
+    ok(files===21,'all 21 map files present — seven families x albedo, normal, ARM ('+files+'/21)');
+    /* AND THEY ARE THE JPEGS THEY CLAIM TO BE. A zero-length or half-downloaded file passes a size
+       check on a bad day; the SOI marker does not. Cheap, and it is the difference between "a file
+       exists" and "a texture will decode". */
+    for(const f of NAMES){ const p=path.join(root,'assets/'+MATS.dir+FAM[f].asset+'_diff_'+MATS.res+'.jpg');
+      const b=fs.existsSync(p)?fs.readFileSync(p,{start:0,end:1}):null;
+      ok(!!b&&b[0]===0xFF&&b[1]===0xD8,f+' albedo starts with a JPEG SOI marker, so it will decode'); }
+    ok(bytes>10e6&&bytes<40e6,'the texture tier is the size LICENCES.md says it is ('+
+       (bytes/1048576).toFixed(1)+' MB)'); }
+
+  // ---- THE LICENCE LINE AND THE CODE AGREE ----
+  /* "No asset lands without its licence line" (REPLAT.md section 1) is the condition the whole
+     external-asset tier lands under, so it is asserted rather than remembered. Two directions:
+     every asset the code uses is written down, and the real-world size it is tiled at is the size
+     the ledger records. The second is the one with teeth — tileM is the texel density, and a
+     density retuned by eye while the ledger still says 2000 mm is a lie that renders fine. */
+  { const fs=require('fs'), path=require('path');
+    const lic=fs.readFileSync(path.join(__dirname,'../../assets/LICENCES.md'),'utf8');
+    for(const f of NAMES){ const F=FAM[f];
+      ok(lic.indexOf('`'+F.asset+'`')>=0,f+': '+F.asset+' has a licence entry in assets/LICENCES.md');
+      for(const suf of ['diff','nor_gl','arm'])
+        ok(lic.indexOf(F.asset+'_'+suf+'_'+MATS.res+'.jpg')>=0,
+           f+': '+suf+' is listed by filename in the ledger, with its md5');
+      /* the ledger writes millimetres, the recipe writes metres — compared, not copied */
+      const m=new RegExp('`'+F.asset+'`[\\s\\S]{0,900}?Published real-world size: \\*\\*([0-9.]+) x').exec(lic);
+      ok(!!m,f+': the ledger records a published real-world size');
+      if(m) near(F.tileM,parseFloat(m[1])/1000,5e-4,
+        f+': the tile the game uses IS the size the publisher published and the ledger recorded'); }
+    ok(/CC0/.test(lic),'and the tier is recorded as CC0'); }
+
+  // ---- NO PROCEDURAL CANVAS LEFT ON A SWAPPED FAMILY ----
+  /* Three claims in one: the two registries are disjoint, every family actually claims some
+     colour or surface, and the three detailTex kinds the swap retired are GONE FROM THE FILE
+     rather than merely unreferenced. The last one is a source read, deliberately and labelled —
+     a dead branch in a texture builder is a trap, because the next person to add a road finds a
+     plausible-looking `asphalt` kind sitting there and uses it. */
+  { const both=Object.keys(X.MATFAM).filter(c=>X.MAPKIND[c]!==undefined);
+    ok(both.length===0,'no colour is registered in BOTH registries — a colour in both takes '+
+       'whichever branch mat() tested first ('+both.join(',')+')');
+    const claimed={}; for(const c of Object.keys(X.MATFAM))claimed[X.MATFAM[c]]=(claimed[X.MATFAM[c]]||0)+1;
+    /* grass and snow also reach the terrain planes, which do not go through mat() at all, so the
+       colour registry is not where their claim lives — G.mats is. Assert through the state. */
+    for(const f of NAMES) ok((G.mats.families[f]||{}).materials>0,
+      f+' actually claims a surface in the built world ('+((G.mats.families[f]||{}).materials|0)+
+      ' material(s))');
+    const src=require('../2026-08-26/keasrc').specimenSource();
+    for(const dead of ['asphalt','corrugate','snowtex'])
+      ok(src.indexOf("kind==='"+dead+"'")<0,
+         "the procedural '"+dead+"' canvas is GONE from detailTex, not merely unreferenced");
+    for(const live of ['grain','speckle','brushed','panel','weave'])
+      ok(src.indexOf("kind==='"+live+"'")>=0,
+         "and '"+live+"' is untouched — it is not a family REPLAT P3 names ("+live+")");
+    /* ANCHOR ON THE CALL, NOT ON THE COLOUR. The first cut of this asserted the hex 0x9E5442 was
+       absent from the file and went red against the COMMENT that explains why it was removed —
+       a test matching the prose written about it rather than the code. The claim is that the five
+       lap-line boxes are not built any more, so the geometry call is the anchor. */
+    ok(!/box\(7\.02,0\.02,5\.42,/.test(src),
+       'the five fake weatherboard lap lines are gone; the scan has real ones at real spacing'); }
+
+  // ---- PROVENANCE IS IN SCENE STATE, THE SAME SHAPE AS G.ibl ----
+  { ok(!!G.mats,'MATERIAL PROVENANCE IS IN SCENE STATE (G.mats)');
+    ok(G.mats.mode==='none'&&G.mats.loaded===0,
+       'headless, the slot is declared and unclaimed — the browser fills it ('+G.mats.mode+')');
+    for(const f of NAMES){ const r=G.mats.families[f]||{};
+      ok(r.asset===FAM[f].asset&&r.tileM===FAM[f].tileM&&r.mode===FAM[f].mode,
+         f+': the state block reports the recipe it was built from ('+r.asset+' @ '+r.tileM+'m)'); } }
+
+  // ---- TEXEL DENSITY: THE UVs CARRY METRES, ON EVERY GEOMETRY KIND ----
+  /* This is the claim the brief leads with, and it is checked on the REAL meshes the REAL world
+     built — walk the scene, find every mesh whose material belongs to a family, and measure the
+     UV span against the world span it covers. A texel is tileM/1024 metres across if and only if
+     one unit of UV is one metre of surface, so that is what is measured: the span, per axis, per
+     face, against the geometry's own parameters. Nothing here trusts the helper that wrote them. */
+  { const fam=[]; G.scene.traverse(o=>{ const m=o.material;
+      if(o.isMesh&&m&&m.userData&&m.userData.matFamily&&o.geometry&&o.geometry.attributes.uv)
+        fam.push(o); });
+    ok(fam.length>40,'the built world carries a decent population of family meshes ('+fam.length+')');
+
+    const spanOf=(g,lo,hi)=>{ const uv=g.attributes.uv; let u0=1e9,u1=-1e9,v0=1e9,v1=-1e9;
+      for(let i=lo;i<hi;i++){ const u=uv.getX(i),v=uv.getY(i);
+        if(u<u0)u0=u; if(u>u1)u1=u; if(v<v0)v0=v; if(v>v1)v1=v; }
+      return {u:u1-u0,v:v1-v0}; };
+
+    /* BOXES — the case that matters most, because a box's UVs are 0..1 PER FACE and a shared
+       texture would therefore give a 40 m car park slab and a 0.7 m chimney the same tile count.
+       three lays the six faces down in a fixed order (px, nx, py, ny, pz, nz) with u along the
+       first extent and v along the second, so every face is checked against ITS OWN pair. */
+    { let boxes=0, faces=0, bad=[];
+      for(const o of fam){ const g=o.geometry; if(g.type!=='BoxGeometry')continue;
+        const p=g.parameters;
+        if(p.widthSegments!==1||p.heightSegments!==1||p.depthSegments!==1)continue;
+        boxes++;
+        const ext=[[p.depth,p.height],[p.depth,p.height],[p.width,p.depth],
+                   [p.width,p.depth],[p.width,p.height],[p.width,p.height]];
+        for(let f=0;f<6;f++){ const s=spanOf(g,f*4,f*4+4); faces++;
+          if(Math.abs(s.u-ext[f][0])>1e-4||Math.abs(s.v-ext[f][1])>1e-4)
+            bad.push(o.material.userData.matFamily+' face'+f+' '+s.u.toFixed(3)+'x'+s.v.toFixed(3)+
+                     ' want '+ext[f][0]+'x'+ext[f][1]); } }
+      /* THE BAR IS COVERAGE, NOT A COUNT. The first cut asserted `boxes>=8` and went red at 7,
+         which is law 15's time bomb in miniature: a bound fitted to a number one build happened to
+         produce. What is worth asserting is that the measurement reached EVERY family box in the
+         world and that more than one family contributed — so the day a family box appears with
+         non-default segments, this says so instead of quietly measuring six of seven. */
+      const allBoxes=fam.filter(o=>o.geometry.type==='BoxGeometry');
+      const fams=new Set(allBoxes.map(o=>o.material.userData.matFamily));
+      ok(boxes===allBoxes.length,'EVERY family box in the built world was measured, none skipped '+
+         'for odd segments ('+boxes+'/'+allBoxes.length+', '+faces+' faces)');
+      ok(fams.size>=3,'and they span several families, so this is not one prop passing for the set ('+
+         [...fams].join(', ')+')');
+      ok(bad.length===0,'EVERY FACE OF EVERY FAMILY BOX SPANS ITS OWN WORLD SIZE IN UV METRES'+
+         (bad.length?' — '+bad.slice(0,3).join(' | '):' ('+faces+'/'+faces+')')); }
+
+    /* THE CARPARK SLAB BY NAME, because it is the surface every opening vantage is looking at and
+       because a 40 x 22 m box is where a per-face bug is largest. Derived from the geometry's own
+       parameters, per law 10 and law 15 — never from the 40 and 22 typed into buildCarpark. */
+    { const slab=fam.find(o=>o.geometry.type==='BoxGeometry'&&o.material.userData.matFamily==='asphalt'&&
+                             o.geometry.parameters.width>30);
+      ok(!!slab,'the carpark slab is an asphalt-family mesh');
+      if(slab){ const p=slab.geometry.parameters, s=spanOf(slab.geometry,8,12);  // face 2 = +Y, the top
+        near(s.u,p.width,1e-4,'its top face spans its full width in UV metres');
+        near(s.v,p.depth,1e-4,'and its full depth');
+        const tiles=p.width/FAM.asphalt.tileM;
+        ok(Math.abs(tiles-p.width/3)<1e-6,'so the asphalt tiles '+tiles.toFixed(1)+
+           ' times across a '+p.width+' m slab, at '+(FAM.asphalt.tileM/1024*1000).toFixed(2)+
+           ' mm per texel'); } }
+
+    /* THE TERRAIN PLANE, which is the other extreme: 240 m of ground on one PlaneGeometry. */
+    { const gnd=fam.find(o=>o.geometry.type==='PlaneGeometry'&&o.geometry.parameters.width>100);
+      ok(!!gnd,'the terrain plane is a family mesh (the grass scan, in paint mode)');
+      if(gnd){ const p=gnd.geometry.parameters, s=spanOf(gnd.geometry,0,gnd.geometry.attributes.uv.count);
+        near(s.u,p.width,1e-3,'the terrain spans its full width in UV metres');
+        near(s.v,p.height,1e-3,'and its full depth'); } }
+
+    /* CYLINDERS AND SPHERES ARE MEASURED AGAINST A PRISTINE GEOMETRY OF THE SAME PARAMETERS, not
+       against an arithmetic guess at three's UV layout — law 10 and law 15 together, and the first
+       cut of this section got it wrong in exactly the way those laws describe. A sphere's u does
+       NOT span 1.0: three offsets the pole rows by half a segment, so the real span is
+       1 + 1/widthSegments, and an assertion that "wants 2*pi*r" fails on correct geometry and
+       reads as a bug in the code under test. Building the untouched geometry and multiplying its
+       own span by the metre factor cannot be wrong about the convention, because it IS the
+       convention. The factor is the claim; the layout is three's business. */
+    const T=H.THREE;
+    const spanAll=g=>spanOf(g,0,g.attributes.uv.count);
+    { let cyls=0, bad=[];
+      for(const o of fam){ const g=o.geometry; if(g.type!=='CylinderGeometry')continue;
+        const p=g.parameters, ref=new T.CylinderGeometry(p.radiusTop,p.radiusBottom,p.height,
+              p.radialSegments,p.heightSegments,p.openEnded);
+        /* the torso's u goes ONCE AROUND, so it carries the mean circumference (these are
+           truncated cones as often as cylinders) and its v carries the height. */
+        const torso=(p.radialSegments+1)*(p.heightSegments+1);
+        const got=spanOf(g,0,torso), want=spanOf(ref,0,torso);
+        const circ=Math.PI*(p.radiusTop+p.radiusBottom);
+        cyls++;
+        if(Math.abs(got.u-want.u*circ)>1e-4||Math.abs(got.v-want.v*p.height)>1e-4)
+          bad.push(o.material.userData.matFamily+' '+got.u.toFixed(4)+'x'+got.v.toFixed(4)+
+                   ' want '+(want.u*circ).toFixed(4)+'x'+(want.v*p.height).toFixed(4)); }
+      ok(cyls>0,'family cylinders found to measure ('+cyls+')');
+      ok(bad.length===0,'every family cylinder torso spans its circumference by its height'+
+         (bad.length?' — '+bad.slice(0,3).join(' | '):' ('+cyls+'/'+cyls+')')); }
+
+    { let sp=0, bad=[];
+      for(const o of fam){ const g=o.geometry; if(g.type!=='SphereGeometry')continue;
+        const p=g.parameters, ref=new T.SphereGeometry(p.radius,p.widthSegments,p.heightSegments);
+        const got=spanAll(g), want=spanAll(ref); sp++;
+        if(Math.abs(got.u-want.u*2*Math.PI*p.radius)>1e-4||Math.abs(got.v-want.v*Math.PI*p.radius)>1e-4)
+          bad.push(o.material.userData.matFamily+' r'+p.radius.toFixed(3)+' '+
+                   got.u.toFixed(4)+'x'+got.v.toFixed(4)+' want '+
+                   (want.u*2*Math.PI*p.radius).toFixed(4)+'x'+(want.v*Math.PI*p.radius).toFixed(4)); }
+      ok(sp>0,'family spheres found to measure ('+sp+' — the carpark grit)');
+      ok(bad.length===0,'every family sphere spans its equator by its meridian'+
+         (bad.length?' — '+bad.slice(0,3).join(' | '):' ('+sp+'/'+sp+')')); }
+
+    /* AND NOTHING OUTSIDE A FAMILY WAS TOUCHED. The other half of the same claim, and the one that
+       keeps this piece inside its brief: a non-family mesh must still carry three's own 0..1 UVs,
+       because P3 was asked to swap seven families and not to re-tile the whole game. */
+    { let plain=0, moved=[];
+      G.scene.traverse(o=>{ const m=o.material, g=o.geometry;
+        if(!o.isMesh||!g||g.type!=='BoxGeometry'||!g.attributes.uv)return;
+        if(m&&m.userData&&m.userData.matFamily)return;
+        if(g.parameters.widthSegments!==1)return;
+        plain++;
+        const s=spanOf(g,0,4);
+        if(Math.abs(s.u-1)>1e-6||Math.abs(s.v-1)>1e-6)moved.push(g.parameters.width+'x'+g.parameters.height); });
+      ok(plain>50,'plenty of non-family boxes to check ('+plain+')');
+      ok(moved.length===0,'and EVERY ONE still carries three unit UVs — P3 swapped seven families, '+
+         'not the whole game'+(moved.length?' — '+moved.slice(0,3).join(' | '):'')); } }
+
+  /* ---- THE CORRUGATIONS RUN DOWN THE SLOPE, WHICH IS A FACT ABOUT ROOFS ---- */
+  /* A corrugated roof whose ribs run ALONG the ridge does not drain, and it is the single most
+     obvious way to get a scanned material wrong on a building. The direction is not a taste call
+     and it is not visible enough to trust to a glance either — I read it off 19_roof_follow as
+     WRONG and it was right, which is exactly why this is measured instead of eyeballed.
+     corrugated_iron_02's ribs run vertically in the image, so they are lines of CONSTANT U and
+     therefore run along whatever world direction V increases in. Measured on the built roof: U
+     runs along world X (the ridge) and V runs down the pitched slope, so the ribs run down the
+     slope. The claim asserted is the geometric one — V has a vertical component on a pitched
+     panel — because that is what "down the slope" means and it survives the hut moving. */
+  { let panels=0, bad=[];
+    G.scene.traverse(o=>{ const m=o.material;
+      if(!(o.isMesh&&m&&m.userData&&m.userData.matFamily==='corrugate'))return;
+      if(o.geometry.type!=='BoxGeometry')return;
+      const g=o.geometry;
+      o.updateWorldMatrix(true,false);
+      const V=[];
+      for(let i=8;i<12;i++){                          // face 2 = +Y, the four top-face vertices
+        const w=new H.THREE.Vector3(g.attributes.position.getX(i),g.attributes.position.getY(i),
+                                    g.attributes.position.getZ(i)).applyMatrix4(o.matrixWorld);
+        V.push({u:g.attributes.uv.getX(i),v:g.attributes.uv.getY(i),p:w}); }
+      let vd=null;
+      for(let a=0;a<4&&!vd;a++)for(let b=0;b<4;b++){ if(a===b)continue;
+        if(Math.abs(V[a].u-V[b].u)<1e-6&&Math.abs(V[a].v-V[b].v)>1e-6){
+          vd=V[b].p.clone().sub(V[a].p).normalize(); break; } }
+      if(!vd)return;
+      panels++;
+      /* a PITCHED panel must have V leaning up or down the pitch; a flat one cannot and is
+         excluded by the same test rather than by a name. */
+      const pitched=Math.abs(vd.y)>0.05;
+      if(pitched&&Math.abs(vd.y)<0.3)
+        bad.push(m.userData.matFamily+' '+vd.x.toFixed(2)+','+vd.y.toFixed(2)+','+vd.z.toFixed(2)); });
+    ok(panels>=3,'corrugate panels found to measure ('+panels+')');
+    ok(bad.length===0,'THE CORRUGATIONS RUN DOWN THE SLOPE on every pitched panel, not along the '+
+       'ridge — a roof that does not drain is the loudest way to get a scanned material wrong'+
+       (bad.length?' — '+bad.join(' | '):''));
+    /* AND THE PITCH IS A REAL CORRUGATE PITCH. 2.7 m over 1024 px with ~34 ribs is 79 mm, against
+       a real sheet's 76 mm. Recorded as a bound on the TILE, because that is the constant a future
+       session would move. */
+    ok(FAM.corrugate.tileM>2.0&&FAM.corrugate.tileM<3.4,
+       'and the sheet tiles at a real corrugate pitch — '+FAM.corrugate.tileM+' m over 34 ribs is '+
+       (FAM.corrugate.tileM/34*1000).toFixed(0)+' mm against a real sheet 76 mm'); }
+
+  // ---- THE rbox UV VARIANT: WORLD Y ON V ON EVERY FACE ----
+  /* An ExtrudeGeometry's UVs are already in model units, which is exactly what texel density
+     wants. What they are NOT is consistently oriented: three's WorldUVGenerator lays the cap faces
+     down as (x,y) and the side walls as (y,-z), so world Y lands on V on the caps and on U on the
+     two end walls. glassRamp's comment records that defect and works around it; for a colour it is
+     invisible, but for WEATHERBOARD it turns the laps ninety degrees on the hut's gable ends.
+     The variant geometry is cached under its own key, so this also proves the plain geometry every
+     other caller shares was not poisoned on the way past. */
+  { const wall=X.roundedBoxGeo(7,2.6,5.4,0.1,true), plain=X.roundedBoxGeo(7,2.6,5.4,0.1);
+    ok(wall!==plain,'the metre-UV rbox variant is a SEPARATE cached geometry, so the plain one '+
+       'every other caller shares cannot be poisoned by it');
+    /* THE CLAIM IS EXACT, SO THE ASSERTION IS EXACT — and the two cuts before this one were not.
+       Both tried to identify the end walls by NORMAL DOMINANCE and both went red against correct
+       code, because smoothFacetNormals blends normals across three bevel segments and every
+       dominance bucket inside the side-wall group ends up spanning the same 7.07 m. Law 15's own
+       words: derive the bound from how the value is CONSTRUCTED.
+       WHAT IT IS CONSTRUCTED FROM. three's WorldUVGenerator writes a side wall's u as the RAW
+       local coordinate it picked — position.y on a wall of constant x, position.x on a wall of
+       constant y — and v as 1-z either way. So every side-wall vertex must satisfy exactly one of
+       two identities, and they are float equalities rather than tolerances:
+           v === position.y     the vertical end walls, reoriented: world Y is on V
+           u === position.x     the horizontal walls, untouched: both axes already horizontal
+       A vertex satisfying NEITHER is a wall carrying world Y on U — which is the defect, and it is
+       what the plain geometry has on exactly half its perimeter. */
+    const audit=g=>{ const gr=(g.groups||[]).find(x=>x.materialIndex===1);
+      const lo=gr?gr.start:0, hi=gr?gr.start+gr.count:0;
+      let vy=0,ux=0,neither=0;
+      for(let i=lo;i<hi&&i<g.attributes.uv.count;i++){
+        if(Math.abs(g.attributes.uv.getY(i)-g.attributes.position.getY(i))<1e-6)vy++;
+        else if(Math.abs(g.attributes.uv.getX(i)-g.attributes.position.getX(i))<1e-6)ux++;
+        else neither++; }
+      return {vy,ux,neither,n:hi-lo}; };
+    const A=audit(wall), B=audit(plain);
+    ok(A.n>1000,'the hut wall geometry has a real perimeter to measure ('+A.n+' side-wall vertices)');
+    ok(A.neither===0,'ON THE VARIANT, EVERY SIDE-WALL VERTEX CARRIES WORLD Y ON V OR IS ALREADY '+
+       'HORIZONTAL — so a weatherboard lap runs level on every face of the hut ('+A.vy+
+       ' reoriented + '+A.ux+' already horizontal, '+A.neither+' wrong)');
+    ok(A.vy>0&&A.ux>0,'and BOTH kinds are present, so it reoriented the end walls without '+
+       'flattening the ones that were right ('+A.vy+' / '+A.ux+')');
+    ok(B.neither>0,'while the plain geometry has '+B.neither+' vertices carrying world Y on U — '+
+       'the three behaviour this variant exists to correct, and the reason glassRamp rides vertex '+
+       'Y instead of a UV');
+    near(A.ux,B.ux,0,'the walls that were already right were not touched ('+A.ux+' vs '+B.ux+')');
+
+    /* AND THE LID FACES ARE UNTOUCHED, which is the regression the first cut actually shipped for
+       ten minutes: it swapped cap vertices near the wall's vertical edges. The 7 x 2.6 m wall face
+       must read 7 across U and 2.6 up V on BOTH geometries, to the float. */
+    { const lid=(g,axis)=>{ const gr=(g.groups||[]).find(x=>x.materialIndex===0);
+        const lo=gr?gr.start:0, hi=gr?gr.start+gr.count:0; let a=1e9,b=-1e9;
+        for(let i=lo;i<hi;i++){ const val=axis==='u'?g.attributes.uv.getX(i):g.attributes.uv.getY(i);
+          if(val<a)a=val; if(val>b)b=val; }
+        return b-a; };
+      /* 1e-5 AND NOT 1e-9: a BufferAttribute is Float32, so 2.6 comes back as 2.5999999046 and a
+         nine-decimal bound fails on arithmetic that is exactly right. The EQUALITY between the two
+         geometries below is still exact (tolerance 0) — that comparison is float-to-float and has
+         no decimal to lose. */
+      near(lid(wall,'u'),7,1e-5,'the variant left the WALL FACE spanning its full 7 m width on U');
+      near(lid(wall,'v'),2.6,1e-5,'and its full 2.6 m height on V');
+      near(lid(wall,'u'),lid(plain,'u'),0,'identical to the plain geometry on U, so only the '+
+        'perimeter was reoriented');
+      near(lid(wall,'v'),lid(plain,'v'),0,'and identical on V'); }
+
+    /* and the hut wall in the built world is actually using it */
+    { let hut=null; G.scene.traverse(o=>{ if(o.isMesh&&o.material&&o.material.userData&&
+        o.material.userData.matFamily==='weatherboard')hut=o; });
+      ok(!!hut,'the hut wall is a weatherboard-family mesh');
+      ok(!!hut&&hut.geometry.type==='ExtrudeGeometry',
+         'and it is the rbox extrude, whose UVs are metres already ('+(hut?hut.geometry.type:'-')+')'); } }
+
+  // ---- THE TINT AND THE PAINT NORMALISATION ARE ARITHMETIC, SO THEY ARE PROVEN, NOT EYEBALLED ----
+  /* matDress is the whole colour half of the recipe and it runs in node. What it must guarantee is
+     that neither mode moves EXPOSURE: a scan-mode tint pushes hue at constant luminance, and a
+     paint-mode colour is scaled by exactly the reciprocal of the mean the albedo was normalised
+     to. Both are checked by driving matDress with a fabricated map set and reading the material
+     back — which is also the only way to test the loaded branch without a GPU. */
+  { const T=H.THREE, lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+    /* LAW 14: read through an accessor that cannot throw. A family with no material would make
+       `S.mats[0].userData` a stack trace and no verdict, and a sabotage against this whole block
+       would then come back with ZERO findings and read as a gap in the test. The count is asserted
+       above; this returns null instead of exploding. */
+    const probe=(f)=>{ const S=X.matFam(f), m=(S.mats||[])[0];
+      if(!m||!m.userData||!m.userData.matBase)return null;
+      const base=m.userData.matBase.clone(), had=S.maps;
+      S.maps={map:{},normalMap:{},roughnessMap:{}};
+      X.matDress(m); const got=m.color.clone(), rough=m.roughness;
+      S.maps=had; X.matDress(m);                       // hand it back exactly as it was found
+      return {base,got,rough}; };
+
+    for(const f of NAMES){ const F=FAM[f], r=probe(f);
+      ok(!!r,f+': has a material to read the dressed colour back off');
+      if(!r)continue;
+      if(F.mode==='scan'){
+        near(lum(r.got),1,2e-3,f+' (scan): the tint is LUMINANCE-NEUTRAL, so choosing a hue cannot '+
+          'smuggle in an exposure change');
+        if(F.tint>0){ const hue=r.base.clone().multiplyScalar(1/(lum(r.base)||1));
+          const want=new T.Color(1,1,1).lerp(hue,F.tint);
+          near(r.got.r,want.r,1e-5,f+': and it is white lerped toward the palette hue by tint='+F.tint); }
+      } else {
+        near(lum(r.got)*MATS.paintMean,lum(r.base),1e-5,
+          f+' (paint): the colour carries exactly 1/paintMean, so an albedo normalised to '+
+          MATS.paintMean+' lands the surface back on its authored luminance');
+      }
+      near(r.rough,MATS.roughScale,1e-9,f+': with maps on, the SCAN owns roughness (material '+
+        'roughness '+r.rough+' x roughnessMap.g), not mat()\'s authored 0.82'); }
+
+    /* AND IT GOES BACK. A material that cannot return to the palette look is a material that would
+       photograph as scanned on a machine whose fetch failed, which is the exact failure assertBooted
+       exists to refuse. This also proves the probe above left the world as it found it. */
+    for(const f of NAMES){ const m=(X.matFam(f).mats||[])[0], u=(m||{}).userData||{};
+      ok(!!m&&!!u.matBase&&m.color.equals(u.matBase),
+         f+': with no maps it is the authored palette colour again (#'+
+         (m?m.color.getHexString():'-')+' vs #'+(u.matBase?u.matBase.getHexString():'-')+')');
+      near((m||{}).roughness,u.matRough,1e-9,f+': and the authored roughness'); } }
+
+  /* THE FAMILY MATERIALS MUST NOT ALSO BE NIGHT-TINTED. nightTint captures a material's colour at
+     registration and lerps it every night frame; matDress writes the same colour when the textures
+     land. Two authors for one value is the P2 note's own warning, and today the two sets are
+     disjoint — this is the tripwire for the day somebody nightTints a roof. */
+  { const bad=(G.nightMats||[]).filter(e=>e.m.userData&&e.m.userData.matFamily);
+    ok(bad.length===0,'no family material is ALSO night-tinted — matDress and nightApply would '+
+       'both own its colour ('+bad.length+')'); }
+
+  /* THE SKI FIELD BUILDS ITS OWN MATERIALS LONG AFTER THE FIRST INSTALL, which is the one ordering
+     this design has to survive: travel builds a second biome after the textures have landed, so a
+     material created LATER must dress itself on creation rather than waiting for an install that
+     already happened. Proven by building it and reading the registry back. */
+  { X.boot({biome:'skifield'}); X.startGame(1); tick(4); park();
+    ok(G.mats.families.snow.materials>0,'the ski field enrols its snow surfaces on build ('+
+       G.mats.families.snow.materials+')');
+    ok(G.mats.families.corrugate.materials>0,'and its corrugate roofs ('+
+       G.mats.families.corrugate.materials+')');
+    const gnd=G.skiGround;
+    ok(!!gnd&&gnd.material.userData.matFamily==='snow',
+       'and the ski ground itself is the snow scan, not the carpark grass ('+
+       (gnd?gnd.material.userData.matFamily:'-')+')'); }
 
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
 }

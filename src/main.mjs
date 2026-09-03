@@ -45,6 +45,23 @@ if (!cfg.nosky && !globalThis.__KEA_NOSKY__) {
   }
 }
 
+/* THE SCANNED MATERIALS go on after the sky and before the film camera, for the same reason and
+   in the same shape. They are AWAITED because the capture rig photographs a settled page and a
+   frame taken half-dressed — three families scanned, four still flat palette colour — would be
+   neither look and would be impossible to judge. Seven sets, 16 MB, one fetch each.
+   IT CANNOT TAKE THE GAME DOWN. Every family material was built with its authored palette colour
+   and roughness, so a failed install leaves exactly the world P2 shipped; G.mats.mode stays
+   'none' and says so. __KEA_NOMATS__ turns it off for a like-for-like comparison against the
+   pre-P3 look, which is how the P3 variant strips were shot. */
+if (!cfg.nomats && !globalThis.__KEA_NOMATS__) {
+  try {
+    const { installMaterials } = await import('./materials.mjs');
+    await installMaterials(KEAGAME);
+  } catch (e) {
+    console.error('materials: scanned PBR sets failed to install, staying on palette colour —', e);
+  }
+}
+
 /* THE FILM CAMERA goes on after boot, because it attaches to the renderer the boot creates.
    Wired HERE and not in game.mjs so that file keeps the single import the gauntlet's specimen
    loader asserts — see src/post.mjs. If the post stack cannot build, the game keeps playing on the

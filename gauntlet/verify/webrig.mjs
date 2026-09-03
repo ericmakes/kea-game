@@ -85,7 +85,16 @@ export async function serve(dir = DIST) {
    — a nested merge would silently half-apply `sunPosDay`. game.mjs only accepts keys that already
    exist in SKY, so a typo is a no-op there rather than a new constant nobody reads; the check
    below catches it here instead, where it can still say so out loud.
-   All four are read here so every browser tool gets them for free, and all four are absent from a
+   REPLAT P3 adds the materials on the same seam again, and needs it for the same reason — every
+   tint and tile in that piece is judged at a vantage:
+       NOMATS=1                     skip the seven scanned sets, stay on flat palette colour
+       KEAMATS='{"families":{"asphalt":{"tint":0.8}},"paintMean":0.6}'
+                                    overwrite leaves of src/game.mjs's MATS constants
+   KEAMATS IS NESTED ONE LEVEL, unlike KEASKY, because MATS is not flat: `families` is a map of
+   seven records and a flat merge would mean restating all seven to change one tint. It is one
+   level and no more — a family record is itself a flat block of scalars, so game.mjs
+   Object.assigns over it and there is nothing deeper to get wrong.
+   All six are read here so every browser tool gets them for free, and all six are absent from a
    normal pass, which therefore shoots exactly what the build pins. */
 const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay','sunNight',
   'sunIntensityDay','sunIntensityNight','sunPosDay','sunPosNight','shadowType','shadowMap',
@@ -95,9 +104,12 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
   'fillIntensityDay','fillIntensityNight','rimIntensityDay','rimIntensityNight',
   'hazeOpacityDay','hazeOpacityNight'];
 
+const MATS_KEYS = ['dir','res','paintMean','normalScale','roughScale','families'];
+
 export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
   const nopost = !!process.env.NOPOST;
   const nosky = !!process.env.NOSKY;
+  const nomats = !!process.env.NOMATS;
   let film = null;
   if (process.env.KEAFILM) {
     try { film = JSON.parse(process.env.KEAFILM); }
@@ -116,12 +128,33 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
     if (bad.length) throw new Error('webrig: KEASKY has no such SKY constant: ' + bad.join(', ') +
       '\n  known keys: ' + SKY_KEYS.join(', '));
   }
-  if (nopost || nosky || film || sky) await page.evaluateOnNewDocument((np, f, ns, sk) => {
-    if (np) globalThis.__KEA_NOPOST__ = true;
-    if (ns) globalThis.__KEA_NOSKY__ = true;
-    if (f) globalThis.__KEA_FILM__ = f;
-    if (sk) globalThis.__KEA_SKY__ = sk;
-  }, nopost, film, nosky, sky);
+  let mats = null;
+  if (process.env.KEAMATS) {
+    try { mats = JSON.parse(process.env.KEAMATS); }
+    catch (e) { throw new Error('webrig: KEAMATS is not valid JSON — ' + e.message); }
+    /* SAME ARGUMENT AS KEASKY's, ONE LEVEL DEEPER. A misspelled knob must not look like a tuning
+       that did nothing: game.mjs ignores unknown keys by design, so a strip could be shot, judged
+       and locked with one frame silently on the default. Checked at BOTH levels, because
+       `{"families":{"asfalt":{...}}}` is the typo that actually happens. */
+    const bad = Object.keys(mats).filter(k => !MATS_KEYS.includes(k));
+    if (bad.length) throw new Error('webrig: KEAMATS has no such MATS constant: ' + bad.join(', ') +
+      '\n  known keys: ' + MATS_KEYS.join(', '));
+    /* THE TOP LEVEL IS CHECKED HERE AND THE FAMILIES ARE NOT, and that division is deliberate.
+       A family NAME cannot be validated from this side without keeping a second copy of the
+       seven, and a list kept in two files is a list that drifts — this file did keep one for
+       about ten minutes and let `{"families":{"asfalt":{"tint":0.8}}}` through untouched,
+       because `tint` is a valid KEY and `asfalt` is not a family. game.mjs knows the names, so
+       game.mjs reports what it ignored and assertBooted refuses the pass below. */
+  }
+  if (nopost || nosky || nomats || film || sky || mats)
+    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt) => {
+      if (np) globalThis.__KEA_NOPOST__ = true;
+      if (ns) globalThis.__KEA_NOSKY__ = true;
+      if (f) globalThis.__KEA_FILM__ = f;
+      if (sk) globalThis.__KEA_SKY__ = sk;
+      if (nm) globalThis.__KEA_NOMATS__ = true;
+      if (mt) globalThis.__KEA_MATS__ = mt;
+    }, nopost, film, nosky, sky, nomats, mats);
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);
@@ -138,7 +171,7 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
 /* Assert the page actually booted the way we asked. A capture pass that quietly fell back to an
    unseeded default world is the exact failure the old anchor-throw existed to prevent, so the
    replacement seam gets the same treatment: proven per page, not assumed. */
-export async function assertBooted(page, { biome, iblTimeout = 8000 } = {}) {
+export async function assertBooted(page, { biome, iblTimeout = 8000, matsTimeout = 20000 } = {}) {
   /* THE ENVIRONMENT IS FETCHED, SO IT IS WAITED FOR — bounded, then asserted. main.mjs awaits the
      HDRI before the film camera goes on, but that await lives inside the page's module graph and
      page.goto's 'load' does not cover it: a caller can be here before the fetch resolves. Found
@@ -154,12 +187,20 @@ export async function assertBooted(page, { biome, iblTimeout = 8000 } = {}) {
      initRenderer installs on the first frame so the scene is never unlit, and sky.mjs upgrades it
      to 'hdri' a moment later. Breaking on it meant the wait returned before the thing it was
      waiting for, and probe.mjs failed exactly as it had without any wait at all. */
+  /* REPLAT P3 PUT SEVEN MORE FETCHES BEHIND THE SAME await, so the wait covers both and the
+     terminal state is now a PAIR. 21 jpgs, 16 MB, so matsTimeout is generous where iblTimeout is
+     not — measured cold on this Mac at about 1.5s over loopback, and a bound that only fires on a
+     genuine failure is worth more than a tight one. */
   const want = process.env.NOSKY ? 'painted' : 'hdri';
+  const wantMats = process.env.NOMATS ? 'none' : 'scanned';
   const t0 = Date.now();
   for (;;) {
-    const mode = await page.evaluate(() => ((((globalThis.KEAGAME || {}).G || {}).ibl) || {}).mode || null);
-    if (mode === want) break;
-    if (Date.now() - t0 > iblTimeout) break;            // let the assertions below say what went wrong
+    const st = await page.evaluate(() => ({
+      ibl: ((((globalThis.KEAGAME || {}).G || {}).ibl) || {}).mode || null,
+      mats: ((((globalThis.KEAGAME || {}).G || {}).mats) || {}).mode || null,
+    }));
+    if (st.ibl === want && st.mats === wantMats) break;
+    if (Date.now() - t0 > Math.max(iblTimeout, matsTimeout)) break;   // the assertions below say what went wrong
     await new Promise(r => setTimeout(r, 100));
   }
   const state = await page.evaluate(() => ({
@@ -171,6 +212,9 @@ export async function assertBooted(page, { biome, iblTimeout = 8000 } = {}) {
     // REPLAT P2: read through an accessor that cannot throw (FLAKES law 14) — this must report
     // a missing G.ibl as a fact, not die on the way to reporting it.
     ibl: ((globalThis.KEAGAME || {}).G || {}).ibl || null,
+    // REPLAT P3: the same accessor discipline, for the same reason — a missing G.mats is a fact
+    // to report, not a stack trace on the way to reporting it.
+    mats: ((globalThis.KEAGAME || {}).G || {}).mats || null,
   }));
   if (!state.keagame) throw new Error('webrig: page did not publish KEAGAME');
   if (!state.seen) throw new Error('webrig: __KEA_BOOT__ never reached the page');
@@ -190,6 +234,35 @@ export async function assertBooted(page, { biome, iblTimeout = 8000 } = {}) {
       'photograph the wrong look. Set NOSKY=1 to shoot the fallback deliberately.');
   if (process.env.NOSKY && state.ibl.mode !== 'painted')
     throw new Error('webrig: NOSKY=1 asked for the painted fallback but G.ibl.mode is "' + state.ibl.mode + '"');
+  /* AND THE MATERIALS ARE PROVEN THE SAME WAY, REPLAT P3, because they fail in the same shape and
+     it is a WORSE shape. A family whose three jpgs 404 keeps its authored palette colour and its
+     authored roughness — so a pass with two families missing photographs a world that is complete,
+     plausible, and wearing 1990s flat colour on the car park while the hut is scanned. Nobody
+     eyeballing thirty frames would catch that; the difference is a shade of grey, not a black
+     page. G.mats.mode is 'scanned' only when all seven landed, so this is the assertion that
+     makes "the look Eric judged" and "the look the code describes" the same thing.
+     IT NAMES THE FAMILIES THAT FAILED, because "partial" is useless on its own and the whole point
+     of the provenance block is that the answer is readable rather than inferred from pixels. */
+  if (!state.mats) throw new Error('webrig: G.mats is missing — the page has no material provenance at all');
+  if (!process.env.NOMATS && state.mats.mode !== 'scanned') {
+    const bad = Object.entries(state.mats.families || {})
+      .filter(([, v]) => !v.maps).map(([k, v]) => k + ' (' + v.asset + ')');
+    throw new Error('webrig: the scanned materials did not land — G.mats.mode is "' + state.mats.mode +
+      '" (expected "scanned"), ' + state.mats.loaded + '/7 families dressed' +
+      (bad.length ? '; missing: ' + bad.join(', ') : '') +
+      '. Those surfaces keep flat palette colour, so this pass would photograph a half-dressed ' +
+      'world. Set NOMATS=1 to shoot the pre-P3 look deliberately.');
+  }
+  /* A KEAMATS OVERRIDE THAT WENT NOWHERE IS A STRIP JUDGED ON THE DEFAULT. game.mjs ignores keys
+     it does not recognise, which is right, and records them — so the pass refuses rather than
+     photographing a variant that was never applied. Thrown and not warned, because a strip is
+     judged by eye and a warning scrolls past. */
+  if ((state.mats.ignored || []).length)
+    throw new Error('webrig: KEAMATS set something the recipe does not have, so it was IGNORED: ' +
+      state.mats.ignored.join(', ') + '. This pass would photograph the default and be judged as ' +
+      'the variant.');
+  if (process.env.NOMATS && state.mats.mode !== 'none')
+    throw new Error('webrig: NOMATS=1 asked for the palette look but G.mats.mode is "' + state.mats.mode + '"');
   return state;
 }
 
