@@ -111,7 +111,20 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
    why the strip shooter now verifies the frame on disk actually changed. Two independent guards,
    because this one is a list a human has to remember. */
 const MATS_KEYS = ['dir','res','paintMean','normalScale','roughScale','families','breakup'];
-
+/* REPLAT P4 adds the grass on the same seam, and the density TIER is the whole point of it: the
+   brief was "measure three tiers", and three tiers cannot be measured if switching one needs a
+   rebuild.
+       NOMATS is unrelated; there is no NOGRASS - KEAGRASS='{"tier":"low"}' is the way down.
+       KEAGRASS='{"tier":"high"}'                     switch the density tier
+       KEAGRASS='{"biomes":{"carpark":{"bare":0.18}}}' reach a per-biome leaf
+   THERE IS DELIBERATELY NO KEY LIST HERE. KEASKY and KEAMATS both keep one, and the MATS one has
+   now drifted twice — `breakup` was missing when P3b added it, and a P4 copy of the GRASS keys was
+   stale within the hour (it still named clumpR and clumpFall, which no longer exist, and had never
+   heard of clumpPull, lodFrac, snap or comb). A list of a recipe's keys kept in a second file is a
+   list that drifts, and every time it drifts it REFUSES A LEGITIMATE OVERRIDE, which is the most
+   annoying possible failure: it looks like the seam is broken.
+   game.mjs knows its own keys, and it already reports every path it ignored. assertBooted refuses
+   the pass on that report below. One source of truth, checked where the truth lives. */
 export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
   const nopost = !!process.env.NOPOST;
   const nosky = !!process.env.NOSKY;
@@ -134,6 +147,11 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
     if (bad.length) throw new Error('webrig: KEASKY has no such SKY constant: ' + bad.join(', ') +
       '\n  known keys: ' + SKY_KEYS.join(', '));
   }
+  let grass = null;
+  if (process.env.KEAGRASS) {
+    try { grass = JSON.parse(process.env.KEAGRASS); }
+    catch (e) { throw new Error('webrig: KEAGRASS is not valid JSON — ' + e.message); }
+  }
   let mats = null;
   if (process.env.KEAMATS) {
     try { mats = JSON.parse(process.env.KEAMATS); }
@@ -152,15 +170,16 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
        because `tint` is a valid KEY and `asfalt` is not a family. game.mjs knows the names, so
        game.mjs reports what it ignored and assertBooted refuses the pass below. */
   }
-  if (nopost || nosky || nomats || film || sky || mats)
-    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt) => {
+  if (nopost || nosky || nomats || film || sky || mats || grass)
+    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt, gr) => {
       if (np) globalThis.__KEA_NOPOST__ = true;
       if (ns) globalThis.__KEA_NOSKY__ = true;
       if (f) globalThis.__KEA_FILM__ = f;
       if (sk) globalThis.__KEA_SKY__ = sk;
       if (nm) globalThis.__KEA_NOMATS__ = true;
       if (mt) globalThis.__KEA_MATS__ = mt;
-    }, nopost, film, nosky, sky, nomats, mats);
+      if (gr) globalThis.__KEA_GRASS__ = gr;
+    }, nopost, film, nosky, sky, nomats, mats, grass);
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);
@@ -221,6 +240,7 @@ export async function assertBooted(page, { biome, iblTimeout = 8000, matsTimeout
     // REPLAT P3: the same accessor discipline, for the same reason — a missing G.mats is a fact
     // to report, not a stack trace on the way to reporting it.
     mats: ((globalThis.KEAGAME || {}).G || {}).mats || null,
+    grass: ((globalThis.KEAGAME || {}).G || {}).grass || null,
   }));
   if (!state.keagame) throw new Error('webrig: page did not publish KEAGAME');
   if (!state.seen) throw new Error('webrig: __KEA_BOOT__ never reached the page');
@@ -268,6 +288,14 @@ export async function assertBooted(page, { biome, iblTimeout = 8000, matsTimeout
     throw new Error('webrig: KEAMATS set something the recipe does not have, so it was IGNORED: ' +
       state.mats.ignored.join(', ') + '. This pass would photograph the default and be judged as ' +
       'the variant.');
+  /* THE GRASS OVERRIDE IS REFUSED THE SAME WAY, for the same reason a mistyped KEAMATS is: a tier
+     that did not apply photographs as the default and gets judged as the variant. */
+  if ((state.grass && (state.grass.ignored || []).length))
+    throw new Error('webrig: KEAGRASS set something the recipe does not have, so it was IGNORED: ' +
+      state.grass.ignored.join(', ') + '. This pass would photograph the default tier.');
+  if (state.grass && state.grass.shader !== true)
+    throw new Error('webrig: the grass blade shader did not install — ' + state.grass.shader +
+      '. Wind, thinning and transmission are all off, so this pass would photograph a dead field.');
   if (process.env.NOMATS && state.mats.mode !== 'none')
     throw new Error('webrig: NOMATS=1 asked for the palette look but G.mats.mode is "' + state.mats.mode + '"');
   return state;

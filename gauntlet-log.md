@@ -3887,8 +3887,12 @@ category.
 ## SESSION 17 — 2026-09-03, Eric order: act on the three P3 verdicts, then re-pin from consensus
 
 Lock taken (none held), released as the final act. Tip certified before anything moved
-(`c48aced312c8966239a340c6f1c0391a`, matching the log). Recipe in ARTBIBLE.md under REPLAT P3b.
-**P4 NOT STARTED, as ordered.**
+(`c48aced312c8966239a340c6f1c0391a`, matching the log). **Shipped at specimen
+`dc7aa96c2fd2e864307d9606b453c314`, bundle `5754762aedbb4b311766b44d7ccaa6b5`.** Recipe in
+ARTBIBLE.md under REPLAT P3b. **P4 NOT STARTED, as ordered.**
+(Shipped md5 added at the start of session 18: session 17 recorded the tip it certified and not the
+tip it left, and "gate md5 matches the log" is the FIRST thing the next session checks — it failed
+that check on a green tree. The entry above it does it correctly; this one simply missed it.)
 
 **ERIC'S THREE VERDICTS, ALL THREE DONE.** (1) The carpark tiling repetition is fixed with breakup
 and not a bigger texture: a large-scale variation layer plus per-tile rotation and offset, applied
@@ -4018,3 +4022,111 @@ poured-concrete footing: an eighth family, `concrete_layers_02`, CC0, licensed b
   A set of ceilings whose violators change completely between two sessions is measuring the machine
   and not the vantages, so re-fitting them inside a re-pin would pin today's noise as tomorrow's
   contract. TODO 77 stands and this is the evidence for it.
+
+## SESSION 18 — 2026-09-03, Eric order: run REPLAT P4 (instanced grass), push the browser ceiling
+
+Lock taken (none held), released as the final act. Tip certified before anything moved
+(`dc7aa96c2fd2e864307d9606b453c314`, matching the log **after** the log was repaired — session 17
+recorded the tip it certified and not the tip it left, and "gate md5 matches the log" is the FIRST
+thing the next session checks; it failed that check on a green tree. Fixed in place, with a note).
+Shipped at specimen `3793c3c45fb34fbac82e506b3e4697d3`, bundle `95f5586db2a77754a1101ee568c382c7`.
+Recipe in ARTBIBLE.md under REPLAT P4. **Nothing re-pinned — 25 of 28 vantages flagged.**
+
+**THE FIELD FOLLOWS THE CAMERA, AND A MEASUREMENT IS WHY.** The first cut placed blades statically
+over a disc round the world origin — the obvious design, and it cannot work at this budget. The
+playable world is ~12,900 m2, the frame budget tops out near 420,000 blades, and 420,000 over
+12,900 m2 is **thirty-three blades per square metre**, which photographs as stubble. Shrinking the
+radius to raise density is worse, not better: it moves the grass away from the bird, and the r20
+frame in the density sweep came back with an EMPTY FOREGROUND for exactly that reason. So `near` is
+a radius around the CAMERA, the anchor is snapped to 0.5 m so the field cannot swim, and every
+per-blade property is hashed from the blade's WORLD POSITION rather than its instance index — so a
+blade that lands on new ground takes on that ground's blade instead of carrying its own appearance
+across the world. Same budget, 195 blades/m2 instead of 33.
+
+- **AND I SHIPPED IT WITH THE ANCHOR NEVER WRITTEN.** The uniform was declared, initialised to
+  (0,0), and never driven from the camera — so the field sat at the world origin and 05 came back
+  with no grass at all. **It photographs identically to "the grass did not build"**, which is what
+  I first assumed. The anchor is the entire point of the design and it was the one line missing.
+
+- **BLADE WIDTH WAS IN THE WRONG UNITS AND THE FRAME SAID SO IMMEDIATELY.** I carried the old
+  code's width numbers straight over — 0.85 to 1.35 — which were a MULTIPLIER on a 95 mm plane and
+  became an ABSOLUTE width the moment the geometry went unit-sized. Metre-wide blades. The field
+  came back as a heap of angular gold shards. Real pasture grass is 4-10 mm across; a battery now
+  refuses anything over 3 cm, because that number can only be a unit error.
+
+- **THE FIRST TUNING BURIED THE BIRD, AND THE SUBJECT FLOORS CAUGHT IT.** At h 0.30-0.78 with
+  clumpPull 0.62 the kea portrait read **465 pixels against a floor of 1600** and the preen vantage
+  414 against 900 — three bird classifiers red at once, which is the gauntlet saying the game had
+  stopped showing its protagonist. Five tunings measured at 03 and 13; blade HEIGHT is the dominant
+  lever and the looser clumping is what stopped the field reading as isolated brushes with bare
+  ground between. Locked at h 0.20-0.48 / pull 0.42 / bare 0.18: **1663/1600 and 1604/900, and the
+  set is back to exactly the two known TODO 75 reds.** No floor was touched. Some occlusion is
+  authentic — ref_bow_03's bin is half-buried and it looks right — but a bird you cannot see is not
+  a trade, it is a bug.
+
+- **I NEARLY RECORDED A FRAME RATE THAT WAS THE BROWSER IDLING.** The brief asked for three
+  measured tiers, so I wrote a RAF-based fps mode. It reported **59.9 fps median for 120,000
+  blades, for 1,900,000 blades, and for the pre-P4 build — all identical** — while the loop-timed
+  cost of those three differed by a factor of ten. A number that does not move when the work grows
+  tenfold is not measuring the work. Headless Chrome drives requestAnimationFrame on a fixed
+  cadence. **And my first guard on it was also wrong**: it read renderer.info after the frame, found
+  one triangle in one call and concluded nothing had rendered — `info.autoReset` means those
+  counters describe the LAST pass of the composer, which is a fullscreen quad. The honest check is
+  whether the frame COUNTER advanced (it did: ~110 renders/s). The mode now reports a CADENCE, says
+  in its own header that it is not an fps, and fails loudly if nothing rendered.
+  **THE HONEST LIMIT: no instrument here can measure a true frame rate**, so "holds a playable
+  frame rate on Eric's Mac" cannot be settled from this machine. What can be said is the
+  loop-timed scene cost at the Retina framebuffer the game actually runs at (2304x1296, because
+  setPixelRatio caps at 1.8 and a Mac reports 2), against a pre-P4 baseline of 8.978 ms:
+      low   60,000 blades   97/m2   16.710 ms   1.9x        mid  120,000  195/m2  23.878 ms  2.7x
+      high 240,000 blades  264/m2   39.360 ms   4.4x        (420k = 62.4 ms; 1.9M = 259.5 ms)
+  **mid ships** because 8.978 ms was the already-accepted cost of the shipped build and 2.7x of it
+  is defensible where 4.4x is a guess; the four densities photograph close, and above 240k the
+  difference is barely visible while the cost doubles again. `high` is measured, kept, and one env
+  var away on the machine that can judge it.
+
+- **THE RIG KEPT A COPY OF THE RECIPE'S KEYS AND IT DRIFTED WITHIN THE HOUR.** Exactly the failure
+  session 17 wrote up for KEAMATS, repeated: I added a GRASS_KEYS list to webrig, then renamed two
+  constants and added four, and a legitimate `KEAGRASS='{"clumpPull":0.42}'` was REFUSED — which is
+  the most annoying possible failure, because it looks like the seam is broken. The list is gone.
+  game.mjs knows its own keys and already reports every path it ignored; assertBooted refuses the
+  pass on that report. One source of truth, checked where the truth lives.
+
+- **TWO DEAD KNOBS, FOUND BY A SABOTAGE THAT STAYED GREEN.** `GRASS.clumpM` and `GRASS.bare` sat at
+  the top of the recipe looking authoritative while the shader read the per-biome values — so
+  tuning them did nothing. A constant nothing reads is a knob that LIES about being connected.
+  Deleted, and there is now an assertion that every top-level GRASS scalar is referenced somewhere
+  after the recipe block ends. **Its first cut matched the word "bare" inside its own comment about
+  bare ground** — the third time this project has caught an assertion matching its own prose — so
+  the check is structural now, not textual.
+
+- **AND ONE ASSERTION WAS VACUOUSLY TRUE.** "the blade arcs forward by the pinned bend" compared
+  the geometry against `GRASS.bend`, so setting bend to zero made it trivially pass and a field of
+  straight spikes sailed through. The bound comes first now, then the agreement.
+
+- **THE DEAD CPU PATH WENT WITH IT, AND TWO BATTERY SECTIONS WERE RECALIBRATED WITH EVIDENCE.**
+  `grassBlade`, `grassTint` and `grassTintReset` are gone — every per-blade decision is in the
+  vertex shader. THE GRASS TINT section's claim is stronger for it: the tint was immune to the
+  world seed and Math.random by having its own fixed-seed generator, and is now immune by being a
+  pure function of world position, with no sequence to perturb at all. THE FIELD IS COMBED section
+  now derives its bound from the constant (a sine of amplitude `amp` spans exactly 2*amp) instead
+  of sampling 600 blades and hoping — and the tuft cones and the blade shader are generated from
+  ONE `GRASS.comb` block, so "the tufts take the same comb as the blades" is a fact rather than a
+  comment.
+
+- **AND A BATTERY EDIT OF MINE MOVED THE SEEDED STREAM AND BROKE SIX UNRELATED ASSERTIONS.**
+  Removing the old tint section removed its `load()` call, which shifts the shared Math.random
+  stream (FLAKES law 15) — and four hint-plate assertions started reading "E DOFF THE SKI GOGGLES"
+  because the bird now happened to be WEARING something, and a verb in reach beats a hint by
+  design. `k.held` was cleared at those call sites; `k.hatProp` was not. Fixed by clearing the worn
+  item in the one helper they all go through, rather than by restoring a magic side effect.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, gate-selftest ALL PASS, **fifteen P4
+  sabotages, all fifteen red** (two survived the first pass and both were real findings about my
+  own work, not weak tests), bundle builds, 30/30 vantages shoot with no retakes and no GAVE UP,
+  sidebyside 33 pairs. **stability 4 vantages x 3 takes, 0 unstable (worst 0.9956) — and
+  05_tussock_ground, the grassiest frame in the set, reshoots at exactly 1.0000, which is the
+  cleanest available proof that the wind is deterministic under the capture clock pin.** diff 28
+  compared 25 flagged (worst 0.4866), boxdiff 12 compared 5 changed, pxdiff 27 of 28 over band,
+  subjects 16 checked **2 missing — exactly the two known-red from TODO 75, no new regression**.
+  **ALL OF IT LEFT FLAGGED — the look is Eric's.**

@@ -147,16 +147,56 @@ X.startGame(1); tick(4);
   ok(onPaint.every(w=>w.color!==0x8A7A52&&((w.color>>16)&255)<0x60),'sealed wear goes oil-dark'); }
 
 C.section('THE FIELD IS COMBED - tussock lean and clump');
-{ const B=[]; for(let i=0;i<600;i++) B.push(X.grassBlade(-58+i*0.19,-40+((i*7)%80)));
-  ok(B.every(b=>b.lean>=0.08&&b.lean<=0.30),'blade lean stays inside the comb band');
-  const dirs=B.map(b=>b.dir), lo=Math.min.apply(null,dirs), hi=Math.max.apply(null,dirs);
-  ok(hi-lo<1.4,'the whole field leans one way (dir spread '+(hi-lo).toFixed(2)+' rad, not a scatter)');
-  ok(hi-lo>0.2,'the breeze wanders across the flats (dir spread '+(hi-lo).toFixed(2)+' rad)');
-  ok(X.grassBlade(10.1,4.1).cell===X.grassBlade(11.2,4.9).cell,'blades inside one clump share a height cell');
-  ok(X.grassBlade(10.1,4.1).cell!==X.grassBlade(20.6,4.1).cell,'a clump four cells away is a different height');
-  const hs=B.map(b=>b.h);
-  ok(Math.min.apply(null,hs)<0.75&&Math.max.apply(null,hs)>1.35,'heights run from grazed to tall ('+
-     Math.min.apply(null,hs).toFixed(2)+' to '+Math.max.apply(null,hs).toFixed(2)+')'); }
+/* RECALIBRATED AT REPLAT P4, WITH EVIDENCE. The claim has not moved: the whole field leans ONE
+   WAY, wandering slowly across the flats, because that is what a breeze looks like on tussock and
+   the alternative — every blade picking its own direction — reads as static rather than as a
+   field. What moved is WHERE the claim lives. P4 put every per-blade decision in the vertex
+   shader, so `grassBlade` is gone; the 260 tuft cones still need a CPU pose, and both of them now
+   read ONE named constant block (GRASS.comb) that the shader line is generated from by string
+   interpolation.
+   THE LEAN BOUND IS DERIVED, NOT SAMPLED, WHICH IS STRICTLY STRONGER. The old form drew 600 blades
+   and checked the spread of what came back — an empirical bound that could pass on a lucky sample
+   and, being a hardcoded pair of numbers, went red the moment the biome profile legitimately
+   changed. A sine of amplitude `amp` spans exactly 2*amp end to end, so the bound is the constant,
+   and it holds for every point in the world rather than for six hundred of them. */
+{ const C=X.GRASS.comb;
+  ok(!!C&&typeof C.amp==='number','the comb is one named constant block (GRASS.comb)');
+  ok(2*C.amp<1.4,'THE WHOLE FIELD LEANS ONE WAY — the comb spans '+(2*C.amp).toFixed(2)+
+     ' rad end to end, which is a lean and not a scatter (bound 1.4)');
+  ok(2*C.amp>0.2,'and it does wander across the flats rather than being one fixed angle ('+
+     (2*C.amp).toFixed(2)+' rad)');
+  /* and the sampled behaviour still agrees with the derived bound, which is what makes the
+     derivation a claim about THIS code rather than about trigonometry */
+  { const D=[]; for(let i=0;i<600;i++) D.push(X.grassComb(-58+i*0.19,-40+((i*7)%80)));
+    const lo=Math.min.apply(null,D), hi=Math.max.apply(null,D);
+    ok(hi-lo<=2*C.amp+1e-9,'six hundred samples stay inside that derived bound ('+
+       (hi-lo).toFixed(3)+' <= '+(2*C.amp).toFixed(3)+')');
+    ok(hi-lo>0.2,'and they genuinely spread, so this is a real comparison ('+(hi-lo).toFixed(2)+' rad)'); }
+
+  /* ONE SET OF NUMBERS, TWO CONSUMERS. The tufts and the blades sharing a comb is the thing this
+     section is actually protecting, and it is now checkable: the shader's dir line is BUILT from
+     the same constants, so a change to GRASS.comb reaches both or neither. */
+  { const vs=X.GRASS_GLSL_V;
+    ok(vs.indexOf('#define COMB_AMP  '+C.amp.toFixed(6))>0,
+       'the blade shader is generated from those constants, not from a second copy of them');
+    ok(/float dir=COMB_BASE\+COMB_AMP\*sin\(w\.x\*COMB_FX\+w\.y\*COMB_FZ\)/.test(vs),
+       'and its dir line is the same expression the tufts use');
+    const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','src','game.mjs'),'utf8');
+    ok(src.indexOf('function grassBlade(')<0,
+       'the old CPU pose function is GONE rather than left beside the shader to drift out of step'); }
+
+  /* THE CLUMP STILL AGREES WITH ITSELF. Blades in one mound share a height, blades four cells away
+     do not — the tuft seam carries the same cell hash the shader does. */
+  ok(X.grassTuftPose(10.1,4.1).cell===X.grassTuftPose(11.2,4.9).cell,'blades inside one clump share a height cell');
+  ok(X.grassTuftPose(10.1,4.1).cell!==X.grassTuftPose(20.6,4.1).cell,'a clump four cells away is a different height');
+  const hs=[]; for(let i=0;i<400;i++) hs.push(X.grassTuftPose(-40+i*0.21,12+((i*5)%60)).h);
+  const hlo=Math.min.apply(null,hs), hhi=Math.max.apply(null,hs);
+  const HB=X.GRASS.biomes.carpark.h;
+  ok(hlo>=HB[0]*0.72-1e-6&&hhi<=HB[1]*(0.72+0.56)+1e-6,
+     'heights stay inside the biome profile scaled by the clump weight ('+hlo.toFixed(2)+' to '+
+     hhi.toFixed(2)+', profile '+HB[0]+'-'+HB[1]+')');
+  ok(hhi-hlo>0.15,'and they run from grazed to tall rather than all agreeing ('+(hhi-hlo).toFixed(2)+')');
+}
 
 C.section('THE PADDOCK GATE - a toy for the emptiest area');
 X.startGame(1); tick(8); park();
@@ -481,44 +521,42 @@ C.section('THE WHITE THING BEHIND THE BIRD IS CARPARK GRIT');
 }
 
 C.section('THE GRASS TINT IS SEEDED, NOT A LOTTERY');
-// buildGrass is `if(HEADLESS)return`, so node can never see the field itself. What node CAN do is
-// hold the tint seam to its contract, and then check the field still goes through it. The old code
-// drew two Math.random per blade, so ANY change to the object count retinted the whole country -
-// which was the entire residual tripwire noise. It could not move onto rnd() either: 42000 blades
-// at two draws each would have injected 84000 draws into the middle of buildWorld.
-{ const T=H.THREE;
-  const seq=(inst,n)=>{ const c=new T.Color();
-    const cA=new T.Color(0xB8901F), cB=new T.Color(0x8A7C2E), cC=new T.Color(0xD9B84A);
-    inst.grassTintReset(); const out=[];
-    for(let i=0;i<n;i++){ inst.grassTint(c,cA,cB,cC); out.push(c.getHexString()); }
-    return out.join(','); };
-
-  const a=seq(X,200);
-  ok(a===seq(X,200),'the same build replays an identical tint sequence after a reset');
-  const distinct=new Set(a.split(',')).size;
-  ok(distinct>20,'and the sequence genuinely varies, so this is a real comparison ('+distinct+' distinct tints)');
-
-  // THE CLAIM, stated as strongly as it can be: neither the world seed nor Math.random can move
-  // the tint. Second FRESH instance, a different seed, and Math.random poisoned to a constant.
-  const realRandom=Math.random;
-  let poisoned=0; Math.random=()=>{ poisoned++; return 0.123456789; };
-  let b, seen;
-  try{ const H2=load(); H2.X.setSeed(987654321);
-       poisoned=0;                       // count the SEAM only - load() itself makes three uuids
-       b=seq(H2.X,200); seen=poisoned; }
-  finally{ Math.random=realRandom; }
-  ok(b===a,'a different world seed AND a poisoned Math.random give the SAME tint sequence');
-  ok(seen===0,'in fact the tint seam never calls Math.random at all ('+seen+' calls)');
-
-  // and the field really does go through that seam. buildGrass is browser-only, so this is a
-  // structural check on the source rather than a behavioural one - stated plainly, not disguised.
-  const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','src','game.mjs'),'utf8'); // REPLAT P1: specimen is the module now
-  const body=src.slice(src.indexOf('function buildGrass()'), src.indexOf('function buildTrees'));
-  ok(body.indexOf('grassTint(col')>0,'buildGrass tints its blades through that seam');
-  ok(body.indexOf('Math.random')<0,'and buildGrass no longer touches Math.random anywhere');
-  // that second claim covers the DETAIL MAP as well as the blades: the grass speckle painter was
-  // another ~10k Math.random draws, so object-count changes still reshuffled the multiply-map even
-  // once the blades were seeded. It now paints from a fixed seed, like detailTex already did.
+/* RECALIBRATED AT REPLAT P4, WITH EVIDENCE, AND THE CLAIM IS STRONGER THAN IT WAS.
+   The old contract was: the blade tint must be immune to the world seed and to Math.random, so
+   that changing the number of objects in the world cannot retint the whole country. It was met by
+   giving the tint its own fixed-seed generator on the CPU — `grassTint`/`grassTintReset`.
+   P4 DELETED THAT SEAM because it deleted the thing it served. A camera-anchored field decides
+   where every blade stands in the VERTEX SHADER, so there are no per-instance colours to generate:
+   a blade's tint is now a pure function of the WORLD POSITION it lands on, hashed in GLSL. That is
+   not a weaker guarantee, it is the same guarantee without a sequence — there is no ordering to
+   perturb, so object count, world seed and Math.random are all structurally incapable of moving it,
+   rather than merely observed not to.
+   WHAT IS ASSERTED NOW is the property that actually matters and can still be reached from node:
+   the field is built without touching Math.random at all, and the tint is derived from the blade's
+   world position rather than from anything that could vary run to run. The dead functions are gone
+   rather than left exported and unused — a seam nothing goes through is a trap, and the previous
+   version of this section would have kept passing over one. */
+{ const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','src','game.mjs'),'utf8');
+  const body=src.slice(src.indexOf('function buildGrass('), src.indexOf('function nightTint'));
+  ok(body.length>200,'buildGrass is where it is expected to be ('+body.length+' chars)');
+  ok(body.indexOf('Math.random')<0,'buildGrass touches Math.random nowhere — an object-count change '+
+     'cannot reshuffle the field');
+  const vs=src.slice(src.indexOf('const GRASS_GLSL_V='), src.indexOf('const GRASS_GLSL_F='));
+  ok(vs.length>800,'the blade vertex shader is where it is expected to be ('+vs.length+' chars)');
+  ok(vs.indexOf('vGrassTint=')>0,'the blade computes its own tint in the vertex shader');
+  ok(vs.indexOf('vGrassTint=mix(mix(uTintA,uTintB')>0&&vs.indexOf(',uTintC,')>0,
+     'and it mixes the biome three-tint the recipe supplies, not a literal');
+  /* THE TINT IS A FUNCTION OF WORLD POSITION, WHICH IS THE WHOLE POINT. The hash inputs must be
+     the world position `w`, never the instance index — an index-derived tint would travel WITH the
+     blade as the field follows the camera, so a patch of ground would change colour as you walked
+     toward it. That is the P4 shape of the defect this section has always been about. */
+  ok(vs.indexOf('vec2 h1=keaGH2(w*')>0&&vs.indexOf('h2=keaGH2(w*')>0,
+     'every per-blade draw is hashed from the WORLD POSITION, so a blade cannot carry its '+
+     'appearance across the world as the field follows the camera');
+  ok(vs.indexOf('gl_InstanceID')<0&&vs.indexOf('aOff*uNear')>0,
+     'the lattice offset only places the blade; it never decides what the blade looks like');
+  ok(src.indexOf('function grassTint(')<0&&src.indexOf('function grassTintReset(')<0,
+     'and the CPU tint seam is GONE, not left exported and unreachable');
 }
 
 C.section('CURVED HULLS ARE SMOOTH WITHOUT MOVING A VERTEX');
@@ -1755,7 +1793,27 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody ca
      spot is the hint centre plus three on x - the centre itself is inside grab range of the ute
      keys, and a verb prompt beats a hint by design, which is the assertion after these two. */
   { const CX=()=>cageF('x')+3, CZ=()=>cageF('z');   // accessor: see the note at cageF
-    const standAt=(k,x,z)=>{ X.setPrompt(k.idx,'');
+    /* LAW 3, AND IT TOOK A SEED SHIFT TO EXPOSE THE GAP. This spot was chosen as "hint radius, but
+       clear of the ute keys", which was true of exactly one arrangement of the world. The comment
+       three lines up says a verb prompt beats a hint BY DESIGN — so any grabbable that happens to
+       land within range turns these four assertions red, and the placement moves whenever the
+       seeded stream does (FLAKES law 15: a section added or removed anywhere earlier is enough).
+       That is what happened at REPLAT P4: the ski goggles drifted into range and the plate came
+       back "E DOFF THE SKI GOGGLES" instead of the cage line.
+       So the spot is CLEARED rather than assumed clear, which is what law 3 has said all along —
+       isolate the subject before the assert instead of hoping the neighbours stay away. */
+    /* THE BIRD MUST BE CARRYING AND WEARING NOTHING. `k.held` was already cleared at each call
+       site; `k.hatProp` was not, and a WORN item offers a DOFF verb which — as the comment above
+       says — beats a hint by design. Nothing pinned the hat, so it depended on what the seeded
+       stream happened to leave the bird in, and a section removed anywhere earlier is enough to
+       change that (FLAKES law 15). At REPLAT P4 the bird turned up in ski goggles and four
+       assertions came back reading "E DOFF THE SKI GOGGLES".
+       Cleared HERE, in the one helper every one of those assertions goes through, rather than at
+       each call site — which is how `k.held` came to be cleared in three places and the hat in
+       none. */
+    const bare=(k)=>{ if(k.held){k.held.heldBy=null;k.held=null;}
+      if(k.hatProp){ k.hatProp.heldBy=null; k.hatProp=null; } };
+    const standAt=(k,x,z)=>{ X.setPrompt(k.idx,''); bare(k);
       const y=Math.max(0.25,X.groundHeightAt(x,z,3)+0.02);
       for(let i=0;i<4;i++){ k.x=x; k.z=z; k.y=y; k.vy=0; k.grounded=true; X.update(1/60); }
       return String(X.PROMPTS[k.idx]); };
@@ -1792,7 +1850,13 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody ca
   // THE RESOLVER IS ON THE DISPLAY PATH, proved through a hint that CAN fire rather than by trusting
   // the export. Pick an open-mission hint, stand the bird in it with an empty plate, and read the HUD.
   { X.startGame(1); tick(6); park();
-    const k=G.keas[0]; if(k.held){k.held.heldBy=null;k.held=null;}
+    /* AND NOTHING WORN, for the reason spelled out at the cage plate above: a WORN item offers a
+       DOFF verb and a verb in reach beats a hint by design, so a bird that the seeded stream
+       happened to leave in ski goggles reads "E DOFF THE SKI GOGGLES" on every plate in this
+       block. `k.held` was cleared here and `k.hatProp` was not. */
+    const k=G.keas[0];
+    if(k.held){k.held.heldBy=null;k.held=null;}
+    if(k.hatProp){k.hatProp.heldBy=null;k.hatProp=null;}
     const live=(G.hints||[]).find(h=>{ const m=G.missions.find(x=>x.id===h.mid);
       return m&&!m.done&&!(typeof m.locked==='function'?m.locked():m.locked); });
     ok(!!live,'a hint with an open mission behind it to test the display path with ('+(live?live.mid:'none')+')');
@@ -1817,6 +1881,7 @@ C.section('THE CAGE HINT NO LONGER LIES IN CO-OP - and after TODO 55 somebody ca
          did, on the first attempt. Joined at run time, the sentence exists nowhere in the source. */
       fired.text=()=>['RESOLVED','ON','THE','DISPLAY','PATH'].join(' ');
       X.setPrompt(k.idx,'');
+      if(k.hatProp){k.hatProp.heldBy=null;k.hatProp=null;}   // the bird can pick one up mid-block
       for(let i=0;i<4;i++){ k.x=fired.x; k.z=fired.z; k.y=Math.max(0.25,fired.y); k.vy=0; k.grounded=true; X.update(1/60); }
       const plate=String(X.PROMPTS[k.idx]);
       ok(plate.indexOf('RESOLVED ON THE DISPLAY PATH')>=0,
@@ -4740,6 +4805,235 @@ C.section('REPLAT P3b: the tiling breakup');
   { const WANT={gravel:0.35,asphalt:0.45,brick:0.20,snow:0.55};
     for(const [f,v] of Object.entries(WANT))
       near(FAM[f].tint,v,1e-9,f+' keeps the tint Eric accepted at the P3 judgement'); }
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
+}
+
+/* ============================================================
+   REPLAT P4 — INSTANCED GRASS. The recipe becomes law.
+   ============================================================
+   P4's proof contract is three claims: instance count and LOD thresholds asserted, frame budget
+   measured and recorded, and wind deterministic under the capture clock pin. The shader cannot run
+   in node, so what is proved here is everything around it that can be — and, as with P3b, every
+   one of these is a bug this piece actually shipped and had to photograph its way out of. */
+C.section('REPLAT P4: instanced grass');
+{
+  const GR=X.GRASS, T=X.grassTier();
+  const near=(a,b,eps,what)=>ok(Math.abs(a-b)<=(eps||1e-6),what+' ('+a+' vs '+b+')');
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+
+  // ---- THE SHADER INSTALLED AT ALL ----
+  /* THE SAME TRAP AS P3b, AND IT CAUGHT THE SAME WAY: onBeforeCompile hands you a shader whose
+     `#include` directives are unresolved, so surgery against expanded chunk text matches nothing
+     and throws nothing. A field with no wind, no thinning and no transmission looks ALMOST right.
+     Validated at module scope against the three that is installed, reported in scene state, and
+     the capture rig refuses to photograph a pass where it did not take. */
+  ok(!!G.grass,'the grass reports itself in scene state (G.grass)');
+  ok(G.grass.shader===true,'THE BLADE SHADER INSTALLED — every chunk it rewrites still contains the '+
+     'line it rewrites ('+(G.grass.shader===true?'ok':G.grass.shader)+')');
+  { const C2=H.THREE.ShaderChunk||{};
+    ok((C2.begin_vertex||'').indexOf('vec3 transformed = vec3( position );')>=0,
+       'begin_vertex still declares transformed the way the blade hooks it');
+    ok((C2.lights_fragment_end||'').indexOf('#if defined( RE_IndirectDiffuse )')>=0,
+       'lights_fragment_end still has the seam the transmission adds into');
+    const F=(H.THREE.ShaderLib&&H.THREE.ShaderLib.physical&&H.THREE.ShaderLib.physical.fragmentShader)||'';
+    ok(F.indexOf('vec4 diffuseColor = vec4( diffuse, opacity );')>=0,
+       'and meshphysical_frag still declares diffuseColor where the blade tint replaces it'); }
+
+  // ---- INSTANCE COUNT AND LOD THRESHOLDS, WHICH THE CONTRACT NAMES ----
+  ok(T.count>0,'the tier declares an instance count ('+T.count+')');
+  ok(G.grass.instances===0&&G.grass.headless===true,
+     'headless builds no field — there is no GPU to instance onto — but declares what it would ('+
+     G.grass.count+' blades)');
+  near(G.grass.count,T.count,0,'and the count it declares is the tier it was asked for');
+  /* THE THRESHOLDS ARE DERIVED FROM THE RADIUS, NEVER TYPED TWICE. A tier given a lodFar that
+     disagreed with the radius it draws over would thin blades that are still inside the field, or
+     draw blades past its edge — and both read as "the grass is broken" rather than as a number
+     being wrong. There is one number and the rest come off it. */
+  near(T.lodFar,T.near,1e-9,'the outer LOD threshold IS the field radius, so nothing is drawn past it');
+  near(T.lodNear,T.near*GR.lodFrac,1e-9,'and the inner one is the pinned fraction of it');
+  ok(T.lodNear<T.lodFar,'full density inside, fading out to the edge ('+T.lodNear.toFixed(1)+
+     '..'+T.lodFar+' m)');
+  ok(GR.fadeBand>0&&GR.fadeBand<0.5,'the fade band is a real window, so a blade shrinks out rather '+
+     'than popping ('+GR.fadeBand+')');
+  /* NO DEAD KNOBS IN THE RECIPE. A constant nothing reads is a knob that lies about being
+     connected: a later session tunes it, photographs no change, and concludes the feature is
+     broken. There were two — a top-level `clumpM` and `bare` that the per-biome values shadowed —
+     and a sabotage zeroing one of them stayed GREEN, which is how they were found. Every
+     top-level scalar must be reachable from the shader source or the uniform block that feeds it. */
+  /* THE SEARCH IS STRUCTURAL, NOT TEXTUAL, and the first cut of it was not: it looked for the bare
+     key name anywhere in the shader source and matched the word "bare" inside its own COMMENT
+     about bare ground, so reintroducing the dead knob stayed green. Third time this file has been
+     caught matching its own prose. A consumer is a `GRASS.<key>` reference AFTER the recipe block
+     ends — the block itself is the declaration and cannot count as a use of what it declares. */
+  { const src=require('../2026-08-26/keasrc').specimenSource();
+    const after=src.slice(src.indexOf('matMerge(GRASS,'));
+    ok(after.length>1000,'there is source after the recipe block to look in ('+after.length+' chars)');
+    const dead=[];
+    for(const k of Object.keys(GR)){
+      if(typeof GR[k]!=='number')continue;                 // tier/biome tables are checked above
+      if(after.indexOf('GRASS.'+k)<0)dead.push(k); }
+    ok(dead.length===0,'every top-level GRASS scalar is actually read by something'+
+       (dead.length?' — DEAD KNOBS: '+dead.join(', ')+' (a constant nothing reads is a knob that '+
+        'lies about being connected)':' ('+
+        Object.keys(GR).filter(k=>typeof GR[k]==='number').length+' checked)')); }
+  near(T.density,T.count/(Math.PI*T.near*T.near),1e-6,
+     'the reported density IS count over the disc it covers ('+Math.round(T.density)+' blades/m2)');
+  ok(T.density>90,'and it is a FIELD density, not the 33 blades/m2 a world-sized static disc could '+
+     'afford ('+Math.round(T.density)+'/m2)');
+
+  /* EVERY TIER IS COHERENT, not just the shipped one — a tier nobody has selected lately is
+     exactly where a bad number waits. */
+  { const keep=GR.tier;
+    for(const t of Object.keys(GR.tiers)){ GR.tier=t; const q=X.grassTier();
+      ok(q.count>0&&q.near>0,t+' declares a count and a radius ('+q.count+' in r'+q.near+'m)');
+      ok(q.lodNear<q.lodFar&&q.lodFar===q.near,t+' has coherent thresholds');
+      ok(q.density>90,t+' is a field density ('+Math.round(q.density)+'/m2)'); }
+    GR.tier=keep; }
+
+  // ---- THE FIELD FOLLOWS THE CAMERA, WHICH IS THE WHOLE DESIGN ----
+  /* A static field over the playable world can afford 33 blades/m2 at this budget and photographs
+     as stubble; shrinking its radius to raise density just moves the grass away from the bird,
+     which is what the density sweep in ARTBIBLE shows. The anchor is what fixes that, and it has
+     to be WRITTEN EVERY FRAME — left at its initial (0,0) the field is a disc round the world
+     origin and the foreground is empty, which is precisely the failure it was introduced to cure
+     and photographs identically to "the grass did not build". */
+  { const src=require('../2026-08-26/keasrc').specimenSource();
+    ok(/U\.uAnchor\.value\.set\(/.test(src),'the anchor is written from the frame loop');
+    ok(/Math\.round\(c\.position\.x\/q\)\*q/.test(src),
+       'and it is SNAPPED to a grid, so the field cannot swim under a creeping camera');
+    ok(GR.snap>0&&GR.snap<=1,'the snap is small enough to stay inside the fade band ('+GR.snap+' m)');
+    const vs=X.GRASS_GLSL_V;
+    ok(vs.indexOf('vec2 w=uAnchor+aOff*uNear;')>0,
+       'and the blade takes its world position from that anchor plus its lattice offset'); }
+
+  // ---- WIND: DETERMINISTIC UNDER THE CAPTURE CLOCK PIN ----
+  /* The contract names this explicitly. The capture rig holds G.time at 12.0 on every animation
+     frame, so a photographed frame is a fixed frame — but ONLY if the wind is a function of that
+     clock and nothing else. A single performance.now() or Date.now() in the blade shader's driver
+     would make every vantage in the set irreproducible, and it would look like flakiness rather
+     than like a bug. */
+  { const src=require('../2026-08-26/keasrc').specimenSource();
+    const vs=X.GRASS_GLSL_V;
+    ok(vs.indexOf('uTime*uGustHz')>0&&vs.indexOf('uTime*uFlutterHz')>0,
+       'both wind frequencies are functions of uTime');
+    /* COMMENTS STRIPPED FIRST. The first cut searched the raw shader source and went red against
+       the COMMENT that explains the shader reads no clock — the same self-matching trap the P3
+       weatherboard check fell into. Assertions match code, never the prose written about it. */
+    const code=vs.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+    ok(code.indexOf('performance.now')<0&&code.indexOf('Date.now')<0,
+       'and the shader reads no clock of its own');
+    ok(/U\.uTime\.value=G\.time;/.test(src),
+       'uTime IS G.time — the clock the capture rig pins, and no other');
+    /* and the driver block itself takes nothing else that varies per frame */
+    const blk=src.slice(src.indexOf('if(G.grassMat&&G.grassMat.userData.keaG)'),
+                        src.indexOf('if(G.grassMat&&G.grassMat.userData.keaG)')+900);
+    ok(blk.indexOf('performance.now')<0&&blk.indexOf('Date.now')<0&&blk.indexOf('Math.random')<0,
+       'the per-frame grass driver reads no wall clock and no randomness at all');
+    ok(GR.windGust>0&&GR.windFlutter>0,'both wind terms are actually on ('+GR.windGust+' / '+
+       GR.windFlutter+')');
+    ok(GR.windGust>GR.windFlutter,'and the slow gust leads the fast flutter, so the field moves as '+
+       'one thing rather than shimmering'); }
+
+  // ---- THE BLADE IS A BLADE ----
+  { const g=X.grassBladeGeo(GR.seg,GR.taper,GR.bend);
+    const pos=g.attributes.position, n=pos.count;
+    ok(n===2*GR.seg+1,'the blade is a strip with a POINTED tip — '+n+' vertices for '+GR.seg+
+       ' segments, not a squared-off ribbon');
+    ok(g.userData.tris===2*GR.seg-1,'and '+g.userData.tris+' triangles');
+    /* it must TAPER and it must ARC: a blade that neither narrows nor curves is a fence paling,
+       and ref_bow_02's grass is all curve */
+    let wBase=0,wTip=1e9,zBase=0,zTip=0;
+    for(let i=0;i<n;i++){ const y=pos.getY(i), ax=Math.abs(pos.getX(i));
+      if(y<1e-6){ wBase=Math.max(wBase,ax); zBase=pos.getZ(i); }
+      if(y>1-1e-6){ wTip=Math.min(wTip,ax); zTip=pos.getZ(i); } }
+    ok(wBase>0.4,'it is full width at the base ('+wBase.toFixed(3)+')');
+    ok(wTip<0.02,'and comes to a point at the tip ('+wTip.toFixed(4)+')');
+    /* IT MUST ACTUALLY ARC, not merely agree with its own constant. The first cut of this only
+       compared the geometry against GRASS.bend — so setting bend to zero made the assertion
+       VACUOUSLY TRUE and a field of straight spikes sailed through. Caught by exactly that
+       sabotage. The bound comes first, then the agreement. */
+    ok(GR.bend>0.1,'the blade is pinned to a real arc, not a straight spike (bend '+GR.bend+')');
+    near(zTip-zBase,GR.bend,1e-6,'and the geometry arcs forward by exactly that much');
+    /* THE NORMALS ARE ONE SHEET, DELIBERATELY. A blade is one triangle thick; face normals on a
+       curved strip swing through ninety degrees and make the whole field read as noise under a
+       directional sun. */
+    const nr=g.attributes.normal; let sheet=true;
+    for(let i=0;i<nr.count;i++) if(nr.getZ(i)!==1||nr.getX(i)!==0||nr.getY(i)!==0)sheet=false;
+    ok(sheet,'every vertex normal is the same sheet normal, not a computed face normal'); }
+
+  // ---- BLADE WIDTH IS IN METRES, WHICH COST THIS PIECE A WHOLE PHOTOGRAPH ----
+  /* The first cut carried the old code's width numbers straight over. They were a MULTIPLIER on a
+     95 mm plane and became an ABSOLUTE width the moment the geometry went unit-sized, so the field
+     came back as metre-wide angular shards. Real pasture grass is 4-10 mm across and a tussock
+     leaf is narrower; anything above about 3 cm is not a blade. */
+  for(const [b,B] of Object.entries(GR.biomes)){
+    ok(B.w[0]>0.001&&B.w[1]<0.03,b+' blade width is a BLADE WIDTH in metres, not a multiplier ('+
+       (B.w[0]*1000).toFixed(1)+'-'+(B.w[1]*1000).toFixed(1)+' mm)');
+    ok(B.w[0]<B.w[1]&&B.h[0]<B.h[1],b+' width and height are ranges the right way round');
+    ok(B.h[1]<1.6,b+' blades are grass-height, not reeds ('+B.h[1]+' m)');
+    ok(B.bare>0&&B.bare<0.75,b+' leaves real bare ground between the mounds ('+
+       (B.bare*100).toFixed(0)+'% of cells)'); }
+  /* TUSSOCK IS A SHAPE CLAIM, NOT A COLOUR ONE. The brief asked for tussock-shaped blades in the
+     alpine biome, and a tussock leaf is longer, narrower and stands closer to upright than pasture
+     grass, in tighter mounds with more open ground between. Asserted as the RELATION between the
+     two profiles, so it survives both being retuned. */
+  { const c=GR.biomes.carpark, s=GR.biomes.skifield;
+    ok(s.h[1]>c.h[1],'the alpine blade is LONGER than the pasture blade ('+s.h[1]+' vs '+c.h[1]+' m)');
+    ok(s.w[1]<c.w[1],'and NARROWER ('+(s.w[1]*1000).toFixed(1)+' vs '+(c.w[1]*1000).toFixed(1)+' mm)');
+    ok(s.lean[1]<c.lean[1],'and stands closer to upright ('+s.lean[1]+' vs '+c.lean[1]+' rad)');
+    ok(s.bare>c.bare,'and its mounds sit in more open ground ('+(s.bare*100).toFixed(0)+'% vs '+
+       (c.bare*100).toFixed(0)+'%)');
+    ok(s.clumpM>c.clumpM,'in a coarser mound spacing ('+s.clumpM+' vs '+c.clumpM+' m)'); }
+
+  // ---- THE CUT-OUTS FIT, AND THEY COVER WHAT THEY USED TO ----
+  /* The reject mask used to be a CPU closure per biome. A camera-anchored field decides where a
+     blade stands in the shader, so the same information travels as four uniform boxes — and four
+     is a hard limit, so a fifth would be a silent truncation rather than a compile error. */
+  for(const b of ['carpark','skifield']){
+    const cuts=X.grassCuts(b);
+    ok(cuts.length===4,b+' passes exactly the four cut-out boxes the shader has uniforms for ('+
+       cuts.length+')');
+    ok(cuts.every(c=>c.length===4),'and each is a centre and a half-extent');
+    const live=cuts.filter(c=>c[3]>0);
+    ok(live.length>=3,b+' actually cuts things out ('+live.length+' live boxes)'); }
+  /* the carpark cut-outs still cover the surfaces they always did — a blade growing through the
+     road or the car park is the loudest possible way to get this wrong */
+  { const cuts=X.grassCuts('carpark');
+    const inside=(x,z)=>cuts.some(c=>c[3]>0&&Math.abs(x-c[0])<c[2]&&Math.abs(z-c[1])<c[3]);
+    ok(inside(0,34),'the road is cut out');
+    ok(inside(2,17),'the car park is cut out');
+    ok(inside(-24,-9),'the hut slab is cut out');
+    ok(!inside(-40,-40),'and open country is not ('+(-40)+','+(-40)+')'); }
+
+  // ---- THE SKI FIELD GREW GRASS FOR THE FIRST TIME ----
+  { X.boot({biome:'skifield'}); X.startGame(1); tick(4); park();
+    ok(G.grass&&G.grass.biome==='skifield','the ski field builds a field of its own');
+    ok(G.grass.bare===GR.biomes.skifield.bare,'with the alpine profile, not the carpark one ('+
+       G.grass.bare+')');
+    const cuts=X.grassCuts('skifield');
+    const inside=(x,z)=>cuts.some(c=>c[3]>0&&Math.abs(x-c[0])<c[2]&&Math.abs(z-c[1])<c[3]);
+    ok(inside(X.SKIPISTE?0:20,0)||inside(20,0),'the groomed run is cut out');
+    X.boot({biome:'carpark'}); X.startGame(1); tick(4); park(); }
+
+  // ---- THE FRAME BUDGET IS RECORDED, WHICH THE CONTRACT ALSO NAMES ----
+  /* A battery cannot time a GPU. What it CAN do is refuse to let the recorded numbers quietly
+     disappear: the measured cost of every tier lives in ARTBIBLE under REPLAT P4, and this checks
+     the tiers named in the recipe are the tiers the measurement wrote down. A tier added later
+     without a measurement goes red here rather than shipping unmeasured. */
+  { const fs=require('fs'), path=require('path');
+    const ab=fs.readFileSync(path.join(__dirname,'../../ARTBIBLE.md'),'utf8');
+    const sec=ab.slice(ab.indexOf('## REPLAT P4'));
+    ok(sec.length>400,'ARTBIBLE carries a REPLAT P4 section');
+    ok(/8\.98\s*ms|8\.978/.test(sec),'and it records the pre-P4 baseline the tiers are measured against');
+    /* THE DOCUMENT WRITES "120,000" BECAUSE IT IS PROSE FOR A PERSON; the recipe writes 120000
+       because it is code. Normalise the separators rather than making the table harder to read —
+       an assertion should bend to the document, not the other way round. */
+    const flat=sec.replace(/,/g,'');
+    for(const t of Object.keys(GR.tiers))
+      ok(flat.indexOf(String(GR.tiers[t].count))>=0,
+         'the measured cost of tier "'+t+'" ('+GR.tiers[t].count+' blades) is recorded there');
+    ok(sec.indexOf('ms')>=0,'in milliseconds'); }
 
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
 }

@@ -299,6 +299,122 @@ WHAT IS STILL SHORT, HONESTLY, AND WHY IT IS NOT P3b's
     the real fix and it is a piece of its own, with a precomputed texture per family.
   - THE GRASS SCAN IS STILL UNDER 42,000 CONE BLADES. P4, unchanged.
 
+## REPLAT P4 - INSTANCED GRASS   [LOCKED 2026-09-03, session 18; THE LOOK IS FLAGGED, NOT JUDGED]
+Judged against nz_tussock_01 for the country and ref_bow_02 / ref_bow_03 / ref_bow_15 for density
+and light through the blades. THE RECIPE IS THE `GRASS` BLOCK IN src/game.mjs, frozen by the REPLAT
+P4 section of audits/2026-08-28/harness-everything.js. NOTHING WAS RE-PINNED.
+
+  SHIPPED TIER  mid = 120,000 blades in a 14 m radius = 195 blades/m2
+  seg 4 (9 vertices, 7 triangles)   taper 0.72   bend 0.34   snap 0.5 m
+  clumpJit 0.55   clumpPull 0.42   fadeBand 0.11   comp 0.45
+  (mound spacing and bare fraction are PER BIOME - see the profiles below)
+  wind: gust 0.19 @ 0.55 Hz over 0.055 m^-1, flutter 0.075 @ 2.7 Hz
+  transmission: amt 0.55, pow 3.2, wrap 0.32, colour 0xFFE7A8
+
+THE FIELD FOLLOWS THE CAMERA, AND THAT IS THE WHOLE DESIGN.
+The first cut placed blades statically over a disc centred on the world origin, and the measurement
+killed it: the playable world is ~12,900 m2, the budget tops out near 420,000 blades, and 420,000
+over 12,900 m2 is THIRTY-THREE BLADES PER SQUARE METRE, which photographs as stubble. Shrinking the
+radius to raise density does not help — it moves the grass away from the bird, and the r20 frame in
+the density sweep came back with an EMPTY FOREGROUND for exactly that reason. So `near` is a radius
+around the CAMERA: every blade submitted is close enough to matter, density is the same wherever
+the bird goes, and the same budget buys 195/m2 instead of 33/m2. Beyond `near` the ground is the P3
+scanned grass under fog, which is what distance grass actually looks like.
+The anchor is SNAPPED to 0.5 m so the field cannot swim, and every per-blade property is hashed
+from the blade's WORLD POSITION rather than its instance index - so when the anchor snaps and a
+blade lands on new ground it takes on that ground's blade instead of carrying its own appearance
+across the world.
+
+THE FRAME BUDGET, MEASURED AND NOT ASSUMED.
+Loop-timed scene cost with the GPU synced by a readPixels, best of six passes of forty renders, at
+the Retina framebuffer this game actually runs at - 2304x1296, because setPixelRatio caps at 1.8 and
+a Mac reports 2. Pre-P4 baseline (the 42,000-blade triangle carpet): 8.978 ms.
+
+     TIER        blades   radius   blades/m2      scene ms    vs baseline
+     low         60,000     14 m          97        16.710          1.9x
+     mid        120,000     14 m         195        23.878          2.7x    <- SHIPPED
+     high       240,000     17 m         264        39.360          4.4x
+     (measured beyond the tiers, before the height tune: 420,000 in r20 = 334/m2, 62.360 ms;
+      1,000,000 -> 134.7 ms; 1,900,000 -> 259.5 ms with 26.9M triangles submitted, all of which
+      the GPU really did draw - the triangle counter was checked, because a cost that does not
+      move is usually a thing that is not happening)
+
+  seg 2 INSTEAD OF seg 4 saves about 19% (120,000 blades: 24.307 -> 19.775 ms) and costs the blade
+  its arc. Not taken: the curve is most of what makes a blade read as a blade at bird height.
+
+WHY mid AND NOT high, WHICH IS THE HONEST LIMIT ON THIS PIECE.
+NO INSTRUMENT IN THIS HARNESS CAN MEASURE A TRUE FRAME RATE. Headless Chrome drives
+requestAnimationFrame on a fixed cadence: it reported 59.9 fps median for 120,000 blades, for
+1,900,000 blades AND for the pre-P4 build, all identical, while the loop-timed cost of those three
+differs by a factor of ten. A number that does not move when the work grows tenfold is not
+measuring the work, and I nearly recorded it as proof that everything held 60. `perf.mjs` RAF mode
+now says so in its own header and reports a CADENCE rather than an fps.
+So "holds a playable frame rate on Eric's Mac" cannot be settled from here. What CAN be said is
+that 8.978 ms was the already-accepted cost of the shipped build, and mid is 2.7x that while high
+is 4.5x. Photographed at 05_tussock_ground the four densities are close - 60k already reads as a
+field because the clumping concentrates it, and above 240k the difference is barely visible while
+the cost doubles again. Shipping the 2.7x tier is the defensible call; `high` is measured, kept,
+and one env var away on the machine that can actually judge it:
+    KEAGRASS='{"tier":"high"}' npm run dev
+
+THE HEIGHTS AND THE CLUMPING WERE TUNED AGAINST THE SUBJECT FLOORS, BECAUSE THE FIRST CUT BURIED
+THE BIRD. At h 0.30-0.78 with clumpPull 0.62 the kea portrait read 465 pixels against a floor of
+1600 and the preen vantage 414 against 900 - three bird classifiers red at once, which is the
+gauntlet saying the game had stopped showing its protagonist. Measured at 03_kea_plate / 13_idle_preen:
+
+     h 0.30-0.78  pull 0.62  bare 0.28     465/1600     414/900
+     h 0.30-0.78  pull 0.42  bare 0.18     737/1600     595/900
+     h 0.22-0.52  pull 0.42  bare 0.18    1573/1600    1494/900
+     h 0.20-0.48  pull 0.42  bare 0.18    1663/1600    1604/900   <- LOCKED
+     h 0.18-0.44  pull 0.42  bare 0.18    1683/1600    1647/900
+
+Blade HEIGHT is the dominant lever; the looser clumping is what stopped the field reading as
+isolated brushes with bare ground between them. Some occlusion is authentic - ref_bow_03's bin is
+half-buried and it looks right - but a bird you cannot see is not a trade, it is a bug, and the
+subject floors are the instrument that said so. NO FLOOR WAS TOUCHED.
+
+CLUMPING IS WHAT MAKES IT A FIELD AND NOT A LAWN.
+nz_tussock_01 is discrete golden mounds with open ground between them, and a uniform scatter cannot
+read as that at any density - which is the real reason the old triangle carpet looked like a lawn.
+Blades are pulled toward their cell's jittered centre (`clumpPull`) and 28% of cells are dropped
+entirely (`bare`), both in the vertex shader off a hash of the cell coordinate. The scatter itself
+is a golden-angle sunflower lattice rather than uniform random, because a random disc scatter makes
+its own voids and those are indistinguishable from the deliberate bare ground.
+
+TUSSOCK IS A SHAPE CLAIM, NOT A COLOUR ONE.
+  carpark   h 0.20-0.48 m   w 5.5-12.5 mm   lean 0.10-0.34   bare 18%   mounds 1.35 m
+  skifield  h 0.26-0.62 m   w 3.5-8.0 mm    lean 0.05-0.19   bare 34%   mounds 1.75 m
+A tussock leaf is longer, narrower and stands closer to upright than pasture grass, in tighter
+mounds with more open ground between. The battery asserts the RELATION between the two profiles so
+it survives both being retuned.
+AND THE SKI FIELD HAS GRASS FOR THE FIRST TIME. Its terrain has always lerped to tussock below
+z=34 and there was never a blade standing in it - the bottom of that map was a painted gradient.
+
+LIGHT THROUGH THE BLADES.
+ref_bow_02 and ref_bow_15 are both backlit and the blades GLOW. An opaque Lambert blade cannot do
+that at any density, and it is a large part of why the old carpet read as plastic. Two cheap terms:
+a WRAP term so a blade facing away from the sun is not black, and a FORWARD scatter lobe for
+looking down-sun through a blade. Both ride the SQUARE of the height up the blade, because a blade
+is thinnest at its tip and that is where light actually gets through.
+The blade's vertex normals are ONE SHEET normal rather than computed face normals - a blade is one
+triangle thick, and a face normal on a curved strip swings through ninety degrees and makes the
+whole field read as noise under a directional sun.
+
+WHAT IS STILL SHORT, HONESTLY, AND WHY IT IS NOT P4's
+  - THE 260 TUFT CONES ARE STILL THERE, standing among the real blades. They were the stand-in for
+    tussock mounds and the blades now do that job; they are left because removing 260 rnd draws
+    shifts the seeded stream for everything built after them (FLAKES law 15) and that is a re-pin
+    of its own, not a side effect of this piece. Visible as the small gold triangles at 05.
+  - THE GRASS CASTS NO SHADOW. A shadow pass over 120,000 blades is a second full vertex pass, and
+    the transmission term plus the ground's ambient occlusion stand in for it. Measurable if it is
+    ever wanted; not measured, because it was not close.
+  - NO GROUND-TEXTURE TINT ON THE BLADES. Sampling the P3 scanned ground in the vertex shader and
+    tinting each blade by the ground it grows from would tie the field to the terrain at the macro
+    scale. It is a genuinely good idea and it is not in the brief.
+  - THE FIELD'S OUTER EDGE IS A FADE, NOT A HORIZON. At 14 m the blades are gone and the P3 ground
+    scan carries the distance. That is correct behaviour and it is also the thing to look at first
+    if the field ever reads as a circle following the bird.
+
 ## PHASE 1 - LIGHT & AIR   [not yet run]
 TARGETS: ugg_shadows_01/02, swag_shadows_01, nz_mist_01, kea_social_02.
 GAPS: no cast shadows anywhere; no AO; pale tarmac ellipses read as
