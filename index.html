@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNTITLED KEA GAME — an alpine crime simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F7F1DE; --ink:#2E2A22; --kea:#5E6E2F; --org:#FF7A1A;
+  --dawn:#FFD9A0; --alp:#9CC4E4; --bad:#C0392B; --tick:#3E7C3E;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0c1420;font-family:'Fredoka',system-ui,sans-serif;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;display:block}
+.hud{position:fixed;z-index:10;pointer-events:none}
+#splitline{position:fixed;top:0;bottom:0;left:50%;width:3px;background:rgba(20,26,18,.85);z-index:9;display:none;transform:translateX(-1.5px)}
+/* ---------- score strip ---------- */
+#topbar{top:10px;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center}
+.chip{background:rgba(24,28,20,.78);color:#fff;border-radius:14px;padding:6px 14px;font-size:18px;font-weight:600;letter-spacing:.5px;box-shadow:0 2px 0 rgba(0,0,0,.35);backdrop-filter:blur(3px)}
+#chaos{color:#FFD34D;min-width:150px;text-align:center}
+#combo{color:var(--org);display:none;animation:pop .18s ease}
+#wanted{display:flex;gap:4px;align-items:center;padding:6px 12px}
+.feather{width:16px;height:22px;background:#5a5f52;clip-path:polygon(50% 0,90% 35%,72% 100%,28% 100%,10% 35%);opacity:.28;transition:all .25s}
+.feather.on{background:var(--bad);opacity:1;transform:scale(1.12)}
+@keyframes pop{from{transform:scale(1.6)}to{transform:scale(1)}}
+/* ---------- per-player hud ---------- */
+.phud{bottom:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:44vw}
+#phud1{left:16px}#phud2{right:16px;align-items:flex-end;display:none}
+.ptag{font-size:13px;font-weight:700;color:#fff;background:var(--kea);padding:2px 10px;border-radius:10px;letter-spacing:1px}
+#phud2 .ptag{background:#7A5E2F}
+.prompt{background:rgba(24,28,20,.82);color:#fff;border-radius:12px;padding:7px 14px;font-size:21px;min-height:40px;display:none;box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.prompt b{color:#FFD34D}
+.holding{background:rgba(255,122,26,.92);color:#241a10;border-radius:12px;padding:5px 12px;font-size:15px;font-weight:600;display:none}
+.tugbar{width:180px;height:10px;background:rgba(0,0,0,.5);border-radius:6px;overflow:hidden;display:none;border:2px solid rgba(255,255,255,.6)}
+.tugbar i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#FFD34D,var(--org))}
+/* ---------- popup feed ---------- */
+#feed{top:64px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px}
+.pf{font-size:22px;font-weight:700;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.5);animation:rise 1.6s ease forwards;white-space:nowrap}
+.pf .pts{color:#FFD34D}
+.pf.big{font-size:30px;color:var(--org)}
+@keyframes rise{0%{opacity:0;transform:translateY(14px) scale(.8)}12%{opacity:1;transform:translateY(0) scale(1.08)}22%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-26px)}}
+/* ---------- to-do list ---------- */
+#todo{top:0;right:0;bottom:0;width:min(400px,92vw);background:var(--paper);color:var(--ink);font-family:'Patrick Hand',cursive;padding:26px 28px 20px;transform:translateX(105%);transition:transform .28s cubic-bezier(.2,.9,.3,1.05);box-shadow:-8px 0 30px rgba(0,0,0,.45);pointer-events:auto;overflow-y:auto;border-left:6px solid #d8ceac}
+#todo.open{transform:translateX(0)}
+#todo h2{font-family:'Fredoka';font-size:24px;letter-spacing:.5px;margin-bottom:2px}
+#todo .sub{font-size:19px;opacity:.75;margin-bottom:14px;border-bottom:2px dashed #b9ad86;padding-bottom:10px}
+.miarea{font-size:12px;letter-spacing:2px;color:#8a7f5a;margin:10px 0 3px;border-bottom:1px dashed #cdbf94;padding-bottom:2px;font-weight:700}
+.mi{font-size:20px;line-height:1.25;margin:9px 0;display:flex;gap:10px;align-items:flex-start}
+.mi .box{width:20px;height:20px;border:2.5px solid var(--ink);border-radius:4px;flex:none;margin-top:3px;position:relative;background:#fffdf4}
+.mi.done{opacity:.55}
+.mi.done .box::after{content:"";position:absolute;left:-3px;top:-9px;width:26px;height:26px;background:transparent;border-right:4px solid var(--tick);border-bottom:4px solid var(--tick);transform:rotate(40deg) scaleY(1.15);border-radius:2px}
+.mi.done span{text-decoration:line-through;text-decoration-thickness:2px}
+.mi .prog{color:#8a7f5c;font-size:17px}
+.mi.coop .box{border-color:#7A5E2F}
+.mi.coop::before{content:"×2";font-family:'Fredoka';font-size:12px;font-weight:700;background:#7A5E2F;color:#fff;border-radius:8px;padding:1px 6px;margin-top:6px;order:2}
+.mi.finale{margin-top:14px;padding-top:12px;border-top:2px dashed #b9ad86;font-weight:600}
+.mi.locked{opacity:.4;filter:blur(.4px)}
+#todohint{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);color:#fff;background:rgba(24,28,20,.7);padding:4px 12px;border-radius:10px;font-size:14px;z-index:10}
+#todohint.docked{left:auto;right:10px;transform:none;bottom:8px;font-size:11px;padding:3px 8px;opacity:.8}
+/* ---------- title / win ---------- */
+.screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:linear-gradient(180deg,var(--alp) 0%,var(--dawn) 78%,#e8b46f 100%);pointer-events:auto;text-align:center;padding:20px;overflow:hidden}
+.screen h1{font-size:clamp(38px,7vw,74px);font-weight:700;color:#2c3318;letter-spacing:1px;line-height:.95;text-shadow:0 3px 0 rgba(255,255,255,.5)}
+.screen h1 em{font-style:normal;color:var(--org);display:block;font-size:.42em;letter-spacing:4px;font-weight:600}
+.screen .tag{font-family:'Patrick Hand';font-size:clamp(17px,2.4vw,23px);color:#41411f;max-width:640px}
+.bigbtn{font-family:'Fredoka';font-size:24px;font-weight:700;padding:14px 34px;border:none;border-radius:16px;background:var(--kea);color:#fff;cursor:pointer;box-shadow:0 5px 0 #3d4a1c;transition:transform .08s}
+.bigbtn:hover{transform:translateY(-2px)}
+.bigbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #3d4a1c}
+.bigbtn.col{background:#7A3D2E;color:#FFD9A0;border-color:#4A2018}
+.bigbtn.col:hover{background:#8E4A38}
+.bigbtn.alt{background:#7A5E2F;box-shadow:0 5px 0 #4d3a1b}
+.btnrow{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+/* ---------- the tour brochure (TODO 37). LOOK IS FLAGGED: the pins are decorative and the LIST is
+   what you actually click, so the thing stays legible at 320px while the paper stays a picture. */
+#tour{display:none}
+/* THE BROCHURE IS TALLER THAN A SHORT WINDOW, and .screen centres its children inside overflow
+   hidden - which cut the heading off the top and the BACK button off the bottom at 960x540. So this
+   screen scrolls from the top instead of centring. Measured on the 26 vantage, which is why it has
+   one. */
+#tour.open{display:flex;justify-content:flex-start;overflow-y:auto;padding:16px 18px}
+.brochure{background:var(--paper);color:var(--ink);border-radius:14px;box-shadow:0 10px 34px rgba(0,0,0,.35);padding:16px 20px 6px;max-width:min(880px,94vw);width:100%;border:5px solid #d8ceac}
+.brochure h2{font-family:'Fredoka';font-size:clamp(20px,3vw,27px);letter-spacing:1px;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.brochure h2 span{font-size:.62em;color:#8a7a2f}
+.brochure .note{font-family:'Patrick Hand';font-size:15px;opacity:.8;text-align:left}
+.brochure .paper{position:relative;height:min(240px,30vh);margin:10px 0 6px;border-radius:10px;background:linear-gradient(160deg,#e9e2c6,#cfe0c8 55%,#e8d9b4);overflow:hidden;border:2px dashed #b9ad86}
+.tpin{position:absolute;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;border:3px solid #fffdf4;box-shadow:0 2px 5px rgba(0,0,0,.35);background:#9a9384}
+.tpin.open{background:var(--kea)}
+.tpin.current{background:var(--org);box-shadow:0 0 0 6px rgba(255,122,26,.26)}
+.tpin.soon{background:var(--alp)}
+.tpin b{position:absolute;left:50%;top:17px;transform:translateX(-50%);font-family:'Patrick Hand';font-weight:400;font-size:13px;white-space:nowrap;color:#3a3626;text-shadow:0 1px 0 rgba(255,255,255,.75)}
+.trow{display:flex;align-items:center;gap:10px;padding:7px 4px;border-top:2px solid #e2d9bb;text-align:left}
+.trow .nm{font-family:'Fredoka';font-weight:700;font-size:17px;flex:1;min-width:0}
+.trow .nm i{display:block;font-style:normal;font-family:'Patrick Hand';font-weight:400;font-size:14px;opacity:.72}
+.trow .pips{font-family:'Fredoka';font-size:14px;color:#8a7a2f;flex:none}
+.trow .stamp{font-family:'Fredoka';font-size:11px;color:var(--bad);border:2px solid var(--bad);border-radius:6px;padding:1px 6px;transform:rotate(-7deg);flex:none}
+.trow button{font-family:'Fredoka';font-weight:700;font-size:14px;border:none;border-radius:10px;padding:7px 13px;background:var(--kea);color:#fff;cursor:pointer;flex:none}
+.trow button[disabled]{background:#b4ad99;cursor:not-allowed}
+/* the level title card (TODO 38). LOOK IS FLAGGED with the brochure. */
+#travelcard{position:fixed;left:0;right:0;top:38%;z-index:15;text-align:center;pointer-events:none;opacity:0;
+  font-family:'Fredoka';font-weight:700;font-size:clamp(28px,6vw,58px);letter-spacing:3px;color:#FFF6E2;
+  text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 26px rgba(255,200,120,.5);transition:opacity .45s ease}
+#travelcard.on{opacity:1}
+.controls{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.ctl{background:rgba(255,255,255,.55);border-radius:14px;padding:12px 18px;font-size:15px;color:#2c3318;min-width:200px}
+.ctl h3{font-size:15px;letter-spacing:1px;margin-bottom:6px;color:#5E6E2F}
+.ctl b{background:#2c3318;color:#fff;border-radius:6px;padding:1px 7px;font-weight:600}
+.crimes{font-family:'Patrick Hand';font-size:15px;color:#5b5533;max-width:680px;line-height:1.35;margin-top:4px}
+#win{display:none;background:linear-gradient(180deg,#20304a,#5a3a6e 60%,#c46a3a)}
+#win h1{color:#ffe9c9;text-shadow:0 3px 0 rgba(0,0,0,.4)}
+#win .stats{font-family:'Patrick Hand';font-size:20px;color:#ffe9c9;line-height:1.5}
+/* TODO 22: the versus result borrows the win screen wholesale - same hidden-by-default rule, same
+   type, a colder ground so a match reads as a verdict rather than a coronation. LOOK IS FLAGGED. */
+#vsend{display:none;background:linear-gradient(180deg,#16233a,#2f4a63 60%,#8a9db0)}
+#vsend h1{color:#eaf2ff;text-shadow:0 3px 0 rgba(0,0,0,.4)}
+#vsend .stats{font-family:'Patrick Hand';font-size:20px;color:#eaf2ff;line-height:1.6}
+#hint2p{font-size:13px;color:#41411f;opacity:.8}
+.muted{position:fixed;top:10px;right:12px;z-index:15;pointer-events:auto;background:rgba(24,28,20,.6);color:#fff;border:none;border-radius:10px;font-size:13px;padding:5px 10px;cursor:pointer;font-family:'Fredoka'}
+@media (max-width:760px){.chip{font-size:14px;padding:4px 9px}#chaos{min-width:100px}.pf{font-size:17px}.pf.big{font-size:22px}}
+#cfback{position:fixed;inset:0;background:rgba(10,14,12,0.78);z-index:40;display:none;align-items:center;justify-content:center}
+#cfback.open{display:flex}
+#cfcard{width:min(680px,92vw);background:#E8DFC8;color:#2A2620;border-radius:6px;padding:18px 20px 16px;
+  box-shadow:0 24px 80px rgba(0,0,0,0.55), inset 0 0 60px rgba(120,100,60,0.18);
+  font-family:'Trebuchet MS',system-ui,sans-serif;transform:rotate(-0.4deg);position:relative}
+#cfcard:before{content:'DOCUMENTED CRIME';position:absolute;top:10px;right:14px;color:#A8342A;border:3px solid #A8342A;
+  padding:2px 8px;font-weight:900;font-size:12px;letter-spacing:2px;transform:rotate(6deg);opacity:0.85;border-radius:3px}
+#cftitle{font-size:24px;font-weight:900;letter-spacing:0.5px;margin:0 0 2px}
+#cfsub{font-size:12px;opacity:0.75;margin-bottom:10px;font-style:italic}
+#cfvid{position:relative;width:100%;padding-top:56.25%;background:#161A17;border-radius:4px;overflow:hidden;border:3px solid #4A4234}
+#cfposter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:repeating-linear-gradient(45deg,#1E241F,#1E241F 14px,#182019 14px,#182019 28px);color:#D8CFAE;text-align:center;padding:14px}
+#cfposter .play{width:64px;height:64px;border-radius:50%;background:#C0392B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 3px 0 rgba(0,0,0,.4)}
+#cfposter .cap{font-weight:800;letter-spacing:.06em}
+#cfposter .sub2{font-size:13px;opacity:.7}
+#cfvid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+#cfblurb{font-size:14px;line-height:1.45;margin:10px 0 4px}
+#cfnote{font-size:11px;opacity:0.6;margin-bottom:12px}
+#cfbtns{display:flex;gap:10px;justify-content:flex-end}
+#cfbtns button{font-family:inherit;font-weight:900;font-size:14px;padding:9px 16px;border-radius:5px;border:0;cursor:pointer}
+#cfgo{background:#1F5C38;color:#F2EFE4}#cfgo:hover{background:#277146}
+#cfskip{background:#B8AE92;color:#2A2620}#cfskip:hover{background:#C8BEA2}
+#hud,#todo,.prompt,.tugbar,#kealabels{transition:opacity .25s}
+body.photo #hud,body.photo #todo,body.photo .prompt,body.photo .tugbar,body.photo #kealabels,body.photo .muted{opacity:0;pointer-events:none}
+#touchui{display:none}
+body.touch #touchui{display:block;position:fixed;inset:0;z-index:40;pointer-events:none}
+#tjoy{position:absolute;left:22px;bottom:26px;width:112px;height:112px;border-radius:50%;background:rgba(24,28,20,.32);border:2px solid rgba(255,255,255,.25);pointer-events:auto;touch-action:none}
+#tknob{position:absolute;left:34px;top:34px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.5)}
+.tbtn{position:absolute;border-radius:50%;background:rgba(24,28,20,.5);color:#fff;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-weight:800;pointer-events:auto;touch-action:none;font-size:12px}
+.tbtn.on{background:rgba(255,211,77,.55);color:#1a1a10}
+#tflap{right:22px;bottom:26px;width:92px;height:92px;font-size:15px}
+#tgrab{right:128px;bottom:58px;width:66px;height:66px}
+#tscreech{right:52px;bottom:132px;width:66px;height:66px}
+body.photo #touchui{opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="c" style="filter:saturate(1.22) contrast(1.06) brightness(1.03)"></canvas>
+<div id="splitline"></div>
+
+<div class="hud" id="topbar">
+  <div class="chip" id="chaos">CHAOS 0</div>
+  <div class="chip" id="vshud" style="display:none"></div>
+  <div class="chip" id="wanted" title="how cross the humans are">
+    <div class="feather"></div><div class="feather"></div><div class="feather"></div><div class="feather"></div><div class="feather"></div>
+  </div>
+  <div class="chip" id="combo">×2 SPREE</div>
+</div>
+
+<div class="hud" id="feed"></div>
+
+<div class="hud phud" id="phud1">
+  <div class="ptag">KEA 1</div>
+  <div class="holding" id="hold1"></div>
+  <div class="tugbar" id="tug1"><i></i></div>
+  <div class="prompt" id="prompt1"></div>
+</div>
+<div class="hud phud" id="phud2">
+  <div class="ptag">KEA 2</div>
+  <div class="holding" id="hold2"></div>
+  <div class="tugbar" id="tug2"><i></i></div>
+  <div class="prompt" id="prompt2"></div>
+</div>
+
+<div id="cfback"><div id="cfcard">
+  <div id="cftitle"></div><div id="cfsub"></div>
+  <div id="cfvid"><div id="cfposter"><div class="play">▶</div><div class="cap">DOCUMENTED KEA CRIME</div><div class="sub2">footage needs internet — the re-enactment does not</div></div><iframe id="cfframe" src="" title="documented kea crime" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+  <div id="cfblurb"></div>
+  <div id="cfnote">real footage — needs internet to play. the mission starts when you do.</div>
+  <div id="cfbtns"><button id="cfskip">SKIP [ESC]</button><button id="cfgo">RE-ENACT THE CRIME [ENTER]</button></div>
+</div></div>
+<div class="hud" id="todo">
+  <h2>NAUGHTY THINGS TO DO</h2>
+  <div class="sub">scrawled in beak-marks on the back of a stolen trail map</div>
+  <div id="milist"></div>
+</div>
+<div id="todohint" style="display:none">TAB — to-do list</div>
+<button class="muted" id="mutebtn" style="display:none">🔊 sound</button>
+
+<div class="screen" id="title">
+  <h1>UNTITLED KEA GAME<em>AN ALPINE CRIME SIMULATOR</em></h1>
+  <div class="tag">You are a juvenile kea at a scenic South Island carpark at dawn.
+  The tourists have rubber, sandwiches and shiny things. You have a beak like a Swiss Army knife and absolutely no shame.</div>
+  <div class="btnrow">
+    <button class="bigbtn" id="btn1p">1 KEA</button>
+    <button class="bigbtn alt" id="btn2p">2 KEA (couch)</button>
+    <button class="bigbtn col" id="btncol">🌋 COLOSSAL — grow with every point (solo)</button>
+    <button class="bigbtn alt" id="btnvs">⚔ 2 KEA VERSUS — menace vs management</button>
+    <button class="bigbtn alt" id="btntour">🗺 THE TOUR — pick your map</button>
+  </div>
+  <div id="hint2p">press <b>1</b> / <b>2</b> / <b>3</b> / <b>4</b> (or Enter) to start · <b>M</b> for the tour map · real kea work as a team to inflict maximum damage on one car — two-player is the scientifically accurate mode</div>
+  <div class="controls">
+    <div class="ctl"><h3>KEA 1</h3><b>W A S D</b> waddle &nbsp; HOLD <b>SPACE</b> — fly<br><b>E</b> grab · rip (hold) &nbsp; <b>Q</b> screech</div>
+    <div class="ctl"><h3>KEA 2</h3><b>ARROWS</b> waddle &nbsp; HOLD <b>/</b> — fly<br><b>.</b> grab · rip (hold) &nbsp; <b>,</b> screech</div>
+    <div class="ctl"><h3>EVERYONE</h3><b>TAB</b> to-do list &nbsp; <b>P</b> pause &nbsp; <b>O</b> photo mode<br><b>C</b> band colour &nbsp; feathers = dignity — run out and you're only briefly embarrassed<br>stash shinies &amp; scoff food at <b>your nest</b> · progress saves itself (<b>⌫</b> at title wipes it)</div>
+  </div>
+  <div class="crimes">based on documented crimes: the Homer Tunnel cone gang · the 2009 passport theft · the Craigieburn snow-ambush crew (they used a sentry) · nails stolen and stashed sorted by size · one hiking boot never recovered</div>
+</div>
+
+<div id="travelcard"></div>
+
+<div class="screen" id="tour">
+  <div class="brochure">
+    <h2>THE KEA TOUR<span id="tourstars"></span></h2>
+    <div class="note">Department of Conservation visitor brochure. Somebody has drawn on it.</div>
+    <div class="paper" id="tourpaper"></div>
+    <div id="tourlist"></div>
+  </div>
+  <div class="btnrow"><button class="bigbtn alt" id="tourback">BACK [ESC]</button></div>
+</div>
+
+<div class="screen" id="win">
+  <h1>APEX MENACE<em>CERTIFIED KEA</em></h1>
+  <div class="stats" id="winstats"></div>
+  <div class="btnrow"><button class="bigbtn" id="btnagain">CAUSE MORE CHAOS</button></div>
+</div>
+
+<div class="screen" id="vsend">
+  <h1 id="vswin">FULL TIME<em>THE HORN</em></h1>
+  <div class="stats" id="vsstats"></div>
+  <div class="btnrow"><button class="bigbtn" id="btnvsagain">REMATCH</button></div>
+</div>
+
+<script type="module" src="/src/main.mjs"></script>
+
+</body>
+</html>

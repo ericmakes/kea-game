@@ -1,4 +1,5 @@
-gauntlet/capture/*.png
 .DS_Store
+dist/
+gauntlet/capture/*.png
 gauntlet/reference/pairs/
 SESSION.lock

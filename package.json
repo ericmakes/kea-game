@@ -2,6 +2,18 @@
   "name": "kea-gauntlet",
   "private": true,
   "description": "Self-contained certification gauntlet for the untitled kea game. bash gauntlet/verify/gate.sh certifies; no chat required.",
-  "dependencies": { "three": "0.128.0" },
+  "comment-type": "NO \"type\":\"module\" ON PURPOSE. The nine batteries and the shared rig are CommonJS .js files using require(); flipping the package to ESM would break all of them at once. The ported game is an explicit .mjs instead, which is unambiguous under either setting. See REPLAT.md P1.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4321 --strictPort"
+  },
+  "dependencies": {
+    "three": "0.185.1",
+    "three-r128": "npm:three@0.128.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.14"
+  },
   "optionalDependencies": { "puppeteer": "^22.0.0" }
 }
