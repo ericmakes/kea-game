@@ -1642,3 +1642,76 @@ would cut 30 launches to 1 and is a behaviour change to a rig every baseline dep
 its own piece and a stability sweep; (3) capture the browser's stderr on a timeout.
 NOT URGENT: the pass now self-heals and says so in its output. But a 3% stall rate on a 30-shot
 sweep means most sweeps take a 90s penalty, and crossrun with RUNS=5 takes five of them.
+
+### 79. THE HUT ROOF IS AN INVERTED GABLE — IT MEETS IN A VALLEY WHERE A RIDGE SHOULD BE
+Filed 2026-09-04, session 21, on Eric's instruction: FILE, DO NOT FIX. This is P6 geometry work and
+it is on the BLOCKED list at the top of this file (`hut roof rebuild`), so it must not be improvised
+overnight.
+WHAT ERIC SEES, three defects in one object:
+  1. THE PITCH IS INVERTED. The two roof planes meet in a VALLEY, not a ridge — the roof reads as a
+     shallow V collecting water where it should shed it. Every other cue in the hut (walls, chimney,
+     the way the eaves are lit) says gable, so the eye reads the roof as wrong rather than as a
+     design.
+  2. A VISIBLE GAP TO THE WALLS. The roof does not land on the wall plates; there is daylight
+     between them. ARTBIBLE's PHASE 4 gap list has carried "hut roof floats off its walls" since the
+     24-frame audit, so this half is a re-sighting of a known defect, not a new one.
+  3. THE SOLAR PANELS ARE OFF-PITCH. They do not lie in either roof plane, so they read as boards
+     resting at their own angle rather than as panels fixed to a roof.
+WHERE TO JUDGE IT: 02_hut_snow (the hut's own vantage), 19_roof_follow (the bird ON the roof, so the
+pitch is read against a subject standing on it), 01_carpark_wide and the P4d wide proof frame (the
+hut in the left third, which is where it was noticed).
+VERIFIED FROM THE GEOMETRY, so whoever takes this does not have to re-derive it. In `buildHut`:
+    const rl = Mesh(BoxGeometry(7.8, 0.18, 3.6)); rl.position.set(0, 3.35, -1.45); rl.rotation.x =  0.62;
+    const rr = rl.clone();                        rr.position.z = 1.45;            rr.rotation.x = -0.62;
+    const cap = box(8, 0.14, 0.5, PAL.dark, 0, 3.98, 0);          // the ridge batten
+Each panel is 3.6 deep, so its edges sit at local z = ±1.8. Under Rx(0.62) that is ±1.8·sin(0.62) =
+±1.04 in y and ±1.8·cos(0.62) = ±1.46 in z. Landing them:
+    rl  high edge  y 4.39 at z −2.91   ->  low edge  y 2.31 at z  0.01
+    rr  low  edge  y 2.31 at z −0.01   ->  high edge y 4.39 at z  2.91
+THE TWO PLANES MEET AT z≈0 AT y 2.31, WHICH IS THEIR LOWEST POINT, AND RISE TO 4.39 AT BOTH EAVES.
+That is the inverted gable, in arithmetic: a V-shaped valley down the centre line. The two rotation
+signs are simply swapped — `rl` wants −0.62 and `rr` wants +0.62 — but see below on why that alone
+is not the piece.
+AND THE OTHER TWO DEFECTS FALL OUT OF THAT ONE, WHICH IS WHY IT IS ONE PIECE:
+  - THE RIDGE CAP IS AT y 3.98 AND THE PANELS MEET AT y 2.31, so the batten floats 1.67 m above the
+    valley it is supposed to cap. That dark bar hanging in mid-air is part of what Eric is seeing.
+  - THE COLLIDER ALREADY BELIEVES IN A RIDGE: `{kind:'roof', ridge:4.05, slope:0.52, slide:true}`,
+    and `groundHeightAt` walks the bird on `ridge − |z−c.z|·slope`. 4.05 agrees with the CAP and
+    disagrees with the drawn panels by 1.7 m at the centre line, so the bird currently walks an
+    invisible correct ridge above a visible wrong valley. 19_roof_follow is the vantage that shows
+    it, and it means fixing the geometry should bring the drawn roof TO the collider rather than the
+    other way round — the collider is the one that is right.
+  - THE GAP TO THE WALLS IS THE SAME BUG SEEN SIDEWAYS. With the pitch inverted the eaves are lifted
+    to 4.39 instead of dropping to the wall plate, so the roof's outer edges pull away from the top
+    of the walls; 02_hut_snow shows daylight between the roof and the wall top plate across the
+    whole front. Correcting the pitch moves the eaves DOWN, which may close it on its own — check
+    before adding any packing geometry, or the fix will double up.
+ONE THING I COULD NOT CONFIRM: there is no mesh named for a solar panel anywhere in `buildHut`. What
+reads as off-pitch panels in 02_hut_snow is most likely the twelve `rg` ridge battens (0.02 m
+cylinders parented to `rl`, so they ride its wrong rotation and present as a framed array) and/or
+the `sn` snow cap at z 2.4 / rotation.x −0.62. Whoever takes this should confirm at the vantage
+first: if the panels are the battens, they are fixed by fixing the pitch and there is no third
+defect; if Eric means a mesh I have not found, it is elsewhere in the hut group.
+
+### 80. THE ROLLING TUSSOCK HILLS HAVE FLAT TOPS, AND THEY ARE THE LAST STRAIGHT EDGE IN A WIDE FRAME
+Filed 2026-09-04, session 21, during P4d. FILED, NOT FIXED: P4d's scope was the squares in the grass
+and the ground colour, and this is neither — it is landform silhouette, so it belongs with the
+mountain shape work (ARTBIBLE PHASE 5 / P6).
+WHAT IT IS: the nine rolling hills in `buildCarpark` are `SphereGeometry(rad,18,10)` with
+`scale.y` between 0.2 and 0.3. Ten height segments means the polar bands are already nearly
+horizontal, and squashing to a quarter of the radius collapses the top two bands into a genuinely
+FLAT cap several metres across. At their placement radius (64-84 m) that cap presents as a dead
+straight horizontal line against the sky, and the radial noise applied to x/z does not touch it
+because it only perturbs the horizontal profile.
+WHY IT MATTERS NOW: P4d's proof frame was shot to show that no straight edge or lattice remains in
+the grass or the ground colour, and it does show that. These caps are the only straight edges left
+in the frame, so they are what the eye goes to next. They are also visible in 01_carpark_wide
+(y~145-175) and 05_tussock_ground (the yellow shape with the ruled top edge, left third).
+CHEAPEST HONEST FIX, for whoever takes it: perturb the vertical profile as well as the horizontal
+one — the sculpt loop already has a per-hill phase, so a `pos.setY(v, y*(1+n*...))` term costs
+nothing — and/or raise the height segment count, which is nine meshes and not a budget question.
+Do NOT just raise scale.y: that changes the landform's read, which is a taste call and Eric's.
+RELATED, AND STILL OPEN: these same hills are the horizon COLOUR SEAM recorded in the P4b/P4c/P4d
+recipes — they are separate vertex-coloured geometry and do not wear `GRASS.groundTint`, so tinted
+flat ground meets untinted gold hill with a visible join. Same nine meshes, so the two are probably
+one piece.

@@ -4261,3 +4261,136 @@ smooth noise field, and the outer edge noise-perturbed in world space.
   sidebyside 33 pairs. diff 28 compared 27 flagged (worst 0.2694), boxdiff 12 compared 7 changed,
   pxdiff 28 over band, subjects 16 checked **2 missing — the two known TODO 75 reds, no new
   regression**. **ALL OF IT LEFT FLAGGED — the look is Eric's.**
+
+## SESSION 21 — 2026-09-04, Eric played P4c: STILL squares, and this time it was the cover layer
+
+Lock taken (none held), released as the final act. Tip certified before anything moved
+(specimen `4a8bf227f48413bed78ad9cee7a19715`, bundle `7d5f00b6ddc88b585c9ed08811423c3b`, matching
+the log's P4c line). Shipped at specimen `2219325fdb3ebf535d749399d625275d`, bundle
+`8a38d65553117aa108103ba9900086f5`. Recipe in ARTBIBLE under REPLAT P4d. **Nothing re-pinned — 27 of
+28 vantages flagged.**
+
+**THE BUG WAS THE SENTENCE THE LAST SESSION WROTE WHILE FIXING THE SAME BUG.** P4c gave the CLUMP
+layer irregular territories and, in the same commit, exempted the COVER layer: "the SEARCH IS
+SKIPPED where the pull is negligible: the cover layer sits at 0.10 and gathers almost nothing, so
+nine hash lookups per vertex would buy it nothing." That was reasoned and never photographed, and it
+left the defect in the layer that covers the closest ten metres of every play frame.
+
+- **FOUR CANDIDATES, THREE MULTIPLIERS EACH, ONE VANTAGE, ONE BUILD — AND ONLY ONE OF THEM MAKES A
+  SQUARE.** Shooting 14_player_view at `cover.clumpM` 0.55 / 1.10 / 2.20 makes straight bare LANES
+  in a rectangular lattice double and double again in step with it. `bareScale` 0.29 / 0.145 /
+  0.0725 (a 4x range) shifts the pattern and produces no square at any setting. `ground.segs`
+  24 / 48 / 96 and `ground.maskScale` 0.5 / 1.0 / 2.0 both change the horizon blobs as asked and
+  produce no square at any setting. Two of the three candidates in the brief are ruled OUT by
+  measurement, not by reading the code.
+
+- **THE GROUND COLOUR MASK HAD NO SCALE KNOB, SO IT GOT ONE BEFORE IT WAS DIAGNOSED.** Its lattice
+  was the literal `PlaneGeometry(240,240,48,48)` and its pattern was four magic sine frequencies
+  inline in buildCarpark. **A candidate system with no scale knob cannot be ruled in OR out**, and
+  the only reason the other two could be swept is that somebody had already named their knob.
+  `GRASS.ground = {segs:48, maskScale:1.0}` now reaches BOTH terrain planes — and the assertion that
+  enforces that went red on the SKI FIELD's plane the first time it ran, which is the point: a seam
+  that reaches one of two planes would have photographed four identical frames on the ski field and
+  acquitted an innocent system.
+
+- **THE MECHANISM IS ARITHMETIC, AND IT IS WHY THE EXEMPTION COULD NEVER HAVE BEEN SAFE.**
+  `w=mix(w,cc,pull)` moves every blade `pull` of the way toward its cell's centre. On a square cell
+  that VACATES A MARGIN ALONG EVERY CELL EDGE — so a small pull does not draw a faint grid, it draws
+  a **grid of straight empty lanes, in negative space**, and the smallness that was thought to make
+  it safe is exactly what makes it legible. Proved by re-shooting at `cover.clumpPull` 0: the lanes
+  vanish completely at both 0.55 and 2.20. That also rules out the mound's own colour — `cw` still
+  stepped per square cell in that shot and was invisible even at 2.20 m cells.
+
+- **THE FIX IS ONE CONSTANT, AND WHAT MATTERS IS THAT IT IS A CONSTANT.** `GRASS.blobMinPull` at
+  **0.0**, replacing a hardcoded `0.2` buried in a uniform expression. That 0.2 was unreachable from
+  the recipe, so it could not be tuned, could not be shot and could not be argued with — the three
+  properties that let it survive a whole session. At zero, any layer that pulls at all gets a
+  Voronoi territory, because any pull at all draws the lattice it pulls toward. Kept as a knob rather
+  than deleted so the next session can SHOOT an exemption instead of reasoning about one.
+
+- **THE CHEAPER FIX WAS MEASURED AND NOT SHIPPED, WHICH IS A CHOICE AND NOT AN OVERSIGHT.**
+  `cover.clumpPull` 0 also removes the squares and is CHEAPER than P4c (the gate then skips the scan
+  for that layer outright). Rejected because it flattens the cover to a mathematically even carpet
+  and leaves the mound identity stepping on a square lattice that is invisible today and would
+  surface the moment anyone tunes the cover's colour. Reachable at
+  `KEAGRASS='{"cover":{"clumpPull":0}}'` and named in the battery so nobody has to rediscover it.
+
+- **THE FIRST COST READING WAS +1.3 ms AND IT WAS WRONG, FOR A REASON WORTH WRITING DOWN.** It was
+  taken with eleven headless Chromes from the capture sweep still on the machine. Re-measured
+  interleaved on a quiet one (`perf.mjs bird`, best-of-6 x 40 renders, 1280x720 DPR 1): blobScan off
+  entirely **14.16 ms** (4 runs), P4c **14.36 ms** (7 runs), P4d **14.69 ms** (7 runs) — so the
+  cover's territories cost about **+0.33 ms**, and at DPR 2 the two read 17.87 and 17.90, i.e.
+  nothing measurable, because the added work is per-vertex and that frame is fragment-bound. The
+  ranges overlap heavily; the honest statement is "at or below this instrument's noise floor". Note
+  the same A/B gives +0.20 ms for P4c's blob scan where P4c recorded +0.71 — **P4c's tables are left
+  as they were taken rather than quietly restated.** Publishing the loaded-machine figure would have
+  been P4c's camLock mistake in a different currency.
+
+- **perf.mjs HAD THE camLock BUG TWICE.** P4c established that camLock is an OBJECT and that a bare
+  `true` is a truthy lock with no coordinates, then fixed one of the two call sites. The RAF cadence
+  branch still had it. That branch is documented in its own file as not a real measurement, so
+  nothing published rests on it — but a known bug left in a sibling branch is the same
+  knob-that-lies pattern, so it is fixed rather than filed.
+
+- **AN ASSERTION'S OWN MESSAGE WAS A LAW-14 FUSE, AND ONLY THE SABOTAGE FOUND IT.** The new
+  "the P4b ground tint is still there" line formatted its value as `'#'+GR.groundTint.toString(16)`,
+  so the exact sabotage it exists to catch — delete `groundTint` — died on `undefined.toString` and
+  killed the whole battery instead of reporting one finding. The gate would still have gone red (a
+  throw prints no ALL PASS and exits non-zero) but the FINDING was lost. **My sabotage script scored
+  that GREEN**, because it only grepped for FINDINGS; it now judges a throw the way the gate does,
+  and the message formats defensively. Same shape as the P4c debug readback, third time this project
+  has been bitten by a diagnostic that dies before it can speak.
+
+- **THE DEAD-KNOB SWEEP NOW GOES INSIDE THE BLOCKS.** The P4 check only looked at top-level numbers,
+  which skips `cover`, `ground`, `tiers` and `biomes` entirely — and P4d added two nested knobs. It
+  matches the LEAF NAME rather than `GRASS.<block>.<leaf>`, which is forced by how the leaves are
+  actually read (a layer spec reaches the shader as `L.taper` off a merged copy; the terrain reads
+  `GRD.segs` off a local alias), comments stripped first, and its limit is stated in the file: a
+  leaf whose name collides with an unrelated property would pass vacuously, so it is a tripwire for
+  a NEWLY ADDED knob and not a proof that every leaf is live.
+
+- **THE PROOF FRAME IS A DIAGONAL, ON PURPOSE.** 1920x1080, HUD hidden, camera (-8, 2.4, -6) looking
+  at (6, 0.45, -30) — chosen so a world-axis-aligned lattice crosses the frame at an angle and
+  cannot hide in the perspective. Shot at blobMinPull 0.2 and 0.0 from the same build: the before has
+  straight lanes and a right-angle corner; the after has wandering channels, no straight segment
+  anywhere in the grass, and a ground colour that is a soft wash with no lattice and no facet edge.
+  Not a pinned vantage (the brief said re-pin nothing) — the camera is recorded in ARTBIBLE so it
+  can be re-shot.
+
+- **FILED, NOT FIXED, ON ERIC'S INSTRUCTION: TODO 79, THE HUT ROOF IS AN INVERTED GABLE.** Verified
+  from the geometry rather than filed on report: each 3.6 m panel's edges land at ±1.04 in y under
+  Rx(0.62), so `rl` runs 4.39 down to 2.31 and `rr` runs 2.31 up to 4.39 — **the two planes meet at
+  their LOWEST point, y 2.31 on the centre line, and rise to 4.39 at both eaves.** The rotation signs
+  are simply swapped. Two things fall out of that one bug and are why it is one piece: the ridge
+  batten sits at y 3.98 and so floats 1.67 m above the valley it caps, and the roof collider says
+  `ridge:4.05, slope:0.52` — so the bird currently walks an invisible CORRECT ridge above a visible
+  wrong valley, which means the fix brings the drawn roof to the collider and not the reverse. The
+  gap to the walls is the same bug seen sideways (inverted pitch lifts the eaves to 4.39 instead of
+  dropping them to the wall plate), so correcting the pitch may close it without any packing
+  geometry. **One thing I could not confirm:** there is no mesh named for a solar panel anywhere in
+  `buildHut` — what reads as off-pitch panels is most likely the twelve `rg` ridge battens, which are
+  parented to `rl` and ride its wrong rotation. Recorded as unconfirmed rather than asserted.
+
+- **ALSO FILED, NOT FIXED: TODO 80, THE ROLLING TUSSOCK HILLS HAVE FLAT TOPS.** They are
+  `SphereGeometry(rad,18,10)` at `scale.y` 0.2-0.3, so the polar bands collapse into a genuinely flat
+  cap, and the sculpt loop only perturbs x/z so it cannot break it. At 64-84 m that cap is a dead
+  straight horizontal line against the sky, and **it is the only straight edge left in the wide proof
+  frame** — which is exactly why it is written down rather than left for Eric to find. Landform
+  silhouette, not grass and not ground colour, so it is not this piece's scope. Same nine meshes as
+  the horizon colour seam P4b/P4c/P4d all recorded, so the two are probably one piece.
+
+- **THE 05/14 RESHOOT HAZARD IS UNCHANGED AND STILL P4c's.** Both codes land on the same two discrete
+  states and which one a batch of five takes visits varies: P4c gave worst 0.9842 then 0.9999, P4d
+  gave 0.9841 then 0.9842, on the same machine minutes apart; 14_player_view read 0.9795 at P4c and
+  0.9796 at P4d, i.e. the same state. P4d did not introduce it, nothing was attributed to it, and
+  **no threshold was touched.** The honest next step is still `crossrun` on a quiet machine.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, gate-selftest ALL PASS, **fifteen P4d
+  sabotages, all fifteen red** (one of which was scored green until the scorer was fixed — see
+  above), bundle builds, 30/30 vantages shoot with no retakes and no GAVE UP, sidebyside 33 pairs.
+  diff 28 compared 27 flagged (worst 0.2690, against P4c's 0.2694). boxdiff 12 compared 7 changed.
+  pxdiff 28 over band. subjects 16 checked **2 missing — the two known TODO 75 reds
+  (25_preen_follow beak, 29_lodge_deck hutgreen), no new regression**. Bird readability held:
+  03_kea_plate 9674 against a floor of 1600, 13_idle_preen 5683 against 900. stability 0 unstable on
+  its default four; the two grass vantages tested separately and attributed above.
+  **ALL OF IT LEFT FLAGGED — the look is Eric's.**

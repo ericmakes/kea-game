@@ -512,6 +512,11 @@ THE THREE CHANGES.
   the height and colour still do, and the squares come back in the colour instead.
   Skipped where the pull is negligible (the cover layer at 0.10), because nine hash lookups per
   vertex is not free.
+    ^^ THIS SENTENCE IS WRONG AND P4d BELOW IS THE PROOF. It was never shot. A pull of 0.10 on a
+    square cell empties a 10% margin along every cell EDGE, so the exemption drew the whole lattice
+    in negative space and Eric saw squares for a second session. Measured cost of removing the
+    exemption: +0.33 ms at 1280x720, +0.03 ms at DPR 2 - both inside the instrument's own spread.
+    "Nine hash lookups is not free" was true and irrelevant; the number was never taken.
   BARE GROUND IS A FIELD, NOT A STEP. `smoothstep(bare-soft, bare+soft, fbm(w*scale))`. The patches
   are deliberately much larger than the mound spacing (6.9 m against 1.35 m) or the noise just
   re-cuts the same grid at another scale.
@@ -563,6 +568,124 @@ WHAT IS STILL SHORT
     triangle thick and presents almost no area from directly above. It did earn its keep - it is
     what found the camLock bug above - but a tool that cannot reliably aim its own camera is worse
     than no tool, and the clumpM period test answered the question without it.
+
+## REPLAT P4d - THE SQUARES WERE THE COVER LAYER   [LOCKED 2026-09-04, session 21; LOOK FLAGGED]
+Eric played P4c and STILL saw squares, on a verified-fresh build. Fifteen sabotages, all fifteen
+red. Nothing re-pinned; 27 of 28 vantages flagged.
+
+THE BUG WAS THE SENTENCE P4c WROTE WHILE FIXING THE SAME BUG.
+P4c gave the CLUMP layer irregular territories and exempted the COVER layer in the same breath:
+"the SEARCH IS SKIPPED where the pull is negligible: the cover layer sits at 0.10 and gathers almost
+nothing, so nine hash lookups per vertex would buy it nothing." That exemption was reasoned, not
+photographed, and it kept the defect alive in the layer that covers the closest ten metres of every
+play frame - which is the half of the field the player is actually looking at.
+
+THE MEASUREMENT. Four candidate systems, three multipliers each, one vantage (14_player_view),
+one build. Only one of the four produces a square, and it scales exactly with its own knob.
+
+  SYSTEM                          KNOB SWEPT                     WHAT THE FRAME DID
+  cover layer placement           cover.clumpM 0.55/1.10/2.20    straight bare LANES in a
+                                                                 rectangular lattice; cell size
+                                                                 doubles and doubles again in step
+                                                                 <- THE CAUSE
+  bare-ground noise field         bareScale 0.29/0.145/0.0725    pattern shifts, NO square at any
+                                                                 setting (4x range)
+  ground colour mask - lattice    ground.segs 24/48/96           horizon blob shapes shift, NO
+                                                                 square at any setting
+  ground colour mask - pattern    ground.maskScale 0.5/1.0/2.0   blob SIZE changes as asked, NO
+                                                                 square at any setting
+
+THE MECHANISM, AND IT IS ARITHMETIC RATHER THAN TASTE. `w=mix(w,cc,pull)` moves every blade `pull`
+of the way toward its cell's centre. On a square cell that VACATES A MARGIN ALONG EVERY CELL EDGE -
+so a small pull does not draw a faint grid, it draws a GRID OF STRAIGHT EMPTY LANES, in negative
+space, and the smallness that was thought to make it safe is exactly what makes it legible. Proved
+by re-shooting at cover.clumpPull 0: the lanes vanish COMPLETELY at both 0.55 and 2.20, which pins
+the pull as the cause and rules out the mound's own colour (`cw`, which still stepped per cell in
+that shot and was invisible even at 2.20 m cells).
+
+THE FIX. One constant, and it is a threshold that stops being a secret.
+  blobMinPull  0.0   the pull above which a layer earns irregular territories. It was a hardcoded
+                     0.2 inside a uniform expression: unreachable from the recipe, so it could not
+                     be tuned, could not be shot, and could not be argued with - the three
+                     properties that let it survive a whole session. At zero, ANY layer that pulls
+                     at all gets a Voronoi territory, because any pull at all draws the lattice it
+                     pulls toward. Kept as a knob rather than deleted so the next session can shoot
+                     an exemption instead of reasoning about one.
+Two things fall out for free: the cover's mound IDENTITY (height and colour, via `cw`) now travels
+with an irregular territory instead of a square cell, which is the subtle half P4c had to learn the
+hard way on the clump layer; and the cover keeps its density variation, which the rejected
+alternative does not.
+
+THE ALTERNATIVE THAT WAS MEASURED AND NOT SHIPPED. cover.clumpPull 0 also removes the squares
+completely, and it is CHEAPER than P4c (the gate then skips the scan for that layer outright). It
+was rejected for two reasons and both are visible in the frames: it flattens the cover to a
+mathematically even carpet, and it leaves the mound identity stepping on a square lattice that is
+invisible today and would surface the moment anyone tunes the cover's colour. Reachable for
+re-judging at KEAGRASS='{"cover":{"clumpPull":0}}'.
+
+THE MEASUREMENT SEAM THE GROUND MASK DID NOT HAVE, AND NOW DOES.
+Two of the four candidates could be swept because someone had already named their knob. The ground
+colour mask had none: its lattice was the literal `PlaneGeometry(240,240,48,48)` and its pattern was
+four magic sine frequencies inline in buildCarpark. A candidate system with no scale knob cannot be
+ruled in OR out by measurement, so it got one BEFORE it was diagnosed rather than after.
+  ground.segs       48    the terrain plane's tessellation across 240 m. The vertex colour is
+                          computed PER VERTEX, so 240/segs IS the colour lattice's cell size (5 m).
+  ground.maskScale  1.0   a multiplier on the mask pattern's spatial FREQUENCY, geometry untouched.
+                          2.0 halves every feature. Ships at 1.0: it is a seam, not a tune.
+It reaches BOTH terrain planes, carpark and ski field. A seam that reaches one of two planes is a
+knob that lies about its scope - sweeping it on the ski field would have photographed four identical
+frames and acquitted an innocent system, which is the exact failure this piece exists to undo. The
+assertion that catches it went red on the ski field's plane the first time it ran.
+
+THE COST, MEASURED THREE TIMES BECAUSE THE FIRST READING WAS WRONG.
+Interleaved runs of `perf.mjs bird`, best-of-6 x 40 renders, 1280x720 DPR 1, on a QUIET machine:
+     blobScan off entirely      14.16 ms   (13.79 - 14.45 over 4 runs)
+     P4c (clump layer only)     14.36 ms   (13.89 - 15.22 over 7 runs)
+     P4d (both layers)          14.69 ms   (14.12 - 15.10 over 7 runs)   <- SHIPPED
+     P4c at DPR 2               17.87 ms   (2 runs)
+     P4d at DPR 2               17.90 ms   (2 runs)
+So the cover's territories cost about +0.33 ms at 1280x720 and NOTHING measurable at the Retina
+framebuffer - the added work is per-vertex and that frame is fragment-bound. The ranges overlap; the
+honest statement is "at or below this instrument's noise floor", not a figure to three decimals.
+THE FIRST READING SAID +1.3 ms AND IT WAS TAKEN WITH ELEVEN HEADLESS CHROMES FROM THE CAPTURE SWEEP
+STILL ON THE MACHINE. Recording that would have repeated P4c's camLock mistake in a different
+currency: a number measured under conditions the label does not mention. It is written down here
+because the next session will be tempted by the same shortcut.
+Note this also disagrees with P4c's recorded "+0.71 ms for the 3x3 blob scan": the same A/B on this
+machine reads +0.20 ms. P4c's tables are left as they were taken rather than quietly restated.
+
+AND perf.mjs HAD THE camLock BUG TWICE. P4c found `G.camLock=true` (camLock is an OBJECT), fixed
+the loop-timed path, and left the RAF cadence branch on the bug. That branch is documented in its
+own file as not a real measurement, so nothing published rests on it - but a known bug left in a
+sibling branch is the same knob-that-lies pattern, so it is fixed rather than filed.
+
+THE PROOF FRAME. Not a pinned vantage (the brief said re-pin nothing), but the camera is recorded
+so it can be re-shot: 1920x1080, HUD hidden, biome carpark, seed 20260828, camera
+(-8, 2.4, -6) looking at (6, 0.45, -30) - a DIAGONAL look across the field, chosen so that a
+world-axis-aligned lattice crosses the frame at an angle and cannot hide in the perspective. Near
+blades fill the lower half, the ground colour band runs across the middle, the field's ragged edge
+is in shot. Shot at blobMinPull 0.2 and 0.0 from the same build: the before has straight lanes and a
+right-angle corner; the after has wandering channels and no straight segment anywhere in the grass,
+and the ground colour is a soft wash with no lattice and no facet edge.
+
+THE BIRD AND THE COLOUR ARE UNTOUCHED. 03_kea_plate reads 9674 against a floor of 1600 (P4c: 9693)
+and 13_idle_preen 5683 against 900 (P4c: 5988). The readability tune, the P4b per-blade colour work
+and groundTint were not modified, and the gate asserts all three.
+
+WHAT IS STILL SHORT
+  - THE GROUND TINT IS STILL ONE FLAT MULTIPLIER and the horizon colour seam is still there. P4b
+    said so, P4c said so, P4d did not touch either. Still P3's territory.
+  - THE ROLLING TUSSOCK HILLS HAVE FLAT TOPS. Filed this session, NOT fixed (TODO). They are
+    SphereGeometry(rad,18,10) at scale.y 0.2-0.3, so the polar bands collapse into a genuinely flat
+    cap and the silhouette reads as a straight horizontal edge at 64-84 m. It is the only straight
+    edge left in the wide proof frame. It is landform geometry, not the grass and not the ground
+    colour, so it is P6's shape work and not this piece's.
+  - THE HUT ROOF IS AN INVERTED GABLE. Filed this session, NOT fixed, on Eric's instruction (TODO).
+  - THE 05/14 RESHOOT HAZARD IS UNCHANGED AND STILL P4c's. Both codes land on the same two discrete
+    states (0.9842 and ~1.0000) and which one a batch of five takes visits varies run to run:
+    P4c gave 0.9842 then 0.9999, P4d gave 0.9841 then 0.9842, on the same machine minutes apart.
+    P4d did not introduce it and no threshold was touched. The honest next step is still `crossrun`
+    on a quiet machine.
 
 ## PHASE 1 - LIGHT & AIR   [not yet run]
 TARGETS: ugg_shadows_01/02, swag_shadows_01, nz_mist_01, kea_social_02.

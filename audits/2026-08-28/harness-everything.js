@@ -4882,7 +4882,31 @@ C.section('REPLAT P4: instanced grass');
     ok(dead.length===0,'every top-level GRASS scalar is actually read by something'+
        (dead.length?' — DEAD KNOBS: '+dead.join(', ')+' (a constant nothing reads is a knob that '+
         'lies about being connected)':' ('+
-        Object.keys(GR).filter(k=>typeof GR[k]==='number').length+' checked)')); }
+        Object.keys(GR).filter(k=>typeof GR[k]==='number').length+' checked)'));
+
+    /* ---- AND THE SWEEP NOW GOES INSIDE THE BLOCKS — REPLAT P4d ----
+       The check above skips anything that is not a top-level number, which is every nested block:
+       cover, ground, tiers, biomes. P4d added GRASS.ground.{segs,maskScale} and a knob that lies
+       about being connected is no less of a lie for living one level down.
+       IT MATCHES THE LEAF NAME, NOT `GRASS.<block>.<leaf>`, AND THAT IS FORCED BY HOW THE LEAVES
+       ARE ACTUALLY READ. A layer spec reaches the shader as `L.taper` off a merged copy, and the
+       terrain reads `GRD.segs` off a local alias — so a fully-qualified search would report every
+       one of them dead. Comments are stripped first, for the fourth time in this file: an
+       assertion matches code, never the prose written about it.
+       ITS LIMIT, STATED. A leaf whose name collides with an unrelated property elsewhere in the
+       file would pass vacuously. It is a tripwire for a NEWLY ADDED knob, whose name is the one
+       thing under the author's control, and not a proof that every leaf is live. */
+    { const code=after.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+      const deadLeaf=[], seen=[];
+      const walk=(o,path,depth)=>{ for(const [k,v] of Object.entries(o)){
+        if(v&&typeof v==='object'&&!Array.isArray(v)){ if(depth>0)walk(v,path+k+'.',depth-1); continue; }
+        if(typeof v!=='number')continue;
+        if(seen.indexOf(k)>=0)continue; seen.push(k);
+        if(code.indexOf('.'+k)<0)deadLeaf.push(path+k); } };
+      for(const k of Object.keys(GR)) if(GR[k]&&typeof GR[k]==='object'&&!Array.isArray(GR[k]))
+        walk(GR[k],k+'.',1);
+      ok(deadLeaf.length===0,'and every NESTED numeric leaf is read by name too'+
+         (deadLeaf.length?' — DEAD KNOBS: '+deadLeaf.join(', '):' ('+seen.length+' leaf names checked)')); } }
   near(T.density,T.count/(Math.PI*T.near*T.near),1e-6,
      'the reported density IS count over the disc it covers ('+Math.round(T.density)+' blades/m2)');
   ok(T.density>90,'and it is a FIELD density, not the 33 blades/m2 a world-sized static disc could '+
@@ -5186,8 +5210,13 @@ C.section('REPLAT P4c: nature has no right angles');
   ok(/cc=pt; cell=cn;/.test(vs),
      'the winning neighbour becomes the mound identity too, so height and colour follow the '+
      'territory rather than stepping at a cell edge');
-  ok(vs.indexOf('uBlobScan>0.5')>0,'and it is skipped where the pull is negligible, because nine '+
-     'hash lookups per vertex is not free');
+  /* REPLAT P4d REWROTE THIS LINE'S PROSE, AND THE PROSE WAS THE BUG. It used to read "and it is
+     skipped where the pull is negligible, because nine hash lookups per vertex is not free" — an
+     exemption nobody ever shot, which kept the squares alive in the cover layer for a whole extra
+     session. The uniform is still the switch; what it is allowed to switch OFF is now a named
+     constant, asserted in the P4d section below. */
+  ok(vs.indexOf('uBlobScan>0.5')>0,'the scan is switched by a uniform, so a layer can be exempted '+
+     'from it at all — see REPLAT P4d for what may earn that exemption');
 
   /* ---- (2) BARE GROUND COMES OFF A SMOOTH FIELD, NOT A PER-CELL STEP ----
      This was the worst of it: culling a whole square cell puts four right angles in the middle of
@@ -5231,6 +5260,125 @@ C.section('REPLAT P4c: nature has no right angles');
   ok(GR.biomes.carpark.base!==undefined&&GR.biomes.carpark.tip!==undefined,
      'and the P4b colour work is still there');
   ok(GR.groundTint!==undefined,'ground tint included');
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+}
+
+/* ============================================================
+   REPLAT P4d — THE SQUARES WERE THE COVER LAYER, AND AN UNSHOT EXEMPTION KEPT THEM.
+   ============================================================
+   Eric played P4c and STILL saw squares. P4c had fixed the clump layer and, in the same breath,
+   written the sentence that kept the bug alive: the 3x3 territory search "is skipped where the
+   pull is negligible: the cover layer sits at 0.10 and gathers almost nothing, so nine hash
+   lookups per vertex would buy it nothing". That was never photographed. Measured the P4c way —
+   14_player_view at cover.clumpM 0.55 / 1.10 / 2.20 — the straight bare LANES in the near field
+   double and double again in step with it, while the bare-ground noise field (bareScale 0.0725 /
+   0.145 / 0.29) and the ground colour mask (ground.segs 24/48/96, ground.maskScale 0.5/1.0/2.0)
+   moved the frame and produced no square at any setting.
+   AND THE MECHANISM IS ARITHMETIC, WHICH IS WHY THE EXEMPTION WAS ALWAYS WRONG. `w=mix(w,cc,pull)`
+   moves every blade `pull` of the way toward its cell's centre. On a square cell that VACATES A
+   MARGIN ALONG EVERY CELL EDGE, so a small pull does not draw a faint grid — it draws a grid of
+   straight empty LANES, in negative space, and the smallness that was thought to make it safe is
+   exactly what makes it legible. Re-shot at cover.clumpPull 0 the lanes vanish at both 0.55 and
+   2.20, which pins the pull as the cause and rules out the mound colour.
+   So the threshold stops being a magic 0.2 inside a uniform and becomes GRASS.blobMinPull at zero.
+   This section is the pin on the general claim: ANY layer that pulls at all gets a territory. */
+C.section('REPLAT P4d: any pull at all earns a territory');
+{
+  const GR=X.GRASS, vs=X.GRASS_GLSL_V;
+  const src=require('../2026-08-26/keasrc').specimenSource();
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+
+  /* ---- (1) THE GATE IS A NAMED CONSTANT, NOT A NUMBER BURIED IN A UNIFORM ----
+     The 0.2 was unreachable from the recipe, so it could not be tuned, could not be shot, and
+     could not be argued with — the three properties that let it survive a whole session. */
+  ok(typeof GR.blobMinPull==='number','the blob-scan gate is a named constant (GRASS.blobMinPull)');
+  ok(GR.blobMinPull===0,'and it is ZERO: any pull at all earns the nine lookups ('+
+     GR.blobMinPull+')');
+  { const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+    ok(code.indexOf('GRASS.blobMinPull')>0,'the shader gate READS that constant');
+    ok(!/clumpPull\)>0\.2\)\?1:0/.test(code),
+       'and the magic 0.2 it replaced is gone from the code'); }
+
+  /* ---- (2) THE GENERAL CLAIM, COMPUTED THE WAY grassShader COMPUTES IT ----
+     Not against a second copy of the numbers: grassSpecs is what feeds the shader, so a layer
+     added later — a third tier, a new biome's cover — is swept by this loop for free. */
+  { const bad=[];
+    for(const biome of ['carpark','skifield']){
+      const S=X.grassSpecs(biome);
+      for(const name of ['clump','cover']){
+        const L=S[name], pull=L.clumpPull===undefined?GR.clumpPull:L.clumpPull;
+        const scan=!!(GR.blobScan&&pull>GR.blobMinPull);
+        if(pull>0&&!scan)bad.push(biome+'.'+name+' pulls '+pull+' with NO territory');
+        ok(pull<=0||scan,biome+' '+name+' layer pulls '+pull+' toward a mound, so it gets an '+
+           'IRREGULAR territory rather than a square cell'); } }
+    ok(bad.length===0,'no layer anywhere pulls toward a square cell'+
+       (bad.length?' — '+bad.join(' | '):' (4 layers checked)')); }
+
+  /* ---- (3) AND THE COVER LAYER IS THE ONE THIS PIECE IS ABOUT ----
+     Named explicitly, because the general loop above would stay green if somebody set the cover's
+     pull to zero instead — which was measured, works for the geometry, and was NOT what shipped:
+     it leaves the mound identity (height and colour, via `cw`) stepping on a square lattice, and
+     it flattens the density variation the cover reads better with. Reachable as
+     KEAGRASS='{"cover":{"clumpPull":0}}' for anyone who wants to shoot it again. */
+  { const C4=X.grassSpecs('carpark').cover;
+    const pull=C4.clumpPull===undefined?GR.clumpPull:C4.clumpPull;
+    ok(pull>0,'the cover layer still gathers, so it still has density variation ('+pull+')');
+    ok(pull>GR.blobMinPull,'and that gather is over the gate, so its territories are irregular'); }
+
+  /* ---- (4) THE MECHANISM, IN THE LINE THAT CAUSES IT ----
+     A pull of p empties a p-wide margin along every territory boundary. That is fine when the
+     boundary wanders and fatal when it is a cell edge, and it is the whole reason (2) has to hold
+     for EVERY layer rather than only for the ones that gather hard. */
+  ok(vs.indexOf('w=mix(w,cc,pull);')>0,
+     'the pull is a lerp toward the mound centre, which is what empties the territory boundary');
+
+  /* ---- (5) THE OTHER TWO CANDIDATES KEEP THEIR SCALE KNOBS ----
+     Both were ruled out BY MEASUREMENT, and the only reason that was possible is that both had a
+     knob to sweep. The ground colour mask had none — its lattice was `PlaneGeometry(240,240,48,48)`
+     and its pattern was four magic frequencies inline — so it got one before it was diagnosed. A
+     candidate system with no scale knob cannot be ruled in or out, and the next session will have
+     candidates too. */
+  ok(GR.bareScale>0,'the bare-ground field has a scale knob to sweep ('+GR.bareScale+')');
+  ok(!!GR.ground&&typeof GR.ground.segs==='number'&&typeof GR.ground.maskScale==='number',
+     'and the ground colour mask now has BOTH — a lattice and a pattern frequency');
+  ok(GR.ground.maskScale===1,'the pattern knob ships at 1.0: it is a measurement seam, not a tune ('+
+     GR.ground.maskScale+')');
+  ok(GR.ground.segs>=24&&GR.ground.segs<=96,'and the lattice ships at the tessellation P3 shot the '+
+     'ground materials against ('+GR.ground.segs+' segments over 240 m = '+
+     (240/GR.ground.segs).toFixed(1)+' m cells)');
+  { const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+    ok(/PlaneGeometry\(240,240,GRD\.segs,GRD\.segs\)/.test(code),
+       'the terrain plane is built from the constant, not from a literal 48');
+    /* BOTH TERRAIN PLANES, and the first cut of this assertion only checked one — it sliced from
+       buildCarpark and went red on the SKI FIELD's plane, which was still a literal 48,48. That is
+       the assertion doing its job: a seam that reaches one of two planes is a knob that lies about
+       its scope, and sweeping it on the ski field would have photographed four identical frames. */
+    const planes=(code.match(/new THREE\.PlaneGeometry\(240,240,[^)]*\)/g)||[]);
+    ok(planes.length===2,'there are exactly two 240 m terrain planes to keep in step ('+
+       planes.length+')');
+    ok(planes.every(t=>t.indexOf('GRD.segs,GRD.segs')>0),
+       'and BOTH are built from the constant, not from a literal'+
+       (planes.length?' — '+planes.join(' | '):'')); }
+
+  /* ---- (6) AND EVERYTHING P4b AND P4c EARNED IS STILL THERE ----
+     P4d touched a threshold and a mask's constants. It must not have moved the bird's readability
+     or the colour work, and those are the two things every grass session is tempted to move. */
+  ok(GR.biomes.carpark.h[1]<=0.50,'the bird readability tune is untouched ('+
+     GR.biomes.carpark.h[1]+' m)');
+  ok(GR.biomes.carpark.base!==undefined&&GR.biomes.carpark.tip!==undefined,
+     'the P4b per-blade colour work is still there');
+  /* THE MESSAGE IS THROW-PROOF, AND IT WAS NOT — A LAW-14 FUSE IN AN ASSERTION ABOUT A MISSING
+     CONSTANT. The first cut formatted the value as '#'+GR.groundTint.toString(16), so the exact
+     sabotage this line exists to catch (delete groundTint) died on `undefined.toString` and killed
+     the whole battery instead of reporting one finding. The gate still went red — a throw prints
+     no ALL PASS and exits non-zero — but the FINDING was lost, and a battery that dies cannot tell
+     you which of its 4,000 claims failed. Same shape as the P4c debug readback. Format defensively
+     in any message that describes a value whose absence is the thing being asserted. */
+  ok(GR.groundTint!==undefined,'the P4b ground tint is still there ('+
+     (GR.groundTint===undefined?'MISSING':'#'+GR.groundTint.toString(16).toUpperCase())+')');
+  ok(GR.blobScan===true&&GR.bareScale>0&&GR.edgeVar>0,
+     'and all three of P4c\'s structural fixes are still on');
 
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);
 }

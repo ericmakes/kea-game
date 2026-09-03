@@ -57,7 +57,13 @@ try{
   if(RAF){
     const r=await pg.evaluate(({pos,at})=>new Promise(res=>{
       const G=KEAGAME.G, cam=G.cams[0];
-      G.camLock=true;
+      /* REPLAT P4d: THE SECOND HALF OF THE P4c camLock BUG. P4c found `G.camLock=true` here and in
+         the loop-timed path, established that camLock is an OBJECT ({x,y,z,lx,ly,lz}) so a bare
+         `true` is a truthy lock with no coordinates, and fixed ONE of the two call sites. This
+         branch kept measuring at the follow camera under a label that named a vantage. It is the
+         cadence mode, which this file already says is not a measurement — but a known bug left in
+         a sibling branch is exactly the knob-that-lies pattern, so it is fixed rather than filed. */
+      G.camLock={x:pos[0],y:pos[1],z:pos[2],lx:at[0],ly:at[1],lz:at[2]};
       cam.position.set(pos[0],pos[1],pos[2]); cam.lookAt(at[0],at[1],at[2]);
       /* PROOF THAT THE FRAMES BEING TIMED ARE FRAMES THAT DREW THE GRASS. A frame-rate loop that
          quietly measures a paused game reports a beautiful 60 and means nothing, and the two

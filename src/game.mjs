@@ -481,6 +481,20 @@ const GRASS={
      It costs nothing — it is one colour on one material — and it is the single largest thing in
      P4b that the play camera actually sees. */
   groundTint:0xA8B078,
+  /* ---- THE GROUND'S OWN COLOUR MASK — REPLAT P4d's MEASUREMENT SEAM ----
+     P4c proved the mound lattice by SHOOTING IT at three clumpM multipliers and watching the
+     patches shrink and grow. The other three candidate systems for "the field reads in squares"
+     needed the same test, and two of them already had a knob (GRASS.cover.clumpM, GRASS.bareScale)
+     while the ground's colour had NONE: its lattice was `PlaneGeometry(240,240,48,48)` and its
+     pattern was four magic sine frequencies inline in buildCarpark. A system with no scale knob
+     cannot be ruled in or out by measurement, which is the only kind of evidence this piece
+     accepts — so both became named constants BEFORE anything was diagnosed.
+       segs       the terrain plane's tessellation across 240 m. The vertex colour is computed PER
+                  VERTEX, so 240/segs metres IS the colour lattice's cell size: 5 m at 48.
+       maskScale  a multiplier on the mask pattern's spatial FREQUENCY, geometry untouched. 2.0
+                  halves every feature, 0.5 doubles it. This is the knob that separates "the
+                  pattern is on a grid" from "the plane is on a grid". */
+  ground:{ segs:48, maskScale:1.0 },
   tier:'mid', snap:0.5,
   tiers:{
     low:  {count: 60000, near:14},
@@ -539,7 +553,28 @@ const GRASS={
        edgeVar    the field's outer fade was `length(w-camera)`, a perfect circle. The radius is
                   now perturbed by noise in world space, so the boundary is ragged and does not
                   read as a disc following the bird. */
-  blobScan:true, bareScale:0.145, bareSoft:0.12, edgeVar:0.26,
+  /* ---- REPLAT P4d: THE SQUARES WERE THE COVER LAYER, AND blobMinPull IS WHY ----
+     Eric played P4c and still saw SQUARES. P4c had fixed the CLUMP layer and, in the same breath,
+     written the exemption that kept the bug alive: "the SEARCH IS SKIPPED where the pull is
+     negligible: the cover layer sits at 0.10 and gathers almost nothing, so nine hash lookups per
+     vertex would buy it nothing." That sentence is a GUESS, it was never shot, and it is wrong.
+     Measured the P4c way — shoot 14_player_view at cover.clumpM 0.55 / 1.10 / 2.20 — the straight
+     bare LANES in the near field double and double again with it, exactly in step. The bare-ground
+     noise field (bareScale 0.0725 / 0.145 / 0.29) and the ground colour mask (ground.segs 24/48/96,
+     ground.maskScale 0.5/1.0/2.0) both moved the frame and neither produced a square at any
+     setting. The full tables are in ARTBIBLE.
+     AND THE MECHANISM IS THE PULL ITSELF, NOT THE MOUND'S COLOUR. Re-shot at cover.clumpPull 0
+     the lanes vanish completely at both 0.55 and 2.20. A pull of 0.10 toward ONE CENTRE PER SQUARE
+     CELL moves every blade 10% of the way in from wherever it stood, which VACATES A MARGIN ALONG
+     EVERY CELL EDGE — so the square lattice is drawn in NEGATIVE SPACE, as a grid of straight
+     empty lanes, and it is drawn by the very smallness that was thought to make it safe. "Gathers
+     almost nothing" is not the same as "gathers nothing": a 10% gather is a 10% gap, and a gap on
+     a square grid is a square grid.
+     So the threshold stops being a magic 0.2 buried in a uniform and becomes a named constant AT
+     ZERO. Any layer that pulls at all gets irregular territories, because any pull at all draws
+     the lattice it pulls toward. It is kept as a knob rather than deleted so the next session can
+     shoot the exemption instead of arguing about it. */
+  blobScan:true, blobMinPull:0.0, bareScale:0.145, bareSoft:0.12, edgeVar:0.26,
   /* THINNING. `fade` is how sharply a blade shrinks out as it crosses its own cull threshold —
      `fadeBand` is the WIDTH of that shrink window in density units, and the density ramp is
      stretched to 1+fadeBand on purpose so that "full density" really means every blade at full
@@ -2290,8 +2325,13 @@ void keaGrass(inout vec3 t){
      contributes exactly one mound and its territory is the cell. Taking the nearest of nine makes
      the territories irregular polygons whose edges follow no cell boundary at all — and a blade
      near a cell edge is pulled to whichever mound is actually closer, which is the whole point.
-     The SEARCH IS SKIPPED where the pull is negligible: the cover layer sits at 0.10 and gathers
-     almost nothing, so nine hash lookups per vertex would buy it nothing. */
+     REPLAT P4d: THE SEARCH IS NO LONGER SKIPPED FOR A SMALL PULL, and the sentence that used to
+     sit here ("the cover layer sits at 0.10 and gathers almost nothing, so nine hash lookups per
+     vertex would buy it nothing") is the bug Eric photographed twice. A pull of p moves every
+     blade p of the way toward its centre, which empties a p-wide margin along every cell EDGE —
+     so a tiny pull on a square cell does not draw a faint grid, it draws a grid of straight bare
+     LANES, which is the most legible artefact a field can have. The gate is GRASS.blobMinPull and
+     it is zero: any pull at all earns the nine lookups. */
   vec2 base=floor(w/uClumpM);
   vec2 cell=base, cc=(base+0.5+(keaGH2(base)-0.5)*uClumpJit)*uClumpM;
   if(uBlobScan>0.5){
@@ -2453,7 +2493,11 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
     uClumpPull:{value:B.clumpPull===undefined?GRASS.clumpPull:B.clumpPull},
     uClumpPullVar:{value:B.clumpPullVar===undefined?GRASS.clumpPullVar:B.clumpPullVar},
     uBare:{value:B.bare},
-    uBlobScan:{value:(GRASS.blobScan&&(B.clumpPull===undefined?GRASS.clumpPull:B.clumpPull)>0.2)?1:0},
+    /* REPLAT P4d: the gate is GRASS.blobMinPull, and it is 0. It was a hardcoded 0.2 whose only
+       justification was that a small pull "buys nothing" — and a small pull on a square cell is
+       precisely what drew the squares Eric saw. See the blobMinPull note in the recipe. */
+    uBlobScan:{value:(GRASS.blobScan&&
+      (B.clumpPull===undefined?GRASS.clumpPull:B.clumpPull)>GRASS.blobMinPull)?1:0},
     uBareScale:{value:GRASS.bareScale}, uBareSoft:{value:GRASS.bareSoft},
     uEdgeVar:{value:GRASS.edgeVar},
     uHmul:{value:new THREE.Vector2(H.mul[0],H.mul[1])}, uHamp:{value:H.amp},
@@ -2770,7 +2814,8 @@ function buildCarpark(){
      it has always had, declared by the map that uses it. */
   G.nestPos={x:-4,z:-33};
   // terrain
-  const gg=new THREE.PlaneGeometry(240,240,48,48);
+  const GRD=GRASS.ground;
+  const gg=new THREE.PlaneGeometry(240,240,GRD.segs,GRD.segs);
   const pos=gg.attributes.position;
   for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
     let h=0; if(d>58) h=(d-58)*0.06*(1+0.4*Math.sin(x*0.08)*Math.cos(y*0.07));
@@ -2779,8 +2824,13 @@ function buildCarpark(){
   { const cols=[],c1=new THREE.Color(PAL.ground).convertSRGBToLinear(),c2=new THREE.Color(PAL.ground2).convertSRGBToLinear(),c3=new THREE.Color(PAL.ground3).convertSRGBToLinear(),cg=new THREE.Color(PAL.gravel).convertSRGBToLinear();
     const pp=gg.attributes.position;
     const cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
-    for(let i=0;i<pp.count;i++){ const x=pp.getX(i),y=pp.getY(i);
-      const n=Math.sin(x*0.11+1.7)*Math.cos(y*0.09)+Math.sin(x*0.31)*0.5+Math.cos(y*0.27+0.6)*0.5;
+    /* maskScale MULTIPLIES ONLY THE MASK'S OWN FREQUENCIES. It deliberately does NOT scale x,y
+       for the two features below it — the carpark's gravel rectangle and the scree ring are
+       PLACES, not pattern, and shrinking them would confound the very measurement this knob
+       exists to make. */
+    const MS=GRD.maskScale;
+    for(let i=0;i<pp.count;i++){ const x=pp.getX(i),y=pp.getY(i), mx=x*MS, my=y*MS;
+      const n=Math.sin(mx*0.11+1.7)*Math.cos(my*0.09)+Math.sin(mx*0.31)*0.5+Math.cos(my*0.27+0.6)*0.5;
       let c=n>0.55?c3.clone():(n<-0.55?c2.clone():c1.clone());
       if(Math.abs(y+2)<16&&Math.abs(x)<26&&n>0.1)c=cg.clone().lerp(c1,0.45); // braided-gravel carpark
       const d=Math.hypot(x,y); if(d>55)c.lerp(cR,Math.min(0.85,(d-55)/38)); // scree toward the ring
@@ -3100,7 +3150,13 @@ const SKINEST={x:-40,z:32};
 function buildSkifield(){
   G.nestPos={x:SKINEST.x,z:SKINEST.z};
   // terrain: hard alpine snow, scoured grey where the wind gets at it, tussock where the snow ends
-  const gg=new THREE.PlaneGeometry(240,240,48,48);
+  /* REPLAT P4d: THE SAME NAMED BLOCK AS THE CARPARK'S, and that is not tidiness. GRASS.ground is a
+     measurement seam, and a seam that reaches one of the two terrain planes is a knob that lies
+     about its scope: a later session sweeping ground.segs on the ski field would photograph four
+     identical frames and conclude the ground was innocent, which is precisely the failure this
+     piece exists to undo. */
+  const GRD=GRASS.ground;
+  const gg=new THREE.PlaneGeometry(240,240,GRD.segs,GRD.segs);
   const pos=gg.attributes.position;
   for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
     let h=0; if(d>58) h=(d-58)*0.075*(1+0.35*Math.sin(x*0.07)*Math.cos(y*0.06));
@@ -3113,8 +3169,9 @@ function buildSkifield(){
   { const cols=[], pp=gg.attributes.position;
     const cS=new THREE.Color(PAL.snow).convertSRGBToLinear(), cW=new THREE.Color(PAL.snowShade).convertSRGBToLinear(),
           cR=new THREE.Color(PAL.rock).convertSRGBToLinear(), cT=new THREE.Color(PAL.tussock).convertSRGBToLinear();
-    for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i);
-      const n=Math.sin(x*0.09+0.6)*Math.cos(zw*0.08)+Math.sin(x*0.27)*0.4;
+    const MS=GRD.maskScale;
+    for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
+      const n=Math.sin(mx*0.09+0.6)*Math.cos(mz*0.08)+Math.sin(mx*0.27)*0.4;
       const c=cS.clone().lerp(cW,clamp(n*0.28+0.2,0,0.55));            // wind scour
       const t=clamp((zw-34)/16,0,1); if(t>0)c.lerp(cT,t*0.85);         // the snowline, at the bottom of the map
       const d=Math.hypot(x,zw); if(d>52)c.lerp(cR,Math.min(0.8,(d-52)/30));
@@ -6363,6 +6420,10 @@ if(typeof globalThis!=='undefined'){
        photographing its consequences, none of which a headless battery could otherwise reach. */
     GRASS, grassTier, grassCuts, grassBladeGeo, grassLattice, GRASS_GLSL_V,
     grassComb, grassTuftPose,
+    /* REPLAT P4d. The gate has to compute the blob-scan gate the way grassShader computes it —
+       from the LAYER SPECS — rather than from a second copy of the numbers, because the bug this
+       piece fixed was a gate whose threshold nobody could see from the recipe. */
+    grassSpecs,
     /* PAL travels with SKY for one reason: "the fog is tuned to the sky" is only checkable if a
        battery can read BOTH numbers, and the dome's colours live here. Exported as the palette it
        is, not as a favour to one assertion. */
