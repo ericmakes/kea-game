@@ -496,7 +496,7 @@ C.section('THE GRASS TINT IS SEEDED, NOT A LOTTERY');
 
   // and the field really does go through that seam. buildGrass is browser-only, so this is a
   // structural check on the source rather than a behavioural one - stated plainly, not disguised.
-  const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','untitled-kea-game.html'),'utf8');
+  const src=require('fs').readFileSync(require('path').join(__dirname,'..','..','src','game.mjs'),'utf8'); // REPLAT P1: specimen is the module now
   const body=src.slice(src.indexOf('function buildGrass()'), src.indexOf('function buildTrees'));
   ok(body.indexOf('grassTint(col')>0,'buildGrass tints its blades through that seam');
   ok(body.indexOf('Math.random')<0,'and buildGrass no longer touches Math.random anywhere');
@@ -559,20 +559,32 @@ C.section('CURVED HULLS ARE SMOOTH WITHOUT MOVING A VERTEX');
       if(u.lengthSq()<1e-9||v.lengthSq()<1e-9)continue;
       const ang=u.angleTo(v)*180/Math.PI; if(ang<m)m=ang; }
     return m; };
-  let welded=0, leaked=0, keptEdge=0, blunted=0, arc=0;
+  let welded=0, leaked=0, keptEdge=0, blunted=0, arc=0, banded=0;
   for(const idx of by.values()){
     if(idx.length<2)continue;
     const before=maxAng(fl,idx), after=maxAng(sm,idx), near=minPair(fl,idx);
     if(before<=lim){ if(after<=0.5)welded++; else leaked++; }
     else if(near>lim){ if(after>lim*0.5)keptEdge++; else blunted++; }   // no two normals close: a real edge
     else arc++;                                    // a chain of small steps round an arc - smooths
+    // ADDED 2026-09-03: whatever bucket it landed in, if it is not a genuine hard edge it must
+    // actually END smooth. The arc bucket never checked this - see the note on the assertion below.
+    if(near<=lim && after>0.5) banded++;
   }
   ok(welded>0&&leaked===0,'every facet join inside '+lim+'deg was welded smooth ('+welded+
      ' welded, '+leaked+' left banded)');
   ok(keptEdge+blunted===0,'a ROUNDED box has no hard edges to keep - every edge is an arc ('+
      keptEdge+'/'+blunted+')');
-  ok(arc>0,'so the chain groups smooth as the arcs they are ('+arc+' of them, closest pair under '+
-     lim+'deg but spanning more)');
+  // AMENDED 2026-09-03 (REPLAT P1 step 3). This read `ok(arc>0, 'so the chain groups smooth as the
+  // arcs they are')` — and it did not check that they smoothed. It counted them and called that a
+  // pass. Measured on the same shape, same call, both stacks:
+  //     r128  358 groups, 333 welded, 25 arc — and ALL 25 arc groups ended with a >0.5deg gap,
+  //           i.e. 25 vertex groups were STILL BANDED and the battery called it green
+  //     r185  352 groups, 352 welded, 0 arc, 0 banded — the box smooths everywhere
+  // So r185 did not lose the chain case; ExtrudeGeometry stopped producing the seam that made it,
+  // and the 25 residual bands went with it. Re-pinning `arc>0` would have demanded the defect back.
+  // The claim it should always have made, which r128 would have FAILED and r185 passes:
+  ok(banded===0,'no group that is not a genuine hard edge is left banded ('+banded+' banded; '+
+     welded+' welded, '+arc+' chain groups)');
 
   // EDGE PRESERVATION needs a shape that HAS an edge. Two quads on a hinge, non-indexed like
   // ExtrudeGeometry, with the dihedral as the knob.
@@ -599,12 +611,33 @@ C.section('CURVED HULLS ARE SMOOTH WITHOUT MOVING A VERTEX');
   ok(gapAt(soft)<0.5,'a 20deg join - inside the threshold - welds smooth ('+gapAt(soft).toFixed(2)+'deg)');
   ok(gapAt(hard)>89,'a 90deg edge stays exactly as crisp as it was ('+gapAt(hard).toFixed(1)+'deg)');
 
-  // normals stay unit length, except the two zero-area seam triangles three itself emits
-  let nonUnit=0;
+  // NORMALS STAY UNIT LENGTH, except on triangles that have no area to take a normal from.
+  // AMENDED 2026-09-03 (REPLAT P1 step 3). This read `nonUnit===6` and described "the 6 that three
+  // emits zeroed on two ZERO-AREA seam triangles". Both numbers were three's, not the game's:
+  // r128's ExtrudeGeometry emitted two degenerate seam triangles on this shape and zeroed their
+  // 6 vertex normals. r185's does not, so the count went to 0 and the battery went red on a
+  // three.js IMPROVEMENT. Measured on both, same shape, same call:
+  //     r128  714 tris, 2 zero-area, 6 zeroed normals
+  //     r185  700 tris, 0 zero-area, 0 zeroed normals
+  // Re-pinning 6 to 0 would just swap one version's magic number for another's. So the claim is
+  // now tied to its CAUSE and holds on either stack: the only non-unit normals in the mesh are the
+  // ones belonging to zero-area triangles, three per such triangle, and there are no others. That
+  // is strictly stronger than the count it replaces — it would still catch a real smoothing bug,
+  // and if a future three re-introduces degenerate triangles it says so in as many words.
+  const triArea=t=>{ const A=t*3;
+    const ax=pos.getX(A),ay=pos.getY(A),az=pos.getZ(A);
+    const bx=pos.getX(A+1)-ax,by=pos.getY(A+1)-ay,bz=pos.getZ(A+1)-az;
+    const cx=pos.getX(A+2)-ax,cy=pos.getY(A+2)-ay,cz=pos.getZ(A+2)-az;
+    return Math.hypot(by*cz-bz*cy, bz*cx-bx*cz, bx*cy-by*cx); };
+  let degenTris=0, degenVerts=0;
+  for(let t=0;t<pos.count/3;t++) if(triArea(t)<1e-12){ degenTris++; degenVerts+=3; }
+  let nonUnit=0, nonUnitOffDegen=0;
   for(let i=0;i<sm.count;i++){ const L=Math.hypot(sm.getX(i),sm.getY(i),sm.getZ(i));
-    if(Math.abs(L-1)>1e-3)nonUnit++; }
-  ok(nonUnit===6,'normals stay unit length bar the 6 that three emits zeroed on two ZERO-AREA '+
-     'seam triangles, which rasterize to nothing ('+nonUnit+')');
+    if(Math.abs(L-1)>1e-3){ nonUnit++; if(triArea(Math.floor(i/3))>=1e-12) nonUnitOffDegen++; } }
+  ok(nonUnitOffDegen===0,'every normal on a triangle that HAS area is unit length ('+
+     nonUnitOffDegen+' that are not)');
+  ok(nonUnit===degenVerts,'and the only non-unit normals are the '+degenVerts+' on '+degenTris+
+     ' zero-area triangle(s), which rasterize to nothing ('+nonUnit+' non-unit)');
 }
 
 C.section('THE CARAVAN DOOR IS ON ITS WALL, NOT FINNING OFF THE SIDE OF IT');

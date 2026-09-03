@@ -23,16 +23,30 @@ N=0; DIRTY=0
 for h in $BATS; do
   N=$((N+1))
   OUT=$(node "$h" 2>&1); RC=$?
-  printf '%s\n' "$OUT" | grep -Ev "$NOISE" | tail -1 | tee -a /tmp/gate.txt
+  # 2026-09-03 (REPLAT P1 step 3): PRINT EVERY FINDING, not just the last line. The gate kept
+  # `tail -1` per battery, so a battery with two findings surfaced only the SECOND one — the gate
+  # still went red (the grep below sees any ✗), but it under-reported, and a porting session spent
+  # a whole cycle fixing one finding before learning a second existed. Verdict AND findings now.
+  # This does not loosen the count check: finding lines carry no 'ALL PASS', and a battery that
+  # printed two verdicts would push PASSES above N and still fail. It fails closed either way.
+  printf '%s\n' "$OUT" | grep -Ev "$NOISE" | grep -E "ALL PASS|FINDINGS|✗" | tee -a /tmp/gate.txt
   if [ "$RC" -ne 0 ]; then DIRTY=$((DIRTY+1)); echo "GATE: $h exited $RC" | tee -a /tmp/gate.txt; fi
 done
 if grep -q "✗\|FINDINGS" /tmp/gate.txt; then echo CERT-FAIL; exit 1; fi
 PASSES=$(grep -c "ALL PASS" /tmp/gate.txt)
 if [ "$PASSES" -ne "$N" ] || [ "$DIRTY" -ne 0 ]; then
   echo "CERT-FAIL: $PASSES of $N batteries reported ALL PASS, $DIRTY exited unclean"; exit 1; fi
-md5sum untitled-kea-game.html
+# THE GATE HASHES WHAT THE BATTERIES LOADED. Since REPLAT P1 the specimen is src/game.mjs, not
+# untitled-kea-game.html — that file is the FROZEN r128 build, kept as a reference for the
+# re-platform and no longer under test. Hashing it here would have certified a file no battery
+# reads. Both are printed: the specimen under test first, the frozen reference second, labelled.
+echo -n 'specimen  '; md5sum src/game.mjs
+echo -n 'frozen    '; md5sum untitled-kea-game.html
 if [ -n "$OUTDIR" ]; then
-  cp untitled-kea-game.html "$OUTDIR"/untitled-kea-game.html
+  mkdir -p "$OUTDIR"/src
+  cp src/game.mjs src/main.mjs "$OUTDIR"/src/
+  cp index.html vite.config.mjs package.json "$OUTDIR"/
+  cp untitled-kea-game.html "$OUTDIR"/untitled-kea-game.html   # the frozen reference travels too
   cd gauntlet && rm -f "$OUTDIR"/kea-gauntlet-pack.zip
   zip -rq "$OUTDIR"/kea-gauntlet-pack.zip reference CRITIC.md TASKS.md OPPORTUNITIES.md audio verify capture motion -x "*/node_modules/*"
   cd ..

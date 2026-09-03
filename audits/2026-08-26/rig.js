@@ -4,7 +4,8 @@
 const fs=require('fs');
 
 const path=require('path'); const ROOT=path.resolve(__dirname,'..','..');
-const THREE=require(path.join(ROOT,'node_modules','three'));
+const THREE=require('three');   // 0.185.1, resolved through the package exports map
+const {evalSpecimen}=require('./keasrc');
 function load(){
   const GAUNTLETSEED=20260828;   // capture.mjs's seed; see the note below
   global.localStorage={_m:new Map(),getItem(k){return this._m.has(k)?this._m.get(k):null;},setItem(k,v){this._m.set(k,String(v));},removeItem(k){this._m.delete(k);},clear(){this._m.clear();}}; // fresh store per instance
@@ -22,10 +23,10 @@ function load(){
   { let t=GAUNTLETSEED>>>0;
     global.Math.random=()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t);
       r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; }
-  const html=fs.readFileSync(path.join(ROOT,'untitled-kea-game.html'),'utf8');
-  const logic=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(b=>b.includes('KEA-LOGIC-START'));
-  (new Function('THREE',logic+'\n;globalThis.__X=KEAGAME;'))(THREE);
-  const X=globalThis.__X;
+  /* REPLAT P1 step 3: the specimen is src/game.mjs now, not a <script> block in the HTML.
+     Still evaluated with THREE injected, still a fresh instance per load(), still identified by
+     content and never by position. See keasrc.js for why it is not an import(). */
+  const X=evalSpecimen(THREE);
   /* SEEDED BATTERIES (2026-09-02, TODO 45). RNGF defaults to Math.random and no battery ever seeded
      it, so every battery built a different country and threw every dropped prop differently -
      spawnLoose gives each prop vy=rnd(1.4,2.4), vx and vz rnd(-1.2,1.2). That is the law-11

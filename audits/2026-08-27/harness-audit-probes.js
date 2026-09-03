@@ -30,7 +30,7 @@ okp(spd>2&&s2f<15,'seconds-to-fun estimate '+s2f.toFixed(1)+'s at speed '+spd.to
 const hm=G.humans.find(h=>!h.driverCar); const kx=G.keas[0]; kx.size=1;
 let sh=0; while(hm.state!=='shoo'&&sh<600){ hm.state='idle'; hm.t=0.5; kx.x=hm.x+0.8; kx.z=hm.z; kx.y=0; kx.grounded=true; X.update(1/60); sh++; if(hm.state==='shoo')break; }
 console.log('  (shoo provoke under pinning: state='+hm.state+' — informational; hook verified at source below)');
-const src=require('fs').readFileSync(__dirname+'/../../untitled-kea-game.html','utf8');
+const src=require('fs').readFileSync(__dirname+'/../../src/game.mjs','utf8'); // REPLAT P1: specimen is the module now
 okp(/VOX\.play\('shoo'/.test(src),'P3a (ENFORCING, fixed during audit): shoo state reachable in play (proven above) but no VOX.play(shoo) hook in source — most common bark is silent');
 okp(/VOX\.play\('flee'/.test(src),'P3b (ENFORCING, fixed during audit): flee VO recorded (flee1/flee2) but no VOX.play(flee) hook in source');
 console.log('  vox hooks in source: shoo='+/VOX\.play\('shoo'/.test(src)+' flee='+/VOX\.play\('flee'/.test(src)+' | shooProvoked='+(hm.state==='shoo'));

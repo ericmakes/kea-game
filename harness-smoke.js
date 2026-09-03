@@ -11,17 +11,18 @@ global.performance={now:()=>Date.now()};
 global.requestAnimationFrame=noop;
 global.innerWidth=1280; global.innerHeight=720; global.devicePixelRatio=1;
 
-/* ---- assembly loader (identify logic by content, never index) ---- */
-const SIG='KEA-LOGIC-START';
-const html=require('fs').readFileSync(require('path').join(__dirname,'untitled-kea-game.html'),'utf8');
-const logic=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(b=>b.includes(SIG));
-if(!logic){console.error('SPECIMEN FAIL: logic block not found');process.exit(1);}
-console.log('specimen: html '+html.length+' bytes, logic '+logic.length+' chars');
+/* ---- assembly loader (identify logic by content, never index) ----
+   REPLAT P1 step 3: the specimen is src/game.mjs now. This battery still does NOT use the shared
+   rig — it seeds and boots itself, which is the independence that makes it battery one — but it
+   does share the LOADER, so the module-shape strips are asserted in exactly one place rather than
+   copied here to drift. */
+const {specimenSource,evalSpecimen,SPECIMEN}=require('./audits/2026-08-26/keasrc');
+console.log('specimen: src/game.mjs '+require('fs').statSync(SPECIMEN).size+' bytes, '+specimenSource().length+' chars evaluable');
 
 let F=[]; const ok=(c,m)=>{ if(!c) F.push(m); };
 
-(new Function('THREE',logic+'\n;globalThis.__X=KEAGAME;'))(THREE);
-const X=globalThis.__X, G=X.G;
+const X=evalSpecimen(THREE);
+const G=X.G;
 ok(!!G,'state root G exposed');
 
 /* ---- boot to world ---- */
