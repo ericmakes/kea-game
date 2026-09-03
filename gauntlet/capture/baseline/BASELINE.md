@@ -247,3 +247,103 @@ floor was lowered to clear it: a floor moved to get green is that check deleted.
 **NOT IN THE SET, AND STILL NOT:** 26_tour_brochure and 27_travel_card shoot every pass but have
 never been pinned, so diff.mjs cannot see them. That gap predates the re-platform and is unchanged
 by it; adding them is a new-vantage decision for Eric, not a side effect of a re-pin.
+
+---
+
+# RE-PIN 2026-09-03 (session 15b) — THE P2 BASELINES, PINNED FROM CONSENSUS
+
+Eric judged the P2 set and accepted it. 28 vantages re-pinned on specimen
+`6a6aac54d7a3d3dff61de5f634052082`, bundle `372f1b98408a424e2a621b0d7f048d85`, gate
+CERTIFIED-SHIP. Ratio variant B kept as locked — Eric's reasoning, recorded because it is a
+judgement and not a measurement: variant C would chase contrast that the trailer gets from
+**canopy and materials**, not from shadow darkness. TODO 76 (the unlit sky dome) is DEFERRED until
+after P3/P4 on the grounds that it cannot be judged against a spike field.
+
+## THE PINS CAME FROM A MEASURED CONSENSUS, NOT FROM THE SWEEP THAT WAS ON DISK
+
+This is the first re-pin to implement TODO 73's actual fix rather than only its manual fallback.
+Four independent sweeps were shot, each in its own process and its own directory, and every frame
+was pinned from the **medoid**: the take whose total pixel distance to the same frame in the other
+three runs is smallest.
+
+**PER VANTAGE, NOT PER RUN, AND THAT MATTERED.** A sweep is thirty independent photographs, each in
+its own browser process, so a run can be the outlier on one vantage and the consensus on another —
+which is exactly what 23 and 28 did last session, out of a sweep that was fine everywhere else.
+Provenance of the 28 pins: **run1 -> 7, run2 -> 12, run3 -> 4, run4 -> 5.**
+
+**AND IT CAUGHT A BAD SWEEP THAT WOULD OTHERWISE HAVE BEEN PINNED.** run1 stands clear of the other
+three on **12 of 28 vantages**, and on several of those the other three agree with each other
+EXACTLY. The tell is unmistakable once the distances are laid out per run:
+
+    14_player_view    sums [5061, 1687, 1687, 1687]   runs 2-4 are 0 px apart; run1 is 1687 away
+    15_sign           sums [ 423,  141,  141,  141]   same shape
+    19_roof_follow    sums [2240,  748,  748,  748]   same shape
+    25_preen_follow   sums [3918, 1306, 1306, 1306]   same shape
+    17_flight         sums [32068, 10735, 10799, 10730]
+    09_colossal       sums [13014, 4349, 4351, 4350]
+
+run1 was shot immediately after a stalled run was killed, while the machine was still settling, and
+it also took two retakes. **Had this re-pin used the frames that happened to be in
+gauntlet/capture — effectively one sweep — it would have pinned run1's state on roughly fifteen
+vantages.** That is the TODO 73 failure, avoided by measurement rather than by luck. run1 was still
+used for the 7 vantages where it AGREES with the other three (its median distance there is 0-33 px);
+a run is not disqualified wholesale, it is disqualified per frame.
+
+**28_skifield_base's OUTLIER WAS run3, NOT run1** — sums [4682, 953, 7301, 4006]. Different run,
+same hazard, and the second independent confirmation this session that the outlier is a property of
+a (run, vantage) pair.
+
+## VERIFIED ON A FRESH FIFTH SWEEP, NOT ON THE SWEEPS THE PINS CAME FROM
+
+    diff      28 compared, 0 flagged, worst 0.9997
+    pxdiff    28 compared, 0 over band, 0 over churn (loudest 123 px, 13_idle_preen)
+    boxdiff   12 subjects compared, 0 changed, worst 0.9990
+    subjects  16 checked, 2 missing — deliberately red, see below
+    gate      CERTIFIED-SHIP
+    stability 4 vantages x 4 takes, 0 unstable (worst 0.9981)
+
+## THREE VANTAGES ARE NOW LESS REPRODUCIBLE THAN pxdiff RECORDS, AND THE BANDS WERE NOT RE-FIT
+
+Measured among the CONSENSUS runs only (2-4, with the outlier run excluded so the number is churn
+and not run1's badness):
+
+    01_carpark_wide        churn  500   recorded ceiling  104
+    04_flight_underwing    churn  291   recorded ceiling   69
+    28_skifield_base       churn 3369   recorded ceiling 1291
+
+The other 25 hold. **The bands were left exactly as they are.** Session 14b left them alone because
+they held; leaving them alone now, when three do NOT hold, is the more deliberate choice: re-fitting
+a churn ceiling inside a re-pin is a recalibration smuggled in as housekeeping, and FLAKES is clear
+that a ceiling moved to accommodate today's number is that ceiling deleted. The verification sweep
+above came in at 0 over band on all 28 — but ONE sweep landing inside a ceiling does not prove the
+ceiling is right, and it should not be read as retiring this finding. A real recalibration wants
+`crossrun` with RUNS=5 on a quiet machine and is its own piece.
+
+## TWO SUBJECT CHECKS ARE RED ON PURPOSE AND WERE NOT PINNED GREEN
+
+`25_preen_follow beak` 3 against a floor of 12, and `29_lodge_deck hutgreen` 4645 against 8000. No
+floor and no window was touched. Both subjects were verified BY EYE to be plainly in frame. The
+cause is TODO 75: P2 made shade COLOURED rather than grey, and every classifier window in
+subjects.mjs was cut on frames where shade was neutral — the lodge's green rotates out of its HUE
+band, and the beak's `dark AND grey` conjunction is empty because the mean saturation of its dark
+pixels went 0.154 -> 0.569. **07_jam carblue, TODO 74's standing red, fixed itself on the same
+mechanism: 2950 -> 10655 against an untouched floor of 3000.** Both remaining reds fail
+conservatively — they under-report presence and so still cannot pass a frame whose subject is gone.
+
+## THE PHOTOGRAPHER HAD AN UNBOUNDED HANG, AND IT IS FIXED
+
+Three stalls in one session — 600s, 8m20s, and 25 MINUTES with the node process at 0.0% CPU — plus
+three more during these sweeps. `shot()` had no timeout, so a browser that stopped answering stopped
+the pass forever, and `shotR`'s three retakes could never fire because a hang raises no exception.
+`SHOT_MS` (default 90s, far above a healthy ~6s shot) now turns a stall into a retake. In the same
+breath: `await browser.close()` sat on the SUCCESS PATH ONLY, so every failed shot leaked a headless
+Chrome — **124 of them were counted mid-session**, and their CPU contention is what made the first
+stall look like a machine problem instead of a missing timeout. It is a try/finally now, with a
+SIGKILL fallback for a browser that will not close cleanly. Proven both ways: `SHOT_MS=1` gives three
+retakes, a GAVE UP that says why, and zero orphans.
+
+## NOT IN THE SET, AND STILL NOT
+
+26_tour_brochure and 27_travel_card shoot every pass and have still never been pinned, so diff.mjs
+cannot see them. Unchanged by this re-pin and flagged for the third time: adding a vantage is a
+new-vantage decision for Eric, not a side effect of a re-pin.

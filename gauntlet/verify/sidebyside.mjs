@@ -44,6 +44,30 @@ const BOW = [
 const RETIRED = [
   ['12_seal_midpeel.png', 'ugg_shadows_01.jpg'],
 ];
+/* THE BIRD PAIRS, RESTORED 2026-09-03 FOR P5 (REPLAT.md: the kea as a rigged asset).
+   These eight were on disk as ORPHANS — composites from an earlier session whose pair list has
+   since been trimmed, so sidebyside could never refresh them and their game halves were two
+   lighting models old. They were deleted with the other stale frames rather than left to be
+   judged, and the pairs themselves are restored HERE so the tool can shoot them again.
+   THE THREE REFERENCES THIS BRINGS BACK are kea_head_02, kea_posture_02 and kea_feet_01, and
+   without them the bird's beak, wing seat and feet had NO live sidebyside at all — which is
+   exactly the judgement P5 has to make. The vantage-to-reference mapping is not invented here; it
+   is WAVES.md's WAVE 3 brief verbatim:
+       BEAK / EYES   judge at 03 and 18      against kea_head_02
+       WING SEAT     judge at 03, 13, 25     against kea_posture_01/02
+       FEET          judge at 13, 12, 25     against kea_feet_01
+   They are shot on every full run from now on, so P5 opens with them already fresh instead of
+   discovering on the day that the references are missing. */
+const BIRD = [
+  ['03_kea_plate.png',    'kea_head_02.jpg'],
+  ['18_rear_close.png',   'kea_head_02.jpg'],
+  ['03_kea_plate.png',    'kea_posture_02.jpg'],
+  ['13_idle_preen.png',   'kea_posture_01.jpg'],
+  ['25_preen_follow.png', 'kea_posture_02.jpg'],
+  ['12_seal_midpeel.png', 'kea_feet_01.jpg'],
+  ['13_idle_preen.png',   'kea_feet_01.jpg'],
+  ['25_preen_follow.png', 'kea_feet_01.jpg'],
+];
 const PAIRS = [
   ...BOW,
   ['03_kea_plate.png', 'kea_head_01.jpg'],
@@ -63,12 +87,38 @@ const PAIRS = [
   ['02_hut_snow.png', 'nz_hut_01.jpg'],
   ['21_night_camp.png', 'nz_mist_01.jpg'],
   ['16_trish.png', 'nz_hikers_01.jpg'],
+  ...BIRD,
   ...(HISTORICAL ? RETIRED : []),
 ];
 const only = process.argv[2] || '';
 const b64 = p => `data:image/${p.endsWith('.png') ? 'png' : 'jpeg'};base64,` +
   fs.readFileSync(p).toString('base64');
 fs.mkdirSync(OUT, { recursive: true });
+
+/* STALENESS GUARD (2026-09-03). WHAT IT PREVENTS, which happened: this directory is gitignored
+   derived output and it ACCUMULATES. When the pair list is trimmed, the composites for the removed
+   pairs stay on disk forever, and nothing in a composite records which build shot its game half —
+   so nine frames survived a whole re-platform and sat in the judging folder looking exactly as
+   authoritative as the fresh ones. Eight of them showed pre-P2 lighting. A stale pair is worse
+   than a missing one: a missing pair is obviously missing, and a stale pair is a wrong judgement
+   that feels informed.
+   SO A FULL RUN NOW OWNS THE DIRECTORY: what is on disk after it is exactly one pass.
+
+   IT ONLY CLEARS ON A FULL RUN. A filtered run (`node sidebyside.mjs 03`) must NOT wipe twenty-odd
+   pairs in order to write three — that would turn the guard into the very problem it fixes, one
+   pass at a time. Filtered runs therefore leave the directory alone and say so.
+   AND IT ONLY TOUCHES TOP-LEVEL .png FILES. Subdirectories survive on purpose: p2-strips/ holds
+   the REPLAT P2 variant strips, which are judging material this tool did not generate and has no
+   business deleting. Nothing recurses. */
+if (!only) {
+  const doomed = fs.readdirSync(OUT, { withFileTypes: true })
+    .filter(e => e.isFile() && e.name.endsWith('.png'))
+    .map(e => e.name);
+  for (const f of doomed) fs.unlinkSync(path.join(OUT, f));
+  if (doomed.length) console.log(`cleared ${doomed.length} composite(s) from a previous pass`);
+} else {
+  console.log(`filtered run (${only}) — leaving the other composites in place, so this pass does NOT own the directory`);
+}
 // LAUNCH (2026-09-01): mirrors capture.mjs. The bundled chrome is unsigned on some macs and
 // spawn fails with errno -88 (EBADARCH), so fall back to the installed channel exactly as the
 // photographer does. Without this the tool cannot run on the studio machine at all.

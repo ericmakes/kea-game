@@ -34,26 +34,53 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const BOOT=`window.AudioContext=undefined; KEAGAME.startGame(1);`;
 const BOOTCOL=`window.AudioContext=undefined; KEAGAME.startGame(1,{colossal:true});`;
 
+/* SHOT_MS: A HANG MUST BECOME A RETAKE — added 2026-09-03 (session 15b), after this cost three
+   separate stalls in one session: a five-shot pass sat for 600s, an eight-shot ablation died at
+   8m20s having taken four, and run 2 of a five-sweep crossrun stopped for 25 MINUTES with the node
+   process at 0.0% CPU and no frame written. NOT contention, which is what I first blamed and what
+   the leaked browsers below made it look like: nothing here was bounded, so a browser that never
+   answers stops the pass forever instead of failing.
+   shotR HAS ALWAYS HAD THREE RETAKES AND COULD NEVER USE THEM FOR THIS, because a retake needs an
+   exception and a hang produces none. 90s is deliberately far above a healthy shot (a whole
+   30-vantage sweep runs in ~110s, and the slowest single shot measured ~6s) so this can only fire
+   on a genuine stall and never shorten a slow-but-working one.
+   AND THE BROWSER IS NOW CLOSED ON EVERY PATH. `await browser.close()` sat on the success path
+   only, so any throw — a failed assertBooted, a bad stage, now a timeout — leaked a headless
+   Chrome. THIS IS WHERE THE ORPHANS CAME FROM: 124 of them were counted mid-session, and their
+   CPU contention is what made the first stall look like a machine problem rather than a missing
+   timeout. try/finally, so a pass cannot poison the machine it is running on. */
+const SHOT_MS=+(process.env.SHOT_MS||90000);
+const withTimeout=(pr,ms,what)=>{ let t;
+  return Promise.race([ pr.finally(()=>clearTimeout(t)),
+    new Promise((_,rej)=>{ t=setTimeout(()=>rej(new Error(what+' exceeded '+ms+'ms — treating as a stalled browser')),ms); }) ]); };
+
 async function shot(name,stage,opts){
   if(ONLY.length&&!ONLY.some(o=>name.startsWith(o)))return;
   const o=opts||{};
   const url0=await origin();
   const browser=await launch();
-  const page=await browser.newPage();
-  await page.setViewport({width:o.w||960,height:o.h||540,deviceScaleFactor:1});
-  // DETERMINISM (2026-08-28, moved to webrig 2026-09-03): the world is built from Math.random at
-  // page load, before any evaluate can seed it. Without this the same build reshoots at ssim 0.82
-  // and the tripwire is noise. preparePage installs the seed AND __KEA_BOOT__ before any module runs.
-  const want=o.biome||BIOME;
-  await preparePage(page,{seed:GAUNTLETSEED,biome:want});
-  await page.goto(url0,{waitUntil:'load'}); await sleep(1000);
-  await assertBooted(page,{biome:want});   // the seed and the map took, or this shot does not happen
-  await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
-  await page.evaluate(QUIET);
-  if(o.colossal){ await page.evaluate(`window.__keaFeedKeep=true; for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
-  await page.evaluate('{'+stage+'}'); await sleep(o.settle||900);
-  await page.screenshot({path:path.join(OUT,name+'.png')});
-  await browser.close();
+  try{
+    await withTimeout((async()=>{
+      const page=await browser.newPage();
+      await page.setViewport({width:o.w||960,height:o.h||540,deviceScaleFactor:1});
+      // DETERMINISM (2026-08-28, moved to webrig 2026-09-03): the world is built from Math.random at
+      // page load, before any evaluate can seed it. Without this the same build reshoots at ssim 0.82
+      // and the tripwire is noise. preparePage installs the seed AND __KEA_BOOT__ before any module runs.
+      const want=o.biome||BIOME;
+      await preparePage(page,{seed:GAUNTLETSEED,biome:want});
+      await page.goto(url0,{waitUntil:'load'}); await sleep(1000);
+      await assertBooted(page,{biome:want});   // the seed and the map took, or this shot does not happen
+      await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
+      await page.evaluate(QUIET);
+      if(o.colossal){ await page.evaluate(`window.__keaFeedKeep=true; for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
+      await page.evaluate('{'+stage+'}'); await sleep(o.settle||900);
+      await page.screenshot({path:path.join(OUT,name+'.png')});
+    })(), SHOT_MS, 'shot '+name);
+  } finally {
+    // kill(), not just close(): a browser that stopped answering will not honour a clean close
+    try{ await withTimeout(browser.close(), 15000, 'closing '+name); }
+    catch(e){ try{ const proc=browser.process&&browser.process(); if(proc)proc.kill('SIGKILL'); }catch(_){} }
+  }
   console.log('shot',name);
 }
 async function shotR(name,stage,opts){ // SwiftShader is moody: up to 3 takes per photograph

@@ -3,3 +3,7 @@ dist/
 gauntlet/capture/*.png
 gauntlet/reference/pairs/
 SESSION.lock
+# Derived-artefact archives. gauntlet/reference/pairs/ is ignored as a directory, but a zip of it
+# sits BESIDE that directory and so was not covered — a 48MB binary that `git add -A` would have
+# swept into the repo. Added 2026-09-03 after exactly that near-miss.
+gauntlet/reference/*.zip

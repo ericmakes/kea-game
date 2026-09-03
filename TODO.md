@@ -1594,3 +1594,51 @@ THE OPTIONS, cheapest first, none of them taken:
      it. This is the photoreal answer and it DELETES a piece of authored art; it also makes the
      sky respond to nothing the game controls.
 Option 2 is the one worth a variant strip. Judge at 06_skyline and 11_trailhead against ref_bow_04.
+
+### 77. THREE VANTAGES ARE LESS REPRODUCIBLE THAN pxdiff RECORDS, MEASURED ON CONSENSUS RUNS
+Filed 2026-09-03, session 15b, during the P2 re-pin. NOT re-fitted, deliberately.
+Measured across four independent sweeps with the outlier run excluded per vantage, so the number is
+churn and not a bad sweep:
+    01_carpark_wide        churn  500   recorded ceiling  104     4.8x
+    04_flight_underwing    churn  291   recorded ceiling   69     4.2x
+    28_skifield_base       churn 3369   recorded ceiling 1291     2.6x
+The other 25 hold. The ceilings were cut on r128 and session 14b left them alone because they held;
+three of them no longer do, and P2 is the only thing between.
+WHY IT WAS NOT FIXED IN THE RE-PIN: re-fitting a churn ceiling inside a re-pin is a recalibration
+smuggled in as housekeeping. FLAKES is explicit that a ceiling moved to accommodate today's number
+is that ceiling deleted, and the whole value of the pxdiff table is that it was measured once,
+deliberately, on a quiet machine.
+AND DO NOT READ THE VERIFICATION SWEEP AS RETIRING THIS. The fresh sweep after the re-pin came in
+0 over band on all 28, because a consensus pin puts every vantage at the state most sweeps visit.
+One sweep landing inside a ceiling is not evidence the ceiling is right.
+THE PIECE: `crossrun` with RUNS=5 on a quiet machine (no other capture pass, no leftover browsers —
+see TODO 78), then paste its table. Report the before/after per vantage so a widened ceiling cannot
+hide in the batch. WORTH ASKING FIRST whether the cause is the LOOK or the STAGING: 01 and 04 both
+gained soft shadows and 28 is the high-albedo snow frame that already sets the bloom threshold, so
+a VSM shadow map re-blurring a 2048 map per frame is a plausible new source of per-frame variance
+that no previous ceiling had to absorb. Measure with `KEASKY='{"shadowType":"pcfsoft"}'` before
+touching a number: if the churn drops back inside the r128 ceilings under PCFSoft, the cause is the
+shadow map and the honest fix may be a VSM parameter rather than a wider band.
+
+### 78. THE PHOTOGRAPHER'S HANG IS BOUNDED NOW, BUT THE CAUSE IS STILL UNKNOWN
+Filed 2026-09-03, session 15b. The SYMPTOM is fixed and the ROOT CAUSE is not, so this is filed
+rather than closed.
+WHAT HAPPENED: six stalls in one session. Three before the fix (600s, 8m20s, and 25 minutes with
+the node process at 0.0% CPU and no frame written) and three during the consensus sweeps, at roughly
+one per 30-shot sweep — a ~3% per-shot rate. Every one of them sat in `shot()` with nothing bounded.
+WHAT WAS FIXED: `SHOT_MS` (default 90s, against a healthy shot of ~6s and a full 30-vantage sweep of
+~110s) turns a stall into one of `shotR`'s three retakes, which could never fire before because a
+hang raises no exception. And `await browser.close()` moved into a try/finally with a SIGKILL
+fallback — it had been on the SUCCESS PATH ONLY, so every failed shot leaked a headless Chrome.
+124 orphans were counted mid-session and their contention is what made the first stall look like a
+machine problem rather than a missing timeout. That misdiagnosis cost the better part of an hour.
+WHAT IS STILL OPEN: WHY does a browser stop answering? One retake printed
+`Protocol error (Runtime.evaluate): Target closed`, which says the browser DIED rather than hung, so
+there may be two failure modes wearing one symptom. capture.mjs launches a fresh browser PER SHOT —
+30 per sweep, 150 per crossrun — and repeated system-Chrome launches are the obvious suspect.
+WORTH TRYING, cheapest first: (1) log the stall's stage by timing each await inside `shot` so the
+next occurrence names the step; (2) reuse ONE browser per sweep with a fresh page per shot, which
+would cut 30 launches to 1 and is a behaviour change to a rig every baseline depends on, so it wants
+its own piece and a stability sweep; (3) capture the browser's stderr on a timeout.
+NOT URGENT: the pass now self-heals and says so in its output. But a 3% stall rate on a 30-shot
+sweep means most sweeps take a 90s penalty, and crossrun with RUNS=5 takes five of them.

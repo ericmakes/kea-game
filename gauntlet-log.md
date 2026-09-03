@@ -3661,3 +3661,78 @@ certified at specimen `6a6aac54d7a3d3dff61de5f634052082`, bundle
   4 vantages x 4 takes 0 unstable (worst 0.9981) so VSM and an async HDRI fetch add no variance.
   diff 25 of 28 flagged (worst 21_night_camp 0.6596), boxdiff 12 of 12 changed, pxdiff 28 of 28
   over band, subjects 16 checked 2 missing. **ALL OF IT LEFT FLAGGED — the look is Eric's.**
+
+## SESSION 15b — 2026-09-03, Eric order: P2 accepted, re-pin the whole set from a fresh sweep
+
+Lock taken (none held), released as the final act. Tip certified before anything moved. Shipped at
+specimen `6a6aac54d7a3d3dff61de5f634052082` — **unchanged from 15a, because not one line of game
+code was touched.** Everything in this session is baselines and instruments.
+
+**ERIC'S THREE JUDGEMENTS, RECORDED BECAUSE THEY ARE TASTE AND NOT MEASUREMENT.** Ratio B kept:
+variant C would chase contrast the trailer gets from CANOPY AND MATERIALS, not from shadow
+darkness. TODO 76 (the unlit sky dome) deferred until after P3/P4 — it cannot be judged against a
+spike field. The whole set accepted and re-pinned.
+
+- **THE FIRST RE-PIN TO IMPLEMENT TODO 73's ACTUAL FIX, AND IT CAUGHT A BAD SWEEP.** Four
+  independent sweeps, every frame pinned from the MEDOID — the take whose total pixel distance to
+  the same frame in the other three runs is smallest. PER VANTAGE, not per run, because a sweep is
+  thirty independent photographs in thirty browser processes and a run can be the outlier on one
+  frame and the consensus on another. **run1 stands clear of the other three on 12 of 28
+  vantages**, and on several the other three agree at EXACTLY zero:
+      14_player_view   [5061, 1687, 1687, 1687]      15_sign          [ 423,  141,  141,  141]
+      19_roof_follow   [2240,  748,  748,  748]      25_preen_follow  [3918, 1306, 1306, 1306]
+      17_flight        [32068, 10735, 10799, 10730]  09_colossal      [13014, 4349, 4351, 4350]
+  run1 was shot while the machine was still settling from a killed run and took two retakes. **Had
+  this used the frames sitting in gauntlet/capture — effectively one sweep — it would have pinned
+  run1's state on about fifteen vantages.** Pin provenance: run1 7, run2 12, run3 4, run4 5. run1
+  was still used where it AGREES (median distance 0-33 px there): a run is disqualified per frame,
+  not wholesale. **28_skifield_base's outlier was run3, not run1** — [4682, 953, 7301, 4006] — which
+  is the second independent confirmation that the outlier is a property of a (run, vantage) pair.
+
+- **THE PHOTOGRAPHER HAD AN UNBOUNDED HANG AND I MISDIAGNOSED IT TWICE BEFORE MEASURING IT.** Six
+  stalls this session. The first three I blamed on contention from leaked Chrome, and the leak was
+  real (124 orphans counted) but it was a CONSEQUENCE, not the cause: `await browser.close()` sat on
+  the SUCCESS PATH ONLY, so every failed shot leaked a browser, and the orphans' CPU contention made
+  a missing timeout look like a machine problem. The actual defect is that nothing in `shot()` was
+  bounded, so a browser that stops answering stops the pass forever — and `shotR`'s three retakes
+  could NEVER fire, because a hang raises no exception. The 25-minute stall at 0.0% CPU with no
+  frame written is what finally made it unmistakable. `SHOT_MS` (90s, against a healthy ~6s shot)
+  plus try/finally with a SIGKILL fallback. Proven both directions: `SHOT_MS=1` gives three retakes,
+  a GAVE UP that says why, and ZERO orphans. Three stalls during the consensus sweeps all self-healed
+  into retakes. Cause still unknown and filed as TODO 78 — one retake printed
+  `Protocol error (Runtime.evaluate): Target closed`, so the browser DIED rather than hung, and
+  there may be two failure modes wearing one symptom.
+
+- **THREE VANTAGES ARE NOW LESS REPRODUCIBLE THAN pxdiff RECORDS, AND I DID NOT RE-FIT THE BANDS.**
+  Measured among consensus runs only, so the number is churn and not run1's badness: 01_carpark_wide
+  500 against 104, 04_flight_underwing 291 against 69, 28_skifield_base 3369 against 1291. The other
+  25 hold. Re-fitting a ceiling inside a re-pin is a recalibration smuggled in as housekeeping, and
+  the verification sweep coming in 0 over band on all 28 does NOT retire it — a consensus pin puts
+  every vantage at the state most sweeps visit, so one sweep landing inside a ceiling proves nothing.
+  TODO 77, with the useful question attached: 01 and 04 both gained soft shadows and 28 is the
+  high-albedo snow frame, so a VSM map re-blurring 2048px per frame is a plausible new variance
+  source — measure under `shadowType:'pcfsoft'` BEFORE touching a number.
+
+- **THE PAIRS DIRECTORY HAD NINE STALE COMPOSITES AND NO WAY TO KNOW IT.** It is gitignored derived
+  output that accumulates, and when the pair list was trimmed the composites for removed pairs stayed
+  on disk forever. Eight of the nine showed PRE-P2 lighting and sat in the judging folder looking
+  exactly as authoritative as the fresh ones; the ninth was the ugg_shadows pair REPLAT forbids
+  judging against. **A stale pair is worse than a missing one — a missing pair is obviously missing,
+  and a stale pair is a wrong judgement that feels informed.** Deleted on Eric's order, not opened.
+  A full run now clears the directory first, so what is on disk is exactly one pass. It clears ONLY
+  on a full run (a filtered run would otherwise wipe twenty-odd pairs to write three, which is the
+  same problem one pass at a time) and ONLY top-level .png, so p2-strips/ survives. Both branches
+  tested: full run printed `cleared 25 composite(s)` and wrote 33; `sidebyside.mjs 03` printed that
+  it does not own the directory and left all 33.
+
+- **THE BIRD HAD NO LIVE SIDEBYSIDE AT ALL, WHICH IS WHAT P5 HAS TO JUDGE.** The eight deleted
+  orphans were the only composites for kea_head_02, kea_posture_02 and kea_feet_01 — the beak, the
+  wing seat and the feet. Restored to the pair table as a labelled BIRD block so they shoot on every
+  full run and P5 opens with them fresh instead of discovering on the day that its references are
+  missing. The vantage mapping is not invented: it is WAVES.md's WAVE 3 brief verbatim (beak/eyes at
+  03 and 18, wing seat at 03/13/25, feet at 13/12/25).
+
+- **VERIFIED ON A FRESH FIFTH SWEEP, not on the sweeps the pins came from:** diff 28 compared 0
+  flagged worst 0.9997, pxdiff 28 compared 0 over band 0 over churn (loudest 123 px), boxdiff 12
+  compared 0 changed worst 0.9990, subjects 16 checked 2 missing (deliberately red, TODO 75), gate
+  CERTIFIED-SHIP, sidebyside 33 pairs. Working tree clean, SESSION.lock released.
