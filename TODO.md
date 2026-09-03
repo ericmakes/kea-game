@@ -1513,3 +1513,84 @@ the red goes away is not. Prove which by re-measuring against the absent referen
 NOT URGENT, AND SAFE TO LEAVE RED: the check is failing conservatively — it under-reports presence,
 so it cannot pass a frame whose subject is genuinely gone. The instrument is still trustworthy in
 the direction that matters.
+
+### 75. SUBJECT CLASSIFIERS ASSUME NEUTRAL SHADE, AND REPLAT P2 RETIRED THAT ASSUMPTION
+Filed 2026-09-03, session 15 (REPLAT P2). SUPERSEDES THE DIAGNOSIS IN TODO 74 WITHOUT REPLACING
+ITS PIECE — 74 said every floor is calibrated in r128 PIXEL COUNTS and predicted "the next look
+change moves whichever check is closest then". P2 moved three of them, and measured, the cause is
+not the counts and not the film camera. It is the COLOUR OF SHADE.
+
+WHAT P2 CHANGED. The environment went from a 64x32 painted gradient to a real HDRI, so ambient
+light is now warm and directional instead of near-neutral. Shade is consequently COLOURED, which
+is the whole point of the piece and the thing ref_bow_00/04/06 read as. Every classifier in
+subjects.mjs is an HSV window cut on frames whose shade was grey.
+
+MEASURED, PER FAILING CLAUSE, WITH THE WINDOW SPLIT INTO ITS CONJUNCTS — because guessing which
+clause fails produced a WRONG answer first time round. The initial hypothesis was "the subjects
+brightened out of an upper value bound", and both had in fact got DARKER:
+
+  29_lodge_deck  hutgreen  (h140-175 AND s>=0.45 AND v 0.10-0.45)   4645 against a floor of 8000
+      h140-175 clause   15877 -> 5479      <-- THIS is the collapse
+      s>=0.45  clause   19252 -> 18306         held
+      v<=0.45  clause   16478 -> 19628         IMPROVED
+    The lodge is PAL.ranger 0x24513B, h155. Warm bounce rotates a green surface toward yellow, so
+    its hue leaves the low edge of a window whose whole safety argument was "the only saturated
+    green on a map made of snow". The green is still the only green; it is no longer h155.
+
+  25_preen_follow  beak  (v<=0.34 AND s<=0.35)                         3 against a floor of 12
+      v<=0.34 clause   24 -> 80      MORE dark pixels than before
+      s<=0.35 clause 1204 -> 1149    barely moved
+      BOTH CLAUSES HAVE PLENTY AND THEIR INTERSECTION IS EMPTY, which can only mean the dark
+      pixels and the desaturated pixels stopped being the SAME pixels. Measured directly: the mean
+      saturation OF THE DARK PIXELS (v<=0.34) in that box went 0.154 -> 0.569, max 0.244 -> 0.789,
+      at hue 48deg. The comment in subjects.mjs calls this a "crude dark and grey window" and says
+      it works because the beak "is the ONLY dark thing" in the box. It still is. It is no longer
+      grey, because nothing in shade is grey any more.
+
+AND ONE CHECK WENT THE OTHER WAY, WHICH IS THE PROOF THE CAUSE IS DIRECTIONAL AND NOT DRIFT.
+07_jam carblue — TODO 74's own red, 2950 against a floor of 3000 — now reads 10655. Same window,
+same floor, untouched. The blue cars moved INTO it. A cause that only ever lowered counts could
+not do that; a hue-and-saturation rotation can, and does, in whichever direction each surface's
+own colour happens to sit relative to its window.
+
+THE PIECE, AND IT IS TODO 74's PIECE WITH A CORRECTED BRIEF: recalibrate all sixteen checks on the
+P2 renderer, and recalibrate the WINDOWS as well as the floors, which 74 only raised as a maybe for
+07_jam. The window edges are the thing that broke. Hold the separation ratio each window was chosen
+for — measure every subject present AND against a re-measured `absent` reference frame, and report
+before/after separation per check so a weakened one cannot hide in the batch. A window widened with
+the separation held is a recalibration; widened until the red goes away it is that check deleted.
+
+DO NOT LOWER A FLOOR OR WIDEN A WINDOW TO GET GREEN — Eric's standing order on this instrument,
+restated because this session had two reds and an obvious way to clear both.
+
+SAFE TO LEAVE RED, AND VERIFIED BY EYE THIS SESSION: both subjects are plainly in frame. The day
+lodge fills a third of 29_lodge_deck; the preening bird is centre-frame in 25. The checks fail
+CONSERVATIVELY — they under-report presence and so still cannot pass a frame whose subject is
+genuinely gone, which is the direction that matters.
+
+### 76. THE PAINTED SKY DOME IS NOW THE ONLY THING IN THE FRAME THAT IS NOT LIT
+Filed 2026-09-03, session 15 (REPLAT P2). NOT a defect — a consequence, and the largest remaining
+P2-shaped gap against ref_bow_00 and ref_bow_04.
+
+The dome, its haze band, the sun sprite and the clouds are all MeshBasicMaterial with `fog:false`.
+They are authored art: a saturated blue gradient tuned to the NZ tourism-campaign palette that
+ARTBIBLE's vividness law names. Everything else in the game is now lit by a measured HDRI and
+hazed by exponential fog. So the sky is the one surface that cannot respond to the light model, and
+the seam shows exactly where the reference is least like the game: ref_bow_00 and _04 both have a
+BLOWN, PALE, WARM sky that reads as atmosphere, while the dome stays a confident blue.
+
+THE TENSION IS REAL AND IT IS ERIC'S TO RESOLVE, which is why this is filed rather than fixed:
+  - REPLAT section 3 says ref_bow_* is THE target for LIGHT and that the stylised references are
+    historical.
+  - ARTBIBLE STANDING LAWS say "NZ tourism-campaign colour - saturated, never washed out."
+  - A real NZ alpine sky IS deep blue. The reference is Australian suburbia in haze. On this one
+    axis the country and the target disagree, and no tuning satisfies both.
+
+THE OPTIONS, cheapest first, none of them taken:
+  1. Leave it. The dome is good art and the disagreement is honest.
+  2. Tune the dome's low band toward the fog colour so the horizon transition stops being a seam,
+     keeping skyTop saturated. Small, reversible, does not touch the vividness law at altitude.
+  3. Put the HDRI on scene.background at low intensity behind the dome, or replace the dome with
+     it. This is the photoreal answer and it DELETES a piece of authored art; it also makes the
+     sky respond to nothing the game controls.
+Option 2 is the one worth a variant strip. Judge at 06_skyline and 11_trailhead against ref_bow_04.

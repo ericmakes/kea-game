@@ -76,19 +76,52 @@ export async function serve(dir = DIST) {
    without a rebuild and without a second staging table:
        NOPOST=1                     shoot on the plain renderer, for a like-for-like A/B
        KEAFILM='{"bloom":{...}}'    deep-merge over src/post.mjs's FILM defaults
-   Both are read here so every browser tool gets them for free, and both are absent from a normal
-   pass, which therefore shoots exactly what the build pins. */
+   REPLAT P2 adds the sky on the same seam, for the same reason — every variant strip in that
+   piece (three HDRIs, three fog densities, two shadow maps) had to be shootable from one build:
+       NOSKY=1                      skip the HDRI, stay on the painted fallback environment
+       KEASKY='{"fogDensityDay":0.008,"shadowType":"pcfsoft"}'
+                                    overwrite leaves of src/game.mjs's SKY constants
+   KEASKY IS A FLAT LEAF MERGE, not a deep one, because SKY is a flat block of scalars and arrays
+   — a nested merge would silently half-apply `sunPosDay`. game.mjs only accepts keys that already
+   exist in SKY, so a typo is a no-op there rather than a new constant nobody reads; the check
+   below catches it here instead, where it can still say so out loud.
+   All four are read here so every browser tool gets them for free, and all four are absent from a
+   normal pass, which therefore shoots exactly what the build pins. */
+const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay','sunNight',
+  'sunIntensityDay','sunIntensityNight','sunPosDay','sunPosNight','shadowType','shadowMap',
+  'shadowRadius','shadowBlur','shadowBias','shadowNormalBias','shadowExtent','shadowFar',
+  'hdri','envIntensityDay','envIntensityNight','envRotationY','hemiIntensityDay',
+  'hemiIntensityNight','hemiSkyDay','hemiSkyNight','hemiGroundDay','hemiGroundNight',
+  'fillIntensityDay','fillIntensityNight','rimIntensityDay','rimIntensityNight',
+  'hazeOpacityDay','hazeOpacityNight'];
+
 export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
   const nopost = !!process.env.NOPOST;
+  const nosky = !!process.env.NOSKY;
   let film = null;
   if (process.env.KEAFILM) {
     try { film = JSON.parse(process.env.KEAFILM); }
     catch (e) { throw new Error('webrig: KEAFILM is not valid JSON — ' + e.message); }
   }
-  if (nopost || film) await page.evaluateOnNewDocument((np, f) => {
+  let sky = null;
+  if (process.env.KEASKY) {
+    try { sky = JSON.parse(process.env.KEASKY); }
+    catch (e) { throw new Error('webrig: KEASKY is not valid JSON — ' + e.message); }
+    /* A MISSPELLED KNOB MUST NOT LOOK LIKE A TUNING THAT DID NOTHING. game.mjs ignores unknown
+       keys by design, so without this a variant strip could be shot, judged and locked while one
+       of its frames was silently the default — the same class of failure as an unseeded capture
+       pass that photographs fine. Thrown, not warned, because a strip is judged by eye and a
+       warning scrolls past. */
+    const bad = Object.keys(sky).filter(k => !SKY_KEYS.includes(k));
+    if (bad.length) throw new Error('webrig: KEASKY has no such SKY constant: ' + bad.join(', ') +
+      '\n  known keys: ' + SKY_KEYS.join(', '));
+  }
+  if (nopost || nosky || film || sky) await page.evaluateOnNewDocument((np, f, ns, sk) => {
     if (np) globalThis.__KEA_NOPOST__ = true;
+    if (ns) globalThis.__KEA_NOSKY__ = true;
     if (f) globalThis.__KEA_FILM__ = f;
-  }, nopost, film);
+    if (sk) globalThis.__KEA_SKY__ = sk;
+  }, nopost, film, nosky, sky);
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);
@@ -105,19 +138,58 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
 /* Assert the page actually booted the way we asked. A capture pass that quietly fell back to an
    unseeded default world is the exact failure the old anchor-throw existed to prevent, so the
    replacement seam gets the same treatment: proven per page, not assumed. */
-export async function assertBooted(page, { biome } = {}) {
+export async function assertBooted(page, { biome, iblTimeout = 8000 } = {}) {
+  /* THE ENVIRONMENT IS FETCHED, SO IT IS WAITED FOR — bounded, then asserted. main.mjs awaits the
+     HDRI before the film camera goes on, but that await lives inside the page's module graph and
+     page.goto's 'load' does not cover it: a caller can be here before the fetch resolves. Found
+     immediately by probe.mjs, which asserts straight after goto and read 'painted' on a build
+     where the HDRI loads fine in under a second.
+     THE WAIT BELONGS HERE AND NOT IN THE FOUR CALLERS. capture.mjs happens to sleep 1000ms first
+     and so never saw this; probe, motion and journey do not, and fixing it four times is how
+     webrig.mjs came to exist in the first place. Polling rather than a fixed sleep so a normal run
+     costs one evaluate, and BOUNDED so a genuinely failed fetch still fails loudly below instead
+     of hanging a pass forever. */
+  /* IT WAITS FOR THE TERMINAL STATE, NOT FOR "ANY STATE". The first version of this loop broke as
+     soon as G.ibl.mode stopped being 'none', and 'painted' is not an outcome — it is the fallback
+     initRenderer installs on the first frame so the scene is never unlit, and sky.mjs upgrades it
+     to 'hdri' a moment later. Breaking on it meant the wait returned before the thing it was
+     waiting for, and probe.mjs failed exactly as it had without any wait at all. */
+  const want = process.env.NOSKY ? 'painted' : 'hdri';
+  const t0 = Date.now();
+  for (;;) {
+    const mode = await page.evaluate(() => ((((globalThis.KEAGAME || {}).G || {}).ibl) || {}).mode || null);
+    if (mode === want) break;
+    if (Date.now() - t0 > iblTimeout) break;            // let the assertions below say what went wrong
+    await new Promise(r => setTimeout(r, 100));
+  }
   const state = await page.evaluate(() => ({
     keagame: typeof globalThis.KEAGAME !== 'undefined',
     seen: globalThis.__KEA_BOOT__ || null,
     biome: (globalThis.KEAGAME && globalThis.KEAGAME.G && globalThis.KEAGAME.G.biome) || null,
     children: (globalThis.KEAGAME && globalThis.KEAGAME.G && globalThis.KEAGAME.G.scene)
       ? globalThis.KEAGAME.G.scene.children.length : 0,
+    // REPLAT P2: read through an accessor that cannot throw (FLAKES law 14) — this must report
+    // a missing G.ibl as a fact, not die on the way to reporting it.
+    ibl: ((globalThis.KEAGAME || {}).G || {}).ibl || null,
   }));
   if (!state.keagame) throw new Error('webrig: page did not publish KEAGAME');
   if (!state.seen) throw new Error('webrig: __KEA_BOOT__ never reached the page');
   if (state.seen.seed !== GAUNTLETSEED) throw new Error('webrig: wrong seed on page: ' + state.seen.seed);
   if (biome && state.biome !== biome) throw new Error('webrig: asked for biome ' + biome + ', page built ' + state.biome);
   if (state.children < 40) throw new Error('webrig: world looks unbuilt (' + state.children + ' children)');
+  /* THE ENVIRONMENT IS PROVEN PER PAGE, NOT ASSUMED — REPLAT P2, and it is the same argument the
+     seed seam above rests on. The painted gradient is a deliberate fallback that keeps the game
+     up when the HDRI cannot be fetched, which means a capture pass whose fetch failed photographs
+     a COMPLETE, PLAUSIBLE, WRONGLY-LIT world and says nothing. Every frame in the pass would then
+     be judged, and possibly pinned, as the HDRI look. So a pass that asked for the sky asserts it
+     got the sky; NOSKY=1 is the way to ask for the fallback on purpose. */
+  if (!state.ibl) throw new Error('webrig: G.ibl is missing — the page has no IBL provenance at all');
+  if (!process.env.NOSKY && state.ibl.mode !== 'hdri')
+    throw new Error('webrig: the HDRI environment did not land — G.ibl.mode is "' + state.ibl.mode +
+      '" (expected "hdri"). The painted fallback lights the scene differently, so this pass would ' +
+      'photograph the wrong look. Set NOSKY=1 to shoot the fallback deliberately.');
+  if (process.env.NOSKY && state.ibl.mode !== 'painted')
+    throw new Error('webrig: NOSKY=1 asked for the painted fallback but G.ibl.mode is "' + state.ibl.mode + '"');
   return state;
 }
 

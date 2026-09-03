@@ -3533,3 +3533,131 @@ game." Nothing was pinned that he had not looked at.
   only because its colour is STAGED and therefore tightly bounded, so it had the least margin. The
   check fails CONSERVATIVELY — it under-reports presence and so cannot pass a frame whose subject is
   really gone — which is why it is safe to leave red. No floor was lowered.
+
+## SESSION 15 — 2026-09-03, Eric order: REPLAT.md P2, sky and sun, judged against the ref_bow wall
+
+Branch `replat-b`, lock taken at start (none held) and released as the final act. Tip certified
+before anything moved: gate CERTIFIED-SHIP at specimen `dfbbb247aaadf0b6db06c2c38da31ee8`, and
+diff read 28 compared 0 flagged, so the ground was known-good rather than assumed. Shipped
+certified at specimen `6a6aac54d7a3d3dff61de5f634052082`, bundle
+`372f1b98408a424e2a621b0d7f048d85`, frozen `8232590523658dfc3f5a1fe59a916de0` unchanged.
+**NOTHING RE-PINNED, BY ORDER. 25 of 28 vantages stand flagged for Eric.**
+
+- **THE FIRST BINARY ASSETS IN THE REPO, AND THE LICENCE LEDGER REPLAT ASKED FOR.** Three Poly
+  Haven HDRIs (all CC0), 4.7MB, each verified byte-for-byte against the PUBLISHER'S OWN md5 taken
+  from the API rather than from the file — `assets/LICENCES.md` records the hash so a later session
+  can re-verify rather than trust. `publicDir:'assets'` copies the tier through verbatim, so dist/
+  carries the licences next to the files they license, and the HDRI is fetched by URL rather than
+  base64-inlined into the one chunk the gate md5s.
+
+- **THE FIRST CUT WAS 6 YAVG DARK AND A THIRD DESATURATED, AND THE CAUSE WAS A DEFAULT NOBODY HAD
+  READ.** `Scene.environmentIntensity` DEFAULTS TO 1, so the 64x32 painted gradient was already
+  lighting the game at full strength. P2 did not add image-based light to a dark scene; it replaced
+  a full-strength environment with an HDRI at 0.45 AND cut hemi/fill/rim to "make room" for it. Two
+  cuts, one intended. Measured both environments on one scale — solid-angle-weighted mean radiance,
+  sampled the way three does (ColorManagement off, CanvasTexture NoColorSpace, so sRGB bytes are
+  consumed AS LINEAR) — painted 0.6132, pizzo 0.6892, energy-neutral 0.890. Same shape as the P1
+  bloom mis-tune and the same root cause: a sensible-looking number for an unmeasured quantity.
+
+- **AND ENERGY-NEUTRAL STILL DID NOT SHOW A SHADOW, WHICH IS HOW THE REAL FINDING SURFACED.**
+  `fill` and `rim` are DIRECTIONAL LIGHTS THAT DO NOT CAST. They were authored to fake directional
+  interest in a game where nothing cast a shadow, and they fill every real shadow straight back in.
+  At env 0.890 with both at their authored 0.15, toggling the shadow map moved 40,601 px at max
+  delta 74 — the shadows were being drawn, softly and in the right places, and were simply washed
+  out. Moving their energy to the sun (1.45 -> 1.85) holds YAVG on the P1 baseline to within a
+  third of a level (155.7 against 156.08; 11_trailhead 169.57 against 169.50) while YLOW falls 25.
+  Contrast bought from the fill that was never physical. Frozen by an assertion at ratio < 0.12.
+
+- **THE CARPARK COULD NOT RECEIVE A SHADOW, AND HAD NOT SINCE IT WAS BUILT.** `{noshadow:true}`
+  turns off cast AND receive. The slab, its apron and its bay markings all used it, so every car in
+  01, 07 and 12 has been casting into a surface that could not take one. NOT A NEW IDIOM — the road
+  two blocks up and the ski-field slab both already do `{noshadow:true}` followed by an explicit
+  `receiveShadow`, and the carpark was missed. ARTBIBLE PHASE 1 lists "no cast shadows anywhere" as
+  a GAP and treats it as work not yet done; it was one flag per surface. Asserted through the
+  specimen TEXT, deliberately and labelled, because receiveShadow genuinely does not exist in node.
+
+- **THE r128 BUILD'S `sun.shadow.radius=3` HAS BEEN DECORATIVE FOR ITS WHOLE LIFE.**
+  PCFSoftShadowMap ignores `shadow.radius` outright — a fixed 4-tap in texel space. VSM is the only
+  three shadow map whose softness is a parameter. Compared at ZERO ambient, where a shadow must be
+  black or absent, VSM's penumbra is clean and feathered and PCFSoft's is dithered and noisy; at
+  normal ambient the two are identical to four decimals on YAVG and SATAVG, which is FLAKES law 12
+  exactly — a whole-frame metric cannot see a shadow. Bias is zero on purpose: a variance map
+  compares moments, so a negative constant bias opens leaks rather than curing acne, and the
+  battery pairs `shadowType` to `shadowBias` so a revert to pcfsoft must restore it.
+
+- **FOUR MEASUREMENT MISTAKES OF MY OWN, ALL CAUGHT BY MEASURING AGAIN, AND WORTH THE SPACE.**
+  1. A 600s "hang" in the capture rig was **124 leaked Chrome processes** from earlier killed runs
+     starving the machine. Not a code fault. One shot alone ran in 5.9s and the same five-shot pass
+     ran in 18s once they were cleared. Eric's own Chrome (52 processes) was left alone — the test
+     browsers were distinguished by `--headless`, not by name.
+  2. A shadow probe measured **252,475 px** of "shadow" that was THE TO-DO PANEL, which opened
+     because the probe did not replicate QUIET. Void, re-run with the panel pinned shut: 40,601 px.
+  3. The subject-classifier failures were first diagnosed as "the subjects BRIGHTENED out of an
+     upper value bound". Both had got DARKER. See TODO 75 — the honest cause is different and
+     better.
+  4. The `(fill+rim)/sun` ceiling was first written as "under a fifth of the sun", which forbade
+     NOTHING: a sabotage restoring fill to 0.15 gave 0.25 against a 0.37 ceiling and came back with
+     ZERO FINDINGS. Law 14's tell applied to a BOUND rather than to a read. Re-derived from the two
+     measured states (flat 0.207, locked 0.081) as 0.12, and both sabotages re-run against it.
+
+- **SUBJECT CLASSIFIERS ASSUME NEUTRAL SHADE, AND P2 RETIRED THAT ASSUMPTION — TODO 75, WHICH
+  SUPERSEDES TODO 74's DIAGNOSIS.** 74 predicted the next look change would move whichever check
+  sat closest to its floor, and blamed r128 pixel counts. Measured per CONJUNCT of each window,
+  the cause is the COLOUR of shade:
+    - `29_lodge_deck hutgreen` 4645/8000. The collapsing clause is HUE, 15877 -> 5479; saturation
+      held and the value clause IMPROVED. Warm bounce rotates PAL.ranger's h155 green toward
+      yellow and out of an h140-175 window whose safety argument was "the only saturated green on
+      a map made of snow". It still is the only green. It is no longer h155.
+    - `25_preen_follow beak` 3/12, window `v<=0.34 AND s<=0.35`. BOTH CLAUSES HAVE PLENTY (24->80
+      and 1204->1149) AND THEIR INTERSECTION IS EMPTY, so the dark pixels and the grey pixels
+      stopped being the same pixels. Mean saturation OF THE DARK PIXELS: **0.154 -> 0.569**, max
+      0.244 -> 0.789, hue 48deg. subjects.mjs calls it a "crude dark and grey window". Nothing in
+      shade is grey any more, which is the piece working.
+    - **AND `07_jam` carblue WENT GREEN ON ITS OWN — 2950 -> 10655 against an untouched floor of
+      3000.** TODO 74's standing red is resolved by measurement and not by lowering anything. A
+      cause that only ever lowered counts could not do that; a hue rotation can, in whichever
+      direction each surface sits relative to its window. That is the proof the cause is
+      directional rather than drift.
+  NO FLOOR AND NO WINDOW WAS TOUCHED. Both reds verified BY EYE to have their subject plainly in
+  frame, and both fail conservatively, so they are safe to leave red.
+
+- **MY NEW ASSERTION CAUGHT MY OWN BUG WITHIN A MINUTE OF EXISTING.** `assertBooted` now refuses to
+  photograph a page whose HDRI did not land, because the painted fallback produces a COMPLETE,
+  PLAUSIBLE, WRONGLY-LIT world and says nothing — every frame in such a pass would be judged, and
+  possibly pinned, as the HDRI look. probe.mjs went red immediately: it asserts straight after
+  goto, and capture.mjs only ever passed because it happens to sleep 1000ms first. The wait went
+  into webrig rather than into four callers. THEN THE WAIT ITSELF WAS WRONG — it broke as soon as
+  mode stopped being 'none', and 'painted' is not an outcome but the first-frame fallback, so it
+  returned before the thing it was waiting for and probe failed identically. It waits for the
+  TERMINAL state now, and NOSKY=1 waits for 'painted'.
+
+- **THE JUDGING INSTRUMENT COULD NOT SHOW THE WALL IT IS JUDGED AGAINST.** sidebyside.mjs had no
+  ref_bow pair in it at all, so the one tool whose entire job is "closer to THAT?" could not put
+  the Birds of War frames beside the game. Eight pairs added, the three Eric named first. The
+  retired ugg_shadows pair is no longer shot by default (REPLAT section 3 forbids judging against
+  it) but is KEPT behind HISTORICAL=1 — deleting the evidence of a superseded plan is how a project
+  forgets why it changed course.
+
+- **WHAT I DID NOT CHASE, AND WHY.** 01_carpark_wide reads SATAVG 14.4 against 21.3. Ablated: fog
+  ~3.1, the environment swap ~3.2, the shadow map ZERO. Warmth and fog-density strips barely move
+  it (14.39 / 14.12 / 14.28 across three warmths), so recovering it would mean distorting the light
+  model to satisfy a whole-frame chroma average dominated by grey tarmac and blue sky. FLAKES law
+  12 is the precedent and the P1 log's "a look tuned on one vantage is not tuned" is the other half.
+  Measured, reported, flagged, not chased.
+
+- **MY HONEST JUDGEMENT AGAINST ERIC'S THREE FRAMES.** Daylight (ref_bow_00): warmth and coloured
+  shade have moved genuinely toward it; the remaining gap is overwhelmingly MATERIAL and GEOMETRY —
+  flat untextured colour, primitive shapes, and no leafy caster anywhere to throw the dappled shade
+  that dominates the reference. That is P3-P6, not P2. Warmth (ref_bow_04): the closest of the
+  three; distance now hazes on an exponential curve with no near plane to give it away. Shadow
+  softness (ref_bow_06): the SOFTNESS is right and the CONTRAST is not — ratio variant C is the
+  closer answer and is shot and waiting. The largest P2-shaped gap left is that the sky dome is
+  unlit authored art and cannot respond to any of this: TODO 76, with three options and a
+  recommendation, unresolved because the vividness law and the reference genuinely disagree there.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, gate-selftest ALL PASS, six P2
+  sabotages all red, bundle builds, 30/30 vantages shoot with no retakes and no GAVE UP, journey
+  drives carpark -> map -> GO -> load -> skifield -> in-beat -> to-do -> ticking footer, stability
+  4 vantages x 4 takes 0 unstable (worst 0.9981) so VSM and an async HDRI fetch add no variance.
+  diff 25 of 28 flagged (worst 21_night_camp 0.6596), boxdiff 12 of 12 changed, pxdiff 28 of 28
+  over band, subjects 16 checked 2 missing. **ALL OF IT LEFT FLAGGED — the look is Eric's.**

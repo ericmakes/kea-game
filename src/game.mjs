@@ -44,6 +44,154 @@ THREE.ColorManagement.enabled = false;
 const LX_DIR=Math.PI, LX_HEMI=Math.PI, LX_POINT=7.64, LX_SPOT=12.59;
 
 /* ============================================================
+   SKY AND SUN — REPLAT P2 (2026-09-03). THE RECIPE, IN NAMED CONSTANTS.
+
+   P2's proof contract is "fog params pinned as named constants", and this block is that pin for
+   the whole of sky, sun, shadow and image-based light. Nothing about the daylight is a literal
+   buried in initScene any more: the numbers below ARE the look, and the assertions in
+   harness-everything.js freeze them so the night shift cannot drift them by accident.
+
+   __KEA_SKY__ OVERRIDES ANY LEAF, set before the page boots (KEASKY= through the web rig). This
+   is the same seam post.mjs's FILM uses and it exists for the same reason: a look is judged AT THE
+   VANTAGE, so every variant strip in this piece had to be shootable without a rebuild. It is read
+   ONCE, here, at module scope — which is early enough because initScene runs at boot, and the rig
+   installs the global before any module on the page evaluates. Absent, the game gets exactly what
+   is pinned below, which is why a normal capture pass photographs the recipe and not a mood.
+
+   WHY EXPONENTIAL FOG AND NOT THE LINEAR PAIR IT REPLACES. Linear fog is a near/far ramp: nothing
+   hazes at all inside `near`, then haze climbs on a straight line. Real aerial perspective has no
+   such edge — extinction is exponential in distance, which is why the middle distance in
+   ref_bow_04 is already visibly milky while the near verge is not. The old Fog(92,218) put the
+   whole carpark inside a hard no-haze zone and then ramped, so the hills read as pasted-on rather
+   than far away. FogExp2 has no near plane to give the game away.
+
+   AND WHY THE COLOUR MOVED. The old fog was 0x93AEBF — DARKER and more saturated than the sky
+   dome's own horizon (skyLow 0xC9DCE6, haze band 0xC3D2DC). Distant ridges therefore faded toward
+   something bluer than the sky immediately behind them, which is the one thing aerial perspective
+   never does: haze IS the sky, seen edge-on. Tuning the fog to the sky is not a preference, it is
+   the correction, and it is what P2 means by "fog tuned to the sky". */
+const SKY={
+  /* FOG — day and night. Both are FogExp2 densities, and the night pair reproduces the old
+     linear night fog's REACH rather than its shape: Fog(34,126) was fully opaque by 126 units,
+     and 1-exp(-(d*density)^2) reaches 0.97 at d=126 when density is 0.0148. */
+  fogDay:0xC4D2D6, fogDensityDay:0.0062,
+  fogNight:0x0C1524, fogDensityNight:0.0148,
+
+  /* THE SUN — one warm directional, per P2, and the piece's main light in a way it was not
+     before. Warmed 0xFFF4E2 -> 0xFFEAC8 toward the reference wall's daylight (picked off a
+     three-step warmth strip; the values are in ARTBIBLE) and raised 1.45 -> 1.85 to take over the
+     work withdrawn from fill and rim. The multiplier is LX_DIR (pi) like every other light, so
+     the number is directly comparable with the r128 one it replaces. */
+  sunDay:0xFFEAC8, sunNight:0xB9CCEE,
+  sunIntensityDay:1.85, sunIntensityNight:0.24,
+  sunPosDay:[-46,42,22], sunPosNight:[36,30,-26],
+
+  /* SOFT SHADOWS. `type` picks the shadow map: 'vsm' is THREE.VSMShadowMap, which is the only
+     three shadow map whose softness is a PARAMETER — it blurs the depth variance, so `radius`
+     and `blurSamples` genuinely widen the penumbra. PCFSoftShadowMap ignores `radius` entirely
+     (its kernel is a fixed 4-tap in texel space), which is why the r128 build set radius=3 and
+     got nothing for it: that line has been decorative for as long as it has existed.
+     VSM IS ALSO WHY THE BIAS IS ZERO. Variance shadow maps compare moments, not depths, so a
+     negative constant bias does not fix acne, it opens light leaks under thin geometry; the
+     normal-offset bias is the one that belongs here and it is doing the work alone. */
+  shadowType:'vsm', shadowMap:2048, shadowRadius:4.2, shadowBlur:14,
+  shadowBias:0.0, shadowNormalBias:0.022, shadowExtent:58, shadowFar:170,
+
+  /* IMAGE-BASED LIGHT. The file is fetched at runtime and convolved by PMREMGenerator; see
+     src/sky.mjs for the load, the fallback and why this is not bundled.
+     THE ROTATION IS MEASURED, NOT EYEBALLED. An HDRI whose sun sits somewhere other than the
+     game's directional light gives every surface a bright side that disagrees with its own
+     shadow — the specular highlight points one way and the shadow falls the other. So the
+     environment is rotated about Y until the two agree: the HDRI's solar azimuth was measured
+     as the energy-weighted centroid of its top 0.02% of pixels in the upper hemisphere
+     (36.24deg for pizzo_pernice), the game's sun sits at azimuth 154.44deg, and 2.0630 rad is the
+     difference. Re-measure it if the HDRI or sunPosDay changes; do not carry this number over.
+     RESIDUAL, RECORDED RATHER THAN HIDDEN: azimuth is matched exactly, ELEVATION is not.
+     pizzo_pernice's sun stands at 53.1deg against the game's 39.5deg, a 13.6deg residual, and
+     tilting an environment to fix that tips its horizon and drags the ground bounce sideways —
+     a worse artefact than the one it cures. kloofendal_43d_clear matches elevation to 3.4deg and
+     is on the shelf in assets/hdri/ if Eric would rather have that trade. */
+  hdri:'hdri/pizzo_pernice_1k.hdr', envIntensityDay:0.55, envIntensityNight:0.80,
+  envRotationY:2.0630,
+  /* THE MEASURED INPUTS TO envRotationY, KEPT SO THE ROTATION CAN CHECK ITSELF. hdriSunAz is
+     pizzo_pernice's own solar azimuth (the energy-weighted centroid of its brightest 0.02% of
+     upper-hemisphere pixels) and hdriSunEl its elevation, both in radians. The identity that must
+     hold is  envRotationY === atan2(sunPosDay.z, sunPosDay.x) - hdriSunAz, and a battery asserts
+     exactly that — so moving the sun or swapping the HDRI without re-measuring goes RED with a
+     message saying to re-measure, instead of silently pointing the environment's sun one way and
+     the shadows the other. That is the failure this constant exists to make impossible.
+     hdriSunEl is not used by the renderer at all; it is recorded because the 13.6deg elevation
+     residual against the game's 39.5deg sun is a known, accepted trade (see the note above) and a
+     number nobody wrote down is a number the next session re-derives. */
+  hdriSunAz:0.6325, hdriSunEl:0.9269,
+  /* HOW 0.55 WAS ARRIVED AT, IN THREE MEASURED STEPS. Recorded in full because the obvious value
+     is wrong twice over and the next person to touch it will otherwise repeat both mistakes.
+
+     STEP 1 — 0.45, BY EYE, AND WRONG. The first cut came back 6 YAVG darker and A THIRD LESS
+     SATURATED across four vantages: the exact shape of the P1 bloom mis-tune, and the same root
+     cause, a number that looked sensible for a quantity nobody had measured. Two facts were
+     missing. Scene.environmentIntensity DEFAULTS TO 1, so the painted gradient initRenderer
+     builds was already lighting the game at FULL strength — P2 does not add image-based light to
+     a dark scene, it REPLACES a full-strength environment. And hemi/fill/rim were authored ON TOP
+     of that full-strength environment, so cutting them to "make room for the IBL" cut a second
+     time. Two cuts, one of them intended.
+
+     STEP 2 — 0.890, THE ENERGY-NEUTRAL SWAP, MEASURED. The solid-angle-weighted mean radiance of
+     the painted gradient is 0.6132 (measured the way three samples it: ColorManagement is off and
+     a CanvasTexture is NoColorSpace, so its sRGB bytes are consumed AS LINEAR) and
+     pizzo_pernice's is 0.6892, so 0.6132/0.6892 = 0.890 delivers exactly the energy the game
+     always had. That restored the exposure — and the shadows still would not read.
+
+     STEP 3 — 0.55, BECAUSE THE SHADOWS ARE THE POINT. `fill` and `rim` are DIRECTIONAL lights
+     that DO NOT CAST, and that is the whole problem: they were authored to fake directional
+     interest back when nothing in the game cast a shadow, and they fill every shadow straight
+     back in. With the environment at 0.890 and those two at their authored 0.15, toggling the
+     shadow map moved 40,601 px at a max delta of 74 — the shadows were being drawn correctly and
+     softly, in the right places, and were simply washed out. Measured at 01_carpark_wide, the
+     ratio strip read
+         env 0.89 / fill 0.15 / rim 0.15 / sun 1.45    YAVG 163.5   YLOW 122   flat
+         env 0.55 / fill 0.05 / rim 0.10 / sun 1.85    YAVG 155.7   YLOW  97   shadows read
+         env 0.40 / fill 0.00 / rim 0.08 / sun 2.10    YAVG 152.1   YLOW  80   strong
+     The middle row is locked: YLOW falls 25 levels, so the shade genuinely deepens, while YAVG
+     lands on the P1 baseline of 156.08 to within a third of a level, and 11_trailhead reads
+     169.57 against its own baseline 169.50. Exposure held, contrast bought from the fill that was
+     never physical.
+
+     THE OTHER TWO HDRIs NEED THEIR OWN NUMBER. Energy-neutral measures 0.744 for
+     kloofendal_43d_clear and 1.284 for dry_field, so the same 0.62 ratio off neutral gives 0.46
+     and 0.80. Scale env WITH the swap or the strip compares brightness rather than sky.
+
+     THE NIGHT VALUE HOLDS THE AUTHORED NIGHT, DELIBERATELY. nightApply never touched the
+     environment before, so a night scene was lit by a full-strength MIDDAY gradient. That is not
+     defensible, but neither is silently darkening a vantage this piece was not asked to change:
+     the first cut's 0.06 took 21_night_camp from YAVG 92.3 to 50.9. Swept, 0.60/0.80/1.00 read
+     81.3/89.8/97.1, so 0.80 holds the authored exposure to within 2.5 levels and comes back MORE
+     saturated (36.8 against 33.9). Darkening the night so the torch has more to do is a real and
+     probably good idea, and it is a separate judged change rather than a side effect of P2. */
+
+  /* FILL AND RIM COME DOWN BECAUSE THEY DO NOT CAST — see step 3 in the env note above. They are
+     unshadowed directionals that were faking directional interest in a game where nothing cast a
+     shadow; now that the carpark receives one, they are the single largest thing erasing it. The
+     energy they gave up went to the SUN (1.45 -> 1.85), which does cast, so the frame keeps its
+     exposure and gains its contrast. hemi keeps most of its strength because its groundColor
+     (0x8A7C42) is the warm gold bounce the country is tuned to and it is the cheapest source of
+     the coloured shade ref_bow_00 and _06 read as; 0.18 was picked off the warmth strip, where
+     0.14/0.18/0.22 all held exposure and the middle sat closest to the baseline on 28.
+     NIGHT VALUES ARE UNTOUCHED r128 VALUES. Only the night environment moved. */
+  hemiIntensityDay:0.18, hemiIntensityNight:0.13,
+  hemiSkyDay:0xC7DBE8, hemiSkyNight:0x22304C,
+  hemiGroundDay:0x8A7C42, hemiGroundNight:0x161A24,
+  fillIntensityDay:0.05, fillIntensityNight:0.05,
+  rimIntensityDay:0.10, rimIntensityNight:0.04,
+
+  /* the painted dome keeps its own art; these are the two knobs nightApply already drove */
+  hazeOpacityDay:0.45, hazeOpacityNight:0.14,
+};
+for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_SKY__)||{})){
+  if(k in SKY) SKY[k]=v;
+}
+
+/* ============================================================
    KEA-LOGIC-START  · untitled kea game · single-file build
    state root: G · tick: update(dt) · input seam: KEYS/press()
    ============================================================ */
@@ -885,15 +1033,38 @@ function levelUp(){
 /* ---------- scene ---------- */
 function initScene(){
   G.scene=new THREE.Scene();
-  G.scene.fog=new THREE.Fog(0x93AEBF,92,218);
-  const hemi=new THREE.HemisphereLight(0xC7DBE8,0x8A7C42,0.25*LX_HEMI); G.scene.add(hemi); G.hemi=hemi;
-  const sun=new THREE.DirectionalLight(0xFFF4E2,1.45*LX_DIR);
-  sun.position.set(-46,42,22);
-  if(!HEADLESS){ sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.radius=3;
-    const sc=sun.shadow.camera; sc.left=-58;sc.right=58;sc.top=58;sc.bottom=-58;sc.far=170; sun.shadow.bias=-0.0005; sun.shadow.normalBias=0.02; }
+  /* REPLAT P2: exponential fog, tuned to the sky. See the SKY block for why the near/far pair
+     went away and why the colour moved toward the dome's own horizon. */
+  G.scene.fog=new THREE.FogExp2(SKY.fogDay,SKY.fogDensityDay);
+  G.scene.environmentIntensity=SKY.envIntensityDay;
+  G.scene.environmentRotation.set(0,SKY.envRotationY,0);
+  /* IBL PROVENANCE LIVES IN SCENE STATE, and it is declared HERE — in the headless path — rather
+     than only where the texture is built. P2's proof is "IBL present in scene state", and the
+     PMREM convolution needs a WebGL renderer, so a battery running in node can never see the
+     texture itself. What it CAN see, and now does, is the contract: which source is meant to be
+     installed, at what intensity, at what rotation, and whether anything has actually claimed
+     the slot. initRenderer marks it 'painted' when it installs the fallback gradient and
+     src/sky.mjs marks it 'hdri' when the real file lands, so `G.ibl.mode` distinguishes the
+     three states — unclaimed, degraded, and correct — instead of collapsing them into one. */
+  G.ibl={mode:'none',source:SKY.hdri,intensity:SKY.envIntensityDay,rotationY:SKY.envRotationY,pmrem:false};
+  const hemi=new THREE.HemisphereLight(SKY.hemiSkyDay,SKY.hemiGroundDay,SKY.hemiIntensityDay*LX_HEMI); G.scene.add(hemi); G.hemi=hemi;
+  const sun=new THREE.DirectionalLight(SKY.sunDay,SKY.sunIntensityDay*LX_DIR);
+  sun.position.set(SKY.sunPosDay[0],SKY.sunPosDay[1],SKY.sunPosDay[2]);
+  /* THE SHADOW CONFIG CAME OUT OF THE HEADLESS GUARD, deliberately. Every line below sets a
+     number or a boolean on an object three constructs regardless; not one of them allocates a
+     shadow map, which is the renderer's job and still only happens in a browser. Under the old
+     guard "shadow casting on" was unprovable by any battery — the flag simply did not exist in
+     node — so P2's second proof would have rested on the eye alone. It is asserted now.
+     The per-MESH castShadow guards are untouched: those are thousands of meshes, not one light. */
+  sun.castShadow=true;
+  sun.shadow.mapSize.set(SKY.shadowMap,SKY.shadowMap);
+  sun.shadow.radius=SKY.shadowRadius; sun.shadow.blurSamples=SKY.shadowBlur;
+  sun.shadow.bias=SKY.shadowBias; sun.shadow.normalBias=SKY.shadowNormalBias;
+  { const sc=sun.shadow.camera, E=SKY.shadowExtent;
+    sc.left=-E;sc.right=E;sc.top=E;sc.bottom=-E;sc.far=SKY.shadowFar; sc.updateProjectionMatrix(); }
   G.scene.add(sun); G.sun=sun;
-  const fill=new THREE.DirectionalLight(0x9FB6C8,0.15*LX_DIR); fill.position.set(30,20,-30); G.scene.add(fill); G.fill=fill;
-  const rim=new THREE.DirectionalLight(0xFFE2B8,0.15*LX_DIR); rim.position.set(20,10,44); G.scene.add(rim); G.rim=rim;
+  const fill=new THREE.DirectionalLight(0x9FB6C8,SKY.fillIntensityDay*LX_DIR); fill.position.set(30,20,-30); G.scene.add(fill); G.fill=fill;
+  const rim=new THREE.DirectionalLight(0xFFE2B8,SKY.rimIntensityDay*LX_DIR); rim.position.set(20,10,44); G.scene.add(rim); G.rim=rim;
   const moon=new THREE.Mesh(new THREE.SphereGeometry(4.5,12,10),new THREE.MeshBasicMaterial({color:0xEAF2FF,fog:false}));
   moon.position.set(58,74,-52); moon.visible=false; G.scene.add(moon); G.moon=moon;
   buildSky();
@@ -1483,10 +1654,22 @@ function buildCarpark(){
   for(let x=-118;x<120;x+=6) box(2.6,0.13,0.28,PAL.roadLine,x+rnd(-0.3,0.3),0.13,34,null,{noshadow:true});
   for(let x=-116;x<120;x+=9){ cyl(0.05,0.06,0.85,PAL.white,x,0.42,28.6,null,6); box(0.12,0.1,0.03,PAL.red,x,0.78,28.66,null,{noshadow:true});
     cyl(0.05,0.06,0.85,PAL.white,x+4.5,0.42,39.4,null,6); } // roadside marker posts
-  // carpark slab
-  box(40,0.14,22,PAL.tarmac,2,0.07,17,null,{noshadow:true});
-  box(8,0.13,8,PAL.tarmac,2,0.14,27,null,{noshadow:true}); // entrance apron
-  for(let i=0;i<5;i++) box(0.25,0.14,5.4,PAL.roadLine,-12+i*6.6,0.16,13.4,null,{noshadow:true});
+  /* carpark slab
+     REPLAT P2: THE CARPARK NOW RECEIVES SHADOWS, and this is the fix that made "soft shadows" mean
+     anything. `noshadow:true` on these plates turns off BOTH cast and receive, which is right for
+     casting — a 14cm slab lying flat on the ground casts nothing but its own acne — and wrong for
+     receiving, because the carpark IS the ground for the whole opening set. The sun has had
+     castShadow on since long before the re-platform and every car has cast dutifully into a
+     surface that could not take it, so 01_carpark_wide, 07_jam and 12_seal_midpeel have never had
+     a cast shadow in them. ARTBIBLE PHASE 1 lists "no cast shadows anywhere" as a GAP and treats
+     it as work not yet done; it was one flag per surface.
+     NOT A NEW IDIOM — THE FILE ALREADY HAD IT TWICE. The road two blocks up and the ski-field
+     slab both do exactly this, `{noshadow:true}` followed by an explicit receiveShadow, and the
+     carpark was simply missed. The bay markings get it too: they sit 2cm above the tarmac, so a
+     shadow crossing a bay would otherwise leave the white line glowing straight through it. */
+  { const slab=box(40,0.14,22,PAL.tarmac,2,0.07,17,null,{noshadow:true}); slab.receiveShadow=!HEADLESS;
+    const apron=box(8,0.13,8,PAL.tarmac,2,0.14,27,null,{noshadow:true}); apron.receiveShadow=!HEADLESS; } // entrance apron
+  for(let i=0;i<5;i++){ const bay=box(0.25,0.14,5.4,PAL.roadLine,-12+i*6.6,0.16,13.4,null,{noshadow:true}); bay.receiveShadow=!HEADLESS; }
   for(const [px,pz,pr] of [[-8,24.5,1.3],[14,10,1.0],[-2,20,0.8]]){ const pd=cyl(pr,pr,0.03,0,px,0.145,pz,null,16); pd.material=bmat(0xC6DCE8); } // puddles
   G.gravel=[]; // carpark grit, named: vantage 18 caught one behind the bird and nothing could say what it was
   for(let i=0;i<26;i++){ const grr=rnd(0.05,0.12), gcol=i%2?0x9AA0A6:PAL.gravel, gx=2+rnd(-19,19), gz=17+rnd(-10,10);
@@ -4491,14 +4674,24 @@ function initRenderer(){
   G.renderer.toneMappingExposure=0.95;
   G.renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
   G.renderer.setSize(innerWidth,innerHeight);
-  G.renderer.shadowMap.enabled=true; G.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  { // image-based light from a painted alpine sky — Standard materials wake up
-    const ec=document.createElement('canvas'); ec.width=64; ec.height=32; const eg=ec.getContext('2d');
+  G.renderer.shadowMap.enabled=true;
+  /* REPLAT P2: SOFT SHADOWS ARE A SHADOW-MAP CHOICE, not a radius. See the SKY block — PCFSoft
+     ignores shadow.radius outright, so 'vsm' is what actually buys a wide penumbra. The constant
+     keeps PCFSoft reachable for an A/B at the vantage rather than deleting the old look. */
+  G.renderer.shadowMap.type = SKY.shadowType==='vsm' ? THREE.VSMShadowMap : THREE.PCFSoftShadowMap;
+  /* THE PAINTED SKY IS NOW THE FALLBACK, NOT THE PLAN. src/sky.mjs installs a real HDRI over the
+     top of this a moment later. It is still built, and built FIRST, for two reasons: the HDRI is
+     fetched over the network and a fetch can fail, and Standard materials with no environment at
+     all read dead rather than merely wrong. So the game always has an environment from the first
+     frame, and a failed download costs fidelity instead of the look. Marked 'painted' in G.ibl so
+     a degraded run is visible in scene state and not a silent downgrade. */
+  { const ec=document.createElement('canvas'); ec.width=64; ec.height=32; const eg=ec.getContext('2d');
     const grd=eg.createLinearGradient(0,0,0,32);
     grd.addColorStop(0,'#2F6FAE'); grd.addColorStop(0.55,'#7FA8CC'); grd.addColorStop(0.72,'#D9E4EA'); grd.addColorStop(0.78,'#B9A468'); grd.addColorStop(1,'#6E6438');
     eg.fillStyle=grd; eg.fillRect(0,0,64,32);
     const eqt=new THREE.CanvasTexture(ec); eqt.mapping=THREE.EquirectangularReflectionMapping;
-    const pm=new THREE.PMREMGenerator(G.renderer); G.scene.environment=pm.fromEquirectangular(eqt).texture; pm.dispose(); }
+    const pm=new THREE.PMREMGenerator(G.renderer); G.scene.environment=pm.fromEquirectangular(eqt).texture; pm.dispose();
+    if(G.ibl){ G.ibl.mode='painted'; G.ibl.pmrem=true; } }
   addEventListener('resize',()=>{ G.renderer.setSize(innerWidth,innerHeight); setCamAspect(); });
 }
 function setCamAspect(){
@@ -4597,13 +4790,26 @@ function pollPads(){
 function nightApply(t){
   const L=(a,b)=>a+(b-a)*t, C=(h1,h2)=>new THREE.Color(h1).lerp(new THREE.Color(h2),t).convertSRGBToLinear();
   if(!G.sun)return;
-  G.sun.intensity=L(1.45,0.24)*LX_DIR; G.sun.color=C(0xFFF4E2,0xB9CCEE);
-  G.sun.position.set(L(-46,36),L(42,30),L(22,-26));
-  G.hemi.intensity=L(0.25,0.13)*LX_HEMI; G.hemi.color=C(0xC7DBE8,0x22304C); G.hemi.groundColor=C(0x8A7C42,0x161A24);
-  G.fill.intensity=L(0.15,0.05)*LX_DIR; G.rim.intensity=L(0.15,0.04)*LX_DIR;
-  if(G.scene.fog){ G.scene.fog.color=C(0x93AEBF,0x0C1524); G.scene.fog.near=L(92,34); G.scene.fog.far=L(218,126); }
+  G.sun.intensity=L(SKY.sunIntensityDay,SKY.sunIntensityNight)*LX_DIR; G.sun.color=C(SKY.sunDay,SKY.sunNight);
+  G.sun.position.set(L(SKY.sunPosDay[0],SKY.sunPosNight[0]),L(SKY.sunPosDay[1],SKY.sunPosNight[1]),L(SKY.sunPosDay[2],SKY.sunPosNight[2]));
+  G.hemi.intensity=L(SKY.hemiIntensityDay,SKY.hemiIntensityNight)*LX_HEMI;
+  G.hemi.color=C(SKY.hemiSkyDay,SKY.hemiSkyNight); G.hemi.groundColor=C(SKY.hemiGroundDay,SKY.hemiGroundNight);
+  G.fill.intensity=L(SKY.fillIntensityDay,SKY.fillIntensityNight)*LX_DIR;
+  G.rim.intensity=L(SKY.rimIntensityDay,SKY.rimIntensityNight)*LX_DIR;
+  /* THE FOG LERPS ITS DENSITY NOW, NOT A NEAR/FAR PAIR — FogExp2 has neither. Density is the
+     one parameter, so the day/night roll is a single lerp instead of two that could disagree. */
+  if(G.scene.fog){ G.scene.fog.color=C(SKY.fogDay,SKY.fogNight);
+    G.scene.fog.density=L(SKY.fogDensityDay,SKY.fogDensityNight); }
+  /* AND THE ENVIRONMENT DIMS WITH THE SKY. Without this the IBL would keep pouring full daylight
+     bounce into a night scene: the sun stands down to 17% and the hemisphere halves, but a PMREM
+     of a midday HDRI does not care what time the game thinks it is. It is the single biggest
+     reason a night frame can look flat and lifted after IBL goes in — the torch stops reading
+     because everything already has fill. Scene.environmentIntensity is the correct knob because
+     it scales the contribution without rebuilding the convolution. */
+  G.scene.environmentIntensity=L(SKY.envIntensityDay,SKY.envIntensityNight);
+  if(G.ibl)G.ibl.intensity=G.scene.environmentIntensity;
   if(G.sky)G.sky.material.color.setRGB(L(1,0.16),L(1,0.20),L(1,0.34));
-  if(G.haze)G.haze.material.opacity=L(0.45,0.14);
+  if(G.haze)G.haze.material.opacity=L(SKY.hazeOpacityDay,SKY.hazeOpacityNight);
   if(G.moon)G.moon.visible=t>0.45;
   if(G.warmMats)for(const m of G.warmMats)m.emissiveIntensity=t*(m===G.warmMats[0]?0.95:0.6);
   if(G.nightMats)for(const e of G.nightMats)e.m.color.copy(e.day).lerp(e.night,t);
@@ -4822,6 +5028,14 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
     WORLDREGS,WORLDHANDLES,WORLDLISTS,WORLDFLAGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
+    /* REPLAT P2: the sky recipe is exported so the batteries pin the CONSTANTS rather than
+       re-typing the numbers, and so src/sky.mjs reads one source of truth for the HDRI path,
+       the env intensity and the measured rotation instead of keeping a second copy. */
+    SKY,
+    /* PAL travels with SKY for one reason: "the fog is tuned to the sky" is only checkable if a
+       battery can read BOTH numbers, and the dome's colours live here. Exported as the palette it
+       is, not as a favour to one assertion. */
+    PAL,
     SKI:{SNOW:SKISNOW,TOW:SKITOW,PISTE:SKIPISTE,LODGE:SKILODGE,NEST:SKINEST},
     TRAFFIC:{of:biomeTraffic,spawn:spawnTraffic},
     TOUR:{TABLE:TOUR,KEY:TOURKEY,ARRIVEKEY,model:tourModel,pin:tourPin,pick:tourPick,render:tourRender,open:tourOpen},

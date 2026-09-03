@@ -27,6 +27,24 @@ const cfg = globalThis.__KEA_BOOT__ || {};
 if (cfg.seed !== undefined) KEAGAME.setSeed(cfg.seed);
 KEAGAME.boot(cfg.biome ? { biome: cfg.biome } : undefined);
 
+/* THE SKY goes on after boot, and BEFORE the film camera, because the composer's first frame
+   should already see the real environment — an HDRI that lands after the post chain is built is
+   fine functionally but makes the first captured frame depend on load order rather than on the
+   recipe. Awaited for the same reason: the capture rig photographs a settled page, and a
+   photograph taken between the painted fallback and the HDRI would be neither look.
+   IT CANNOT TAKE THE GAME DOWN. Same law as the film camera below — a failed fetch leaves the
+   painted-gradient environment initRenderer already installed, G.ibl.mode stays 'painted', and
+   the game plays. The console line is the only difference, and G.ibl is where a capture pass or
+   a battery looks to find out which of the two it got. */
+if (!cfg.nosky && !globalThis.__KEA_NOSKY__) {
+  try {
+    const { installSky } = await import('./sky.mjs');
+    await installSky(KEAGAME);
+  } catch (e) {
+    console.error('sky: HDRI environment failed to load, staying on the painted fallback —', e);
+  }
+}
+
 /* THE FILM CAMERA goes on after boot, because it attaches to the renderer the boot creates.
    Wired HERE and not in game.mjs so that file keeps the single import the gauntlet's specimen
    loader asserts — see src/post.mjs. If the post stack cannot build, the game keeps playing on the

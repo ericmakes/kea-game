@@ -3845,4 +3845,200 @@ X.startGame(2); tick(30);
 { const t0=Date.now(); for(let i=0;i<600;i++)X.update(1/60); const ms=(Date.now()-t0)/600;
   ok(ms<8,'headless update mean '+ms.toFixed(2)+'ms (< 8ms floor)'); }
 
+/* ============================================================
+   REPLAT P2 — SKY AND SUN. The recipe becomes law.
+   ============================================================
+   P2's proof contract is three claims: IBL and sun present in scene state, shadow casting on, and
+   fog params pinned as named constants. This section is that contract, plus the day/night roll,
+   which is where an exponential-fog port breaks if it breaks at all.
+
+   IT ASSERTS THROUGH KEAGAME.SKY RATHER THAN RE-TYPING THE NUMBERS. Law 10: an assertion reads the
+   convention, never a second copy of it. Re-typing 0.0062 here would mean a future tune has to be
+   made in two files and would go red for the wrong reason when somebody only did it in one. What
+   is asserted is that every light and the fog actually READ the constants — which is the claim
+   worth making, because the failure mode this piece was written against is a literal left behind
+   in initScene after the block above it was retuned. */
+C.section('REPLAT P2: sky and sun');
+{
+  const SKY=X.SKY, PI=Math.PI;
+  const near=(a,b,eps,what)=>ok(Math.abs(a-b)<=(eps||1e-6),what+' ('+a+' vs '+b+')');
+  X.boot({biome:'carpark'}); tick(4);
+  /* LAW 5, WITH A TWIST WORTH WRITING DOWN. Night is owned here as always — nightManual set, so
+     the auto-driver cannot ease it — but nightApply is deliberately NOT called yet, because at
+     boot it has not run: update() only calls it when nightT and the target disagree, and both are
+     0. That matters for the colour assertions below.
+     THE sRGB/LINEAR SEAM, FOUND BY THIS SECTION AND PRE-EXISTING. initScene hands raw authored
+     hex to the lights and the fog, while nightApply writes the SAME constants through
+     convertSRGBToLinear(). So a colour is one value at boot and a slightly deeper one the moment
+     the first day/night transition completes — 0xC4D2D6 becomes 0x8DA4AB. That is r128 behaviour
+     the port carried over verbatim and it is NOT P2's to change: converting at boot would move
+     every frame in the set, which is a judged re-pin and not a sky piece. It is asserted in BOTH
+     encodings instead, so the seam is documented and a future session that decides to close it
+     will find the two halves already written down rather than discovering them one red at a time. */
+  G.nightManual=true; G.night=false; G.nightT=0;
+
+  ok(!!SKY,'the sky recipe is exported as one named block (KEAGAME.SKY)');
+  const lin=h=>new H.THREE.Color(h).convertSRGBToLinear().getHex();
+  const raw=h=>new H.THREE.Color(h).getHex();
+
+  // ---- FOG: exponential, and pinned to the constants ----
+  const fog=G.scene.fog;
+  ok(!!fog,'the scene carries fog at all');
+  ok(!!fog&&fog.isFogExp2===true,'and it is EXPONENTIAL fog, not the linear near/far pair P2 replaced'+
+     ' ('+(fog?fog.constructor.name:'none')+')');
+  ok(!!fog&&fog.near===undefined&&fog.far===undefined,
+     'so it has no near/far to drive — nightApply must roll DENSITY (near '+(fog&&fog.near)+
+     ', far '+(fog&&fog.far)+')');
+  near(fog&&fog.density,SKY.fogDensityDay,1e-9,'day fog density is the pinned constant');
+  ok(!!fog&&fog.color.getHex()===raw(SKY.fogDay),
+     'and at boot its colour is the pinned constant, authored-encoded (#'+
+     (fog?fog.color.getHexString():'?')+')');
+  /* THE FOG IS TUNED TO THE SKY, AND THAT IS CHECKABLE RATHER THAN A CLAIM IN A COMMENT. The
+     failure P2 corrected is fog DARKER than the horizon it sits against, which makes distant
+     ridges fade toward something bluer than the sky behind them — the one thing aerial perspective
+     never does. So the assertion is that the fog is no darker than the dome's own low band. */
+  { const skyLow=(X.PAL||{}).skyLow;
+    ok(skyLow!==undefined,'the palette is reachable to compare the fog against ('+skyLow+')');
+    const lum=h=>{ const c=new H.THREE.Color(h); return 0.2126*c.r+0.7152*c.g+0.0722*c.b; };
+    const lf=lum(SKY.fogDay), ls=skyLow===undefined?0:lum(skyLow);
+    ok(skyLow!==undefined&&lf>=ls*0.90,
+       'the fog is tuned to the sky it sits against, not darker than it (fog '+lf.toFixed(3)+
+       ' vs skyLow '+ls.toFixed(3)+')'); }
+
+  // ---- THE SUN: present, warm, casting, and pinned ----
+  const sun=G.sun;
+  ok(!!sun&&sun.isDirectionalLight===true,'the sun is one directional light');
+  near(sun&&sun.intensity,SKY.sunIntensityDay*PI,1e-6,'its day intensity is the constant x pi');
+  ok(!!sun&&sun.color.getHex()===raw(SKY.sunDay),
+     'and at boot its colour is the pinned constant, authored-encoded (#'+
+     (sun?sun.color.getHexString():'?')+')');
+  { const c=sun?sun.color:{r:0,g:0,b:0};
+    ok(c.r>c.g&&c.g>c.b,'the sun is WARM — r > g > b, which is the whole point of "one warm'+
+       ' directional sun" ('+c.r.toFixed(3)+' / '+c.g.toFixed(3)+' / '+c.b.toFixed(3)+')'); }
+  ok(!!sun&&sun.position.x===SKY.sunPosDay[0]&&sun.position.y===SKY.sunPosDay[1]&&
+     sun.position.z===SKY.sunPosDay[2],'and it stands where the constant puts it');
+
+  /* SHADOW CASTING ON — asserted, not eyeballed. This is only possible because P2 lifted the
+     shadow config out of its `if(!HEADLESS)` guard: every line of it sets a number or a flag on an
+     object three builds regardless, and none of them allocates a map. Under the old guard this
+     proof could not be written at all. */
+  ok(!!sun&&sun.castShadow===true,'SHADOW CASTING IS ON');
+  ok(!!sun&&sun.shadow.mapSize.x===SKY.shadowMap&&sun.shadow.mapSize.y===SKY.shadowMap,
+     'the shadow map is the pinned size ('+(sun?sun.shadow.mapSize.x:0)+')');
+  near(sun&&sun.shadow.radius,SKY.shadowRadius,1e-9,'shadow radius is pinned');
+  ok(!!sun&&sun.shadow.blurSamples===SKY.shadowBlur,'shadow blur samples are pinned ('+
+     (sun?sun.shadow.blurSamples:0)+')');
+  near(sun&&sun.shadow.normalBias,SKY.shadowNormalBias,1e-9,'shadow normal bias is pinned');
+  /* THE BIAS IS ZERO ON PURPOSE AND THE TEST SAYS WHY. A variance shadow map compares moments
+     rather than depths, so a negative constant bias does not cure acne here — it opens light
+     leaks under thin geometry. If somebody switches shadowType back to pcfsoft they must put the
+     constant bias back, and this pairing is the reminder. */
+  ok(SKY.shadowType!=='vsm'||SKY.shadowBias===0,
+     'a VSM shadow map runs at zero constant bias, leaning on the normal offset instead (type '+
+     SKY.shadowType+', bias '+SKY.shadowBias+')');
+  { const sc=sun?sun.shadow.camera:{};
+    ok(sc.left===-SKY.shadowExtent&&sc.right===SKY.shadowExtent&&
+       sc.top===SKY.shadowExtent&&sc.bottom===-SKY.shadowExtent&&sc.far===SKY.shadowFar,
+       'and the shadow camera covers the pinned extent ('+sc.left+'..'+sc.right+', far '+sc.far+')'); }
+
+  // ---- IBL PRESENT IN SCENE STATE ----
+  ok(!!G.ibl,'IBL PROVENANCE IS IN SCENE STATE (G.ibl)');
+  ok(!!G.ibl&&G.ibl.source===SKY.hdri,'and it names the environment it expects ('+
+     (G.ibl||{}).source+')');
+  near(G.scene.environmentIntensity,SKY.envIntensityDay,1e-9,'the scene environment intensity is the pinned constant');
+  near(G.scene.environmentRotation.y,SKY.envRotationY,1e-9,'and the environment is rotated by the measured constant');
+  /* A BATTERY CANNOT SEE THE TEXTURE — PMREM needs a WebGL renderer — so what it checks is the
+     state a headless run CAN distinguish: the slot is declared and unclaimed. 'painted' and 'hdri'
+     are both browser outcomes, and webrig.assertBooted is what refuses to photograph the wrong
+     one. Asserting 'none' here is therefore the real invariant, not a weaker version of one: it
+     proves initScene declares the contract before any renderer exists to fulfil it. */
+  ok(!!G.ibl&&G.ibl.mode==='none'&&G.ibl.pmrem===false,
+     'headless, the slot is declared and unclaimed — the browser fills it ('+(G.ibl||{}).mode+')');
+
+  /* THE ROTATION CHECKS ITSELF AGAINST ITS OWN INPUTS. envRotationY is a MEASURED number, and the
+     thing it must satisfy is that the HDRI's sun and the game's sun end up at the same azimuth.
+     Assert the identity rather than the value, so that moving sunPosDay or swapping the HDRI
+     without re-measuring goes red HERE with a message that says to re-measure — instead of
+     shipping a world whose specular highlights point one way and whose shadows fall the other. */
+  { const az=Math.atan2(SKY.sunPosDay[2],SKY.sunPosDay[0]);
+    near(SKY.envRotationY,az-SKY.hdriSunAz,1e-3,
+      'the environment rotation IS the azimuth difference it was measured as — re-measure '+
+      'hdriSunAz if the HDRI or sunPosDay changes'); }
+
+  /* THE CARPARK RECEIVES SHADOWS, and this one has to be a SOURCE assertion because
+     receiveShadow is set behind `!HEADLESS` on every mesh in the game — the flag genuinely does
+     not exist in node. The defect it guards is worth the unusual shape: `{noshadow:true}` turns
+     off cast AND receive, the carpark slab used it, and so every car in the opening set cast
+     dutifully into a surface that could not take a shadow. The road and the ski-field slab both
+     re-enable receive after noshadow; the carpark simply did not, and ARTBIBLE listed the result
+     as "no cast shadows anywhere" for months. Reading the specimen text is the only instrument
+     available, so it is used deliberately and labelled. */
+  { const src=require('../2026-08-26/keasrc').specimenSource();
+    const slab=/const slab=box\([^)]*PAL\.tarmac[^)]*\{noshadow:true\}\);\s*slab\.receiveShadow=!HEADLESS;/.test(src);
+    const apron=/const apron=box\([^)]*PAL\.tarmac[^)]*\{noshadow:true\}\);\s*apron\.receiveShadow=!HEADLESS;/.test(src);
+    ok(slab,'the carpark slab RECEIVES shadows (noshadow kills receive as well as cast)');
+    ok(apron,'and so does the entrance apron'); }
+
+  // ---- THE DAY/NIGHT ROLL DRIVES ALL OF IT ----
+  /* This is the section that would have caught the port bug. nightApply used to write fog.near and
+     fog.far; FogExp2 has neither, so the old code would have set two properties nothing reads and
+     the night fog would simply never have arrived — silently, with no error, on a vantage shot
+     once a session. Law 5 throughout: night is OWNED here, never eased into. */
+  G.night=true; G.nightManual=true; G.nightT=1; X.nightApply(1); tick(2);
+  near(G.scene.fog.density,SKY.fogDensityNight,1e-9,'night rolls the fog DENSITY to its constant');
+  ok(G.scene.fog.color.getHex()===lin(SKY.fogNight),
+     'and the fog colour with it, linear-encoded as nightApply writes it (#'+
+     G.scene.fog.color.getHexString()+')');
+  ok(G.sun.color.getHex()===lin(SKY.sunNight),
+     'and the sun colour likewise (#'+G.sun.color.getHexString()+')');
+  near(G.scene.environmentIntensity,SKY.envIntensityNight,1e-9,
+     'and the ENVIRONMENT dims — without this a midday HDRI keeps lighting the night at full');
+  near(G.sun.intensity,SKY.sunIntensityNight*PI,1e-6,'and the sun stands down to its night constant');
+  ok(G.sun.position.x===SKY.sunPosNight[0]&&G.sun.position.z===SKY.sunPosNight[2],
+     'and crosses the sky to the night position');
+  near(G.hemi.intensity,SKY.hemiIntensityNight*PI,1e-6,'hemisphere follows');
+  near(G.fill.intensity,SKY.fillIntensityNight*PI,1e-6,'fill follows');
+  near(G.rim.intensity,SKY.rimIntensityNight*PI,1e-6,'rim follows');
+  ok(!!G.ibl&&Math.abs(G.ibl.intensity-SKY.envIntensityNight)<1e-9,
+     'and G.ibl reports the intensity actually in force, not the one it booted with');
+
+  /* AND IT COMES BACK. A one-way lerp is the other half of the same bug class: the night vantages
+     are shot in the same pass as the day ones, off the same page in some tools, so a value that
+     rolls out and does not roll back moves frames nobody was aiming at. */
+  G.night=false; G.nightT=0; X.nightApply(0); tick(2);
+  near(G.scene.fog.density,SKY.fogDensityDay,1e-9,'and day rolls every one of them back');
+  ok(G.scene.fog.color.getHex()===lin(SKY.fogDay),
+     'the day fog colour comes back linear-encoded, which is the seam noted at the top of this '+
+     'section and not a drift (#'+G.scene.fog.color.getHexString()+')');
+  ok(G.sun.color.getHex()===lin(SKY.sunDay),
+     'and so does the sun (#'+G.sun.color.getHexString()+')');
+  near(G.scene.environmentIntensity,SKY.envIntensityDay,1e-9,'environment included');
+  near(G.sun.intensity,SKY.sunIntensityDay*PI,1e-6,'sun included');
+  near(G.hemi.intensity,SKY.hemiIntensityDay*PI,1e-6,'hemisphere included');
+  near(G.fill.intensity,SKY.fillIntensityDay*PI,1e-6,'fill included');
+  near(G.rim.intensity,SKY.rimIntensityDay*PI,1e-6,'rim included');
+
+  /* THE FILL AND RIM ARE THE SHADOW'S ENEMY, and the recipe's central trade is written down as an
+     assertion so the night shift cannot quietly undo it. They do NOT cast, so every unit they
+     carry is a unit that fills shadows straight back in; P2 moved that energy to the sun, which
+     does cast. If a later tune pushes them back up without lowering the sun, the shadows this
+     piece exists to deliver stop reading — measured, that was YLOW 122 flat against YLOW 97 with
+     the trade in place.
+     THE CEILING IS DERIVED FROM THE TWO MEASURED STATES, and the first attempt at it was worth
+     nothing. It read "under a fifth of the sun", which sounded like a bound and forbade nothing:
+     a sabotage restoring fill to its old 0.15 gave 0.25 against a 0.37 ceiling and came back with
+     ZERO FINDINGS. Law 14's tell — a sabotage that obviously breaks the feature returning nothing
+     — applied to a bound rather than to a read. So the number now comes from the measurements:
+     the flat state was (0.15+0.15)/1.45 = 0.207 of the sun and the state that reads is
+     (0.05+0.10)/1.85 = 0.081, so 0.12 sits between them with room for a real tune above the
+     recipe and none for the regression. Both sabotages were re-run against it. */
+  ok(G.fill.castShadow===false&&G.rim.castShadow===false,
+     'fill and rim do NOT cast — which is exactly why they are kept small');
+  { const ratio=(SKY.fillIntensityDay+SKY.rimIntensityDay)/SKY.sunIntensityDay;
+    ok(ratio<0.12,'the non-casting fills stay under 0.12 of the sun, so cast shadows still read '+
+       '(ratio '+ratio.toFixed(3)+', flat was 0.207, ceiling 0.12)'); }
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);   // hand the world back as it was found
+}
+
 process.exitCode=C.report()?1:0;
