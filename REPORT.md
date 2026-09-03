@@ -1,3 +1,98 @@
+# REPORT — session 14, 2026-09-03: REPLAT P1, the renderer foundation
+
+**P1's build work is done and certified. The re-pin is yours and is not done.**
+
+Branch `replat-b`, five certifiable pieces, every one ending CERTIFIED-SHIP. The `gauntlet` branch
+was never written to. `REPLAT.md` and the Birds of War wall arrived by fast-forward rather than
+cherry-pick, so there are no duplicate SHAs waiting for you at merge time.
+
+| | |
+|---|---|
+| nine batteries | ALL PASS on the ported build |
+| gate | CERTIFIED-SHIP (now builds the bundle too) |
+| captures | 30/30, no retakes, no give-ups |
+| subjects | 16 checked, 1 red **on purpose** |
+| playtest | both birds driven by real key events, split-screen post live |
+| specimen | `dfbbb247aaadf0b6db06c2c38da31ee8` src/game.mjs |
+| bundle | `f087df18379a73a8c2ba4cbd91c77856` dist/kea.js |
+| frozen | `8232590523658dfc3f5a1fe59a916de0` **unchanged** |
+
+## THE ONE THING THAT CHANGES HOW YOU JUDGE THE REST
+
+**Pixel parity with the old baselines is impossible by construction.** Measured at boot in the
+browser, same seed, same generator: r128 consumes **10,570** `Math.random` draws, r185 **10,738**.
+three's internals take 168 more, so the stream diverges partway through the world build and every
+randomised placement after that point — grass, tussock, scatter — lands differently. Scene
+structure is identical (402 children, 64 interactables, 21 props on both).
+
+This is rig.js's own "one seed and two reproducible worlds, not one world", now true across three
+versions as well as across node and the browser. **No lighting fix, no seed, and no amount of
+tuning closes it.** Your port-proves-itself split still earned its keep — it is why the colour
+double-conversion, two three.js defects the batteries were pinning, and the light-model change were
+each caught separately instead of as one unreadable blur — but SSIM against the r128 baselines
+cannot be P1's acceptance instrument. The whole-set re-pin REPLAT already calls for is the only one
+available.
+
+**The control is what turned that into a measurement.** The first ported pass flagged 26 of 28
+vantages and nothing on hand could say whether the port had moved or the machine had. Reshooting
+the FROZEN r128 build through the pre-port path read **0.99998** and **1.00000** against the same
+baselines. The ground is exactly where it was. Kept as `gauntlet/verify/frozen.mjs` for P2–P6.
+
+## WHAT IS WAITING FOR YOUR EYE
+
+Thirty fresh frames in `gauntlet/capture/`. The film camera is ACES + physical lights + GTAO +
+a deliberately quiet bloom + subtle depth of field, tuned once as you asked.
+
+- **The campfire lights its ground again** (`21_night_camp`). Its pool is tighter than r128's,
+  because r128 attenuated by `pow(1-d/distance, decay)` and r185 uses physical `window(d)/d²`. That
+  is the physical model being honest, not a bug.
+- **Bloom is quieter than you may expect, and the ski field is why.** It runs on linear HDR before
+  tone mapping, where lit surfaces already exceed 1.0. At 1.35 the carpark measured well and
+  `28_skifield_base` blew to near-white — snow is high-albedo and its diffuse radiance alone reaches
+  1.5–2.0. Pinned at 2.0 it sits above every lit diffuse surface and below the emissive sources: it
+  catches the torch beam (+3.2 YAVG) and never a snowfield. **Raise it at the vantage** with
+  `KEAFILM='{"bloom":{"threshold":1.8}}'`, or shoot the plain renderer with `NOPOST=1` for an A/B.
+
+## LEFT RED ON PURPOSE
+
+`subjects.mjs` → `07_jam` carblue scores **2950 against a floor of 3000**. That floor was calibrated
+against the r128 renderer; the frame plainly contains four blue cars, the cone and the bird. Every
+subject floor is in the same position — they are part of the pinned set and want recalibrating WITH
+the baselines. Lowering one to get green is the thing FLAKES forbids, so it stands red and is
+reported instead.
+
+## FOUR ASSERTIONS RE-GROUNDED, NONE WEAKENED — AND THREE WERE PINNING DEFECTS
+
+- `nonUnit===6` pinned r128 zeroing normals on two ZERO-AREA seam triangles. r185 emits neither
+  (714 tris / 2 degenerate → 700 / 0).
+- `arc>0` was worse. It counted 25 "chain" vertex groups and **never checked they smoothed** —
+  measured, all 25 were still banded on r128 and the battery called that green. r185 smooths all
+  352. Re-pinning it would have demanded the defect back.
+- `G.sun.intensity<1.0` was an absolute intensity in r128 units, really "under 69% of daylight" with
+  the 69% hidden in a literal. Every light is now ×π and nothing was wrong with the game.
+- Each now asserts its CAUSE, is unit- and version-independent, and **r128 would fail two of them.**
+
+## TWO INSTRUMENTS THAT HID THEIR REASONS
+
+- `gate.sh` kept `tail -1` per battery, so a battery with two findings surfaced only the second. It
+  still went red, but this session fixed one finding and only then learned another existed.
+- `shotR` swallowed its exception, so a stage that could NEVER succeed looked exactly like a flaky
+  GPU. The first pass reported only "GAVE UP 07_jam"; the cause — a bundled build has no global
+  `THREE`, which two vantages stage with — took a separate hunt.
+
+Both now say why. Neither loosened a check.
+
+## A CORRECTION I OWE YOU
+
+Step 2's commit said the game hand-converts sRGB "in exactly one place, the grass tints", and pinned
+`ColorManagement.enabled=false` as temporary. **That was wrong.** The game converts in ~18 places
+including both central material helpers `mat()` and `bmat()`. It owns a complete, consistent colour
+pipeline, so enabling ColorManagement would double-convert *everything* and undoing that means
+deleting eighteen call sites to buy the pipeline it already has. It is the correct **permanent**
+setting, and step 5 documents it as one instead of promising it away.
+
+---
+
 # REPORT — overnight session 13, 2026-09-03
 
 ## ADDENDUM — session 13b: YOU SAID APPLY THE RIG PATCH, AND IT IS IN

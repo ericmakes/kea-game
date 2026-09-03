@@ -3442,3 +3442,65 @@ instruments rather than by argument.
   the held-open drifts, boxdiff 12 compared 2 changed and the same two, subjects 16 checked 0
   missing, gate CERTIFIED-SHIP, three selftests ALL PASS.
 - NOT DONE, BY ORDER: the 12.0 sweep. Shipped as-is.
+
+## SESSION 14 — 2026-09-03, Eric order: REPLAT.md P1, the renderer foundation, supervised
+
+Branch `replat-b`, lock held, Eric present. The `gauntlet` branch was never written to; `REPLAT.md`
+and the Birds of War wall came across by FAST-FORWARD, not cherry-pick — replat-b was strictly
+behind gauntlet by exactly those two commits, so there are no duplicate SHAs for Eric to reconcile
+at merge time and the gauntlet ref never moved.
+
+**ERIC'S TWO CALLS, TAKEN BEFORE ANY CODE MOVED.** P1 split into port-then-film rather than one
+step, and `untitled-kea-game.html` kept frozen rather than retired. Five certifiable pieces:
+scaffold, port, harness, capture rig, film camera. Every one ended CERTIFIED-SHIP.
+
+- **THE PORT WAS SMALL BECAUSE THE FILE WAS ALREADY A MODULE IN A COSTUME.** 348KB of HTML is a
+  19KB shell, one CDN tag and one 328KB logic block that already took THREE injected, exported
+  `globalThis.KEAGAME` and ended `if(!HEADLESS)boot();`. Seven API sites changed and nothing else:
+  5x texture `.encoding`, 1x `outputEncoding`, 1x `LuminanceFormat`. The bundler found all seven
+  statically at step 1, confirming an inventory taken by hand before anything moved.
+- **THE PORTED BUILD MAKES THE SAME COUNTRY HEADLESS.** 64 interactables, 21 props, 29 colliders,
+  identical on both stacks under seed 20260828. That the counts match at all is the load-bearing
+  result: three draws Math.random per object, so a version bump that changed the draw count would
+  have reshuffled the world and silently invalidated every baseline.
+- **AND IN THE BROWSER IT DOES NOT, AND CANNOT.** Measured at boot: r128 consumes 10,570 draws,
+  r185 10,738. three's internals take 168 more, so the stream parts company partway through the
+  build and every randomised placement after that lands differently. Scene STRUCTURE is identical
+  (402 children both). **PIXEL PARITY WITH THE OLD BASELINES IS IMPOSSIBLE BY CONSTRUCTION** — this
+  is rig.js's "one seed and two reproducible worlds, not one world", now true across three versions
+  as well as across node and the browser. No lighting fix and no seed changes it.
+- **THE CONTROL IS WHAT MADE THAT A MEASUREMENT.** The first ported pass flagged 26 of 28 vantages
+  and nothing on hand could say whether the port moved or the machine had. Reshooting the FROZEN
+  build through the PRE-PORT path read **0.99998 and 1.00000** against the same baselines. So the
+  ground is where it was and all of the drift is the port. Kept as `gauntlet/verify/frozen.mjs` for
+  P2-P6. It does NOT copy the staging table — a first draft did and got both frames wrong; it checks
+  the pre-port rig out of git verbatim and patches exactly two paths.
+- **FOUR ASSERTIONS RE-GROUNDED, NONE WEAKENED, AND THREE OF THEM WERE PINNING DEFECTS.**
+  `nonUnit===6` pinned r128 zeroing normals on two ZERO-AREA seam triangles; r185 emits neither
+  (714 tris/2 degenerate -> 700/0). `arc>0` was worse: it counted 25 "chain" groups and never
+  checked they smoothed — measured, ALL 25 were still banded on r128 and the battery called that
+  green. r185 smooths all 352. Re-pinning either number would have demanded the defect back, so
+  both now assert their CAUSE and r128 would fail them. `G.sun.intensity<1.0` was an absolute
+  intensity in r128 units — really "under 69% of daylight" with the 69% hidden in a literal; every
+  light is now x pi and nothing was wrong with the game.
+- **BLOOM RUNS ON LINEAR HDR AND THE SKI FIELD IS WHAT SETS THE THRESHOLD.** 0.86 bloomed
+  everything (+13% brighter, 37% LESS SATURATED). 1.35 measured well on the carpark and blew
+  28_skifield_base to near-white, because snow is high-albedo and its DIFFUSE radiance alone reaches
+  1.5-2.0 linear. 2.0 is clean (195.5 YAVG / 10.89 SAT against plain 194.7 / 11.24) and still
+  catches the torch beam at +3.2. **A LOOK TUNED ON ONE VANTAGE IS NOT TUNED.**
+- **THE TONE-MAPPING CHAIN WAS VERIFIED RATHER THAN SUSPECTED.** OutputPass tone maps at the end so
+  double-tone-mapping was the obvious culprit for the washout; A/B against the plain renderer with
+  every effect off read 155.3/21.8 against 154.5/22.0. Identical. It was the bloom numbers.
+- **TWO INSTRUMENTS THAT HID THEIR REASONS, FIXED.** `gate.sh` kept `tail -1` per battery, so a
+  battery with two findings showed only the second — this session fixed one and only then learned
+  the other existed. `shotR` swallowed its exception, so a stage that could NEVER succeed looked
+  exactly like a flaky GPU: the first pass said only "GAVE UP 07_jam", and the cause (a bundled
+  build has no global `THREE`, which two vantages stage with) took a separate hunt. Both now say why.
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, bundle builds, 30/30 vantages shoot
+  with no retakes, subjects 16 checked 1 missing, playtest drives both birds with real key events in
+  split screen. specimen `dfbbb247aaadf0b6db06c2c38da31ee8`, bundle `f087df18379a73a8c2ba4cbd91c77856`,
+  frozen `8232590523658dfc3f5a1fe59a916de0` unchanged.
+- **NOT DONE, BY ORDER: THE RE-PIN.** Every baseline and every subject floor is calibrated to r128
+  and all thirty frames have moved. `07_jam` carblue stands red at 2950 against a floor of 3000 —
+  98% of an r128-calibrated floor, with four blue cars plainly in the frame. Lowering it to get
+  green is the thing FLAKES forbids. The whole set is Eric's look and Eric's judgement.
