@@ -16,6 +16,13 @@
 # So: every battery must print its own ALL PASS line AND exit zero, and the number of verdicts must
 # equal the number of batteries. Node warning noise is filtered before the verdict line is taken.
 cd "$(dirname "$0")/../.."
+# THE BUNDLE MUST BUILD BEFORE ANYTHING IS CERTIFIED — REPLAT P1 step 5. The gate says
+# CERTIFIED-SHIP, and since the re-platform what ships is dist/, not a file you can open. A green
+# logic gate over a bundle that does not build certifies nothing. ~1s, and it also keeps the
+# capture rig honest: every browser tool calls ensureBuild(), so the gate and the photographer
+# are always looking at the same artefact.
+if ! npm run build >/tmp/gate-build.txt 2>&1; then
+  echo "CERT-FAIL: npm run build failed"; tail -20 /tmp/gate-build.txt; exit 1; fi
 BATS="harness-smoke.js audits/2026-08-26/harness-flow.js audits/2026-08-26/harness-couch.js audits/2026-08-26/harness-adversarial.js audits/2026-08-26/harness-systems.js audits/2026-08-26/harness-colossal.js audits/2026-08-27/harness-newbuilds-audit.js audits/2026-08-27/harness-audit-pass2.js audits/2026-08-28/harness-everything.js"
 NOISE="THREE.Material|ExperimentalWarning|trace-warnings"
 : > /tmp/gate.txt
@@ -41,6 +48,7 @@ if [ "$PASSES" -ne "$N" ] || [ "$DIRTY" -ne 0 ]; then
 # re-platform and no longer under test. Hashing it here would have certified a file no battery
 # reads. Both are printed: the specimen under test first, the frozen reference second, labelled.
 echo -n 'specimen  '; md5sum src/game.mjs
+echo -n 'bundle    '; md5sum dist/kea.js
 echo -n 'frozen    '; md5sum untitled-kea-game.html
 if [ -n "$OUTDIR" ]; then
   mkdir -p "$OUTDIR"/src

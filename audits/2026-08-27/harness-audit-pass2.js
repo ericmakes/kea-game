@@ -136,10 +136,21 @@ const kb=G.keas[0];
 // ADDED 2026-08-28b: THE NIGHT WAVE — arrival, torch, cage, jailbreak
 C.section('night arrives for the wanted');
 H.X.startGame(1); tick(2);
-G.nightManual=false; G.night=false; G.nightT=0; G.wanted=3;
+G.nightManual=false; G.night=false; G.nightT=0; H.X.nightApply(0); G.wanted=3;
+/* AMENDED 2026-09-03 (REPLAT P1 step 5). This read `G.sun.intensity<1.0`. That 1.0 was an
+   ABSOLUTE intensity in r128's light units, where the sun ran 1.45 by day — so it was really
+   asserting "under 69% of daylight" with the 69% left implicit in a magic number.
+   three r155 made lighting physically correct and r165 removed the switch back, so every absolute
+   light value in the game is now multiplied by pi (measured: directional r128/r185 = 3.11-3.21,
+   exactly pi, the 1/pi the legacy renderer omitted from the Lambert BRDF). The sun therefore
+   stands down to 1.79, the claim went red, and NOTHING WAS WRONG WITH THE GAME.
+   So the assertion is re-grounded on the ratio it always meant, which no longer cares what units
+   the renderer counts in: the same 69%, stated out loud instead of hidden in a literal. */
+const sunDay=G.sun.intensity;
 tick(70);
 ok(G.night===true&&G.nightT>0.3,'wanted>=3 rolls the sky ('+G.nightT.toFixed(2)+')');
-ok(G.sun.intensity<1.0,'the sun stands down ('+G.sun.intensity.toFixed(2)+')');
+ok(G.sun.intensity<sunDay*0.69,'the sun stands down to '+(100*G.sun.intensity/sunDay).toFixed(0)+
+   '% of its own daylight value ('+G.sun.intensity.toFixed(2)+' of '+sunDay.toFixed(2)+', 69% ceiling)');
 
 C.section('the torch finds you');
 G.night=true; G.nightManual=true; G.nightT=1; H.X.nightApply(1); // own the state as the N key does — the auto-driver must not ease it off mid-test

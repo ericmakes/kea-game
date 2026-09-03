@@ -26,3 +26,17 @@ if (!KEAGAME) throw new Error('main: game module did not publish KEAGAME');
 const cfg = globalThis.__KEA_BOOT__ || {};
 if (cfg.seed !== undefined) KEAGAME.setSeed(cfg.seed);
 KEAGAME.boot(cfg.biome ? { biome: cfg.biome } : undefined);
+
+/* THE FILM CAMERA goes on after boot, because it attaches to the renderer the boot creates.
+   Wired HERE and not in game.mjs so that file keeps the single import the gauntlet's specimen
+   loader asserts — see src/post.mjs. If the post stack cannot build, the game keeps playing on the
+   plain renderer rather than showing a black page: a look feature must not be able to take the
+   game down. __KEA_NOPOST__ turns it off for a like-for-like comparison against the plain path. */
+if (!cfg.nopost && !globalThis.__KEA_NOPOST__) {
+  try {
+    const { installPost } = await import('./post.mjs');
+    installPost(KEAGAME);
+  } catch (e) {
+    console.error('post: film camera failed to install, playing on the plain renderer —', e);
+  }
+}

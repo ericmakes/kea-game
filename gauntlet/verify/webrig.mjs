@@ -72,7 +72,23 @@ export async function serve(dir = DIST) {
 /* ---- the page ------------------------------------------------------------------------------
    Determinism is installed BEFORE any module on the page evaluates, which is the whole point:
    the world is built at import time, so anything set afterwards is set too late. */
+/* TUNING PASSTHROUGH. The film camera is judged AT THE VANTAGE, so it has to be adjustable
+   without a rebuild and without a second staging table:
+       NOPOST=1                     shoot on the plain renderer, for a like-for-like A/B
+       KEAFILM='{"bloom":{...}}'    deep-merge over src/post.mjs's FILM defaults
+   Both are read here so every browser tool gets them for free, and both are absent from a normal
+   pass, which therefore shoots exactly what the build pins. */
 export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
+  const nopost = !!process.env.NOPOST;
+  let film = null;
+  if (process.env.KEAFILM) {
+    try { film = JSON.parse(process.env.KEAFILM); }
+    catch (e) { throw new Error('webrig: KEAFILM is not valid JSON — ' + e.message); }
+  }
+  if (nopost || film) await page.evaluateOnNewDocument((np, f) => {
+    if (np) globalThis.__KEA_NOPOST__ = true;
+    if (f) globalThis.__KEA_FILM__ = f;
+  }, nopost, film);
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);

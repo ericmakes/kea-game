@@ -6,17 +6,42 @@
    by content, never by file position, and that law did not change with the stack. */
 import * as THREE from 'three';
 
-/* r128 COLOUR PARITY — REPLAT P1 step 2, and a deliberate holding position.
-   Modern three enables ColorManagement by default, so `new THREE.Color(hex)` converts sRGB ->
-   linear working space on construction. r128 did no such thing: it stored the raw value, and this
-   game compensated BY HAND in exactly one place — the three grass tints, which call
-   convertSRGBToLinear() at source. Turn management on and those three tints convert TWICE (muddy
-   grass), while every other colour in the game, none of which converts by hand, shifts the other
-   way. Both states are defensible; what is not is changing the module system, the renderer AND the
-   colour pipeline in one step and then trying to read the pixel diff.
-   So: parity here. P1 step 5 turns this on deliberately, with the film camera, as ONE judged look
-   change. DO NOT flip it without re-pinning the whole set. */
+/* COLOUR MANAGEMENT STAYS OFF, PERMANENTLY — REPLAT P1, corrected at step 5.
+
+   Step 2 pinned this as a temporary holding position and said the game compensated by hand "in
+   exactly one place, the grass tints". THAT WAS WRONG, and the correction matters: the game
+   converts sRGB -> linear in ~18 places, including BOTH central material helpers —
+
+       mat(c)  -> new THREE.Color(c).convertSRGBToLinear()      every Standard material
+       bmat(c) -> new THREE.Color(c).convertSRGBToLinear()      every Basic material
+
+   plus every vertex-colour site (sky dome, ground, mountains, tussock, snow, grass) and the
+   day/night lerp in nightApply. The game owns a complete and internally consistent colour
+   pipeline: authored values are sRGB, converted once at source, handed to the materials linear,
+   and encoded back by renderer.outputColorSpace = SRGBColorSpace.
+
+   Modern three's ColorManagement does the SAME conversion in the Color constructor. Enabling it
+   would therefore convert everything TWICE — not just the grass — and un-doing that means deleting
+   eighteen call sites to buy exactly the pipeline the game already has. So this is not a debt to
+   pay off at step 5; it is the correct setting for this codebase, and it is now documented as one.
+   Turn it on only alongside removing every convertSRGBToLinear above, and re-pin the whole set. */
 THREE.ColorManagement.enabled = false;
+
+/* PHYSICAL LIGHT UNITS — REPLAT P1 step 5 (2026-09-03).
+   r155 made lighting physically correct and r165 DELETED useLegacyLights, so r128's light maths is
+   gone and cannot be switched back. Measured on an identical scene, output colour space matched
+   and nothing clipped, r128/r185 radiance at the lit point:
+       directional 3.11-3.21    hemisphere 3.11-3.20    point 7.635    spot 12.59
+   Directional and hemisphere are exactly PI: the legacy renderer omitted the 1/pi of the Lambert
+   BRDF, so pi restores them precisely and for a reason, not by fitting.
+   Point and spot are NOT constants. r128 attenuated by pow(1-d/distance, decay); r185 uses the
+   physical window(d)/d^2. Their ratio therefore MOVES WITH DISTANCE, and no single multiplier can
+   restore both the level and the shape of a light pool. The figures below are that ratio at each
+   light's working radius — the campfire read at ~2m, the torch beam at ~3m — which is where each
+   was authored to look right. Close in, both now fall off faster than they used to. That is the
+   physical model being honest, and it is the look Eric took deliberately.
+   ONE TUNE, as briefed. Named so the next change is to a constant, not to scattered literals. */
+const LX_DIR=Math.PI, LX_HEMI=Math.PI, LX_POINT=7.64, LX_SPOT=12.59;
 
 /* ============================================================
    KEA-LOGIC-START  · untitled kea game · single-file build
@@ -861,14 +886,14 @@ function levelUp(){
 function initScene(){
   G.scene=new THREE.Scene();
   G.scene.fog=new THREE.Fog(0x93AEBF,92,218);
-  const hemi=new THREE.HemisphereLight(0xC7DBE8,0x8A7C42,0.25); G.scene.add(hemi); G.hemi=hemi;
-  const sun=new THREE.DirectionalLight(0xFFF4E2,1.45);
+  const hemi=new THREE.HemisphereLight(0xC7DBE8,0x8A7C42,0.25*LX_HEMI); G.scene.add(hemi); G.hemi=hemi;
+  const sun=new THREE.DirectionalLight(0xFFF4E2,1.45*LX_DIR);
   sun.position.set(-46,42,22);
   if(!HEADLESS){ sun.castShadow=true; sun.shadow.mapSize.set(2048,2048); sun.shadow.radius=3;
     const sc=sun.shadow.camera; sc.left=-58;sc.right=58;sc.top=58;sc.bottom=-58;sc.far=170; sun.shadow.bias=-0.0005; sun.shadow.normalBias=0.02; }
   G.scene.add(sun); G.sun=sun;
-  const fill=new THREE.DirectionalLight(0x9FB6C8,0.15); fill.position.set(30,20,-30); G.scene.add(fill); G.fill=fill;
-  const rim=new THREE.DirectionalLight(0xFFE2B8,0.15); rim.position.set(20,10,44); G.scene.add(rim); G.rim=rim;
+  const fill=new THREE.DirectionalLight(0x9FB6C8,0.15*LX_DIR); fill.position.set(30,20,-30); G.scene.add(fill); G.fill=fill;
+  const rim=new THREE.DirectionalLight(0xFFE2B8,0.15*LX_DIR); rim.position.set(20,10,44); G.scene.add(rim); G.rim=rim;
   const moon=new THREE.Mesh(new THREE.SphereGeometry(4.5,12,10),new THREE.MeshBasicMaterial({color:0xEAF2FF,fog:false}));
   moon.position.set(58,74,-52); moon.visible=false; G.scene.add(moon); G.moon=moon;
   buildSky();
@@ -3477,7 +3502,7 @@ function updateFX(dt){
     const fl=0.82+Math.sin(T*11.3)*0.16*(RM?0.35:1)+Math.sin(T*23.7)*0.09+Math.sin(T*5.1+1.7)*0.07;
     const spit=(G._fireSpit=Math.max(0,(G._fireSpit||0)-dt))>0?0.25:((Math.random()<dt*1.4)?((G._fireSpit=0.09),0.25):0);
     const F=fl+spit;
-    G.fire.light.intensity=t*1.3*F;
+    G.fire.light.intensity=t*1.3*F*LX_POINT;
     const f=G.fire.flame; f.scale.set(0.68+0.3*F,0.6+0.62*F,0.68+0.3*F);
     f.position.y=0.42+0.05*Math.sin(T*17.3); f.rotation.y=T*2.1;
     f.material.color.setHSL(0.066+0.02*Math.sin(T*7.7),1.0,0.58+0.06*F);
@@ -3786,7 +3811,7 @@ class Human{
   }
   animate(dt,moving){
     if(this.torch){ const on=G.nightT>0.3&&!this.asleep;
-      this.torch.spot.intensity=on?(this.state==='chase'?3.0:2.1)*G.nightT:0;
+      this.torch.spot.intensity=on?(this.state==='chase'?3.0:2.1)*G.nightT*LX_SPOT:0;
       this.torch.lens.visible=!!on;
       if(this.torch.beam){ this.torch.beam.visible=!!on;
         this.torch.beam.material.opacity=(this.state==='chase'?0.13:0.075)*G.nightT; }
@@ -4522,7 +4547,17 @@ function updateCams(dt){
 }
 function render(){
   const w=innerWidth,hh=innerHeight,r=G.renderer;
-  if(G.mode===2&&G.keas.length===2){
+  /* THE POST HOOK — REPLAT P1 step 5. The film camera (bloom, ambient occlusion, depth of field)
+     lives in src/post.mjs and installs itself here, for one hard reason: the gauntlet loads THIS
+     file as a text specimen and evaluates it with THREE injected, and the loader asserts it has
+     exactly ONE import. Importing EffectComposer and four passes here would break all nine
+     batteries at once. So game.mjs stays a single-import module and merely DELEGATES; post.mjs is
+     wired from the browser entry and is never seen by a headless battery.
+     G.post is absent headless and absent until the composer is built, so the plain path below
+     remains the real path for the batteries and for the first frames of any page. */
+  const split=(G.mode===2&&G.keas.length===2);
+  if(G.post&&G.post.render){ G.post.render(split,w,hh); return; }
+  if(split){
     r.setScissorTest(true);
     r.setViewport(0,0,w/2,hh); r.setScissor(0,0,w/2,hh); r.render(G.scene,G.cams[0]);
     r.setViewport(w/2,0,w/2,hh); r.setScissor(w/2,0,w/2,hh); r.render(G.scene,G.cams[1]);
@@ -4562,10 +4597,10 @@ function pollPads(){
 function nightApply(t){
   const L=(a,b)=>a+(b-a)*t, C=(h1,h2)=>new THREE.Color(h1).lerp(new THREE.Color(h2),t).convertSRGBToLinear();
   if(!G.sun)return;
-  G.sun.intensity=L(1.45,0.24); G.sun.color=C(0xFFF4E2,0xB9CCEE);
+  G.sun.intensity=L(1.45,0.24)*LX_DIR; G.sun.color=C(0xFFF4E2,0xB9CCEE);
   G.sun.position.set(L(-46,36),L(42,30),L(22,-26));
-  G.hemi.intensity=L(0.25,0.13); G.hemi.color=C(0xC7DBE8,0x22304C); G.hemi.groundColor=C(0x8A7C42,0x161A24);
-  G.fill.intensity=L(0.15,0.05); G.rim.intensity=L(0.15,0.04);
+  G.hemi.intensity=L(0.25,0.13)*LX_HEMI; G.hemi.color=C(0xC7DBE8,0x22304C); G.hemi.groundColor=C(0x8A7C42,0x161A24);
+  G.fill.intensity=L(0.15,0.05)*LX_DIR; G.rim.intensity=L(0.15,0.04)*LX_DIR;
   if(G.scene.fog){ G.scene.fog.color=C(0x93AEBF,0x0C1524); G.scene.fog.near=L(92,34); G.scene.fog.far=L(218,126); }
   if(G.sky)G.sky.material.color.setRGB(L(1,0.16),L(1,0.20),L(1,0.34));
   if(G.haze)G.haze.material.opacity=L(0.45,0.14);
