@@ -97,9 +97,17 @@ try{
   }
   const out=await pg.evaluate(({pos,at,renders,runs})=>{
     const G=KEAGAME.G, r=G.renderer, gl=r.getContext(), cam=G.cams[0];
-    /* THE CAMERA IS PLACED AND HELD. camLock is the only thing that stops updateCams lerping it
-       away - FLAKES law 12 learned that on the capture rig and it is the same seam here. */
-    G.camLock=true; G.time=12.0;
+    /* THE CAMERA IS PLACED AND HELD, AND camLock IS AN OBJECT AND NOT A FLAG. It is
+       {x,y,z,lx,ly,lz} — the shape capture.mjs's CAM() helper writes — and this file set it to
+       `true` from the day it was written, which makes it truthy with no coordinates: updateCams
+       honours a lock that says nothing and the camera stays wherever the follow cam had it.
+       EVERY LOOP-TIMED NUMBER THIS FILE HAS EVER PRODUCED was therefore taken at the follow
+       camera rather than at the named vantage. The comparisons between them are unaffected —
+       every run did the same wrong thing, so tier against tier still holds — but the absolute
+       figures were labelled with a camera they were not taken from. Found at P4c while debugging
+       why a grass field would not appear in a debug view. */
+    G.time=12.0;
+    G.camLock={x:pos[0],y:pos[1],z:pos[2],lx:at[0],ly:at[1],lz:at[2]};
     cam.position.set(pos[0],pos[1],pos[2]);
     cam.lookAt(at[0],at[1],at[2]);
     cam.updateMatrixWorld(true);

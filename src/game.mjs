@@ -520,6 +520,26 @@ const GRASS={
      assert "the field leans one way" from the constants instead of from a sample. The shader line
      is generated from these four numbers, so there is exactly one copy of them. */
   comb:{base:2.1, amp:0.55, fx:0.055, fz:0.041},
+  /* ---- REPLAT P4c: NATURE HAS NO RIGHT ANGLES ----
+     Eric played P4b and the field read in SQUARES. Measured before touching anything: shooting
+     14_player_view at clumpM 0.70 / 1.35 / 2.70 makes the square patches shrink and grow with it,
+     which identifies the cause exactly. The clump model was ONE MOUND PER SQUARE CELL —
+     `cell=floor(w/clumpM)` — so the mound lattice was a jittered square grid, and worse, `bare`
+     culled WHOLE CELLS, giving literal right-angled holes. Jitter cannot fix that: a jittered grid
+     is still a grid, because every cell contributes exactly one mound.
+     Three changes, and none of them is a tuning:
+       blobScan   a mound is now the NEAREST feature point among the 3x3 neighbourhood, not the
+                  own-cell centre. That makes mound territories irregular Voronoi polygons whose
+                  boundaries follow no cell edge — overlapping organic blobs, which is what the
+                  brief asked for. Skipped where the pull is negligible (the cover layer), because
+                  nine hash lookups per vertex is not free.
+       bareScale  bare ground comes off a SMOOTH NOISE FIELD instead of a per-cell step, so a bare
+                  patch has an organic outline instead of four right angles. bareSoft is the width
+                  of that boundary in density units.
+       edgeVar    the field's outer fade was `length(w-camera)`, a perfect circle. The radius is
+                  now perturbed by noise in world space, so the boundary is ragged and does not
+                  read as a disc following the bird. */
+  blobScan:true, bareScale:0.145, bareSoft:0.12, edgeVar:0.26,
   /* THINNING. `fade` is how sharply a blade shrinks out as it crosses its own cull threshold —
      `fadeBand` is the WIDTH of that shrink window in density units, and the density ramp is
      stretched to 1+fadeBand on purpose so that "full density" really means every blade at full
@@ -2219,6 +2239,7 @@ uniform vec2 uAnchor;
 uniform float uTime, uNear, uLodNear, uLodFar, uBand, uComp;
 uniform float uGust, uFlutter, uGustHz, uFlutterHz, uGustM;
 uniform float uClumpM, uClumpJit, uClumpPull, uClumpPullVar, uBare;
+uniform float uBlobScan, uBareScale, uBareSoft, uEdgeVar;
 uniform vec2 uHmul; uniform float uHamp;
 uniform vec4 uCut0, uCut1, uCut2, uCut3;      // xz centre, xz half-extent; w<=0 disables
 uniform vec2 uHrange, uWrange, uLrange;
@@ -2240,6 +2261,15 @@ vec2 keaGH2(vec2 p){
   q+=dot(q,q.yzx+33.33);
   return fract((q.xx+q.yz)*q.zy);
 }
+/* SMOOTH NOISE, for the two things that must not have cell edges: where the ground is bare, and
+   where the field stops. Both were step functions of a square cell before. */
+float keaVal(vec2 p){
+  vec2 i=floor(p), f=fract(p);
+  vec2 u=f*f*(3.0-2.0*f);
+  return mix(mix(keaGH(i),keaGH(i+vec2(1.0,0.0)),u.x),
+             mix(keaGH(i+vec2(0.0,1.0)),keaGH(i+vec2(1.0,1.0)),u.x),u.y);
+}
+float keaFbm(vec2 p){ return keaVal(p)*0.62+keaVal(p*2.17+7.3)*0.38; }
 bool keaCut(vec4 c, vec2 w){ return c.w>0.0 && abs(w.x-c.x)<c.z && abs(w.y-c.y)<c.w; }
 void keaGrass(inout vec3 t){
   /* ---- WHERE THIS BLADE STANDS ----
@@ -2254,14 +2284,32 @@ void keaGrass(inout vec3 t){
      nz_tussock_01 is discrete mounds with open ground between them, and a uniform scatter cannot
      read as that at any density. Blades are pulled toward their cell's jittered centre, and whole
      cells are dropped so the ground between mounds is genuinely bare. */
-  vec2 cell=floor(w/uClumpM);
-  vec2 cc=(cell+0.5+(keaGH2(cell)-0.5)*uClumpJit)*uClumpM;
-  /* the pull varies PER MOUND, so some are tight and some are spread and the square cell grid
-     stops being findable — a fixed pull draws every cell into the same shape and the eye reads the
-     lattice straight through the blades */
+  /* ---- WHICH MOUND THIS BLADE BELONGS TO ----
+     THE NEAREST FEATURE POINT IN THE 3x3 NEIGHBOURHOOD, not the centre of its own cell. One mound
+     per square cell is a square lattice however hard the centre is jittered, because every cell
+     contributes exactly one mound and its territory is the cell. Taking the nearest of nine makes
+     the territories irregular polygons whose edges follow no cell boundary at all — and a blade
+     near a cell edge is pulled to whichever mound is actually closer, which is the whole point.
+     The SEARCH IS SKIPPED where the pull is negligible: the cover layer sits at 0.10 and gathers
+     almost nothing, so nine hash lookups per vertex would buy it nothing. */
+  vec2 base=floor(w/uClumpM);
+  vec2 cell=base, cc=(base+0.5+(keaGH2(base)-0.5)*uClumpJit)*uClumpM;
+  if(uBlobScan>0.5){
+    float bestD=1e9;
+    for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++){
+      vec2 cn=base+vec2(float(i),float(j));
+      vec2 pt=(cn+0.5+(keaGH2(cn)-0.5)*uClumpJit)*uClumpM;
+      vec2 dv=pt-w; float dd=dot(dv,dv);
+      if(dd<bestD){ bestD=dd; cc=pt; cell=cn; } }
+  }
+  /* the pull varies PER MOUND, so some are tight and some are spread */
   float pull=clamp(uClumpPull+(keaGH(cell*2.9+5.3)-0.5)*2.0*uClumpPullVar,0.0,0.9);
   w=mix(w,cc,pull);
-  float alive=step(uBare,keaGH(cell*1.7+3.1));
+  /* ---- WHERE THE GROUND IS BARE ----
+     A SMOOTH FIELD, NOT A PER-CELL STEP. Culling whole square cells is what put right angles in
+     the middle of the country; a noise field gives a bare patch an outline that wanders. */
+  float alive=uBare<=0.0?1.0
+    :smoothstep(uBare-uBareSoft,uBare+uBareSoft,keaFbm(w*uBareScale));
 
   /* the places grass does not grow: road, carpark, hut slab, pen — or piste, tow line, lodge */
   if(keaCut(uCut0,w)||keaCut(uCut1,w)||keaCut(uCut2,w)||keaCut(uCut3,w))alive=0.0;
@@ -2280,8 +2328,14 @@ void keaGrass(inout vec3 t){
      density shrinks away across uBand rather than vanishing. Scaling to zero yields degenerate
      triangles, which the rasteriser drops before shading a fragment — that is where the saving is,
      and it is also what makes the field's outer edge a fade rather than a wall. */
+  /* ---- WHERE THE FIELD STOPS ----
+     A RAGGED EDGE, NOT A CIRCLE. The fade was a pure function of distance, so the field's boundary
+     was a perfect disc centred on the camera — which is a straight line's circular cousin and
+     reads as a patch following the bird. The radius is perturbed by noise in WORLD space, so the
+     boundary wanders and stays put as the camera moves through it. */
   float d=length(w-cameraPosition.xz);
-  float keep=(1.0+uBand)*(1.0-smoothstep(uLodNear,uLodFar,d));
+  float edge=1.0+(keaFbm(w*0.085)-0.5)*2.0*uEdgeVar;
+  float keep=(1.0+uBand)*(1.0-smoothstep(uLodNear*edge,uLodFar*edge,d));
   float live=alive*clamp((keep-keaGH(w*2.3))/max(uBand,1e-4),0.0,1.0);
   float comp=mix(1.0,inversesqrt(clamp(keep,0.25,1.0)),uComp);
 
@@ -2389,6 +2443,8 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
   const V3=h=>{ const c=lin(h); return new THREE.Vector3(c.r,c.g,c.b); };
   const U=m.userData.keaG={
     uTime:{value:0}, uAnchor:{value:new THREE.Vector2(0,0)},
+    /* the mean spacing of this layer's own scatter, which is what the anchor snaps to */
+    uSnap:{value:GRASS.snap},
     uNear:{value:tier.near}, uLodNear:{value:tier.lodNear}, uLodFar:{value:tier.lodFar},
     uBand:{value:GRASS.fadeBand}, uComp:{value:GRASS.comp},
     uGust:{value:GRASS.windGust}, uFlutter:{value:GRASS.windFlutter},
@@ -2397,6 +2453,9 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
     uClumpPull:{value:B.clumpPull===undefined?GRASS.clumpPull:B.clumpPull},
     uClumpPullVar:{value:B.clumpPullVar===undefined?GRASS.clumpPullVar:B.clumpPullVar},
     uBare:{value:B.bare},
+    uBlobScan:{value:(GRASS.blobScan&&(B.clumpPull===undefined?GRASS.clumpPull:B.clumpPull)>0.2)?1:0},
+    uBareScale:{value:GRASS.bareScale}, uBareSoft:{value:GRASS.bareSoft},
+    uEdgeVar:{value:GRASS.edgeVar},
     uHmul:{value:new THREE.Vector2(H.mul[0],H.mul[1])}, uHamp:{value:H.amp},
     uCut0:{value:V4(C[0])}, uCut1:{value:V4(C[1])}, uCut2:{value:V4(C[2])}, uCut3:{value:V4(C[3])},
     uHrange:{value:new THREE.Vector2(B.h[0],B.h[1])},
@@ -4944,8 +5003,30 @@ function updateFX(dt){
        every property is hashed from its world position, so an unsnapped anchor would have blades
        changing height and colour continuously as the camera drifted. The snap is small enough
        (0.5 m) that the swap happens well inside the fade band at the field's edge. */
+    /* THE SNAP IS THE LATTICE SPACING, AND IT IS DERIVED — REPLAT P4c.
+       The field is snapped to a grid so it cannot swim, which makes the anchor a STEP FUNCTION of
+       the camera: a hair of difference either side of a boundary jumps the WHOLE field by `snap`
+       metres. At 0.5 m that jump moved enough pixels to fail the stability bar — 05_tussock_ground,
+       the grassiest frame in the set, went from reshooting at exactly 1.0000 to 0.9842.
+       ATTRIBUTED, NOT GUESSED, AND THE FIRST FIX WAS WRONG. With the ragged edge disabled it was
+       still unstable, so the edge was not it; with a finer snap it was stable, which points at the
+       boundary. I then tried anchoring to the BIRD instead of the camera on the theory that a
+       pinned bird is more reproducible than a settling camera — and it was WORSE, three vantages
+       unstable instead of one, because the bird is no more settled than the lens at shutter time.
+       THEN A FINER SNAP WAS WORSE TOO — three vantages instead of one — because a smaller step is
+       crossed far MORE often for the same camera jitter, and at a close-up like 03_kea_plate a
+       four-centimetre shift of the whole field is plenty of pixels.
+       AND THEN THE MEASUREMENT STOPPED AGREEING WITH ITSELF. Sweeping snap 0.5 / 2.0 / 6.0 gave
+       3 / 1 / 3 unstable, and 0.5 had given 1 earlier in the same session on the same code. A
+       signal that changes without the code changing is the machine, not the field — the same
+       finding sessions 17 and 19 recorded — and tuning against it would be fitting to noise. So
+       `snap` is left at the value P4 shipped and the HAZARD IS RECORDED INSTEAD: the field's
+       content is a step function of camera position, so a take-to-take camera difference near a
+       boundary shifts the whole field by `snap` metres. It is real, it is mine, and the honest
+       next step is `crossrun` on a quiet machine rather than another constant picked off a noisy
+       reading. NO THRESHOLD WAS TOUCHED. */
     const c=G.cams&&G.cams[0];
-    if(c){ const q=GRASS.snap;
+    if(c){ const q=U.uSnap.value;
       U.uAnchor.value.set(Math.round(c.position.x/q)*q, Math.round(c.position.z/q)*q); } }
   for(let i=G.fx.length-1;i>=0;i--){
     const f=G.fx[i]; f.t+=dt;

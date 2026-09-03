@@ -4197,3 +4197,67 @@ whether it applied.
   Cost at the Retina framebuffer: clumps 19.863 ms, clumps+cover **25.165 ms (2.8x the 8.978 ms
   baseline)** — 1.3 ms over what P4 already shipped, for the whole of the above.
   **ALL OF IT LEFT FLAGGED — the look is Eric's.**
+
+## SESSION 20 — 2026-09-04, Eric played P4b: the field reads in SQUARES
+
+Lock taken (none held), released as the final act. Tip certified before anything moved
+(`758d82092e337f53141c607a8e0390d7`, matching the log). Shipped at specimen
+`4a8bf227f48413bed78ad9cee7a19715`, bundle `7d5f00b6ddc88b585c9ed08811423c3b`. Recipe in ARTBIBLE
+under REPLAT P4c. **Nothing re-pinned — 27 of 28 vantages flagged.**
+
+**THE INVESTIGATION TOOK ONE TEST AND RULED OUT TWO OF THE THREE CANDIDATES.** Shooting
+14_player_view at clumpM 0.70 / 1.35 / 2.70 makes the square patches shrink and grow with it. That
+is the clump cell and nothing else: the placement lattice is a golden-angle sunflower spiral (radial,
+no grid) and the patch edge is a disc. The model was ONE MOUND PER SQUARE CELL, and `bare` culled
+WHOLE CELLS — right angles in the middle of open country. **Jitter could never have fixed it**: a
+jittered grid is still a grid, because every cell contributes exactly one mound and its territory
+IS the cell. Fixed by making a mound the NEAREST of nine jittered feature points, bare ground a
+smooth noise field, and the outer edge noise-perturbed in world space.
+
+- **I BUILT A DEBUG VIEW, IT TAUGHT ME TWO THINGS, AND I DELETED IT.** A true top-down shot of a
+  400,000-blade field comes back as **bare ground** — a blade is a vertical sheet one triangle
+  thick and presents almost no area from directly above, so the one view where a grid cannot hide
+  is also the one view where the blades cannot be seen. Then its camera would not aim: two shots
+  came back byte-identical under different parameters. **A view that cannot prove where it was
+  taken from is not evidence**, so I added a readback — and the readback was itself a law-14 fuse
+  that died on `.toFixed` of undefined and reported nothing. Made it throw-proof, and it found the
+  real bug below. The tool is deleted: it cannot reliably aim its camera, and the clumpM period
+  test answered the question without it.
+
+- **`perf.mjs` SET `G.camLock = true` AND camLock IS AN OBJECT.** It is `{x,y,z,lx,ly,lz}` — the
+  shape capture.mjs's CAM() helper writes — so a bare `true` is truthy with no coordinates:
+  updateCams honoured a lock that said nothing and the camera stayed wherever the follow cam had
+  it. **Every loop-timed number this project has published for the grass was taken at the follow
+  camera, not at the vantage it was labelled with.** The comparisons hold (every run did the same
+  wrong thing); the absolute figures do not. Re-measured at the corrected camera: pre-P4 7.057 ms,
+  P4b 17.103, P4c 18.040 — so the squares fix costs **+0.94 ms**, of which the 3x3 blob scan is
+  +0.71. The correction is written into ARTBIBLE against the old tables rather than quietly
+  replacing them.
+
+- **THE MOUND IDENTITY HAD TO TRAVEL WITH THE TERRITORY, and that is the subtle half.** Taking the
+  nearest feature point fixes where a blade STANDS; if `cell` stays the own cell, the blade's
+  height and colour still step at cell edges and the squares come back in the COLOUR instead of the
+  geometry. Asserted explicitly.
+
+- **THE BIRD CAME OUT MORE READABLE, NOT LESS.** 03 reads 9693 against a floor of 1600 and 13 reads
+  5988 against 900 — far better than P4b, because noise-driven bare ground means the bird is often
+  standing in a gap rather than buried in a mound. The readability tune was not touched.
+
+- **A REPRODUCIBILITY HAZARD I OWN, AND TWO FIXES THAT MADE IT WORSE.** The field is snapped so it
+  cannot swim, which makes its content a step function of camera position: a take-to-take camera
+  difference near a boundary jumps the whole field by `snap`. 05_tussock_ground went 1.0000 ->
+  0.9842. Attributed properly — with the ragged edge off it was still unstable. Then: anchoring to
+  the BIRD instead of the camera gave **three** unstable instead of one (the bird is no more settled
+  than the lens at shutter time), and a finer snap derived from the lattice spacing also gave three
+  (a smaller step is crossed far more often, and four centimetres is plenty of pixels on a
+  portrait). **Then the measurement stopped agreeing with itself**: snap 0.5 / 2.0 / 6.0 gave
+  3 / 1 / 3 unstable, and 0.5 had given 1 earlier in the same session on the same code. A signal
+  that moves without the code moving is the machine, not the field. `snap` is left at the value P4
+  shipped, the hazard is recorded, and the honest next step is `crossrun` on a quiet machine rather
+  than a constant fitted to a noisy reading. **No threshold was touched.**
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, gate-selftest ALL PASS, **twelve P4c
+  sabotages, all twelve red**, bundle builds, 30/30 vantages shoot with no retakes and no GAVE UP,
+  sidebyside 33 pairs. diff 28 compared 27 flagged (worst 0.2694), boxdiff 12 compared 7 changed,
+  pxdiff 28 over band, subjects 16 checked **2 missing — the two known TODO 75 reds, no new
+  regression**. **ALL OF IT LEFT FLAGGED — the look is Eric's.**

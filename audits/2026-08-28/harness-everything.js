@@ -5157,4 +5157,82 @@ C.section('REPLAT P4b: the field Eric played');
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);
 }
 
+/* ============================================================
+   REPLAT P4c — NATURE HAS NO RIGHT ANGLES.
+   ============================================================
+   Eric played P4b and the field read in SQUARES. The cause was MEASURED before anything moved:
+   shooting 14_player_view at clumpM 0.70 / 1.35 / 2.70 makes the square patches shrink and grow
+   with it, which identifies the clump cell and nothing else. The model was one mound per SQUARE
+   cell, and `bare` culled WHOLE CELLS — right-angled holes in the middle of the country. Three
+   structural changes, and this section is the pin on all three. */
+C.section('REPLAT P4c: nature has no right angles');
+{
+  const GR=X.GRASS, vs=X.GRASS_GLSL_V;
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+
+  /* ---- (1) A MOUND IS THE NEAREST FEATURE POINT, NOT THE CENTRE OF ITS OWN CELL ----
+     A jittered grid is still a grid: every cell contributes exactly one mound and its territory IS
+     the cell, so the boundaries lie on cell edges however far the centre is moved. Taking the
+     nearest of the 3x3 neighbourhood makes the territories irregular polygons that follow no cell
+     edge, and a blade near a boundary goes to whichever mound is actually closer. */
+  ok(GR.blobScan===true,'the blob scan is ON — mounds are overlapping territories, not tiles');
+  ok(/for\(int j=-1;j<=1;j\+\+\)for\(int i=-1;i<=1;i\+\+\)/.test(vs),
+     'and it really is a 3x3 neighbourhood search in the shader');
+  ok(vs.indexOf('if(dd<bestD){ bestD=dd; cc=pt; cell=cn; }')>0,
+     'taking the NEAREST feature point, which is what makes a territory irregular');
+  /* AND THE MOUND IDENTITY TRAVELS WITH IT. `cell` has to become the winning neighbour, not stay
+     the own cell — otherwise the height and colour of a blade still step at cell edges even though
+     its position does not, and the squares come back in the COLOUR instead of the geometry. */
+  ok(/cc=pt; cell=cn;/.test(vs),
+     'the winning neighbour becomes the mound identity too, so height and colour follow the '+
+     'territory rather than stepping at a cell edge');
+  ok(vs.indexOf('uBlobScan>0.5')>0,'and it is skipped where the pull is negligible, because nine '+
+     'hash lookups per vertex is not free');
+
+  /* ---- (2) BARE GROUND COMES OFF A SMOOTH FIELD, NOT A PER-CELL STEP ----
+     This was the worst of it: culling a whole square cell puts four right angles in the middle of
+     open country. A noise field gives a bare patch an outline that wanders. */
+  ok(!/step\(uBare,keaGH\(cell/.test(vs),
+     'the per-cell bare STEP is gone — that is what cut square holes in the field');
+  ok(/smoothstep\(uBare-uBareSoft,uBare\+uBareSoft,keaFbm\(w\*uBareScale\)\)/.test(vs),
+     'and bare ground is a smooth noise field with a soft, wandering boundary');
+  ok(GR.bareScale>0&&GR.bareScale<1,'the bare field has a real scale ('+GR.bareScale+
+     ' per metre, so patches are about '+(1/GR.bareScale).toFixed(1)+' m across)');
+  ok(GR.bareSoft>0,'and a boundary width, so the edge of a bare patch is not a hard line ('+
+     GR.bareSoft+')');
+  /* the patches must be BIGGER than the mound spacing, or the noise just re-cuts the same grid at
+     a different scale and nothing is gained */
+  ok(1/GR.bareScale>GR.biomes.carpark.clumpM*2,
+     'and bare patches are much larger than the mound spacing, so the field reads as drifts '+
+     'rather than as a second lattice ('+(1/GR.bareScale).toFixed(1)+' m against '+
+     GR.biomes.carpark.clumpM+' m)');
+
+  /* ---- (3) THE FIELD'S EDGE IS RAGGED, NOT A DISC ----
+     The fade was a pure function of distance from the camera, which is a perfect circle — the
+     straight line's circular cousin, and it reads as a patch following the bird. */
+  ok(GR.edgeVar>0,'the field edge is perturbed at all ('+GR.edgeVar+')');
+  ok(/float edge=1\.0\+\(keaFbm\(w\*[0-9.]+\)-0\.5\)\*2\.0\*uEdgeVar/.test(vs),
+     'by noise in WORLD space, so the boundary wanders and stays put as the camera moves');
+  ok(/smoothstep\(uLodNear\*edge,uLodFar\*edge,d\)/.test(vs),
+     'and the perturbation is applied to BOTH thresholds, or the fade band itself changes width '+
+     'around the ring');
+  ok(GR.edgeVar<0.5,'while staying inside the radius the tier measured its cost at ('+GR.edgeVar+')');
+
+  /* ---- NOTHING ELSE IN THE FIELD MAY STEP ON A SQUARE CELL ----
+     The general claim, so a fourth per-cell step added later goes red here. `cell` may be used for
+     mound identity (which is now a territory, not a tile) and nothing else may branch on it. */
+  { const usesStep=(vs.match(/step\([^)]*cell/g)||[]);
+    ok(usesStep.length===0,'no remaining hard step is keyed on a cell index'+
+       (usesStep.length?' — '+usesStep.join(' | '):' (0 found)')); }
+
+  /* ---- AND THE THINGS P4b EARNED ARE INTACT ---- */
+  ok(GR.biomes.carpark.h[1]<=0.50,'the bird readability tune is untouched ('+
+     GR.biomes.carpark.h[1]+' m)');
+  ok(GR.biomes.carpark.base!==undefined&&GR.biomes.carpark.tip!==undefined,
+     'and the P4b colour work is still there');
+  ok(GR.groundTint!==undefined,'ground tint included');
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+}
+
 process.exitCode=C.report()?1:0;

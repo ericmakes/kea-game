@@ -487,6 +487,83 @@ WHAT IS STILL SHORT, HONESTLY
     the same finding session 17 recorded for 22_torch_beam. Load averaged ~6 from this session's
     own capture passes.
 
+## REPLAT P4c - NATURE HAS NO RIGHT ANGLES   [LOCKED 2026-09-04, session 20; LOOK FLAGGED]
+Eric played P4b and the field read in SQUARES. Twelve sabotages, all twelve red.
+
+THE CAUSE WAS MEASURED, NOT GUESSED, AND IT TOOK ONE TEST.
+Shooting 14_player_view at clumpM 0.70 / 1.35 / 2.70 makes the square patches shrink and grow with
+it. That identifies the clump cell and rules out the other two candidates in the brief - a
+grid-aligned placement lattice (the scatter is a golden-angle sunflower spiral, radial, no grid)
+and the patch's own outer edge (a disc, not a square). The model was ONE MOUND PER SQUARE CELL,
+`cell=floor(w/clumpM)`, and worse, `bare` culled WHOLE CELLS - literal right angles in open
+country. Jitter cannot fix that: a jittered grid is still a grid, because every cell contributes
+exactly one mound and its territory IS the cell.
+
+  blobScan   true      a mound is the NEAREST feature point in the 3x3 neighbourhood
+  bareScale  0.145     bare ground from a smooth noise field, patches ~6.9 m across
+  bareSoft   0.12      the width of that boundary, so a bare patch has no hard edge
+  edgeVar    0.26      the field's outer radius perturbed by world-space noise
+
+THE THREE CHANGES.
+  MOUNDS ARE TERRITORIES, NOT TILES. The nearest of nine jittered feature points, so a mound's
+  territory is an irregular polygon whose edges follow no cell boundary, and a blade near a
+  boundary is pulled to whichever mound is actually closer. The winning neighbour becomes the mound
+  IDENTITY as well as its centre - miss that and the geometry stops stepping at cell edges while
+  the height and colour still do, and the squares come back in the colour instead.
+  Skipped where the pull is negligible (the cover layer at 0.10), because nine hash lookups per
+  vertex is not free.
+  BARE GROUND IS A FIELD, NOT A STEP. `smoothstep(bare-soft, bare+soft, fbm(w*scale))`. The patches
+  are deliberately much larger than the mound spacing (6.9 m against 1.35 m) or the noise just
+  re-cuts the same grid at another scale.
+  THE EDGE IS RAGGED. The fade was a pure function of distance from the camera - a perfect disc,
+  the straight line's circular cousin, and it read as a patch following the bird. The radius is
+  perturbed by noise in WORLD space, applied to BOTH thresholds so the fade band does not change
+  width around the ring.
+
+THE COST, AND A CORRECTION TO EVERY NUMBER THIS PROJECT HAS PUBLISHED FOR THE FIELD.
+`perf.mjs` set `G.camLock = true`. camLock is an OBJECT - {x,y,z,lx,ly,lz}, the shape capture.mjs's
+CAM() helper writes - so a bare `true` is truthy with no coordinates: updateCams honoured a lock
+that said nothing and the camera stayed wherever the follow cam had it. EVERY loop-timed figure in
+the P4 and P4b entries above was therefore taken at the follow camera and not at the vantage it was
+labelled with. The comparisons between them still hold, because every run did the same wrong thing.
+The absolute numbers do not. Found while debugging why a grass field would not appear in a debug
+view; fixed, and re-measured at the corrected `bird` camera:
+     pre-P4 (P3 triangle carpet)      7.057 ms
+     P4b                             17.103 ms   2.4x
+     P4c                             18.040 ms   2.6x     <- SHIPPED
+     P4c with blobScan off           17.335 ms   2.5x
+So the whole squares fix costs +0.94 ms, of which the 3x3 blob scan is +0.71 ms.
+
+THE BIRD IS MORE READABLE, NOT LESS. 03_kea_plate reads 9693 against a floor of 1600 and
+13_idle_preen 5988 against 900 - both far better than P4b, because noise-driven bare ground means
+the bird is often standing in a gap rather than inside a mound. The readability tune is untouched.
+
+A REPRODUCIBILITY HAZARD I OWN, RECORDED RATHER THAN TUNED AWAY.
+The field is snapped to a grid so it cannot swim, which makes its content a STEP FUNCTION of camera
+position: a take-to-take camera difference near a boundary jumps the whole field by `snap` metres.
+05_tussock_ground went from reshooting at exactly 1.0000 to 0.9842. Attributed properly - with the
+ragged edge disabled it was still unstable, so the edge is not it. Two fixes were tried and BOTH
+WERE WORSE: anchoring to the bird instead of the camera (three vantages unstable, because the bird
+is no more settled than the lens at shutter time) and a finer snap derived from the lattice spacing
+(also three, because a smaller step is crossed far more often and four centimetres is plenty of
+pixels on a portrait). Then the measurement stopped agreeing with itself - snap 0.5 / 2.0 / 6.0 gave
+3 / 1 / 3 unstable, and 0.5 had given 1 earlier in the same session on the same code. A signal that
+moves without the code moving is the machine, not the field. `snap` is left at the value P4 shipped;
+the hazard is real, it is mine, and the honest next step is `crossrun` on a quiet machine rather
+than another constant picked off a noisy reading. NO THRESHOLD WAS TOUCHED.
+
+WHAT IS STILL SHORT
+  - THE GROUND TINT IS STILL ONE FLAT MULTIPLIER, and at 06_skyline the mid-distance is a single
+    unvaried olive. P4b's own note said so; P4c did not touch it.
+  - AND THE COLOUR SEAM AT THE HORIZON IS STILL THERE. The rolling tussock hills are separate
+    vertex-coloured geometry and do not get groundTint, so tinted flat ground meets untinted gold
+    hills with a visible join. Both of those are one piece, and it is P3's territory.
+  - THERE IS NO DEBUG PLACEMENT VIEW IN THE TREE. One was written and deleted: a true top-down shot
+    of a 400,000-blade field comes back as BARE GROUND, because a blade is a vertical sheet one
+    triangle thick and presents almost no area from directly above. It did earn its keep - it is
+    what found the camLock bug above - but a tool that cannot reliably aim its own camera is worse
+    than no tool, and the clumpM period test answered the question without it.
+
 ## PHASE 1 - LIGHT & AIR   [not yet run]
 TARGETS: ugg_shadows_01/02, swag_shadows_01, nz_mist_01, kea_social_02.
 GAPS: no cast shadows anywhere; no AO; pale tarmac ellipses read as
