@@ -5383,4 +5383,218 @@ C.section('REPLAT P4d: any pull at all earns a territory');
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);
 }
 
+/* ============================================================
+   REPLAT P4e — THE FIELD STOPS BEING A DISC.
+   ============================================================
+   Eric played P4d: the grass reads perfectly and you can see WHERE IT STOPS. The blade field is a
+   14 m disc anchored to the camera and beyond it the ground was bare, so the boundary was the
+   loudest line in a wide frame.
+   THREE CANDIDATES WERE MEASURED AND TWO OF THEM LOST.
+     - A BIGGER DISC does not work and the measurement is unambiguous: shot at 40 m with the count
+       raised to hold density, the edge does not go away, it MOVES, and it scores WORSE than the
+       14 m one (16.90 against 5.92 on gauntlet/verify/edgefind.mjs) because at that range the fade
+       is compressed into a handful of pixels near the horizon.
+     - PAINTING THE GROUND to match cannot do it alone. Setting the terrain albedo to BLACK at the
+       band beyond the blades moves its luminance 18% and its blue by one and a half levels; fog is
+       0.55% at twelve metres and cannot explain it. Whatever the rest of that pixel is, an albedo
+       multiplier does not reach it.
+     - REAL GEOMETRY does, because what makes a bladed pixel different is OCCLUSION, and nothing
+       painted on a flat plane reproduces that.
+   So: a third instanced tier over an annulus, plus a ground term that carries the colour past it.
+   This section is the pin on the parts of that a headless battery can reach. */
+C.section('REPLAT P4e: the field stops being a disc');
+{
+  const GR=X.GRASS, vs=X.GRASS_GLSL_V;
+  const src=require('../2026-08-26/keasrc').specimenSource();
+  const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+
+  /* ---- (1) THERE IS A FAR TIER AND IT REPORTS ITSELF ---- */
+  ok(!!GR.farLayer,'there is a far tier in the recipe (GRASS.farLayer)');
+  ok(!!G.grass&&!!G.grass.far,'and it reports itself in scene state (G.grass.far)');
+  ok(G.grass.far.count===GR.farLayer.count,'at the count the recipe asked for ('+
+     G.grass.far.count+')');
+  /* AND THE COUNT IS A REAL COUNT. The first cut of this section asserted only that the tier
+     EXISTED and that its reported count matched the recipe — so setting the recipe to zero left
+     0===0 and the whole feature could be deleted while every assertion stayed green. A tier with
+     no blades in it is not a tier, and "it agrees with itself" is not a claim about the world. */
+  ok(GR.farLayer.count>0,'and it is a REAL count — a far tier of zero blades is no far tier ('+
+     GR.farLayer.count+')');
+  ok(G.grass.far.density>8,'covering its annulus at a density that can read as ground cover ('+
+     Math.round(G.grass.far.density)+' blades/m2 over the ring it actually occupies)');
+  { const T2=X.grassTier();
+    ok(G.grass.far.density<T2.density,'and thinner than the near field, which is the whole point '+
+       'of a far tier ('+Math.round(G.grass.far.density)+' against '+Math.round(T2.density)+')'); }
+
+  /* ---- (2) IT IS AN ANNULUS, AND ITS INNER EDGE IS INSIDE THE NEAR TIERS ----
+     THE FIRST CUT SHIPPED A BARE RING AND THE EDGE FINDER FOUND IT. rMin 0.30 of a 52 m radius is
+     15.6 m, the clump layer stops at 14 m, and the 1.6 m annulus between them had no layer in it
+     at all — a ring of bare ground drawn around the player, which is the artefact this piece
+     exists to remove wearing a larger radius. The tiers must OVERLAP, and by a real margin. */
+  { const T=X.grassTier(), F=GR.farLayer, inner=F.near*F.rMin;
+    ok(F.rMin>0,'the far tier is an ANNULUS, not a disc — it spends nothing under the near tiers ('+
+       'rMin '+F.rMin+')');
+    ok(inner<T.near,'and its inner edge is INSIDE the clump layer, so the two OVERLAP rather than '+
+       'leaving a bare ring between them ('+inner.toFixed(1)+' m against '+T.near+' m)');
+    ok(T.near-inner>=2.0,'with a real margin, not a millimetre of luck ('+
+       (T.near-inner).toFixed(1)+' m of overlap)');
+    ok(F.near>T.near*1.5,'and it reaches well past the clump layer, or it is not a far tier ('+
+       F.near+' m against '+T.near+' m)'); }
+
+  /* ---- (3) THE FAR BLADE IS THE SAME SPECIES AS THE NEAR BLADE ----
+     THE OTHER THING THE FIRST CUT GOT WRONG. 110k blades of 34-86 cm at 45-105 mm wide bought
+     screen coverage with SIZE and photographed as sheaves of wheat: grass visibly coarser at
+     thirty metres than at three. A scale break reads worse than the bare ground it replaced,
+     because it says the country changes as you walk. Coverage is bought with COUNT. */
+  { const B=GR.biomes.carpark, F=GR.farLayer;
+    ok(F.h[1]<=B.h[1]*1.6,'the far blade is the same species as the near blade in HEIGHT ('+
+       F.h[1]+' m against '+B.h[1]+' m)');
+    ok(F.w[1]<=B.w[1]*1.8,'and in WIDTH — coverage is bought with count, never with size ('+
+       (F.w[1]*1000).toFixed(1)+' mm against '+(B.w[1]*1000).toFixed(1)+' mm)');
+    ok(F.w[0]>0.001&&F.w[1]<0.03,'and it is still a BLADE width in metres ('+
+       (F.w[0]*1000).toFixed(1)+'-'+(F.w[1]*1000).toFixed(1)+' mm)'); }
+
+  /* ---- (4) fadeBand IS PER LAYER, AND THAT IS WHAT DISSOLVES THE HANDOVER ----
+     A far tier with the near tier's fade band relocates the edge instead of removing it: measured
+     12.79 findability at 0.11, 7.17 at 0.30, 5.77 at 0.55 with the peak moving off the texture
+     channel entirely. It must NOT be raised globally — the same width under the camera stunts the
+     blades in the most visible part of the frame. */
+  { const F=GR.farLayer;
+    ok(F.fadeBand!==undefined,'the far tier carries its OWN fade band');
+    ok(F.fadeBand>GR.fadeBand*2,'and it is far wider than the near layers\' ('+F.fadeBand+
+       ' against '+GR.fadeBand+')');
+    ok(GR.fadeBand<=0.15,'while the near layers keep the band P4 tuned ('+GR.fadeBand+')');
+    ok(/B\.fadeBand===undefined\?GRASS\.fadeBand:B\.fadeBand/.test(code),
+       'and the shader reads the per-layer value with the global as the fallback, so a layer that '+
+       'does not ask for one is unchanged'); }
+
+  /* ---- (5) THE FAR TIER DOES NOT RECEIVE SHADOWS, AND ONLY IT ----
+     A shadow-map lookup is a PER-FRAGMENT cost and the far tier is the most overdrawn thing in the
+     frame. Measured at 2.4 ms of the far tier's cost at DPR 2. The near layers keep theirs. */
+  { ok(GR.farLayer.shadow===false,'the far tier does not receive shadows — nothing can resolve one '+
+       'at thirty metres and it is the most overdrawn surface in the frame');
+    ok(GR.cover.shadow===undefined&&GR.biomes.carpark.shadow===undefined,
+       'and the near layers do not opt out of it');
+    ok(/mesh\.receiveShadow=\(L\.shadow!==false\)/.test(code),
+       'the flag is read per layer, defaulting to ON'); }
+
+  /* ---- (6) THE GROUND'S DRIFT IS THE BLADE FIELD'S OWN NOISE, CHARACTER FOR CHARACTER ----
+     Not a lookalike. "A similar noise field" is exactly how a seam gets reintroduced by a later
+     tune of one of them, so the two expressions are compared as TEXT. */
+  { const blade=(vs.match(/float keaFbm\(vec2 p\)\{[^}]*\}/)||[''])[0];
+    const ground=(X.MATFAR_GLSL.match(/float keaFarFbm\(vec2 p\)\{[^}]*\}/)||[''])[0];
+    ok(blade.length>20,'the blade shader has an fbm to compare against');
+    ok(ground.length>20,'and the ground term has one');
+    ok(blade.replace('keaFbm','F').replace(/keaVal/g,'V')===
+       ground.replace('keaFarFbm','F').replace(/keaVal/g,'V'),
+       'and they are CHARACTER-IDENTICAL once the two names are normalised — the ground reads the '+
+       'same field the blades do\n      blade:  '+blade+'\n      ground: '+ground); }
+
+  /* ---- (7) THE CUT-OUTS ARE NO LONGER RIGHT ANGLES ----
+     They were a hard axis-aligned box test, and giving the grass the range to reach the tarmac is
+     what exposed it: the field used to fade out at 14 m and the car park is 30 m away, so nobody
+     had ever seen its edge. The ramp lives entirely OUTSIDE the box, so every existing assertion
+     about what the cut-outs cover still holds to the millimetre. */
+  { ok(!/bool keaCut\(/.test(vs),'the hard boolean cut-out test is gone');
+    ok(/float keaCutK\(/.test(vs),'and the cut-out returns a FACTOR, so a verge can thin instead '+
+       'of stopping');
+    ok(/smoothstep\(0\.0, max\(0\.05, soft\*\(1\.0\+n\*0\.6\)\), sd\)/.test(vs),
+       'the noise varies the ramp WIDTH and not its position — at sd<=0 the factor is zero whatever '+
+       'the noise says, so no blade can appear inside a cut-out');
+    ok(GR.cutSoft>0.3&&GR.cutSoft<3,'the verge is a stride wide, which is what the edge of a gravel '+
+       'car park in tussock country looks like ('+GR.cutSoft+' m)');
+    ok(/alive\*=keaCutK\(uCut0/.test(vs),'and the four factors MULTIPLY, so overlapping cut-outs '+
+       'thin each other rather than one winning at a seam'); }
+
+  /* ---- (8) TODO 80: THE ROLLING HILLS HAVE FORM, AND THEY WEAR THE GROUND TINT ----
+     Filed in P4d as the last straight edge in a wide frame. The sculpt only ever scaled x and z, so
+     at the pole — where x and z are zero — it multiplied nothing and no amount of noise in it could
+     break the flat cap. Read off the built geometry, not off the source. */
+  { const hills=[]; G.scene.traverse(o=>{ if(o.name==='tussockHill')hills.push(o); });
+    ok(hills.length>=9,'the rolling tussock hills are in the world and nameable ('+hills.length+')');
+    const h0=hills[0];
+    ok(!!h0&&h0.geometry.parameters.heightSegments>=14,
+       'with enough height bands to shape a crown with ('+
+       (h0?h0.geometry.parameters.heightSegments:0)+', was 10)');
+    ok(/pos\.setY\(v,y\*k\)/.test(code),
+       'and the sculpt displaces Y as well as X and Z — scaling x,z alone multiplies ZERO at the '+
+       'pole, which is why the old cap could not be broken');
+    /* THE CAP IS MEASURED, NOT ASSERTED FROM THE CODE. Take the highest vertices and check they do
+       not all sit at one height: a flat cap is a plateau of identical y, and that is the defect. */
+    { const pp=h0.geometry.attributes.position; let ymax=-1e9;
+      for(let v=0;v<pp.count;v++) ymax=Math.max(ymax,pp.getY(v));
+      let spread=0,n=0;
+      for(let v=0;v<pp.count;v++){ const y=pp.getY(v);
+        if(y>ymax*0.90){ spread=Math.max(spread,ymax-y); n++; } }
+      ok(n>3,'there are vertices in the top tenth of the hill to measure ('+n+')');
+      ok(spread>ymax*0.02,'and they are NOT a plateau — the crown has relief ('+
+         spread.toFixed(2)+' m of spread across the top tenth)'); }
+    /* AND THE TINT. The hills never went through matGround, so tinted flat ground met untinted gold
+       hill along a visible join — an open colour seam in the P4b, P4c and P4d recipes. */
+    /* THE TINT IS CHECKED AGAINST WHAT THE VERTEX WOULD BE WITHOUT IT, and the first cut of this
+       was not: it asserted the hill's blue was below 0.45, and the UNTINTED palette is already at
+       0.029 in linear space, so removing the tint sailed straight through. A threshold that the
+       broken state also satisfies is not a test. The colour is now RECONSTRUCTED — the same lerp
+       the builder does, at the same vertex — and the tinted and untinted predictions are BOTH
+       compared, so the assertion can only pass one of them. */
+    { const cc=h0.geometry.attributes.color, pp2=h0.geometry.attributes.position;
+      const T=new H.THREE.Color(GR.groundTint).convertSRGBToLinear();
+      const cG2=new H.THREE.Color(X.PAL.ground2).convertSRGBToLinear();
+      const cT2=new H.THREE.Color(X.PAL.tussock).convertSRGBToLinear();
+      let hi=0; for(let v=1;v<pp2.count;v++) if(pp2.getY(v)>pp2.getY(hi)) hi=v;
+      const rad=h0.geometry.parameters.radius;
+      const t=Math.max(0,Math.min(1,pp2.getY(hi)/rad*0.5+0.5));
+      const plain=cG2.clone().lerp(cT2,t*0.85);
+      const tinted=plain.clone().multiply(T);
+      const got={r:cc.getX(hi),g:cc.getY(hi),b:cc.getZ(hi)};
+      const d=(c)=>Math.abs(got.r-c.r)+Math.abs(got.g-c.g)+Math.abs(got.b-c.b);
+      ok(T.b<0.25,'the ground tint is an olive, so blue is what it removes ('+T.b.toFixed(3)+')');
+      ok(d(tinted)<0.01,'the hill\'s crown vertex IS its palette colour times groundTint ('+
+         d(tinted).toFixed(4)+' away)');
+      ok(d(plain)>0.05,'and it is NOT the untinted colour — the two predictions are far enough '+
+         'apart for this to be a test ('+d(plain).toFixed(4)+' away)'); } }
+
+  /* ---- (9) EVERY LAYER IS DRIVEN, WHICH IS THE ONE THAT CANNOT BE SEEN IN A STILL ----
+     A layer left off the per-frame list keeps its anchor at (0,0) — a static disc round the world
+     origin — and its wind frozen. It photographs as "the far grass does not follow the camera",
+     which looks like a design decision rather than a bug. */
+  ok(/\[G\.grassMat,G\.grassCoverMat,G\.grassFarMat\]/.test(code),
+     'all three layer materials are driven from ONE list, so adding a tier cannot half-connect it');
+
+  /* ---- (9b) THE BULL WHEEL IS PINNED BY THE CAPTURE CLOCK ----
+     Not P4e's bug, but P4e's false alarm: 28_skifield_base's scarlet subject reshot at 490, 1067
+     and 2038 across three takes of ONE build, straddling its floor, and it read as a P4e
+     regression until the takes were counted. The cause is an INTEGRATOR — `rotation.z += dt*2.4`
+     accumulates wall-clock deltas, and the rig's `G.time = 12.0` pin cannot reach one. Every
+     animated handle the capture rig photographs has to be a FUNCTION of the pinned clock, which is
+     the rule the grass wind already follows. */
+  { ok(!/towWheel\.rotation\.z\+=/.test(code),
+       'the bull wheel does not INTEGRATE dt — a clock pin cannot reach an integrator');
+    ok(/towWheel\.rotation\.z=G\.time\*/.test(code),
+       'it is a function of G.time, the clock the capture rig pins, so a photographed frame is a '+
+       'fixed frame');
+    X.boot({biome:'skifield'}); X.startGame(1); tick(4);
+    /* AND IT IS MEASURED, not merely read off the source: set the clock twice and the angle must
+       follow it exactly, with no memory of how many ticks happened in between. */
+    { const w=G.towWheel;
+      ok(!!w,'the ski field has a bull wheel to check');
+      if(w){ G.time=12.0; tick(1); const a=w.rotation.z;
+             for(let i=0;i<7;i++)tick(1);        // seven more frames, clock still pinned
+             G.time=12.0; tick(1); const b=w.rotation.z;
+             ok(Math.abs(a-b)<1e-9,'and eight frames at the same pinned clock leave it at the same '+
+                'angle ('+a.toFixed(6)+' vs '+b.toFixed(6)+')');
+             G.time=13.0; tick(1); const c=w.rotation.z;
+             ok(Math.abs(c-a)>0.5,'while moving the clock does turn it ('+
+                (c-a).toFixed(3)+' rad for one second)'); } }
+    X.boot({biome:'carpark'}); X.startGame(1); tick(4); park(); }
+
+  /* ---- (10) AND THE THINGS P4b, P4c AND P4d EARNED ARE INTACT ---- */
+  ok(GR.biomes.carpark.h[1]<=0.50,'the bird readability tune is untouched ('+
+     GR.biomes.carpark.h[1]+' m)');
+  ok(GR.blobScan===true&&GR.blobMinPull===0,'P4d\'s territory gate is still open to every layer');
+  ok(GR.groundTint!==undefined,'the P4b ground tint is still there');
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(6);
+}
+
 process.exitCode=C.report()?1:0;

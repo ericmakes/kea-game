@@ -687,6 +687,134 @@ WHAT IS STILL SHORT
     P4d did not introduce it and no threshold was touched. The honest next step is still `crossrun`
     on a quiet machine.
 
+## REPLAT P4e - THE FIELD STOPS BEING A DISC   [LOCKED 2026-09-04, session 22; LOOK FLAGGED]
+Eric played P4d: the grass reads perfectly and you can see WHERE IT STOPS. Seventeen sabotages, all
+seventeen red. Nothing re-pinned; 27 of 28 vantages flagged.
+
+A NEW INSTRUMENT FIRST, BECAUSE "NO EDGE IS FINDABLE" NEEDS A FINDER.
+`gauntlet/verify/edgefind.mjs`, with `edgefind-selftest.mjs` as its contract test. It scans rows and
+columns and reports FINDABILITY - the peak step divided by the typical step ELSEWHERE in the same
+scan, so a lighting gradient scores ~1 and a line scores high. THREE channels, and the third exists
+because the measurement demanded it:
+    L   luminance      C   chroma, max(R,G,B)-min(R,G,B)      G   texture energy
+THE SEAM IS A SATURATION SEAM, NOT A BRIGHTNESS ONE, and that was measured under control before
+anything was built - the SAME image rows, same light, same fog, shot once with blades standing there
+and once without:
+      bare ground   rgb 178.1 166.5 128.9    chroma 49    luma 166.3
+      with blades   rgb 181.9 157.9  99.7    chroma 82    luma 158.8
+Red does not move, luminance moves 4.5%, chroma moves by two thirds. A luminance-and-texture detector
+scores that nearly clean, and the instrument was about to certify "no colour seam" while
+structurally unable to see one. The selftest's case 7 is now a pure saturation step that L and G must
+BOTH be blind to.
+
+THE THREE OPTIONS, AND TWO OF THEM LOST ON MEASUREMENT.
+  A BIGGER DISC IS STILL A DISC. Shot at 40 m with the count raised to hold density (980k blades),
+  the edge does not go away, it MOVES - and scores WORSE than the shipped 14 m one, 16.90 against
+  5.92, because at that range the fade compresses into a handful of pixels near the horizon. Sharper
+  in screen space even though it is softer in metres.
+  PAINTING THE GROUND CANNOT DO IT ALONE. Setting the terrain's albedo to BLACK at the band beyond
+  the blades moves its luminance 18% (159.5 -> 131.1) and its BLUE by one and a half levels. Fog is
+  0.55% at twelve metres and cannot explain it. A gain sweep confirmed the lever: 1 through 4 moved
+  that band's blue from 115.0 to 112.9 against a target of 96.7. Whatever the rest of that pixel is,
+  an albedo multiplier does not reach it.
+  REAL GEOMETRY DOES, because what makes a bladed pixel different is OCCLUSION - thin, self-shadowing,
+  back-lit geometry hiding bright ground and brighter sky. Nothing painted on a flat plane
+  reproduces that. So: a third instanced tier, plus a ground term that carries the colour past it.
+
+THE FAR TIER.
+  count 225000   near 28 m   rMin 0.24   h 0.22-0.52   w 12-28 mm   clumpM 1.60   bare 0.22
+  lodFrac 0.08   fadeBand 0.55   seg 2   shadow false
+  IT IS AN ANNULUS. rMin puts every blade outside 6.7 m, because inside that the clump and cover
+  layers have the ground covered and a far blade there is an instance nobody can see. The inner edge
+  must sit INSIDE the clump layer's 14 m or the tiers leave a bare ring between them - the first cut
+  had rMin 0.30 of 52 m = 15.6 m against a clump radius of 14, and the edge finder found the 1.6 m
+  of bare ground immediately.
+  THE FAR BLADE IS THE NEAR BLADE. The first cut made them big and few - 110k at 34-86 cm and
+  45-105 mm wide - and it photographed as SHEAVES OF WHEAT: grass visibly coarser at thirty metres
+  than at three. A scale break reads worse than the bare ground it replaced, because it says the
+  country changes as you walk. Coverage is bought with COUNT.
+  fadeBand IS PER LAYER NOW AND IT IS THE LEVER THAT DISSOLVES THE HANDOVER. A far tier with the near
+  tier's 0.11 relocates the edge instead of removing it. Measured at the far tier's own outer edge:
+      fadeBand 0.11   findability 12.79   (peak on the TEXTURE channel)
+      fadeBand 0.30   findability  7.17
+      fadeBand 0.55   findability  5.77   (peak moves off texture onto chroma)  <- SHIPPED
+  It must NOT be raised globally: the same width under the camera stunts the blades in the most
+  visible part of the frame, which is what the P4 note about the ramp running to 1+fadeBand is about.
+
+THE GROUND TERM, AND IT IS FREE.
+  `GRASS.far`: grassMul [1.021, 0.948, 0.773] - the MEASURED ratio above, used as a direction with a
+  calibrated gain - soilMul unity, moundAmt 0.16 faded out past 120 m.
+  keaFarFbm IS CHARACTER-FOR-CHARACTER THE BLADE SHADER'S keaFbm. Same octaves, same weights, same
+  lacunarity, same offset, same hash - so the ground's grass-versus-bare drift is not a lookalike of
+  the field's, it IS the field's, continued past the last blade. A battery compares the two
+  expressions as TEXT, because "a similar noise field" is how a seam gets reintroduced by a later
+  tune of one of them.
+  THE MOTTLE FADES OUT WITH DISTANCE on purpose: 1.6 m features are sub-pixel by a hundred metres and
+  procedural noise has no mipmap, so left on it would shimmer along the horizon - trading a static
+  seam for a moving one.
+
+AND IT FAILED TO COMPILE FOR AN HOUR WHILE LOOKING FINE, WHICH IS THE LESSON OF THE PIECE.
+The far-grass function was put in the shared MATBREAK_GLSL block while its uniforms were declared
+only for the grass family, so gravel, asphalt and snow compiled a function referencing identifiers
+that did not exist: `ERROR: 'uFarSoft' : undeclared identifier`. Every isotropic ground material
+failed to link. THE GAME LOOKED FINE. The batteries were green, MATBREAK_OK was true, G.mats said
+breakup:true, and the measured effect of the whole feature was ONE GREY LEVEL - which reads as "the
+fix did not work" rather than as "the shader is dead". MATBREAK_OK validates that the patch TARGETS
+exist; it cannot know whether the result compiles. Found by probing the live WebGL program for its
+link status. Declaration and uniforms travel together, always.
+
+THE CUT-OUTS WERE RIGHT ANGLES AND THE FAR TIER IS WHAT EXPOSED THEM.
+`keaCut` was `abs(w.x-c.x)<c.z && abs(w.y-c.y)<c.w` - a hard axis-aligned box test that killed a
+blade outright, so every cut-out ended in a ruled line. Nobody had seen it because the field faded
+out at fourteen metres and the car park is thirty away. Now a signed distance to the box with a
+1.1 m ramp OUTSIDE it, its width perturbed by world-space noise - so a verge thins rather than
+stopping, and at sd<=0 the factor is zero whatever the noise says, which is why every existing
+assertion about what the cut-outs cover still holds to the millimetre.
+
+THE COST, AT THE RETINA FRAMEBUFFER, WHICH IS WHAT THE BRIEF ASKED FOR.
+`perf.mjs bird` (inside the field, the worst case), DPR 2, best-of-12, interleaved three times, on
+Eric's machine at load ~8:
+      no far tier, no ground term      31.5 ms
+      ground term only                 30.3 ms      free, inside the noise
+      far tier 225k over 28 m          40.7 ms      <- SHIPPED, +9 ms
+      far tier 450k over 40 m          48.0 ms      +16 ms
+      450k over 40 m, seg 1, no shadow 40.1 ms
+TWO LEVERS WERE MEASURED AND ONLY ONE IS REAL. Dropping the shadow RECEIVE saves 2.4 ms and is kept;
+seg 1 saves NOTHING, which says the cost is FILL and not vertices - and that is the number that
+decides TODO 82, because fill is exactly what alpha cards fix.
+
+WHAT IT BOUGHT, MEASURED.
+  The colour seam across the old boundary is gone: blue gap across it was 18.3 levels, now 2.7.
+      P4d   outside rgb 177.5 158.6 115.0   inside rgb 173.2 152.6  96.7
+      P4e   outside rgb 172.1 150.5  96.5   inside rgb 175.5 152.5  93.8
+  Findability at the play camera is 6.16 against P4d's 5.97 - unchanged in magnitude, but the peak
+  has moved OFF the texture channel onto chroma, which is where the frame's ambient variation
+  already sat. The hard texture cliff is gone; what is left is the frame's own colour noise.
+
+TODO 80, BOTH HALVES, CLOSED.
+The rolling tussock hills were SphereGeometry(rad,18,10) squashed to scale.y 0.2-0.3 with a sculpt
+that only ever scaled x and z - and at the pole x and z are ZERO, so it multiplied nothing and no
+amount of noise in it could ever break the flat cap. 18 bands now, and the sculpt displaces the
+vertex along its own radius in 3D with two of its three octaves keyed on height as well as angle, so
+the crown gets a shoulder and a saddle instead of a plateau. A battery measures the crown's relief
+off the built geometry rather than trusting the source. AND THEY WEAR groundTint: they never went
+through matGround, so tinted flat ground met untinted gold hill along a visible join - the horizon
+colour seam recorded as open in the P4b, P4c and P4d recipes, closed here.
+
+WHAT IS STILL SHORT, AND THE FIRST ONE IS THE PIECE'S OWN LIMIT
+  - FROM THE AIR THE EXTENT IS STILL FINDABLE. At fourteen metres up the improvement is large and
+    the hard arc is gone, but the far tier stops at 28 m and everything past that is ground. The
+    measurement above says why: geometry to the horizon costs +16 ms and the map is 240 m across.
+    TODO 82 carries it - alpha CARDS, one quad carrying fifteen blades, which is exactly the ratio
+    the fill measurement says is needed. **This piece did not achieve "invisible from the air" and
+    does not claim to.**
+  - 28_skifield_base's BULL WHEEL now fails its subject floor REPRODUCIBLY where it used to pass by
+    luck. TODO 81. The wheel integrated wall-clock dt so the capture clock pin could not reach it -
+    three takes of one build read 490, 1067 and 2038 against a floor of 1500. It is now
+    `rotation.z = G.time*2.4` and reads 838 four times running. THE FLOOR WAS NOT LOWERED.
+  - THE SKI FIELD'S far tier uses the carpark's blade profile, because farLayer is one global spec.
+    It has not been judged up there.
+
 ## PHASE 1 - LIGHT & AIR   [not yet run]
 TARGETS: ugg_shadows_01/02, swag_shadows_01, nz_mist_01, kea_social_02.
 GAPS: no cast shadows anywhere; no AO; pale tarmac ellipses read as

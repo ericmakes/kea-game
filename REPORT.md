@@ -1,102 +1,109 @@
-# REPORT — REPLAT P4d, the squares were the cover layer (session 21, 2026-09-04)
+# REPORT — REPLAT P4e, the field stops being a disc (session 22, 2026-09-04)
 
-Branch `replat-b`. **CERTIFIED-SHIP** at specimen `2219325fdb3ebf535d749399d625275d`.
-**Nothing re-pinned. 27 of 28 vantages flagged. Fifteen sabotages, all fifteen red.**
+Branch `replat-b`. **CERTIFIED-SHIP** at specimen `5c9fa1dd77d46eec3d6da3b630cd4149`.
+**Nothing re-pinned. 27 of 28 vantages flagged. Seventeen sabotages, all seventeen red.**
 
-## IT WAS THE COVER LAYER, AND THE BUG WAS A SENTENCE P4c WROTE
+## READ THIS FIRST — WHAT THIS PIECE DID NOT DO
 
-P4c fixed the clump layer and exempted the cover layer in the same commit: *"the search is skipped
-where the pull is negligible: the cover layer sits at 0.10 and gathers almost nothing, so nine hash
-lookups per vertex would buy it nothing."* That was reasoned, never photographed, and wrong — and it
-left the defect in the layer covering the closest ten metres of every play frame.
+You asked for the transition to be invisible **at the play camera and from the air**. It is at the
+play camera. **From the air it is not, and I am not going to dress that up.** The far tier of real
+blades stops at 28 m because of a hard measured wall:
 
-## THE MEASUREMENT — FOUR CANDIDATES, ONE VANTAGE, ONE BUILD
+| at the Retina framebuffer, DPR 2, `perf.mjs bird`, best-of-12, interleaved ×3 | ms |
+|---|---|
+| no far tier, no ground term | **31.5** |
+| ground term only | 30.3 — free, inside the noise |
+| **far tier 225k over 28 m — SHIPPED** | **40.7  (+9 ms)** |
+| far tier 450k over 40 m | 48.0  (+16 ms) |
+| 450k over 40 m, seg 1, no shadow receive | 40.1 |
 
-| system | knob swept | what the frame did |
-|---|---|---|
-| **cover layer placement** | `cover.clumpM` 0.55 / 1.10 / 2.20 | **straight bare lanes in a rectangular lattice; the cell doubles and doubles again in step** ← the cause |
-| bare-ground noise field | `bareScale` 0.29 / 0.145 / 0.0725 | pattern shifts, no square at any setting (4× range) |
-| ground mask — lattice | `ground.segs` 24 / 48 / 96 | horizon blobs shift, no square at any setting |
-| ground mask — pattern | `ground.maskScale` 0.5 / 1.0 / 2.0 | blob size changes as asked, no square at any setting |
+Dropping the shadow *receive* saves 2.4 ms and is kept. **`seg 1` saves nothing at all** — so the
+cost is FILL, not vertices, and the map is 240 m across. Geometry to the horizon is not affordable
+on your machine. The answer is alpha **cards** — one quad carrying fifteen blades, which is exactly
+the ratio the fill measurement says is needed — and that wants a CC0 alpha atlas, a licence line,
+alpha-to-coverage and its own LOD handover. That is a piece, not a tuning, and shipping it
+half-built would have put a second ring in the field. **TODO 82.**
 
-The ground colour mask had **no scale knob** — a literal `PlaneGeometry(240,240,48,48)` and four
-magic sine frequencies inline. A candidate with no knob cannot be ruled in *or* out, so it got one
-before it was diagnosed. It reaches both terrain planes; the assertion enforcing that went red on the
-ski field's plane first time it ran.
+## THE MEASUREMENT THAT DECIDED IT
 
-## THE MECHANISM — ARITHMETIC, NOT TASTE
+I built the finder first: `gauntlet/verify/edgefind.mjs` + its contract test. It reports
+FINDABILITY — peak step over the typical step *elsewhere* in the same scan, so a lighting gradient
+scores ~1 and a line scores high.
 
-`w = mix(w, cc, pull)` moves every blade `pull` of the way toward its cell's centre. On a square cell
-that **vacates a margin along every cell edge**, so a small pull does not draw a faint grid — it
-draws a grid of straight empty lanes, in negative space. The smallness that was thought to make it
-safe is exactly what makes it legible. Re-shot at `cover.clumpPull` 0 the lanes vanish completely at
-both 0.55 and 2.20, which pins the pull and rules out the mound's own colour.
+**Then the measurement moved the instrument.** Shot under control — the same image rows, same light,
+same fog, once with blades and once without:
 
-## THE FIX — ONE CONSTANT, AND THAT IT *IS* A CONSTANT IS THE POINT
+    bare ground   rgb 178.1 166.5 128.9   chroma 49   luma 166.3
+    with blades   rgb 181.9 157.9  99.7   chroma 82   luma 158.8
 
-`GRASS.blobMinPull = 0.0`, replacing a hardcoded `0.2` buried in a uniform expression. That 0.2 was
-unreachable from the recipe: it could not be tuned, could not be shot, and could not be argued with.
-At zero, **any layer that pulls at all gets an irregular territory**, because any pull at all draws
-the lattice it pulls toward. The cover's mound identity (height and colour) now travels with that
-territory too — the subtle half P4c learned the hard way on the clump layer.
+Red does not move, luminance moves 4.5%, **chroma moves by two thirds**. The seam is *saturation*.
+I was about to certify "no colour seam is findable" with a detector structurally unable to see one,
+so it grew a chroma channel and a selftest case the other two must be blind to.
 
-The cheaper alternative was measured and **not** shipped: `cover.clumpPull 0` also kills the squares
-and costs less, but it flattens the cover to a mathematically even carpet and leaves the identity on
-a square lattice that would surface the moment anyone tunes the cover's colour. It is one env var
-away (`KEAGRASS='{"cover":{"clumpPull":0}}'`) if you want to judge it.
+Two of your three options then lost:
 
-## COST — AND THE FIRST READING WAS WRONG
+- **A bigger disc is still a disc.** At 40 m with the count raised to hold density the edge does not
+  go away, it *moves*, and scores **worse** — 16.90 against 5.92 — because at that range the fade
+  compresses into a handful of pixels near the horizon.
+- **Painting the ground cannot do it alone.** Setting the terrain albedo to **black** beyond the
+  blades moves luminance 18% and blue by one and a half levels; fog is 0.55% at twelve metres. An
+  albedo multiplier does not reach whatever the rest of that pixel is.
+- **Geometry does**, because what makes a bladed pixel different is *occlusion*.
 
-Interleaved, quiet machine, `perf.mjs bird`, best-of-6 × 40 renders, 1280×720 DPR 1:
+## WHAT SHIPPED
 
-    blobScan off entirely   14.16 ms   (4 runs, 13.79-14.45)
-    P4c (clump only)        14.36 ms   (7 runs, 13.89-15.22)
-    P4d (both layers)       14.69 ms   (7 runs, 14.12-15.10)   <- SHIPPED
-    P4c / P4d at DPR 2      17.87 / 17.90 ms
+A third instanced tier over an **annulus** (225k, 28 m, rMin 0.24), plus a ground term that carries
+the colour past it and costs nothing. `fadeBand` became **per layer** — that is the lever that
+dissolves the handover rather than relocating it: 0.11 → 12.79, 0.30 → 7.17, **0.55 → 5.77**, with
+the peak moving off the texture channel entirely at 0.55.
 
-**About +0.33 ms, and nothing measurable at Retina** — the added work is per-vertex and that frame is
-fragment-bound. The ranges overlap; "at or below this instrument's noise floor" is the honest
-statement. The first reading said +1.3 ms and was taken with eleven headless Chromes from the capture
-sweep still on the machine — publishing it would have been P4c's camLock mistake in another currency.
+**Measured result:** the colour seam across the old boundary is gone — the blue gap across it was
+18.3 levels, now **2.7**. Findability at the play camera is 6.16 against P4d's 5.97: unchanged in
+magnitude, but the peak has moved off *texture* onto *chroma*, where the frame's ambient variation
+already sat. The hard cliff is gone.
 
-## THE PROOF FRAME
+Also fixed, because the far tier exposed it: **`keaCut` was a hard axis-aligned box test**, so grass
+stopped dead along a ruled line at every tarmac edge. Invisible while the field faded out at 14 m
+and the car park is 30 away. Now a signed distance with a 1.1 m verge whose *width* is
+noise-perturbed — never its position, so no blade can enter a cut-out.
 
-1920×1080, HUD hidden, camera `(-8, 2.4, -6)` → `(6, 0.45, -30)` — a **diagonal** look across the
-field, chosen so a world-axis-aligned lattice crosses the frame at an angle and cannot hide in the
-perspective. Shot at `blobMinPull` 0.2 and 0.0 from the same build. Before: straight lanes and a
-right-angle corner. After: wandering channels, **no straight segment anywhere in the grass**, and a
-ground colour that is a soft wash with no lattice and no facet edge.
+## TODO 80 — CLOSED, BOTH HALVES
 
-## TWO THINGS FILED, NOT FIXED
+The hills' sculpt only ever scaled x and z, and **at the pole x and z are zero**, so it multiplied
+nothing — which is why a sculpt loop that looks like it should have fixed the flat cap never could.
+18 bands now, displaced along the vertex's own radius in 3D. And they wear `groundTint`, closing the
+horizon colour seam recorded as open in P4b, P4c *and* P4d. See `P4e_todo80_hills_AB.png`.
 
-- **TODO 79 — the hut roof is an inverted gable.** Verified from the geometry, not filed on report:
-  each panel's edges land at ±1.04 in y, so the two planes **meet at their lowest point (y 2.31 on
-  the centre line) and rise to 4.39 at both eaves.** The rotation signs are swapped. The ridge batten
-  at y 3.98 therefore floats 1.67 m above the valley it caps, and the collider says `ridge 4.05` — so
-  the bird walks an invisible *correct* ridge above a visible wrong one, which means the fix brings
-  the drawn roof to the collider, not the reverse. The wall gap is the same bug sideways and may
-  close on its own. One honest gap: I found no mesh named for a solar panel in `buildHut` — what
-  reads as off-pitch panels is most likely the twelve ridge battens riding `rl`'s wrong rotation.
-  Recorded as unconfirmed.
-- **TODO 80 — the rolling tussock hills have flat tops.** `SphereGeometry(rad,18,10)` at `scale.y`
-  0.2-0.3 collapses the polar bands into a genuinely flat cap, and the sculpt only perturbs x/z.
-  At 64-84 m that is a dead straight line against the sky — **and it is the only straight edge left
-  in the wide proof frame,** which is why you are reading about it here rather than finding it.
+## THREE THINGS THAT WENT WRONG, WORTH YOUR TIME
 
-## ALSO IN THE TREE
+- **The shader failed to compile for an hour while the game looked fine.** The far-grass function
+  went in the shared GLSL block while its uniforms were declared only for the grass family. Every
+  batteries-green signal held, and the measured effect of the whole feature was *one grey level* —
+  which reads as "the fix does not work", not "the shader is dead". `MATBREAK_OK` validates that the
+  patch targets exist; it cannot know whether the result compiles.
+- **The first far tier photographed as sheaves of wheat** — big, few blades, visibly coarser at
+  thirty metres than at three. And rMin 0.30 of 52 m left a **1.6 m ring of bare ground** between
+  the tiers. Coverage is bought with count; tiers must overlap.
+- **A false alarm that was a real bug.** `28_skifield_base` read 1215 against a floor of 1500 and
+  looked like the far tier burying the bull wheel. Three takes of one unchanged build read **490,
+  1067, 2038** — a coin flip straddling its own floor, because `rotation.z += dt*2.4` integrates
+  wall-clock deltas and the rig's clock pin cannot reach an integrator. Now `= G.time*2.4` and four
+  takes read **838, 838, 838, 838**. It is below the floor. **I did not lower the floor** — TODO 81
+  lays out the three ways out and leaves the choice to you, because it is a composition call.
 
-- `perf.mjs` had the camLock bug **twice**; P4c fixed one call site. Fixed the other.
-- An assertion's own message was a law-14 fuse (`undefined.toString`) and killed the battery instead
-  of reporting a finding. **My sabotage script scored that green** because it only grepped for
-  FINDINGS; it now judges a throw the way the gate does.
-- The dead-knob sweep now goes inside the nested blocks, with its limit stated in the file.
+## FRAMES
+
+`P4e_proof_edge_AB.png` (play camera, before/after) · `P4e_proof_air_AB.png` (from the air) ·
+`P4e_proof_wide_AFTER.png` · `P4e_todo80_hills_AB.png`.
 
 ## PROOF
 
-Nine batteries ALL PASS · gate CERTIFIED-SHIP · gate-selftest ALL PASS · fifteen sabotages all red ·
-bundle builds · 30/30 vantages shot, no retakes, no GAVE UP · diff 28/27 flagged (worst 0.2690 vs
-P4c's 0.2694) · boxdiff 12/7 changed · pxdiff 28 over band · subjects 16 checked, 2 missing (the two
-known TODO 75 reds) · sidebyside 33 pairs · bird readability held: 03 reads 9674/1600, 13 reads
-5683/900 · the 05/14 reshoot hazard is unchanged, still P4c's, no threshold touched.
+Nine batteries ALL PASS · gate CERTIFIED-SHIP · gate-selftest ALL PASS · edgefind-selftest ALL PASS ·
+seventeen sabotages all red (two were green until the assertions were fixed: a far tier of *zero*
+blades satisfied "its count matches the recipe", and a hill-tint threshold the untinted palette
+already met) · 30/30 vantages, no retakes, no GAVE UP · diff 28/27 flagged (worst 0.2552) · boxdiff
+12/8 · pxdiff 28 over band · subjects 16 checked, **3 missing** — the two known TODO 75 reds plus
+28_skifield_base, now deterministic and filed · readability held: 03 reads 8213/1600, 13 reads
+5131/900 · sidebyside 33 pairs.
 
 **Everything left flagged. The look is yours.**

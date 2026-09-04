@@ -1715,3 +1715,61 @@ RELATED, AND STILL OPEN: these same hills are the horizon COLOUR SEAM recorded i
 recipes — they are separate vertex-coloured geometry and do not wear `GRASS.groundTint`, so tinted
 flat ground meets untinted gold hill with a visible join. Same nine meshes, so the two are probably
 one piece.
+
+### 81. 28_skifield_base's BULL WHEEL FLOOR WAS BEING MET BY LUCK, AND NOW IT REPRODUCIBLY IS NOT
+Filed 2026-09-04, session 22 (REPLAT P4e). The DETERMINISM half is fixed; the THRESHOLD half is a
+composition call and therefore Eric's, so it is filed rather than decided.
+WHAT WAS WRONG: `G.towWheel.rotation.z += dt*2.4` INTEGRATED wall-clock deltas. The capture rig pins
+`G.time = 12.0` on every animation frame, and that pin cannot reach an integrator — so the wheel's
+angle depended on how many frames the settle got through and how long each took. Measured across
+three takes of ONE unchanged build: scarlet 490, 1067, 2038, against a floor of 1500. It straddled
+its own floor in both directions, which is a coin flip wearing the clothes of a regression — and it
+cost this session a false alarm, because the first P4e sweep read 1215 and looked like the far tier
+burying the wheel.
+WHAT IS FIXED: the wheel is now `rotation.z = G.time*2.4`, the same idiom the grass wind already
+uses. In play G.time advances by dt so the wheel turns exactly as it always did; under the pin it
+stops at one angle. Four consecutive takes now read **838, 838, 838, 838**. A battery asserts both
+halves — that no integrator is left, and, measured on the live object, that eight frames at a pinned
+clock leave the angle unmoved while advancing the clock does turn it.
+WHAT IS STILL OPEN, AND WHY IT WAS NOT DECIDED HERE: 838 is below the floor of 1500. The floor was
+calibrated against a frame where the wheel happened to sit at a favourable phase, so the assertion
+has always been phase-dependent and only ever passed by luck. **The floor was NOT lowered** — moving
+a threshold to meet the frame is the one thing FLAKES forbids. Three ways out, and choosing between
+them is a taste call:
+  (a) STAGE THE PHASE. Pin `G.towWheel.rotation.z` in 28_skifield_base's own stage the way the bird's
+      pose is pinned, so the showcase frame presents the wheel's face. Consistent with existing
+      practice (29_lodge_deck already stands the bird on a table for the composition). Needs care:
+      the game writes the angle every frame, so a PIN callback and the game loop would race — the
+      stage would have to win, or the game would need a `G.wheelLock` the way it has `G.camLock`.
+  (b) GIVE THE WHEEL A PHASE CONSTANT so that at the pinned clock it is face-on. Cheapest, but it is
+      fitting the world to the test and should be called that if it is chosen.
+  (c) ACCEPT that the vantage photographs the wheel edge-on and re-derive the floor from the now
+      deterministic frame — only defensible as a deliberate re-pin by Eric, never as a fix.
+WHERE TO JUDGE IT: 28_skifield_base. The wheel is the red disc above the blue base shed.
+
+### 82. HORIZON-SCALE GRASS NEEDS ALPHA CARDS, AND THE MEASUREMENT THAT SAYS SO IS IN P4e
+Filed 2026-09-04, session 22 (REPLAT P4e), as the honest remainder of that piece.
+WHAT P4e DELIVERED: the field's hard 14 m boundary is gone at the play camera — the grass tapers to
+the horizon and the colour seam across the old edge collapsed from 18.3 levels of blue to 2.7. From
+the AIR at fourteen metres up the improvement is large but the extent is still findable, because the
+far tier stops at 28 m and everything past that is ground.
+WHY IT STOPS AT 28 m, MEASURED AT THE RETINA FRAMEBUFFER (DPR 2, `perf.mjs bird`, best-of-12,
+interleaved, machine at load ~8):
+      no far tier                31.5 ms
+      far tier 225k over 28 m    40.7 ms     <- SHIPPED, +9 ms
+      far tier 450k over 40 m    48.0 ms     +16 ms
+      far tier 450k over 40 m, seg 1, no shadow   40.1 ms
+Real geometry to the horizon is simply not affordable: covering 28 m costs +9 ms and 40 m costs
++16 ms, and the map is 240 m across. Two levers were measured and both are small — dropping the
+shadow receive saves 2.4 ms, and seg 1 saves nothing at all, which says the cost is FILL and not
+vertices.
+WHAT WOULD BUY THE REST: alpha-tested CARDS. One quad carrying fifteen blades in a texture gets the
+same coverage for a fifteenth of the instances, which is exactly the ratio the fill measurement says
+is needed. It was not attempted in P4e because it wants a CC0 grass alpha atlas (an asset and a
+licence line), alpha-to-coverage or an alpha test with the sorting that implies, and its own LOD
+handover to the geometry tier — that is a piece, not a tuning, and shipping it half-built would have
+put a second ring in the field.
+DO NOT reach for "just extend the radius" instead. It was measured and it is worse than doing
+nothing: at 40 m with the count raised to hold density the edge does not disappear, it MOVES, and
+`edgefind` scores it 16.90 against the 14 m field's 5.92, because at that range the fade compresses
+into a handful of pixels near the horizon. A bigger disc is still a disc.

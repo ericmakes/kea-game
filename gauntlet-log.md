@@ -4394,3 +4394,102 @@ left the defect in the layer that covers the closest ten metres of every play fr
   03_kea_plate 9674 against a floor of 1600, 13_idle_preen 5683 against 900. stability 0 unstable on
   its default four; the two grass vantages tested separately and attributed above.
   **ALL OF IT LEFT FLAGGED — the look is Eric's.**
+
+## SESSION 22 — 2026-09-04, Eric played P4d: the grass is right, and you can see where it STOPS
+
+Lock taken (none held), released as the final act. Tip certified before anything moved (specimen
+`2219325fdb3ebf535d749399d625275d`, matching the log's P4d line). Recipe in ARTBIBLE under REPLAT
+P4e. **Nothing re-pinned — 27 of 28 vantages flagged.**
+
+- **I BUILT THE INSTRUMENT BEFORE THE FIX, AND IT CHANGED THE FIX.** "Prove no ring, edge or colour
+  seam is findable" needs a FINDER; diff asks whether a frame changed, pxdiff asks how many pixels
+  moved, and neither can look at one frame and say whether it contains a line. `edgefind.mjs` scans
+  rows and columns and reports FINDABILITY — the peak step over the typical step ELSEWHERE in the
+  same scan, so a lighting gradient scores ~1 and a line scores high. It has a contract test.
+  **ITS SELFTEST FOUND THREE BUGS ON ITS FIRST RUN**, including a crash on a perfectly flat frame —
+  a law-14 fuse in the instrument itself, one piece after P4d wrote up exactly that shape — and a
+  hard 60-level step scoring 2.00 because the denominator was made entirely of the line being
+  measured.
+
+- **THEN THE MEASUREMENT MOVED THE INSTRUMENT.** Shot under control — the SAME image rows, same
+  light, same fog, once with blades standing there and once without — the field's edge is
+  `chroma 49 -> 82` and `luma 166.3 -> 158.8`. **It is a SATURATION seam, not a brightness one.**
+  I was about to certify "no colour seam is findable" with a luminance-and-texture detector that
+  was structurally unable to see one. A third channel went in, and a selftest case that L and G must
+  both be blind to.
+
+- **TWO OF THE THREE OPTIONS IN THE BRIEF LOST ON MEASUREMENT, AND THE LOSSES ARE THE USEFUL PART.**
+  A BIGGER DISC does not remove the edge, it MOVES it, and scores **worse** — 16.90 against 5.92 —
+  because at 40 m the fade compresses into a handful of pixels near the horizon. PAINTING THE GROUND
+  cannot do it alone: setting the terrain albedo to **BLACK** at the band beyond the blades moves its
+  luminance 18% and its blue by one and a half levels, and fog is 0.55% at twelve metres. Whatever
+  the rest of that pixel is, an albedo multiplier does not reach it. What makes a bladed pixel
+  different is OCCLUSION, so the answer is geometry.
+
+- **THE SHADER FAILED TO COMPILE FOR AN HOUR WHILE THE GAME LOOKED FINE.** The far-grass function
+  went in the shared GLSL block while its uniforms were declared only for the grass family, so every
+  other isotropic ground material compiled a function referencing identifiers that did not exist.
+  Batteries green, MATBREAK_OK true, `G.mats.breakup.ok` true, and the measured effect of the whole
+  feature was **one grey level** — which reads as "the fix does not work", not as "the shader is
+  dead". MATBREAK_OK validates that the patch TARGETS exist; it cannot know whether the result
+  compiles. Found by probing the live WebGL program for its link status. Declaration and uniforms
+  travel together.
+
+- **THE FIRST FAR TIER WAS WRONG TWICE AND BOTH WERE VISIBLE IN ONE FRAME.** Big-and-few blades
+  (34-86 cm, 45-105 mm wide) photographed as **sheaves of wheat** — grass visibly coarser at thirty
+  metres than at three, which says the country changes as you walk and reads worse than the bare
+  ground it replaced. And rMin 0.30 of a 52 m radius is 15.6 m against a clump radius of 14, so it
+  shipped a **1.6 m ring of bare ground** between the tiers. Coverage is bought with COUNT; the
+  tiers must OVERLAP.
+
+- **fadeBand IS THE LEVER AND IT HAD TO BECOME PER LAYER.** A far tier with the near tier's 0.11
+  relocates the edge rather than dissolving it. Measured at its own outer edge: 0.11 -> **12.79**,
+  0.30 -> **7.17**, 0.55 -> **5.77**, and at 0.55 the peak moves off the TEXTURE channel entirely.
+  It must not be raised globally — the same width under the camera stunts the blades in the most
+  visible part of the frame.
+
+- **THE COST, AT THE RETINA FRAMEBUFFER, AND IT IS THE NUMBER THAT BOUNDS THE PIECE.** DPR 2,
+  `perf.mjs bird`, best-of-12, interleaved three times: no far tier **31.5 ms**, ground term only
+  **30.3 ms** (free), far tier 225k over 28 m **40.7 ms**, 450k over 40 m **48.0 ms**. Dropping the
+  shadow RECEIVE saves 2.4 ms; **seg 1 saves nothing at all**, which says the cost is FILL and not
+  vertices — and that is precisely what alpha cards fix. Geometry to the horizon is not affordable
+  and the map is 240 m across.
+
+- **WHAT IT BOUGHT, AND WHAT IT DID NOT.** The colour seam across the old boundary is gone: the blue
+  gap across it was 18.3 levels, now 2.7. Findability at the play camera is 6.16 against P4d's 5.97
+  — unchanged in magnitude but the peak has moved off the texture channel onto chroma, where the
+  frame's ambient variation already sat. **FROM THE AIR THE EXTENT IS STILL FINDABLE.** The hard arc
+  is gone and the improvement is large, but the far tier stops at 28 m. **This piece did not achieve
+  "invisible from the air" and the report says so rather than hedging.** TODO 82 carries it.
+
+- **THE CUT-OUTS WERE RIGHT ANGLES AND ONLY THE FAR TIER COULD EXPOSE THEM.** `keaCut` was a hard
+  axis-aligned box test, so grass stopped dead along a ruled line at every tarmac edge — invisible
+  for as long as the field faded out at fourteen metres and the car park was thirty away. Now a
+  signed distance with a 1.1 m verge whose WIDTH is noise-perturbed, never its position, so no blade
+  can appear inside a cut-out and every existing assertion about what they cover still holds.
+
+- **TODO 80 CLOSED, BOTH HALVES.** The hills' sculpt only ever scaled x and z — and **at the pole x
+  and z are zero**, so it multiplied nothing and no amount of noise in it could break the flat cap.
+  That is why the defect survived a sculpt loop that looked like it should have fixed it. 18 bands
+  now, displaced along the vertex's own radius in 3D, two octaves keyed on height as well as angle.
+  And they wear `groundTint`, closing the horizon colour seam recorded as open in P4b, P4c and P4d.
+
+- **A FALSE ALARM THAT WAS A REAL BUG: THE BULL WHEEL.** The first P4e sweep read
+  28_skifield_base `scarlet` 1215 against a floor of 1500 and it looked like the far tier burying
+  it. Three takes of ONE unchanged build read **490, 1067, 2038** — a coin flip straddling its own
+  floor. Cause: `rotation.z += dt*2.4` INTEGRATES wall-clock deltas and the rig's `G.time = 12.0`
+  pin cannot reach an integrator. Now `= G.time*2.4`, the same idiom the grass wind uses, and four
+  consecutive takes read **838, 838, 838, 838**. It is below the floor. **THE FLOOR WAS NOT
+  LOWERED** — moving a threshold to meet a frame is the one thing FLAKES forbids. TODO 81 records
+  the three ways out and leaves the choice to Eric, because which one is right is a composition
+  call.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, gate-selftest ALL PASS,
+  edgefind-selftest ALL PASS, **seventeen P4e sabotages, all seventeen red** (two of them green
+  until the assertions were fixed: a far tier of zero blades satisfied "its count matches the
+  recipe", and a hill-tint threshold that the UNTINTED palette already met). Bundle builds. 30/30
+  vantages shoot with no retakes and no GAVE UP. diff 28 compared 27 flagged (worst 0.2552).
+  boxdiff 12 compared 8 changed. pxdiff 28 over band. subjects 16 checked **3 missing — the two
+  known TODO 75 reds plus 28_skifield_base, now deterministic and filed as TODO 81**. Bird
+  readability held: 03_kea_plate 8213 against 1600, 13_idle_preen 5131 against 900. sidebyside 33
+  pairs. **ALL OF IT LEFT FLAGGED — the look is Eric's.**

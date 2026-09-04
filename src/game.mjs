@@ -472,6 +472,40 @@ const GRASS={
      distance; this layer is the fix for the foreground, where it genuinely works and is cheap. */
   cover:{count:150000, near:10, h:[0.055,0.130], w:[0.013,0.026], lean:[0.28,0.66],
          bare:0.0, clumpM:0.55, clumpPull:0.10, clumpPullVar:0.06, taper:0.45, lodFrac:0.88, seg:2},
+  /* ---- THE FAR TIER — REPLAT P4e ----
+     WHY IT IS GEOMETRY AND NOT PAINT, WHICH IS THE MEASUREMENT THAT DECIDED THIS PIECE. The
+     obvious cheap fix is to tint the ground to match the field. It was built, and it does not
+     work, and the reason is worth keeping: the ground's rendered colour is barely made of its own
+     albedo. Setting the terrain's albedo to BLACK at the band just beyond the blades moves its
+     luminance by 18% (159.5 -> 131.1) and its blue by ONE AND A HALF LEVELS. Fog cannot explain it
+     - FogExp2 at 0.0062 is 0.55% at twelve metres. Whatever the rest of that pixel is, an albedo
+     multiplier cannot reach it, and the sweep says so: gain 1 through 4 moved the blue of that
+     band from 115.0 to 112.9 against a target of 96.7. A tint is a lever with almost nothing on
+     the end of it.
+     What makes a bladed pixel different is that blades OCCLUDE - they hide bright ground and
+     brighter sky behind a lot of thin, self-shadowing, back-lit geometry. Nothing painted on a
+     flat plane reproduces that, so the far tier is real instances.
+     IT IS AN ANNULUS, NOT A DISC. rMin 0.30 puts every one of its blades outside 0.3 of its own
+     radius, because inside that the clump and cover layers have the ground covered and a far blade
+     there is an instance nobody can see.
+     ITS BLADES ARE FEW, BIG AND CHEAP. Four to five times the width of a clump blade and about
+     twice the height, at seg 2 - five vertices, three triangles. At twenty to fifty metres a 9 mm
+     blade is a fraction of a pixel and costs a whole vertex shader to contribute nothing, which is
+     what a naive radius extension spends its entire budget on. The count, radius and width were
+     swept and the tables are in ARTBIBLE. */
+  /* THE FIRST CUT MADE THEM BIG AND FEW AND IT WAS WRONG, WHICH IS THE OTHER HALF OF THE LESSON.
+     110k blades of 34-86 cm at 45-105 mm wide photographed as SHEAVES OF WHEAT: grass that is
+     visibly coarser at thirty metres than at three, which is a scale break and reads worse than the
+     bare ground it replaced. Screen coverage bought with blade SIZE breaks the one thing a far tier
+     must preserve, which is that the country is made of the same grass all the way out.
+     SO THE FAR BLADE IS THE NEAR BLADE. h and w sit just above the carpark profile's 0.20-0.48 m
+     and 9-20 mm — enough to hold a pixel at range, not enough to change species — and the coverage
+     is bought with COUNT instead. The sweep is in ARTBIBLE; 300k reads patchy at the road and 450k
+     reads continuous. */
+  farLayer:{count:225000, near:28, rMin:0.24,
+            h:[0.22,0.52], w:[0.012,0.028], lean:[0.10,0.36],
+            bare:0.22, clumpM:1.60, clumpPull:0.44, clumpPullVar:0.28,
+            taper:0.55, lodFrac:0.08, seg:2, shadow:false, fadeBand:0.55},
   /* ---- THE GROUND UNDER THE FIELD ----
      Eric's note said the monochrome yellow-beige runs across grass AND GROUND, and the ground was
      the half no blade can fix. The terrain is a vertex-colour blend that averages to #9b9787 at the
@@ -481,6 +515,64 @@ const GRASS={
      It costs nothing — it is one colour on one material — and it is the single largest thing in
      P4b that the play camera actually sees. */
   groundTint:0xA8B078,
+  /* ---- THE GROUND *IS* THE GRASS — REPLAT P4e ----
+     Eric played P4d and the field reads perfectly, but he can see WHERE IT STOPS. The blade field
+     is a 14 m disc anchored to the camera; beyond it the ground is bare terrain, and the boundary
+     is the loudest line in a wide frame.
+     THE SEAM WAS MEASURED UNDER CONTROL BEFORE ANYTHING WAS BUILT, and the answer is not the one
+     the eye reports. The SAME image rows, same light, same fog, shot once with blades standing
+     there and once without:
+         bare ground   rgb 178.1 166.5 128.9    chroma 49    luma 166.3
+         with blades   rgb 181.9 157.9  99.7    chroma 82    luma 158.8
+     Red does not move, luminance moves 4.5%, and CHROMA moves by two thirds. **The field's edge is
+     a SATURATION seam, not a brightness one** — the ground beyond it is not darker, it is washed
+     out. That is why `grassMul` below is a per-channel multiplier of almost exactly those ratios
+     and not a brightness knob, and it is why gauntlet/verify/edgefind.mjs grew a chroma channel:
+     the instrument was about to certify "no colour seam" while structurally unable to see one.
+     AND EXTENDING THE BLADE RADIUS DOES NOT FIX IT — MEASURED, NOT ASSUMED. Shot at near 40 m with
+     the count raised to hold density (980k blades), the edge does not go away, it MOVES, and the
+     edge finder scores it WORSE than the shipped 14 m one: 16.90 against 5.92. At 40 m the fade
+     band is compressed into a handful of pixels near the horizon, so the transition is SHARPER in
+     screen space even though it is softer in metres. A bigger disc is still a disc.
+     SO THE GROUND STOPS BEING SOMETHING THE FIELD SITS ON AND BECOMES THE FIELD'S OWN FAR TIER.
+     It wears the grass's colour and the grass's clumping everywhere, and the blades are near-field
+     DETAIL laid on top of it. There is then no radius to give away, by construction, because
+     nothing changes at one.
+     THE DRIFT PATTERN IS THE BLADE FIELD'S OWN, NOT A LOOKALIKE. `keaFarFbm` is character-for-
+     character the blade shader's `keaFbm`, over the same `bareScale`, off the same position hash —
+     so where the ground reads bare is exactly where a blade would have declined to grow. A battery
+     asserts the two expressions are identical rather than merely similar, because "a similar noise
+     field" is how a seam gets reintroduced by a later tune of one of them. */
+  far:{
+    /* MEASURED, from the controlled shot above: blades/bare = 1.021 / 0.948 / 0.773. Red barely
+       moves, blue drops by a quarter. Rounded to three places and used as-is — this is a number
+       that was taken, not chosen, and if the blade palette is retuned it should be re-taken. */
+    grassMul:[1.021,0.948,0.773],
+    /* THE MEASURED RATIO IS A DIRECTION; `gain` IS HOW FAR ALONG IT TO GO, AND IT IS CALIBRATED
+       RATHER THAN CHOSEN. The ratio above was read off RENDERED pixels, which are fogged — so
+       applying it to the ALBEDO under-corrects by exactly the fog fraction at the rows it was
+       measured on. The effective multiplier is 1+(grassMul-1)*gain, and gain was swept and read
+       back off the frame until the ground band landed on the blade band's own colour. Because fog
+       is a lerp toward one colour, matching the two UNFOGGED colours matches them at every
+       distance at once - which is why one number serves the whole field and not a distance ramp.
+       The sweep is in ARTBIBLE. */
+    gain:1.0,
+    /* where the field would be BARE the ground is already right: bare ground is what it is. Unity
+       rather than a second invented colour, so the correction has exactly one measured half. */
+    soilMul:[1.0,1.0,1.0],
+    amount:1.0,
+    /* a mound-scale mottle so the TEXTURE frequency continues past the blades rather than stopping
+       with them. It is FADED OUT WITH DISTANCE on purpose: 1.35 m features are sub-pixel by about
+       sixty metres and procedural noise has no mipmap, so left on it would shimmer along the
+       horizon — trading a static seam for a moving one. */
+    /* 0.16 AND A 120 m FADE, BOTH RAISED AFTER SHOOTING THE AIR FRAME. At 0.075 over 55 m the term
+       was invisible from fourteen metres up, which is the one view it was most needed in — the far
+       tier stops at 28 m and everything past that is ground. Raised until the far ground carries a
+       drift structure that reads as tussock country rather than as paint, and no further: this is a
+       MOTTLE standing in for grass nobody can resolve, and pushed harder it becomes a pattern in
+       its own right. Still faded out at the far end, for the anti-shimmer reason above. */
+    moundAmt:0.16, moundFadeM:120.0,
+  },
   /* ---- THE GROUND'S OWN COLOUR MASK — REPLAT P4d's MEASUREMENT SEAM ----
      P4c proved the mound lattice by SHOOTING IT at three clumpM multipliers and watching the
      patches shrink and grow. The other three candidate systems for "the field reads in squares"
@@ -575,6 +667,11 @@ const GRASS={
      the lattice it pulls toward. It is kept as a knob rather than deleted so the next session can
      shoot the exemption instead of arguing about it. */
   blobScan:true, blobMinPull:0.0, bareScale:0.145, bareSoft:0.12, edgeVar:0.26,
+  /* REPLAT P4e: the width IN METRES of the verge where grass thins into a cut-out. 1.1 m is about
+     a stride, which is what the edge of a gravel car park in tussock country actually looks like —
+     and it is wide enough to read as a verge at thirty metres, which is the range the far tier now
+     shows the car park's edge from. */
+  cutSoft:1.1,
   /* THINNING. `fade` is how sharply a blade shrinks out as it crosses its own cull threshold —
      `fadeBand` is the WIDTH of that shrink window in density units, and the density ramp is
      stretched to 1+fadeBand on purpose so that "full density" really means every blade at full
@@ -1073,9 +1170,53 @@ const MATBREAK_PATCH=[
     ['vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
      'vec3 mapN = keaBlendN( normalMap, KEA_G );']]],
 ];
+/* REPLAT P4e's SEAM IS SEPARATE, and deliberately so: it is installed on the GRASS family alone,
+   where the other three run on every isotropic ground family. It goes in AFTER the vertex colours
+   rather than in map_fragment, because the terrain's colour is a vertex-colour BLEND over the scan
+   and the thing that has to match the blade field is the FINAL base colour, not the albedo texture
+   underneath it. Validated against the installed three exactly like the other three are. */
+/* ---- REPLAT P4e: THE GROUND IS THE GRASS ----
+   ITS OWN STRING, NOT PART OF MATBREAK_GLSL, AND THE FIRST CUT LEARNED THAT THE HARD WAY. The
+   function was put in the shared block while its UNIFORMS were declared only for the grass family,
+   so gravel, asphalt and snow compiled a function referencing identifiers that did not exist:
+   `ERROR: 'uFarSoft' : undeclared identifier`. Every isotropic ground material failed to link.
+   AND THE GAME LOOKED FINE, WHICH IS THE REAL LESSON. MATBREAK_OK validates that the patch TARGETS
+   still exist; it cannot know whether the result compiles. The frame came back, the batteries were
+   green, G.mats said breakup:true, and the measured effect of the whole feature was 1 grey level —
+   which read as "the fix did not work" rather than as "the shader is dead". Found by probing the
+   live WebGL program for its link status, which is now what matShaderState does every boot.
+   Declaration and uniforms travel together, always.
+   keaFarFbm IS CHARACTER-FOR-CHARACTER THE BLADE SHADER'S keaFbm. Same two octaves, same 0.62/0.38
+   weights, same 2.17 lacunarity, same 7.3 offset, off the same position hash — so the ground's
+   grass-versus-bare drift is not a lookalike of the field's, it IS the field's, continued past the
+   last blade. A battery asserts the two expressions are identical, because "a similar noise field"
+   is exactly how a seam gets quietly reintroduced by a later tune of one of them. */
+const MATFAR_GLSL=`
+uniform vec3 uFarGrassMul, uFarSoilMul;
+uniform float uFarAmt, uFarBare, uFarSoft, uFarBareScale, uFarMoundK, uFarMoundAmt, uFarMoundFade;
+float keaFarFbm(vec2 p){ return keaVal(p)*0.62+keaVal(p*2.17+7.3)*0.38; }
+vec3 keaFarGrass(vec3 c, vec2 w, float dist){
+  /* where the field would grow, and where it would leave the ground open */
+  float alive=smoothstep(uFarBare-uFarSoft,uFarBare+uFarSoft,keaFarFbm(w*uFarBareScale));
+  vec3 o=mix(c*uFarSoilMul, c*uFarGrassMul, alive);
+  /* the mound-scale mottle, faded out with distance so sub-pixel noise cannot shimmer */
+  float nearK=1.0-smoothstep(uFarMoundFade*0.45,uFarMoundFade,dist);
+  if(nearK>0.001){
+    float mound=keaFarFbm(w*uFarMoundK);
+    o*=1.0+(mound-0.5)*2.0*uFarMoundAmt*nearK;
+  }
+  return mix(c,o,uFarAmt);
+}
+`;
+const MATFAR_PATCH=[
+  ['color_fragment',[
+    ['\tdiffuseColor *= vColor;',
+     '\tdiffuseColor *= vColor;\n\tdiffuseColor.rgb = keaFarGrass( diffuseColor.rgb, '+
+     'vKeaWorld.xz, length(vKeaWorld - cameraPosition) );']]],
+];
 const MATBREAK_OK=(()=>{
   const C=THREE.ShaderChunk||{};
-  for(const [name,pairs] of MATBREAK_PATCH){
+  for(const [name,pairs] of MATBREAK_PATCH.concat(MATFAR_PATCH)){
     if(typeof C[name]!=='string')return 'three has no ShaderChunk.'+name;
     for(const [from] of pairs)
       if(C[name].indexOf(from)<0)return 'ShaderChunk.'+name+' no longer contains: '+from;
@@ -1098,9 +1239,12 @@ function matChunk(src,name,pairs){
    THE UNIFORM OBJECTS ARE KEPT ON THE MATERIAL and the SAME objects are handed to the shader, so a
    later write reaches the GPU. Assigning fresh objects into sh.uniforms is the classic
    onBeforeCompile mistake - it works until the first time you try to change a value. */
-function matBreakup(m,F){
+/* REPLAT P4e. `far` is true only for the grass-family terrain: the code is INJECTED rather than
+   merely disabled elsewhere, so gravel, asphalt and snow pay nothing for a term they do not use. */
+function matBreakup(m,F,far){
   if(MATBREAK_OK!==true)return m;
-  const B=MATS.breakup;
+  const B=MATS.breakup, FG=GRASS.far;
+  const V3=a=>new THREE.Vector3(a[0],a[1],a[2]);
   const U=m.userData.keaU={
     uKeaPatch:{value:F.tileM/B.patchM},
     uKeaMacro:{value:1/B.macroM},
@@ -1114,6 +1258,21 @@ function matBreakup(m,F){
     uKeaMacroAmt:{value:0},          // matDress lifts these when the maps arrive
     uKeaMacroRough:{value:0},
   };
+  /* THE FAR-GRASS UNIFORMS COME OFF THE SAME BLOCKS THE BLADES READ, never off a second copy. The
+     bare threshold and its softness are the CARPARK BIOME'S, because that is the field this ground
+     lies under; taking them from anywhere else is how the ground and the blades drift apart. */
+  if(far){ const B4=GRASS.biomes.carpark;
+    Object.assign(U,{
+      /* the gain is folded in HERE, once, so the shader sees one multiplier and the recipe keeps
+         the measured direction and the calibrated distance as two separate readable numbers */
+      uFarGrassMul:{value:V3(FG.grassMul.map(v=>1+(v-1)*FG.gain))},
+      uFarSoilMul:{value:V3(FG.soilMul.map(v=>1+(v-1)*FG.gain))},
+      uFarAmt:{value:FG.amount},
+      uFarBare:{value:B4.bare}, uFarSoft:{value:GRASS.bareSoft},
+      uFarBareScale:{value:GRASS.bareScale},
+      uFarMoundK:{value:1/B4.clumpM}, uFarMoundAmt:{value:FG.moundAmt},
+      uFarMoundFade:{value:FG.moundFadeM},
+    }); }
   m.onBeforeCompile=(sh)=>{
     Object.assign(sh.uniforms,U);
     /* WORLD POSITION, NOT MODEL POSITION, and it matters. The macro field has to be continuous
@@ -1128,6 +1287,9 @@ function matBreakup(m,F){
     sh.fragmentShader='varying vec3 vKeaWorld;\nuniform float uKeaPatch;\nuniform float uKeaMacro;\n'+
       'uniform float uKeaMacroAmt;\nuniform float uKeaMacroRough;\nuniform float uKeaSharp;\n'+
       'uniform vec3 uKeaMeanA;\nuniform float uKeaMeanR;\nuniform float uKeaVar;\n'+MATBREAK_GLSL+
+      /* THE FAR BLOCK CARRIES ITS OWN UNIFORMS, so a family without it compiles without them and
+         cannot reference an identifier that was never declared. */
+      (far?MATFAR_GLSL:'')+
       'KeaTiles KEA_G;\n'+sh.fragmentShader;
     /* THE TAPS ARE COMPUTED ONCE, in the albedo chunk, and reused by the other two. The order is
        three's and is not an assumption: meshphysical_frag runs map_fragment, then
@@ -1135,6 +1297,8 @@ function matBreakup(m,F){
        all (matDress sets them as a set), so USE_MAP being on is what guarantees KEA_G is filled
        before the other two read it. */
     for(const [name,pairs] of MATBREAK_PATCH) sh.fragmentShader=matChunk(sh.fragmentShader,name,pairs);
+    if(far) for(const [name,pairs] of MATFAR_PATCH)
+      sh.fragmentShader=matChunk(sh.fragmentShader,name,pairs);
   };
   return m;
 }
@@ -1165,7 +1329,7 @@ function matGround(fam,rough){
   const base=fam==='grass'?new THREE.Color(GRASS.groundTint).convertSRGBToLinear()
                           :new THREE.Color(1,1,1);
   m.userData.matFamily=fam; m.userData.matBase=base; m.userData.matRough=rough;
-  { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF); }
+  { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF,fam==='grass'); }
   matFam(fam).mats.push(m); matDress(m); return m;
 }
 function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshStandardMaterial(Object.assign({color:col,roughness:0.82,metalness:0.0,envMapIntensity:0.3},extra||{}));
@@ -2274,7 +2438,7 @@ uniform vec2 uAnchor;
 uniform float uTime, uNear, uLodNear, uLodFar, uBand, uComp;
 uniform float uGust, uFlutter, uGustHz, uFlutterHz, uGustM;
 uniform float uClumpM, uClumpJit, uClumpPull, uClumpPullVar, uBare;
-uniform float uBlobScan, uBareScale, uBareSoft, uEdgeVar;
+uniform float uBlobScan, uBareScale, uBareSoft, uEdgeVar, uCutSoft;
 uniform vec2 uHmul; uniform float uHamp;
 uniform vec4 uCut0, uCut1, uCut2, uCut3;      // xz centre, xz half-extent; w<=0 disables
 uniform vec2 uHrange, uWrange, uLrange;
@@ -2305,7 +2469,25 @@ float keaVal(vec2 p){
              mix(keaGH(i+vec2(0.0,1.0)),keaGH(i+vec2(1.0,1.0)),u.x),u.y);
 }
 float keaFbm(vec2 p){ return keaVal(p)*0.62+keaVal(p*2.17+7.3)*0.38; }
-bool keaCut(vec4 c, vec2 w){ return c.w>0.0 && abs(w.x-c.x)<c.z && abs(w.y-c.y)<c.w; }
+/* ---- THE CUT-OUTS ARE SOFT NOW, AND THE FAR TIER IS WHAT EXPOSED THEM — REPLAT P4e ----
+   This was "abs(w.x-c.x)<c.z && abs(w.y-c.y)<c.w": a hard axis-aligned box test that killed a
+   blade outright. Every cut-out therefore ended in a RULED RIGHT ANGLE — the same defect P4c and
+   P4d spent two sessions removing from the mound lattice — and nobody had seen it because the
+   field faded out at fourteen metres and the car park is thirty away. Give the grass the range to
+   reach the tarmac and it arrives at it along a straight line.
+   A SIGNED DISTANCE TO THE BOX, then a ramp. Negative inside, so the surfaces stay swept exactly
+   as they were and no blade can grow through the road; the ramp lives entirely OUTSIDE the box, so
+   the batteries that assert the cut-outs cover the road still hold to the millimetre.
+   THE NOISE VARIES THE RAMP'S WIDTH, NOT ITS POSITION, which is the safe way round: at sd<=0 the
+   smoothstep is zero whatever the noise says, so a verge can wander in how far it thins but can
+   never put a blade inside the box. */
+float keaCutK(vec4 c, vec2 w, float soft){
+  if(c.w<=0.0) return 1.0;
+  vec2 d=abs(w-c.xy)-c.zw;
+  float sd=min(max(d.x,d.y),0.0)+length(max(d,0.0));
+  float n=(keaFbm(w*0.22)-0.5)*2.0;
+  return smoothstep(0.0, max(0.05, soft*(1.0+n*0.6)), sd);
+}
 void keaGrass(inout vec3 t){
   /* ---- WHERE THIS BLADE STANDS ----
      The lattice offset is a fixed point on a unit disc; the anchor is the camera, snapped to a
@@ -2351,8 +2533,11 @@ void keaGrass(inout vec3 t){
   float alive=uBare<=0.0?1.0
     :smoothstep(uBare-uBareSoft,uBare+uBareSoft,keaFbm(w*uBareScale));
 
-  /* the places grass does not grow: road, carpark, hut slab, pen — or piste, tow line, lodge */
-  if(keaCut(uCut0,w)||keaCut(uCut1,w)||keaCut(uCut2,w)||keaCut(uCut3,w))alive=0.0;
+  /* the places grass does not grow: road, carpark, hut slab, pen — or piste, tow line, lodge.
+     MULTIPLIED, not branched: four soft factors, so two overlapping cut-outs thin each other
+     rather than one of them winning outright at a seam between them. */
+  alive*=keaCutK(uCut0,w,uCutSoft)*keaCutK(uCut1,w,uCutSoft)
+        *keaCutK(uCut2,w,uCutSoft)*keaCutK(uCut3,w,uCutSoft);
 
   /* ---- THIS BLADE'S POSE, all of it hashed from the world position ---- */
   vec2 h1=keaGH2(w*0.911), h2=keaGH2(w*1.703+11.7);
@@ -2486,7 +2671,15 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
     /* the mean spacing of this layer's own scatter, which is what the anchor snaps to */
     uSnap:{value:GRASS.snap},
     uNear:{value:tier.near}, uLodNear:{value:tier.lodNear}, uLodFar:{value:tier.lodFar},
-    uBand:{value:GRASS.fadeBand}, uComp:{value:GRASS.comp},
+    /* REPLAT P4e: fadeBand IS PER LAYER NOW, exactly as taper and seg already were, and it is the
+       single lever that dissolves a tier's outer edge rather than relocating it. It is the WIDTH of
+       the window a blade shrinks out across, so a wide band turns a density cliff into a long taper
+       of blades getting shorter — which is what the eye needs at a handover and what a near layer
+       must NOT have, because there the same width would stunt blades under the camera. Measured:
+       at the far tier's edge, 0.11 scores 12.79 findability, 0.30 scores 7.17 and 0.55 scores 5.77
+       with the peak moving off the texture channel entirely. The near layers keep the 0.11 P4
+       tuned. */
+    uBand:{value:B.fadeBand===undefined?GRASS.fadeBand:B.fadeBand}, uComp:{value:GRASS.comp},
     uGust:{value:GRASS.windGust}, uFlutter:{value:GRASS.windFlutter},
     uGustHz:{value:GRASS.gustHz}, uFlutterHz:{value:GRASS.flutterHz}, uGustM:{value:GRASS.gustM},
     uClumpM:{value:B.clumpM}, uClumpJit:{value:GRASS.clumpJit},
@@ -2499,6 +2692,7 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
     uBlobScan:{value:(GRASS.blobScan&&
       (B.clumpPull===undefined?GRASS.clumpPull:B.clumpPull)>GRASS.blobMinPull)?1:0},
     uBareScale:{value:GRASS.bareScale}, uBareSoft:{value:GRASS.bareSoft},
+    uCutSoft:{value:GRASS.cutSoft},
     uEdgeVar:{value:GRASS.edgeVar},
     uHmul:{value:new THREE.Vector2(H.mul[0],H.mul[1])}, uHamp:{value:H.amp},
     uCut0:{value:V4(C[0])}, uCut1:{value:V4(C[1])}, uCut2:{value:V4(C[2])}, uCut3:{value:V4(C[3])},
@@ -2562,11 +2756,18 @@ function grassBladeGeo(seg,taper,bend){
    SUNFLOWER SPACING, not uniform random: a random disc scatter clumps and voids on its own, and
    those voids are indistinguishable from the deliberate bare ground the clumping puts in. The
    golden-angle spiral is even, and the jitter that breaks its regularity is added on top. */
-function grassLattice(n){
+/* REPLAT P4e: AN INNER RADIUS, SO A LAYER CAN BE AN ANNULUS RATHER THAN A DISC. The far tier only
+   has to cover the ground the near layers have already given up on, and spending a third of its
+   instances under the clump layer where nothing can see them is a third of its cost wasted.
+   `r = sqrt(rMin^2 + (1-rMin^2)*u)` is the area-uniform draw over an annulus - the same inverse-CDF
+   the plain sqrt is, with the inner disc removed - so the ring is as evenly covered as the disc
+   was, and rMin 0 gives back the original expression exactly. */
+function grassLattice(n,rMin){
   const off=new Float32Array(n*2), GA=Math.PI*(3-Math.sqrt(5));
+  const r0=(rMin||0)*(rMin||0);
   const h=(i,k)=>{ const v=Math.sin(i*12.9898+k*78.233)*43758.5453; return v-Math.floor(v); };
   for(let i=0;i<n;i++){
-    const r=Math.sqrt((i+0.5)/n), a=i*GA;
+    const r=Math.sqrt(r0+(1-r0)*((i+0.5)/n)), a=i*GA;
     const jr=(h(i,1)-0.5)*0.9/Math.sqrt(n), ja=(h(i,2)-0.5)*GA*0.9;
     off[i*2]  =Math.cos(a+ja)*(r+jr);
     off[i*2+1]=Math.sin(a+ja)*(r+jr);
@@ -2587,7 +2788,7 @@ function grassLayer(biome,L,name){
   geo.setAttribute('position',geo0.attributes.position);
   geo.setAttribute('normal',geo0.attributes.normal);
   geo.setAttribute('uv',geo0.attributes.uv);
-  geo.setAttribute('aOff',new THREE.InstancedBufferAttribute(grassLattice(L.count),2));
+  geo.setAttribute('aOff',new THREE.InstancedBufferAttribute(grassLattice(L.count,L.rMin),2));
   geo.instanceCount=L.count;
   /* A BOUNDING SPHERE BIG ENOUGH TO NEVER BE THE ANSWER. The vertex shader moves every blade to
      wherever the camera is, so three's idea of where this geometry lives is wrong by construction
@@ -2599,7 +2800,12 @@ function grassLayer(biome,L,name){
   const lf=L.lodFrac===undefined?GRASS.lodFrac:L.lodFrac;
   grassShader(m,L,{near:L.near,lodNear:L.near*lf,lodFar:L.near},biome);
   const mesh=new THREE.Mesh(geo,m);
-  mesh.frustumCulled=false; mesh.receiveShadow=true;
+  /* REPLAT P4e: RECEIVING A SHADOW IS PER LAYER, and on the far tier it is off. A shadow-map
+     lookup is a PER-FRAGMENT cost, and the far tier is hundreds of thousands of thin blades at a
+     grazing angle — which is the most overdrawn thing in the frame and the cheapest place to stop
+     paying for a lookup nobody can resolve at thirty metres. Measured, not assumed; the table is in
+     ARTBIBLE. `shadow:false` is a layer-spec key, so the clump and cover layers are untouched. */
+  mesh.frustumCulled=false; mesh.receiveShadow=(L.shadow!==false);
   /* NOT A SHADOW CASTER, and that is a budget decision rather than an oversight: a shadow pass
      over this many blades is a second full vertex pass for a contribution the transmission term
      and the ground's ambient occlusion already stand in for. */
@@ -2613,17 +2819,28 @@ function grassLayer(biome,L,name){
 /* THE LAYER SPECS. The clump layer takes the biome profile; the cover layer takes GRASS.cover and
    BORROWS the biome's colours, so the two layers cannot drift into different countries. */
 function grassSpecs(biome){
-  const B=GRASS.biomes[biome]||GRASS.biomes.carpark, T=grassTier(), C=GRASS.cover;
+  const B=GRASS.biomes[biome]||GRASS.biomes.carpark, T=grassTier(), C=GRASS.cover, F=GRASS.farLayer;
   const clump=Object.assign({},B,{count:T.count, near:T.near, seed:1.0});
   const cover=Object.assign({},C,{tint:B.tint, base:B.base, tip:B.tip,
     /* the cover is YOUNGER growth: greener, and it does not go rust at the tip the way a long
        outer leaf does. One number says that, rather than a second palette to keep in step. */
     seed:0.25});
-  return {clump,cover,B,T};
+  /* REPLAT P4e. THE FAR TIER BORROWS THE BIOME'S WHOLE PALETTE — base, tint triple and tip — and
+     that is not tidiness, it is the seam. A far tier with colours of its own is a ring of a
+     slightly different country drawn around the player, which is the artefact this piece exists to
+     remove, wearing a bigger radius. Its `seed` matches the clump layer's so the rust gradient runs
+     the same way through both. */
+  const far=Object.assign({},F,{tint:B.tint, base:B.base, tip:B.tip, seed:1.0});
+  return {clump,cover,far,B,T};
 }
 
 function buildGrass(biome){
-  const {clump,cover,B,T}=grassSpecs(biome);
+  const {clump,cover,far,B,T}=grassSpecs(biome);
+  /* the annulus covers pi*(1-rMin^2) of its disc, so its density is over the ring it actually
+     occupies and not over a disc a third of which it deliberately leaves empty */
+  const ringA=Math.PI*far.near*far.near*(1-far.rMin*far.rMin);
+  const farState=(inst)=>({count:far.count,near:far.near,rMin:far.rMin,bare:far.bare,
+    density:far.count/ringA, hi:far.h[1], wide:far.w[1], instances:inst});
   if(HEADLESS){
     G.grass={tier:GRASS.tier,instances:0,perBladeTris:2*GRASS.seg-1,headless:true,
              ignored:GRASSIGNORED.slice(), shader:GRASS_OK===true?true:GRASS_OK,
@@ -2631,19 +2848,24 @@ function buildGrass(biome){
              clumpM:B.clumpM,bare:B.bare,biome:biome,
              cover:{count:cover.count,near:cover.near,bare:cover.bare,
                     density:cover.count/(Math.PI*cover.near*cover.near),
-                    hi:cover.h[1],instances:0}}; return; }
+                    hi:cover.h[1],instances:0},
+             far:farState(0)}; return; }
   /* THE COVER GOES DOWN FIRST so the clumps are drawn over it — not that depth testing cares, but
-     the reading order of the code should match the reading order of the ground. */
+     the reading order of the code should match the reading order of the ground. The FAR tier goes
+     down before both, for the same reason: it is behind them. */
+  const fr=grassLayer(biome,far,'far');
   const cv=grassLayer(biome,cover,'cover');
   const cl=grassLayer(biome,clump,'clump');
   G.grassMesh=cl.mesh; G.grassMat=cl.mat;
-  G.grassCoverMat=cv.mat;
+  G.grassCoverMat=cv.mat; G.grassFarMat=fr.mat;
   G.grass={tier:GRASS.tier, instances:cl.count, shader:GRASS_OK===true?true:GRASS_OK,
            ignored:GRASSIGNORED.slice(), perBladeTris:cl.tris,
-           tris:cl.count*cl.tris+cv.count*cv.tris, near:T.near, density:cl.density,
+           tris:cl.count*cl.tris+cv.count*cv.tris+fr.count*fr.tris,
+           near:T.near, density:cl.density,
            lodNear:T.lodNear, lodFar:T.lodFar, clumpM:B.clumpM, bare:B.bare, biome:biome,
            cover:{count:cv.count,near:cover.near,bare:cover.bare,density:cv.density,
-                  hi:cover.h[1],instances:cv.count}};
+                  hi:cover.h[1],instances:cv.count},
+           far:farState(fr.count)};
 }
 function nightTint(m){ // foliage and bark go dark by construction: L_night is 0.30 x L_day
   if(!m)return m; G.nightMats=G.nightMats||[];
@@ -2874,21 +3096,46 @@ function buildCarpark(){
     const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
     m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m);
   }
-  // rolling tussock hills: the depth band between the flats and the peaks
+  /* ---- ROLLING TUSSOCK HILLS: the depth band between the flats and the peaks ----
+     TODO 80, FIXED IN REPLAT P4e. These were SphereGeometry(rad,18,10) squashed to scale.y 0.2-0.3
+     with a sculpt loop that only ever touched x and z. Ten height bands means the two nearest the
+     pole are already almost horizontal, and squashing to a quarter of the radius collapses them
+     into a genuinely FLAT CAP several metres across — which at their placement radius of 64-84 m
+     presents as a dead straight horizontal line against the sky. After P4d removed the last lattice
+     from the grass these were the only straight edges left in a wide frame, which is exactly why
+     they were written down rather than left for Eric to find twice.
+     TWO CHANGES AND THEY ARE BOTH ABOUT THE VERTICAL. The band count goes 10 -> 18 so the cap has
+     geometry to be shaped WITH, and the sculpt now displaces RADIALLY IN 3D — the vertex is pushed
+     along its own direction from the centre, so a point at the pole moves UP rather than sideways.
+     The old loop scaled x and z by k and left y alone, which is precisely why no amount of noise in
+     it could ever break a flat top: at the pole x and z are zero and k multiplies nothing.
+     THREE OCTAVES, TWO OF THEM KEYED ON HEIGHT AS WELL AS ANGLE. A term that is a function of
+     `ang` alone is constant up any meridian, so it corrugates the skirt and leaves the crown
+     smooth; the t01 terms are what actually put a shoulder and a saddle into the top.
+     AND THEY WEAR THE GROUND TINT NOW, WHICH IS THE OTHER HALF OF TODO 80. They are separate
+     vertex-coloured geometry that never went through matGround, so tinted flat ground met untinted
+     gold hill along a visible join — recorded as an open colour seam in the P4b, P4c and P4d
+     recipes and closed here. Same GRASS.groundTint, same linear space, applied to the vertex colour
+     rather than to the material because the material is the shared white vertex-colour one. */
   { const cG=new THREE.Color(PAL.ground2).convertSRGBToLinear(), cT=new THREE.Color(PAL.tussock).convertSRGBToLinear();
+    const gt=new THREE.Color(GRASS.groundTint).convertSRGBToLinear();
     for(let i=0;i<9;i++){ const a=i/9*Math.PI*2+rnd(-0.22,0.22), r=rnd(64,84);
       const rad=rnd(13,21);
-      const hg=new THREE.SphereGeometry(rad,18,10);
-      const pos=hg.attributes.position, ph=rnd(0,6.3);
+      const hg=new THREE.SphereGeometry(rad,18,18);
+      const pos=hg.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
       for(let v=0;v<pos.count;v++){ const x=pos.getX(v),y=pos.getY(v),z=pos.getZ(v);
-        const ang=Math.atan2(z,x); const k=1+0.16*Math.sin(ang*3+ph)+0.1*Math.sin(ang*6+ph*2);
-        pos.setX(v,x*k); pos.setZ(v,z*k); }
+        const ang=Math.atan2(z,x), t01=clamp(y/rad*0.5+0.5,0,1);
+        const k=1 + 0.16*Math.sin(ang*3+ph) + 0.10*Math.sin(ang*6+ph*2)
+                  + 0.13*Math.sin(ang*2+ph2)*Math.sin(t01*3.1)
+                  + 0.07*Math.cos(ang*5+ph2*1.7)*Math.sin(t01*5.3+ph);
+        pos.setX(v,x*k); pos.setY(v,y*k); pos.setZ(v,z*k); }
       hg.computeVertexNormals();
       { const cols=[]; for(let v=0;v<pos.count;v++){ const t=clamp(pos.getY(v)/rad*0.5+0.5,0,1);
-          const c=cG.clone().lerp(cT,t*0.85); cols.push(c.r,c.g,c.b); }
+          const c=cG.clone().lerp(cT,t*0.85).multiply(gt); cols.push(c.r,c.g,c.b); }
         hg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
       const hm=new THREE.Mesh(hg,mat(0xFFFFFF,{vertexColors:true}));
       hm.scale.y=rnd(0.2,0.3); hm.position.set(Math.cos(a)*r,-rad*0.06,Math.sin(a)*r);
+      hm.name='tussockHill';
       G.scene.add(hm);
     } }
   // THE SKI FIELD (SW): rope-tow base, rack of skis, the most documented crime scene in the country
@@ -5041,7 +5288,18 @@ function updateFX(dt){
      that one at the meter changes WHEN NIGHT FALLS, which is a feel change on two pinned vantages
      and a playtest call. TODO 35 still holds it, and the battery asserts it is still there. */
   G.playT=(G.playT||0)+dt; if((G.score||0)>(G.chaosPeak||0))G.chaosPeak=G.score;
-  if(G.towWheel)G.towWheel.rotation.z+=dt*2.4;
+  /* THE BULL WHEEL IS A FUNCTION OF THE PINNED CLOCK, NOT AN INTEGRAL OF dt — REPLAT P4e.
+     It was `rotation.z += dt*2.4`, which accumulates WALL-CLOCK deltas: the capture rig holds
+     G.time at 12.0 on every animation frame and that pin could not reach an integrator, so the
+     wheel's angle depended on how many frames the settle got through and how long each one took.
+     It is a 14-sided cylinder seen nearly edge-on, so a few degrees swings its visible red area by
+     a factor of four — 28_skifield_base's `scarlet` subject reshot at 490, 1067 and 2038 across
+     three takes of ONE build, straddling its floor of 1500 in both directions. That is a coin
+     flip wearing the clothes of a regression, and it cost this session a false alarm.
+     Reading G.time directly is exactly the idiom the grass wind already uses and for the same
+     reason. In play G.time advances by dt, so the wheel turns at the speed it always did; under
+     the pin it stops at one angle. Nothing about the motion changes, only its reproducibility. */
+  if(G.towWheel)G.towWheel.rotation.z=G.time*2.4;
   updateStrips(dt);
   AMB.update(dt,G.keas&&G.keas[0]);
   TW.step(dt);
@@ -5049,7 +5307,11 @@ function updateFX(dt){
      deterministic under the capture rig's clock pin (it holds G.time at 12.0 every frame). The
      sun direction rides along because the transmission term needs it and the sun crosses the sky
      on the day/night roll — reading it here keeps one author for it. */
-  for(const _gm of [G.grassMat,G.grassCoverMat]) if(_gm&&_gm.userData.keaG){ const U=_gm.userData.keaG;
+  /* REPLAT P4e: THE FAR TIER IS DRIVEN FROM THE SAME LIST. A layer left off this loop keeps its
+     anchor at (0,0) — a static disc round the world origin — and its wind frozen, which reads as
+     "the far grass does not follow" and is precisely the failure the anchor note below describes.
+     One list, every layer, so adding a tier cannot half-connect it. */
+  for(const _gm of [G.grassMat,G.grassCoverMat,G.grassFarMat]) if(_gm&&_gm.userData.keaG){ const U=_gm.userData.keaG;
     U.uTime.value=G.time;
     if(G.sun)U.uSunDir.value.copy(G.sun.position).normalize();
     /* THE ANCHOR IS THE WHOLE POINT OF A CAMERA-FOLLOWING FIELD and it has to be written EVERY
@@ -6419,6 +6681,9 @@ if(typeof globalThis!=='undefined'){
        gate proves the ARITHMETIC — tier thresholds, the reject mask, blade topology — rather than
        photographing its consequences, none of which a headless battery could otherwise reach. */
     GRASS, grassTier, grassCuts, grassBladeGeo, grassLattice, GRASS_GLSL_V,
+    /* REPLAT P4e. The ground term's fbm has to be comparable to the blade shader's AS TEXT, because
+       "a similar noise field" is how the seam comes back. */
+    MATFAR_GLSL,
     grassComb, grassTuftPose,
     /* REPLAT P4d. The gate has to compute the blob-scan gate the way grassShader computes it —
        from the LAYER SPECS — rather than from a second copy of the numbers, because the bug this
