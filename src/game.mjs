@@ -846,7 +846,10 @@ function creditsRender(){
    bird is right, and that is a one-line piece with its own proof. */
 const KEABIRD={
   model:false,                       // OFF: the primitive bird ships until Eric judges the model
-  url:'models/rockatoo.glb',
+  /* THE SHIPPED FILE IS THE DERIVED ONE. rockatoo.glb is the unmodified upstream and stays in the
+     tree so the derivation chain can be re-run; kea_base.glb is it with the crest gone; kea_bill.glb
+     is that with the mandible reshaped. Each has its own ledger row and md5. */
+  url:'models/kea_bill.glb',
   /* Posed scene box is 96.5 model units tall (the BIND pose spans 169.6 with the wings out — the
      wrong number to scale against, and both are recorded in LICENCES.md so nobody picks it twice).
      A kea stands about 0.5 m. Derived, not typed: `scale = standM / posedUnits`. */
@@ -894,48 +897,57 @@ const KEABIRD={
      plumage becomes olive plumage rather than a flat olive decal. What it cannot supply is the
      kea's scalloped feather EDGING, which is a texture feature the source does not have. */
   plume:{
-    /* SAMPLED OFF kea_underwing_01, not chosen. The plate is a photograph so its pixels carry the
-       overcast light with them; what is taken is the RELATIONSHIPS, lifted about 1.4x into albedo:
-           breast  #554029    mantle #725b43    crown #72635f    bill  #647181
-           covert  #79210c    flight #655b3c    bar   #524e40    foot  #737b88
-       Two of those settled arguments the eye was losing. The coverts are a DEEP BRICK RED, not the
-       orange the first pass used - 121,33,12, barely any green in it at all. And the flight-feather
-       ground is OLIVE at 101,91,60, not the gold that made the underwing read as hazard tape. */
-    body   :0x7C7340,   // warm olive-green, the plate's breast lifted to albedo
-    crown  :0x6E6152,   // browner and greyer over the head, less saturated than the body
-    covert :0xA82A10,   // deep brick red - the plate's 121,33,12, not orange
-    flight :0xA29260,   // yellow-OLIVE ground, not gold
+    /* ---- SAMPLED OFF THE PLATES BY HSV CLASS, WITH MATCH COUNTS — REPLAT P5e ----
+       Not boxes drawn by eye: each region is a stated hue/saturation window searched over a stated
+       area, and the count is reported so a class that matched almost nothing can be seen to have
+       been absent. P5E.md's own warning, and it was earned — earlier eyeballed boxes caught feather
+       instead of eye-ring.
+         kea_head_01     eye-ring  #a37c29  hsv  41 0.75 0.64   (1981 px)  <- high-sat orange-gold
+                         cere      #bda283  hsv  31 0.31 0.74   (3564 px)
+                         bill      #565865  hsv 230 0.15 0.40
+                         crown     #676865  hsv  86 0.03 0.41
+         kea_posture_01  mantle    #857b5c  hsv  45 0.31 0.52   (9259 px, 68% of the box)
+                         chest     #776c4a  hsv  45 0.38 0.46
+                         crown     #8b8274  hsv  37 0.17 0.55
+                         UPPERWING #506e41  hsv 100 0.41 0.43   (5321 px)  <- the green IS there
+                         belly     #b2b18b  hsv  60 0.22 0.70   <- the bird's lightest tone
+                         bill      #6a7586  hsv 216 0.21 0.53
+       THE BIRD IS LIGHT. Plate values run 0.46 to 0.70 and centre near 0.52; the P5d2 render
+       measured 0.21 on the chest and 0.39 on the lit mantle — roughly HALF. "Dark reads as
+       sinister" was not a mood, it was a factor of two. Values below are the plate lifted ~1.15x
+       into albedo, because the plate carries its own daylight. */
+    body   :0x968C69,   // mantle/back: the plate's #857b5c lifted
+    crown  :0x9C9384,   // crown/nape: lighter and greyer than the body, as both plates agree
+    chest  :0x8E8461,   // breast: warmer and a touch darker than the mantle
+    wing   :0x5C7F4A,   // FOLDED UPPERWING COVERTS: emerald green, hue 100 - absent until now
+    covert :0xA82A10,   // underwing coverts: deep brick red, from kea_underwing_01's 121,33,12
+    flight :0xA29260,   // flight-feather ground: yellow-olive, not gold
     bar    :0x2A2418,   // near-black barring across it
-    bill   :0x616B78,   // slate blue-grey: the one patch where B > G > R
-    foot   :0x848D9C,   // grey, faintly blue
-    barN   :0.28,       // bars per model unit along the feather
-    barW   :0.42,       // duty cycle of the dark bar
+    bill   :0x79849A,   // slate blue-grey: the one region where B > G > R on both plates
+    foot   :0x848D9C,   // grey, faintly blue - matched already, do not disturb
+    barN   :0.28, barW:0.42,
     mean   :0.34,       // the source texture's mean luminance, MEASURED at load and overwritten
-    /* HOW MUCH OF THE SOURCE TEXTURE'S SHADING SURVIVES, AND WHY IT IS NOT A CLAMP ANY MORE.
-       The first cut multiplied the palette by clamp(lum/mean, lo, hi). On a BLACK cockatoo that is
-       a disaster: a black texel is lum/mean ~ 0.26, so most of the bird sat on the FLOOR and the
-       whole animal came out at 0.55 of its palette colour — dark, flat, and nothing like the plate.
-       Centring on 1 instead keeps the MEAN texel at exactly the palette colour and lets detail
-       modulate around it: shade = 1 + (lum/mean - 1) * detail. The bird is then the colour it was
-       given, wearing the source's feather shading rather than being dimmed by it.
-       The clamp survives only as a guard on the extremes — the bare red face is the bright end. */
-    /* shadeHi PULLED IN FROM 1.45. The cockatoo's wing texture has bright feather edges, and at
-       1.45 they lifted the whole dorsal surface to a pale khaki that read as a different bird from
-       the side than from the front. 1.18 keeps the detail and stops the wash. */
-    detail :0.45, shadeLo:0.62, shadeHi:1.18,
-    /* THE RESTING BILL IS SHUT. The clip never fully closes it - gape runs 0.297 to 1.284 rad over
-       all 22 s and even the best folded frame sits at 0.659 - so a bird posed from it gapes
-       permanently. This offset shuts it, applied on top of whatever the game asks of the jaw, so
-       `jaw.rotation.x` still opens and closes the beak from a CLOSED rest. */
-    /* +0.60, AND THE SIGN WAS THE WHOLE PROBLEM. The first value was -0.62, which forced the bill
-       to a 70-degree gape — wider than the rest pose it was meant to close. Swept and measured on
-       the posed bird as the angle between the two mandibles' length axes: +0.6 gives 6.8 degrees,
-       0 gives 35.5, and -0.62 gives about 70. Not a number to guess the sign of. */
+    /* THE SHADING WINDOW IS RAISED, which is most of the value fix. The texture is a BLACK
+       cockatoo: its texels sit far below the mean, so a low floor drags the whole bird down however
+       light the palette is. 0.62 was costing about a fifth of the value on lit surfaces and far
+       more in shadow. */
+    detail :0.40, shadeLo:0.80, shadeHi:1.16,
     jawShut:0.60,
-    /* WING-OPEN GATE. A kea shows NO red until it opens: the coverts and the barred underside are
-       both hidden under a folded wing, so both are tied to how far the wing actually IS open rather
-       than painted on and hoped for. Below openLo nothing shows at all. */
     openLo :0.14, openHi:0.55,
+    /* ---- THE EYE-RING: geometry, not texture ----
+       P5E.md allows either route and names the condition: "add a small ring geometry if the texture
+       route fights the UVs". It does — the source is one atlas for the whole animal and the eye's
+       island cannot be located without unwrapping it, which is a texture piece. A ring is two small
+       meshes parented to the head bone and it is exact.
+       THE COLOUR IS THE MEASURED ONE: kea_head_01's ring classed at hsv 41 / 0.75 / 0.64 over 1981
+       pixels — high-saturation orange-gold, and the plate's most distinctive single feature.
+       THE PLACEMENT IS IN HEAD-BONE FRACTIONS, not model units, so it survives the bill warp and
+       any future rescale. Swept against the plate. */
+    eyeRing:0xD9A32E, eyeDark:0x1A1712,
+    /* placed and sized in tenths of the head's own diagonal, and laterally as a fraction of its
+       half-width so the ring lands ON the surface rather than beside it. Swept once against the
+       plate: the eye sits a little forward of the head's centroid and a little above it. */
+    eyeFwd :0.55, eyeUp:0.85, eyeLat:0.88, eyeR:0.42, eyeW:0.30,
   },
   /* THE WING HAS THREE SEGMENTS AND THE OLD RIG HAD ONE, so the single `w.rotation` drives the
      chain in these proportions: the humerus takes the stroke, the ulna and metacarpus follow it

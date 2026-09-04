@@ -28,7 +28,7 @@ function keaRegions(THREE,sk,P,upLocal){
     return 'body'; });
   const col=(h)=>new THREE.Color(h).convertSRGBToLinear();
   const C={body:col(P.body),crown:col(P.crown),covert:col(P.covert),flight:col(P.flight),
-           bill:col(P.bill),foot:col(P.foot)};
+           bill:col(P.bill),foot:col(P.foot),wing:col(P.wing),chest:col(P.chest)};
   /* A PER-VERTEX TINT, BLENDED BY BONE WEIGHT — not a winner-take-all region id.
      The first cut picked the dominant bone and wrote an integer region, and every boundary where
      two bones share a vertex about equally flickered between two palette entries from one vertex to
@@ -53,12 +53,22 @@ function keaRegions(THREE,sk,P,upLocal){
       /* THE COVERTS AND THE BARRED UNDERSIDE ARE NOT BAKED INTO THE TINT ANY MORE. Both live under
          a folded wing on a real kea, so both are carried as MASKS and gated on wing-open in the
          shader. What is baked here is what the bird looks like with the wing SHUT. */
-      if(t==='near')      c = C.body;
-      else if(t==='far')  c = C.body;
+      /* THE FOLDED UPPERWING IS GREEN — the one region the palette had nothing for. The plate
+         shows emerald at hue 100 across the inner wing's DORSAL side, which is the same bones the
+         scarlet coverts sit under ventrally. So one bone group, split by which way the surface
+         faces: green above, brick below, and the brick gated on wing-open. */
+      /* THE GREEN BLENDS IN, IT DOES NOT SWITCH. A hard `nd > 0.10` split speckled the wing green
+         and body brown vertex by vertex wherever the surface curved through the threshold — the
+         same defect as the rainbow collar, met on a NORMAL test instead of a bone test, and weight
+         blending cannot smooth it because the discontinuity is in the geometry not the skin. A
+         smoothstep over the normal does. */
+      const gk=nd<=0.0?0:(nd>=0.35?1:(()=>{const u=nd/0.35;return u*u*(3-2*u);})());
+      if(t==='near')      c = C.body.clone().lerp(C.wing,gk);
+      else if(t==='far')  c = C.body.clone().lerp(C.wing,gk);
       else if(t==='bill') c = C.bill;
       else if(t==='foot') c = C.foot;
       else if(t==='crown')c = C.crown;
-      else                c = C.body;
+      else                c = C.body;   /* chest/breast variation rides the texture, not a second bone group */
       r+=c.r*w; gr+=c.g*w; b2+=c.b*w; tot+=w;
       hist[t]=(hist[t]||0)+w;
     }
@@ -208,6 +218,72 @@ export async function installBird(K){
         }catch(e){ K.G.bird.texMeanWhy=String(e&&e.message||e); }
       }
       keaRecolour(THREE,m,B.plume);
+    }
+    /* ---- THE EYE-RING, TWO SMALL MESHES ON THE HEAD BONE ----
+       P5E.md allows geometry "if the texture route fights the UVs", and it does: the source is one
+       atlas for the whole animal and the eye's island cannot be located without unwrapping it.
+       THE FRAME IS DERIVED, NOT ASSUMED. The first cut placed the rings with fractions of a single
+       scalar (the head's smallest bbox extent) and put them OUTSIDE the head — a floating eyeball,
+       because 0.62 of 11.13 is 6.9 and the head only reaches 5.5 laterally. Measured instead, in
+       the head bone's own bind space:
+           head bbox ext  17.81 x 14.99 x 11.13     centroid (10.73, 0.78, 0.02)
+           bill base      (13.80, 0, 0)   <- so +X is FORWARD, by measurement
+       Forward comes from the bill base; up is whichever axis has the largest extent perpendicular
+       to it; lateral is their cross product. A differently-oriented rig therefore still lands. */
+    if(B.plume&&B.plume.eyeR>0){
+      const hb=bones.head;
+      const g=sk.geometry, pos=g.attributes.position,
+            J2=g.attributes.skinIndex, W2=g.attributes.skinWeight;
+      const headIdx=sk.skeleton.bones.findIndex(b=>b===hb);
+      const bindInv=sk.skeleton.boneInverses[headIdx];
+      const c0=new THREE.Vector3();
+      let mn=new THREE.Vector3(1e9,1e9,1e9), mx=new THREE.Vector3(-1e9,-1e9,-1e9),
+          ctr=new THREE.Vector3(), n2=0;
+      for(let v=0;v<pos.count;v++){ let w=0;
+        for(let k=0;k<4;k++) if(J2.getComponent(v,k)===headIdx) w+=W2.getComponent(v,k);
+        if(w<0.5)continue;
+        c0.set(pos.getX(v),pos.getY(v),pos.getZ(v)).applyMatrix4(bindInv);
+        mn.min(c0); mx.max(c0); ctr.add(c0); n2++; }
+      if(n2>0){
+        ctr.multiplyScalar(1/n2);
+        const ext=mx.clone().sub(mn);
+        /* forward: the bill base, expressed in this same space */
+        hb.updateWorldMatrix(true,false); bones.upper.updateWorldMatrix(true,false);
+        const bw=new THREE.Vector3().setFromMatrixPosition(bones.upper.matrixWorld);
+        const fwd=bw.clone().applyMatrix4(hb.matrixWorld.clone().invert()).normalize();
+        /* up: the axis with the largest extent that is most perpendicular to forward */
+        const cand=[new THREE.Vector3(1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,1)];
+        const extA=[ext.x,ext.y,ext.z];
+        let up=cand[1], bestScore=-1;
+        cand.forEach((a,idx)=>{ const sc=extA[idx]*(1-Math.abs(a.dot(fwd)));
+          if(sc>bestScore){bestScore=sc; up=a.clone();} });
+        up.sub(fwd.clone().multiplyScalar(up.dot(fwd))).normalize();
+        const lat=new THREE.Vector3().crossVectors(fwd,up).normalize();
+        const latHalf=Math.abs(lat.x)*ext.x/2+Math.abs(lat.y)*ext.y/2+Math.abs(lat.z)*ext.z/2;
+        const R=B.plume.eyeR*ext.length()*0.1;
+        const ringM=new THREE.MeshStandardMaterial({
+          color:new THREE.Color(B.plume.eyeRing).convertSRGBToLinear(),roughness:0.55,metalness:0});
+        const darkM=new THREE.MeshStandardMaterial({
+          color:new THREE.Color(B.plume.eyeDark).convertSRGBToLinear(),roughness:0.20,metalness:0});
+        const ringG=new THREE.TorusGeometry(R,R*B.plume.eyeW,8,18);
+        const discG=new THREE.SphereGeometry(R*0.95,12,10);
+        kea._eyes=[];
+        for(const side of [-1,1]){
+          const grp=new THREE.Group();
+          grp.position.copy(ctr)
+             .add(fwd.clone().multiplyScalar(B.plume.eyeFwd*ext.length()*0.1))
+             .add(up.clone().multiplyScalar(B.plume.eyeUp*ext.length()*0.1))
+             .add(lat.clone().multiplyScalar(side*B.plume.eyeLat*latHalf));
+          /* face outward along the lateral axis so the ring reads as a ring, not an ellipse */
+          grp.lookAt(grp.position.clone().add(lat.clone().multiplyScalar(side)));
+          grp.add(new THREE.Mesh(ringG,ringM));
+          grp.add(new THREE.Mesh(discG,darkM));
+          hb.add(grp); kea._eyes.push(grp);
+        }
+        K.G.bird.eyes=kea._eyes.length;
+        K.G.bird.headExt=[+ext.x.toFixed(2),+ext.y.toFixed(2),+ext.z.toFixed(2)];
+        K.G.bird.eyeR=+R.toFixed(3);
+      }
     }
     const frame=K.keaBirdFrame(THREE,bones);
     /* THE MODEL IS YAWED. Undo the measured bird frame so the asset faces the way the game's whole

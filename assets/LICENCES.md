@@ -239,6 +239,30 @@ is still a cockatoo. Modified with Blender 5.2.1; the script is in the session l
 | file | `models/kea_base.glb`, 2138948 bytes |
 | md5 | `b9bc87f239501c1068c0b4624b0620b6` |
 
+### THE BILL DERIVATIVE — `models/kea_bill.glb`  (REPLAT P5e, 2026-09-05)
+
+**CC-BY 4.0 REQUIRES CHANGES TO BE INDICATED.** This is `kea_base.glb` with the upper mandible
+reshaped: the palm cockatoo's short heavy hook warped into a kea's long slender one. Modified with
+Blender 5.2.1; the script and its measurements are in the session log.
+
+| field | value |
+|---|---|
+| derived from | `models/kea_base.glb`, itself derived from `models/rockatoo.glb` (Macauley.B, CC-BY 4.0) |
+| licence | **CC-BY 4.0, unchanged** |
+| changes | upper-mandible vertices warped: culmen lengthened x1.60, sagittal depth x0.55, lateral width x0.60, tapering to the tip, all ramped in from the base so the bill does not step away from the cere |
+| measured | culmen : head->billbase went **0.793 -> 1.268**; the plates give **1.27** (kea_head_01) and **1.86** (kea_posture_01) |
+| geometry | unchanged counts: 101 bones, 2,987 vertices, 4,927 triangles |
+| file | `models/kea_bill.glb`, 2210260 bytes |
+| md5 | `0d5a2497d4f07067c51d24a288ef1dad` |
+
+<!-- ASSET file=models/kea_bill.glb md5=0d5a2497d4f07067c51d24a288ef1dad attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+**THE TWO PLATES DISAGREE AND THE SPREAD IS RECORDED RATHER THAN AVERAGED AWAY.** `kea_head_01` is
+a close-up at an angle and gives culmen : eye-to-bill-base of 1.28; `kea_posture_01` is a clean side
+view and gives 1.86. The model was warped to the first, which is the plate P5E.md names first and
+the one where the bill is least foreshortened in the direction being measured. A later pass may
+prefer the side view — the warp is parametric and one number away.
+
 <!-- ASSET file=models/kea_base.glb md5=b9bc87f239501c1068c0b4624b0620b6 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
 
 **THE CREST WAS 70% OF THE MESH, which nobody would guess from looking at it.** 7,121 of 10,108
