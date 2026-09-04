@@ -1716,7 +1716,7 @@ recipes — they are separate vertex-coloured geometry and do not wear `GRASS.gr
 flat ground meets untinted gold hill with a visible join. Same nine meshes, so the two are probably
 one piece.
 
-### 81. 28_skifield_base's BULL WHEEL FLOOR WAS BEING MET BY LUCK, AND NOW IT REPRODUCIBLY IS NOT
+### 81. [CLOSED 2026-09-04] 28_skifield_base's BULL WHEEL FLOOR WAS BEING MET BY LUCK
 Filed 2026-09-04, session 22 (REPLAT P4e). The DETERMINISM half is fixed; the THRESHOLD half is a
 composition call and therefore Eric's, so it is filed rather than decided.
 WHAT WAS WRONG: `G.towWheel.rotation.z += dt*2.4` INTEGRATED wall-clock deltas. The capture rig pins
@@ -1746,6 +1746,21 @@ them is a taste call:
   (c) ACCEPT that the vantage photographs the wheel edge-on and re-derive the floor from the now
       deterministic frame — only defensible as a deliberate re-pin by Eric, never as a fix.
 WHERE TO JUDGE IT: 28_skifield_base. The wheel is the red disc above the blue base shed.
+
+**CLOSED 2026-09-04, session 23, on Eric's call — option (c), and the reference turned out to be the
+wrong half.** Re-deriving `absent` the way every other reference in subjects.mjs was derived — same
+vantage, same stage, same classifier, the bull wheel taken out of the scene and held out every
+frame — scores **0, 0, 0**. The scarlet window sees the wheel and nothing else in that box. Where
+440 came from is recorded nowhere (it is the only reference in that file with no derivation beside
+it) and it does not reproduce: the carpark frame from the same camera, which is how the hutgreen
+reference was taken, scores 11.
+    before   staged 490..2038 (nondeterministic)   floor 1500   reference 440   ratio 3.4x
+    after    staged 838 +/-1  (deterministic)      floor  400   reference   0   ratio inf
+The floor moved DOWN and that is grounding, not weakening: 1500 was fitted to the top of a
+nondeterministic spread and was unmeetable by the frame the rig actually produces. 400 is 0.48 of
+the deterministic reading, in line with the sibling kea test in the same vantage (70 against 128).
+Options (a) and (b) were not taken and remain available if Eric later wants the wheel face-on for
+composition rather than merely present.
 
 ### 82. HORIZON-SCALE GRASS NEEDS ALPHA CARDS, AND THE MEASUREMENT THAT SAYS SO IS IN P4e
 Filed 2026-09-04, session 22 (REPLAT P4e), as the honest remainder of that piece.

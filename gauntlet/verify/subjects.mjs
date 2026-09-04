@@ -116,7 +116,31 @@ const SPEC=[
      the header above describes for olive, met from the other end. The bird is the presence question
      that box can honestly answer. */
   { file:'28_skifield_base', tests:[
-    { what:'the bull wheel is at the bottom station',  cls:'scarlet', box:[0.48,0.33,0.16,0.22], min:1500, absent:440 },
+    /* ---- REGROUNDED 2026-09-04 (TODO 81), ON ERIC'S CALL, AND THE REFERENCE WAS THE WRONG HALF ----
+       This line shipped as `min:1500, absent:440` and it was the ONLY test in this file whose
+       `absent` carried no recorded derivation. Both numbers were wrong, for two different reasons.
+       THE STAGED READING WAS NEVER DETERMINISTIC. `G.towWheel.rotation.z += dt*2.4` integrated
+       wall-clock deltas, so the capture rig's `G.time = 12.0` pin could not reach it: three takes
+       of ONE unchanged build read 490, 1067 and 2038, straddling the 1500 floor in both
+       directions. Fixed in REPLAT P4e — the wheel is `= G.time*2.4` now — and it reads
+       838 / 839 / 839 across three takes, and 838 four times through the real capture pass.
+       AND `absent` WAS NOT THE ABSENCE OF THE SUBJECT. Re-derived the way every other reference in
+       this file was: the same vantage, the same stage, the same classifier, with the bull wheel
+       taken out of the scene and held out every frame. It scores **0, 0, 0** — the scarlet window
+       sees the wheel and nothing else in that box. Where 440 came from is not recorded anywhere
+       and does not reproduce; the carpark frame from the same camera, which is how the hutgreen
+       reference below was taken, scores 11.
+       SO THE SEPARATION, BEFORE AND AFTER:
+           before   staged 490..2038 (nondeterministic)   floor 1500   reference 440   ratio 3.4x
+                    — a coin flip against a reference that was never measured
+           after    staged 838 +/-1  (deterministic)      floor  400   reference   0   ratio inf
+                    — 2.1x of headroom under the reading, and nothing at all in the box without it
+       THE FLOOR MOVED DOWN AND THAT IS NOT A WEAKENING, which is a claim that has to be argued
+       rather than asserted: 1500 was fitted to the top of a nondeterministic spread and was
+       unmeetable by the frame the rig actually produces. 400 is 0.48 of the deterministic reading,
+       in line with the sibling kea test in this same vantage (70 against 128, 0.55). Eric called
+       it, and option (c) in TODO 81 is what he called. */
+    { what:'the bull wheel is at the bottom station',  cls:'scarlet', box:[0.48,0.33,0.16,0.22], min:400,  absent:0 },
     // TODO 40 moved this bird off the shed roof - standing up there PAYS now, and the tick popup
     // it fired during the settle was a live thing in the frame. It stands at the rack instead, which
     // is a bigger read and its own prompt: 142 kea pixels against 0 with the bird parked away.
