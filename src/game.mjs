@@ -803,6 +803,89 @@ function creditsRender(){
   return CREDITS.length;
 }
 
+/* ============================================================
+   THE BIRD AS AN ASSET — REPLAT P5b (2026-09-04). THE RIG ADAPTER.
+   ============================================================
+   P5a landed a skinned cockatoo whose bones are anatomically NAMED, which was the good outcome.
+   The name map is the easy half. This block is the hard half, and the measurement that shaped it is
+   worth reading before touching anything here.
+
+   THE BIRD'S ANIMATION IS 80 HAND-WRITTEN POSE WRITES, not animation clips: `H.rotation.x=-0.1`,
+   `jaw.rotation.x=0.5`, `w.rotation.z=side*stroke`, onto plain Groups whose rest orientation is
+   identity. A SKINNED BONE IS NOT A GROUP. It poses relative to a bind pose, and its local axes
+   point wherever the rigger left them — so writing `.rotation.x` straight onto a bone throws the
+   bind pose away and folds the bird inside out.
+
+   AND NO AXIS-SWAP TABLE CAN FIX THAT, WHICH IS THE MEASUREMENT. Every key bone's rest frame was
+   read out in world space (gauntlet log, session 26). Not one is axis-aligned:
+       head   local X -> (-0.92, 0.28, 0.26)   Y -> ( 0.13, 0.87,-0.47)   Z -> (-0.36,-0.40,-0.84)
+       jaw    local X -> (-0.95, 0.23, 0.23)   Y -> ( 0.11, 0.89,-0.44)   Z -> (-0.31,-0.39,-0.87)
+       ulnaR  local X -> (-0.13, 0.36, 0.92)   Y -> ( 0.33,-0.86, 0.39)   Z -> ( 0.93, 0.35,-0.01)
+   A per-bone {x:'z', y:'-x'} table is a lie about frames like these. The whole MODEL is yawed too:
+   the wing bones sit on a lateral axis of (-0.71, 0.01, -0.70), about 45 degrees off world X, and
+   the beak points (-0.86, 0.27, 0.24) from the head. Nothing here is aligned to anything.
+
+   SO THE BINDING IS A CONJUGATION, NOT A REMAP. The pose writes are treated as a delta rotation in
+   the BIRD'S OWN frame — right/up/forward, which is what the author of `H.rotation.x=-0.1` meant —
+   and carried into each bone's local frame by its rest world orientation:
+
+       delta_local = conj(restWorld) * delta_bird * restWorld
+       bone.quaternion = restLocal * delta_local
+
+   That needs no hand-tuned constants at all: `restWorld` is read off the loaded skeleton, so the
+   same code binds a differently-rigged model without a table to re-derive. The bird frame itself is
+   MEASURED from the model (lateral axis from the two humeri, up from world Y), not assumed.
+
+   THE 80 WRITE SITES DO NOT CHANGE. Each handle stays an Object3D the game writes exactly as it
+   does today; `rigCommit()` runs once at the end of the pose and maps handles onto bones. That is
+   the whole point of the indirection — a retarget that edited 80 sites would be unreviewable.
+
+   IT IS OFF BY DEFAULT AND THAT IS DELIBERATE. `KEABIRD='{"model":true}'` switches it on. The
+   primitive bird is what every pinned vantage and every battery still sees, so this piece cannot
+   move a baseline or break a mission while the look is still being judged. Eric flips it when the
+   bird is right, and that is a one-line piece with its own proof. */
+const KEABIRD={
+  model:false,                       // OFF: the primitive bird ships until Eric judges the model
+  url:'models/rockatoo.glb',
+  /* Posed scene box is 96.5 model units tall (the BIND pose spans 169.6 with the wings out — the
+     wrong number to scale against, and both are recorded in LICENCES.md so nobody picks it twice).
+     A kea stands about 0.5 m. Derived, not typed: `scale = standM / posedUnits`. */
+  standM:0.50, posedUnits:96.5,
+  /* THE JOINT MAP. Names read out of the file, not guessed — see LICENCES.md for the full skeleton.
+     `crest` is listed because P5d has to remove 60 joints of it and something has to name them. */
+  bones:{
+    body :'cockatoo_Ilium_bone_02',
+    chest:'cockatoo_Scapula_bone_03',
+    neck :'cockatoo_Neck_bone_04',
+    head :'cockatoo_Head_bone_06',
+    jaw  :'cockatoo_LowerMandible_bone_039',
+    upper:'cockatoo_UpperMandible_bone_07',
+    tail :'cockatoo_Tail_bone_0106',
+    humR :'cockatoo_Humerus_r_bone_070', ulnaR:'cockatoo_Ulna_r_bone_071', metaR:'cockatoo_Metacarpus_r_bone_072',
+    humL :'cockatoo_Humerus_l_bone_073', ulnaL:'cockatoo_Ulna_l_bone_074', metaL:'cockatoo_Metacarpus_l_bone_075',
+    /* THE LEFT LEG'S SUFFIXES ARE NOT THE MIRROR OF THE RIGHT'S, and guessing them cost a render:
+       the right leg runs _076/_077 and the left runs _092/_00 — the exporter numbered them in
+       creation order, not symmetrically. Every name here is READ OUT OF THE FILE. The bind reports
+       exactly which key is missing when one is wrong, which is how this was caught in one shot. */
+    femR :'cockatoo_Femur_R_bone_076',   tibR :'cockatoo_Tibia_R_bone_077',
+    femL :'cockatoo_Femur_l_bone_092',   tibL :'cockatoo_Tibia_l_bone_00',
+  },
+  crestPrefix:'cockatoo_FeatherHead',   // 60 joints a kea does not have — P5d
+  /* THE WING HAS THREE SEGMENTS AND THE OLD RIG HAD ONE, so the single `w.rotation` drives the
+     chain in these proportions: the humerus takes the stroke, the ulna and metacarpus follow it
+     softened. The primitive bird's per-primary feather spread (`feathers[wi][i]`) has NO bone to
+     drive — the model carries no per-primary bones — so `open` folds into the ulna/metacarpus
+     extension instead. That is a real loss of articulation and it is written down rather than
+     quietly dropped. */
+  wingChain:[1.0, 0.55, 0.30],
+  openChain:[0.0, 0.62, 0.85],
+};
+for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_BIRD__)||{})){
+  if(!(k in KEABIRD))continue;
+  if(typeof KEABIRD[k]==='object'&&KEABIRD[k]&&typeof v==='object'&&v)Object.assign(KEABIRD[k],v);
+  else KEABIRD[k]=v;
+}
+
 const PAL={ // v6 (2026-08-26): colours lifted from the real country — Lindis tussock gold, greywacke, beech, hard alpine snow
   ground:0x96762E, ground2:0x7A6830, ground3:0x54772F, gravel:0x9B9891, tussock:0xC9992F, tussock2:0xA07C24,
   tarmac:0x63666C, road:0x4E5257, roadLine:0xE8E4D6, snow:0xF6FAFD, snowShade:0xC5D4E2,
@@ -4570,6 +4653,66 @@ function deployGym(){
 /* ============================================================
    KEA — the player character
    ============================================================ */
+/* ---- THE RIG ADAPTER'S WORKING PARTS — REPLAT P5b ----
+   keaBirdFrame  measures the bird's own right/up/forward off the loaded skeleton
+   keaRigBind    captures each bone's rest and returns the binding list
+   keaRigCommit  maps the handles onto the bones, once per frame
+   All three are module functions rather than Kea methods so a battery can exercise them against a
+   synthetic skeleton without booting a bird. */
+
+/* THE BIRD'S OWN FRAME, MEASURED. The lateral axis is the line between the two humeri — the one
+   pair of bones guaranteed to be symmetric about the spine — and up is world Y because the model is
+   authored standing. Forward falls out of the cross product. Measured rather than assumed because
+   this model is yawed about 45 degrees off world X and any assumption would be wrong by that much. */
+function keaBirdFrame(THREE,bones){
+  const wl=bones.humL, wr=bones.humR;
+  const up=new THREE.Vector3(0,1,0);
+  let right;
+  if(wl&&wr){
+    const a=new THREE.Vector3().setFromMatrixPosition(wr.matrixWorld);
+    const b=new THREE.Vector3().setFromMatrixPosition(wl.matrixWorld);
+    right=a.sub(b).setY(0).normalize();
+  } else right=new THREE.Vector3(1,0,0);
+  /* forward = up x right for a right-handed frame; verified against the beak, which must lie in
+     front of the head and does (the check is in the battery, not a comment). */
+  const fwd=new THREE.Vector3().crossVectors(up,right).normalize();
+  const m=new THREE.Matrix4().makeBasis(right,up,fwd.clone().negate());
+  return {right,up,fwd,quat:new THREE.Quaternion().setFromRotationMatrix(m)};
+}
+
+/* CAPTURE THE REST. `restLocal` is what the bone sits at in the bind pose and every posed
+   quaternion is built from it; `restWorld` is what carries a bird-frame delta into bone space. */
+function keaRigBind(THREE,bones,frame){
+  const out=[];
+  for(const [key,bone] of Object.entries(bones)){
+    if(!bone)continue;
+    const restWorld=new THREE.Quaternion();
+    bone.matrixWorld.decompose(new THREE.Vector3(),restWorld,new THREE.Vector3());
+    out.push({key,bone,
+      restLocal:bone.quaternion.clone(),
+      restPos:bone.position.clone(),
+      restWorld,
+      /* conj(restWorld) * q * restWorld, precomputed halves */
+      inv:restWorld.clone().invert()});
+  }
+  return out;
+}
+
+/* ONE JOINT. `rot` is a delta in the BIRD's frame; the result is the bone's local quaternion.
+   THE FRAME QUATERNION IS FOLDED IN because the pose writes mean "about the bird's right/up/
+   forward", and the bird's frame is not the world's on this model. */
+const KEARIG_TMP={};
+function keaRigApply(THREE,b,rot,frame,posScale){
+  const T=KEARIG_TMP;
+  T.e=T.e||new THREE.Euler(); T.q=T.q||new THREE.Quaternion(); T.o=T.o||new THREE.Quaternion();
+  T.e.set(rot.x,rot.y,rot.z,'XYZ');
+  T.q.setFromEuler(T.e);                        // the delta, in bird-frame axes
+  if(frame){ T.o.copy(frame.quat); T.q.premultiply(T.o).multiply(T.o.clone().invert()); }
+  // carry into the bone's local frame: conj(restWorld) * delta * restWorld
+  T.q.premultiply(b.inv).multiply(b.restWorld);
+  b.bone.quaternion.copy(b.restLocal).multiply(T.q);
+}
+
 class Kea{
   constructor(idx,map,x,z){
     this.idx=idx; this.map=map;
@@ -4579,6 +4722,12 @@ class Kea{
     this.screamT=99; this.screamCd=0; this.walkPh=0; this.flapPh=0; this.airT=0;
     this.onRoof=false; this.slideD=0; this.slideV=0; this.eatingT=0; this.size=1;
     this.buildMesh();
+    /* REPLAT P5b: A BIRD BORN AFTER THE MODEL LOADED STILL GETS IT. installBird attaches to every
+       kea that exists when the GLB resolves — and the keas are built by startGame, which on a fast
+       machine happens BEFORE a 5.4 MB fetch finishes and on a slow one after. The first render of
+       this piece only worked because the load lost that race; the other way round the model would
+       simply never have appeared, with nothing in G.bird to say so. Both directions covered. */
+    if(typeof KEAGAME!=='undefined'&&KEAGAME._birdAttach)KEAGAME._birdAttach(this);
   }
   buildMesh(){
     const g=this.g=new THREE.Group(); G.scene.add(g);
@@ -4972,11 +5121,11 @@ class Kea{
   wear(prop){ // hats ride the head, not the beak. Quiet: no award, no noise, so the save can call it
     if(this.hatProp)this.doff();
     prop.heldBy=this; prop.worn=true; this.hatProp=prop;
-    prop.mesh.visible=true; this.head.add(prop.mesh);
+    prop.mesh.visible=true; (this.headAttach||this.head).add(prop.mesh);
     prop.mesh.position.set(0,0.13,0.0); prop.mesh.rotation.set(0,0,0); prop.mesh.scale.setScalar(1/0.7);
     if(prop.srcHatG)prop.srcHatG.visible=false; }
   doff(){ const p=this.hatProp; if(!p)return;
-    this.head.remove(p.mesh); G.scene.add(p.mesh); p.mesh.scale.setScalar(1);
+    (this.headAttach||this.head).remove(p.mesh); G.scene.add(p.mesh); p.mesh.scale.setScalar(1);
     p.worn=false; p.heldBy=null; this.hatProp=null;
     p.x=this.x+Math.sin(this.ry)*0.5; p.z=this.z+Math.cos(this.ry)*0.5; p.y=this.y+0.6;
     p.vy=0.8; p.rvy=rnd(-4,4);
@@ -5204,6 +5353,38 @@ class Kea{
       this.tail.rotation.x=0.05; this.tailF.forEach((f,i)=>f.rotation.y=(i-1.5)*0.16);
       this.legs.forEach(l=>l.rotation.x=0.1);
     }
+    /* REPLAT P5b: THE HANDLES ARE NOW READ, ONCE, AND MAPPED ONTO BONES. Everything above this
+       line wrote to the primitive hierarchy exactly as it always has — that is the whole design.
+       No-op unless the model is attached. */
+    if(this._model)this.rigCommit();
+  }
+  /* ---- REPLAT P5b: HANDLES -> BONES ----
+     Reads the pose the 80 write sites just built and carries each one into its bone's local frame.
+     The wing is the interesting case: the old rig has ONE joint per wing and the model has three,
+     so the stroke is distributed down humerus/ulna/metacarpus by KEABIRD.wingChain, and `open` —
+     which used to spread individual primaries the model has no bones for — extends the ulna and
+     metacarpus instead. That is a genuine loss of articulation, recorded in the recipe. */
+  rigCommit(){
+    const M=this._model; if(!M)return;
+    const T=THREE, B=KEABIRD, bn=M.bones, fr=M.frame, rig=M.rig;
+    const by={}; for(const b of rig)by[b.key]=b;
+    const put=(key,x,y,z)=>{ const b=by[key]; if(b)keaRigApply(T,b,{x,y,z},fr); };
+    const R=this.body.rotation, N=this.neck.rotation, H=this.head.rotation;
+    put('body', R.x, R.y, R.z);
+    put('neck', N.x, N.y, N.z);
+    put('head', H.x, H.y, H.z);
+    put('jaw',  this.jaw.rotation.x, 0, 0);
+    put('tail', this.tail.rotation.x, 0, 0);
+    for(const w of this.wings){
+      const sd=w.userData.side, L=sd<0, open=w.userData.open||0;
+      const seg=L?['humL','ulnaL','metaL']:['humR','ulnaR','metaR'];
+      for(let i=0;i<3;i++){
+        const k=B.wingChain[i], o=B.openChain[i]*(open-0.06);
+        put(seg[i], w.rotation.x*k, w.rotation.y*k + sd*o, w.rotation.z*k);
+      }
+    }
+    this.legs.forEach((l,i)=>{ put(i?'femL':'femR', l.rotation.x, 0, 0);
+      put(i?'tibL':'tibR', -l.rotation.x*0.6, 0, 0); });
   }
   freeCage(){
     this.caged=0; this.vy=3.2; this.grounded=false; G.squawk=null;
@@ -6729,6 +6910,9 @@ if(typeof globalThis!=='undefined'){
     /* REPLAT P5: the credits block and its renderer, so a battery can cross-check the licence
        ledger against what a player actually sees. */
     CREDITS, creditsRender,
+    /* REPLAT P5b: the rig adapter. Exported so bird.mjs can bind and a battery can exercise the
+       conjugation against a synthetic skeleton without booting a bird. */
+    KEABIRD, keaBirdFrame, keaRigBind, keaRigApply,
     GRASS, grassTier, grassCuts, grassBladeGeo, grassLattice, GRASS_GLSL_V,
     /* REPLAT P4e. The ground term's fbm has to be comparable to the blade shader's AS TEXT, because
        "a similar noise field" is how the seam comes back. */

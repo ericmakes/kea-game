@@ -5685,4 +5685,144 @@ C.section('REPLAT P5: the licence ledger and the credits agree');
   X.boot({biome:'carpark'}); X.startGame(1); tick(4);
 }
 
+/* ============================================================
+   REPLAT P5b — THE RIG ADAPTER: the pose writes must reach the bones.
+   ============================================================
+   The bird's animation is 80 hand-written pose writes onto Groups with identity rest orientation.
+   A skinned bone poses relative to a bind pose with axes pointing wherever the rigger left them, so
+   the binding is a CONJUGATION and not an axis-swap table — every key bone on this model was
+   measured and not one is axis-aligned. What a headless battery can reach is the recipe, the
+   arithmetic, and the one thing that actually broke: the NAMES. */
+C.section('REPLAT P5b: the rig adapter');
+{
+  const fsx=require('fs'), pathx=require('path'), ROOT=pathx.resolve(__dirname,'..','..');
+  const B=X.KEABIRD;
+  const src=require('../2026-08-26/keasrc').specimenSource();
+  const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+
+  /* ---- (1) IT IS OFF BY DEFAULT, WHICH IS WHAT KEEPS EVERY PINNED VANTAGE HONEST ---- */
+  ok(!!B,'there is a bird-model recipe (KEABIRD)');
+  ok(B.model===false,'and the model is OFF by default, so no baseline moves while the look is '+
+     'still being judged ('+B.model+')');
+
+  /* ---- (2) EVERY BONE NAME IN THE RECIPE EXISTS IN THE ACTUAL FILE ----
+     THE ONE THAT ALREADY EARNED ITS KEEP. The left leg's suffixes are not the mirror of the
+     right's — the right runs _076/_077 and the left runs _092/_00, numbered in creation order —
+     so two guessed names shipped and the bind refused the whole model. Parsed straight out of the
+     GLB here, so a rename or a re-export cannot quietly un-bind the bird. */
+  { const f=pathx.join(ROOT,'assets/models',pathx.basename(B.url));
+    ok(fsx.existsSync(f),'the model file the recipe names is in the tree ('+B.url+')');
+    if(fsx.existsSync(f)){
+      const buf=fsx.readFileSync(f);
+      const j=JSON.parse(buf.slice(20,20+buf.readUInt32LE(12)).toString('utf8'));
+      const joints=new Set((j.skins&&j.skins[0]?j.skins[0].joints:[]).map(i=>j.nodes[i].name));
+      ok(joints.size>0,'and it carries a skin with joints ('+joints.size+')');
+      const missing=Object.entries(B.bones).filter(([k,n])=>!joints.has(n)).map(([k,n])=>k+'='+n);
+      ok(missing.length===0,'every bone the recipe names EXISTS in the file'+
+         (missing.length?' — MISSING: '+missing.join(', '):' ('+Object.keys(B.bones).length+' checked)'));
+      /* and the crest prefix names something, because P5d has to remove it */
+      const crest=[...joints].filter(n=>n.startsWith(B.crestPrefix));
+      ok(crest.length>20,'the crest prefix matches the joints P5d has to remove ('+crest.length+')');
+      /* the mesh is skinned at all — a morph-target bird would pass every name check and pose nothing */
+      const prim=j.meshes[0].primitives[0];
+      ok(!!(prim.attributes&&prim.attributes.JOINTS_0),
+         'and the mesh is SKINNED (JOINTS_0), not morph-target — three.js\' own free parrot is '+
+         'morph-target and would pass every other check here while posing nothing'); } }
+
+  /* ---- (3) THE SCALE IS DERIVED, NOT TYPED ---- */
+  ok(B.standM>0.3&&B.standM<0.8,'the kea\'s standing height is a real bird height ('+B.standM+' m)');
+  ok(B.posedUnits>50,'and the model\'s posed height is recorded to divide by ('+B.posedUnits+' units)');
+  ok(/B\.standM\/B\.posedUnits/.test(fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8')),
+     'and the loader DERIVES the scale from those two rather than carrying a magic number');
+
+  /* ---- (4) THE CONJUGATION IS CORRECT, MEASURED ON A SYNTHETIC SKELETON ----
+     Built here rather than loaded, so the arithmetic is tested without a GPU or a 5 MB fetch. The
+     claim: a ZERO delta must reproduce the rest pose EXACTLY, whatever the bone's rest orientation.
+     That is the property an axis-swap table cannot hold and the whole reason for the conjugation. */
+  { const T=H.THREE;
+    const parent=new T.Object3D();
+    const bone=new T.Bone();
+    /* a deliberately awkward rest: no axis aligned with anything */
+    bone.quaternion.setFromEuler(new T.Euler(0.61,-1.22,0.43,'XYZ'));
+    bone.position.set(3,4,5);
+    parent.add(bone); parent.rotation.set(0.2,1.1,-0.3); parent.updateMatrixWorld(true);
+    const restLocal=bone.quaternion.clone();
+    const rig=X.keaRigBind(T,{b:bone},null);
+    ok(rig.length===1,'the binder captures the joint');
+    X.keaRigApply(T,rig[0],{x:0,y:0,z:0},null);
+    const d=Math.abs(bone.quaternion.x-restLocal.x)+Math.abs(bone.quaternion.y-restLocal.y)
+           +Math.abs(bone.quaternion.z-restLocal.z)+Math.abs(bone.quaternion.w-restLocal.w);
+    ok(d<1e-9,'a ZERO delta reproduces the rest pose exactly, on a bone with no axis aligned to '+
+       'anything ('+d.toExponential(2)+')');
+    /* a non-zero delta must actually move it, and by the right amount: the angle between the posed
+       and rest quaternions must equal the delta's angle, because a conjugation is a rotation and
+       rotations preserve angle. */
+    const ang=0.5;
+    X.keaRigApply(T,rig[0],{x:ang,y:0,z:0},null);
+    const got=2*Math.acos(Math.min(1,Math.abs(bone.quaternion.dot(restLocal))));
+    ok(Math.abs(got-ang)<1e-6,'and a '+ang+' rad delta rotates the bone by exactly that angle, '+
+       'which is the property that makes the conjugation a retarget and not a distortion ('+
+       got.toFixed(6)+')');
+    /* AND THE AXIS, WHICH IS THE WHOLE POINT AND WHICH THE ANGLE TEST ABOVE CANNOT SEE.
+       A sabotage that DELETED the conjugation entirely stayed green against the angle check —
+       correctly, because rotating about the bone's own local x is also a rotation of 0.5 rad. What
+       separates a retarget from a distortion is WHICH AXIS the bird turns about: the pose author
+       wrote `head.rotation.x` meaning the bird's own left-right axis, and on a bone whose local x
+       points at (-0.92, 0.28, 0.26) that is a different thing entirely. So: take the bone's WORLD
+       delta and check its axis is the bird-frame x it was asked for. */
+    { const restW=rig[0].restWorld.clone();
+      bone.updateWorldMatrix(true,false);
+      const nowW=new T.Quaternion();
+      bone.matrixWorld.decompose(new T.Vector3(),nowW,new T.Vector3());
+      const dW=nowW.clone().multiply(restW.clone().invert());
+      /* axis of dW */
+      const sn=Math.sqrt(Math.max(0,1-dW.w*dW.w));
+      const axis=sn<1e-8?new T.Vector3(1,0,0)
+        :new T.Vector3(dW.x/sn,dW.y/sn,dW.z/sn).normalize();
+      const dot=Math.abs(axis.dot(new T.Vector3(1,0,0)));
+      ok(dot>0.9999,'and it turns about the BIRD\'S x axis in world space, not the bone\'s own — '+
+         'the property an axis-swap table cannot hold and the only thing separating a retarget '+
+         'from a distortion (axis dot x = '+dot.toFixed(6)+')'); } }
+
+  /* ---- (5) THE FRAME IS MEASURED FROM THE MODEL, NOT ASSUMED ----
+     This model is yawed about 45 degrees; anything that assumed world axes would be wrong by that
+     much. Two synthetic humeri, deliberately placed on a diagonal. */
+  { const T=H.THREE;
+    const mk=(x,z)=>{ const b=new T.Bone(); b.position.set(x,0,z); b.updateMatrixWorld(true); return b; };
+    const fr=X.keaBirdFrame(T,{humL:mk(-1,-1),humR:mk(1,1)});
+    ok(Math.abs(fr.right.y)<1e-9,'the measured lateral axis is level');
+    ok(Math.abs(fr.right.x-fr.right.z)<1e-6,'and it follows the humeri onto the diagonal, rather '+
+       'than snapping to a world axis ('+fr.right.x.toFixed(3)+', '+fr.right.z.toFixed(3)+')');
+    ok(Math.abs(fr.fwd.dot(fr.right))<1e-6,'forward is perpendicular to it');
+    ok(Math.abs(fr.up.y-1)<1e-9,'and up is up'); }
+
+  /* ---- (6) THE COMMIT IS WIRED, AND ONLY WHERE IT CANNOT BE SKIPPED ---- */
+  ok(/if\(this\._model\)this\.rigCommit\(\);/.test(code),
+     'the commit runs at the END of the pose, after poseLock, which is applied last');
+  ok(/rigCommit\(\)\{/.test(code),'and it exists');
+  { const B2=B.wingChain, O=B.openChain;
+    ok(Array.isArray(B2)&&B2.length===3,'the wing chain names all three segments the model has');
+    ok(B2[0]>B2[1]&&B2[1]>B2[2],'with the stroke strongest at the humerus and softening outward ('+
+       B2.join(' > ')+')');
+    ok(Array.isArray(O)&&O.length===3&&O[0]===0,
+       'and `open` drives the ulna and metacarpus, not the humerus — the model has no per-primary '+
+       'feather bones for the old spread, so it folds into extension ('+O.join(', ')+')'); }
+
+  /* ---- (7) THE PRIMITIVE BIRD IS STILL THE ONE THAT SHIPS ----
+     Everything above is inert until Eric flips KEABIRD.model. The handles the 80 writes use must
+     still be built by buildMesh, or turning the model OFF would leave no bird at all. */
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4);
+  { const k=G.keas[0];
+    ok(!!k,'a bird exists');
+    for(const h of ['body','neck','head','jaw','tail'])
+      ok(!!k[h]&&k[h].isObject3D,'the '+h+' handle is a real Object3D the pose can write to');
+    ok(Array.isArray(k.wings)&&k.wings.length===2,'both wings');
+    ok(Array.isArray(k.legs)&&k.legs.length===2,'both legs');
+    ok(Array.isArray(k.tailF)&&k.tailF.length>=4,'and the tail fan');
+    ok(!k._model,'and no model is attached in a headless build, so the primitive bird is what the '+
+       'batteries and the pinned vantages see'); }
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
 process.exitCode=C.report()?1:0;

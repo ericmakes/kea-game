@@ -4674,3 +4674,56 @@ Lock taken (none held), released as the final act. `src/game.mjs` unchanged — 
 - **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, the PENDING rule and the md5 guard
   both demonstrated on the real file, the asset tier is 27 MB total (still well under the git-lfs
   threshold the ledger names).
+
+## SESSION 26 — 2026-09-04, P5b: the rig is bound, and a name map was the easy half
+
+Lock taken (none held), released as the final act. Tip certified before anything moved (specimen
+`1d175922c03eb13d6e30788e34795bac`). Shipped at `68a516a23c1a616ab381e8536ed849e0`. **Model OFF by
+default — nothing re-pinned, every baseline still sees the primitive bird.** Ten sabotages, all ten
+red. Seal mission still 12/12.
+
+- **THE BRIEF ASSUMED A NAME MAP AND THE NAME MAP IS THE EASY HALF.** Every key bone's rest frame
+  was read out in world space and **not one is axis-aligned** — `head` local X points
+  (-0.92, 0.28, 0.26), `ulnaR` local X points (-0.13, 0.36, 0.92). And the whole model is yawed
+  about 45 degrees: the humeri lie on (-0.71, 0.01, -0.70). A `{x:'z', y:'-x'}` remap table is a lie
+  about frames like these. **So the binding is a CONJUGATION**, `delta_local = conj(restWorld) *
+  delta_bird * restWorld`, with no hand-tuned constants at all — restWorld is read off the loaded
+  skeleton, so the same code binds a differently-rigged model. The bird's own frame is measured too,
+  from the line between the two humeri.
+
+- **THE 80 WRITE SITES DID NOT CHANGE, WHICH WAS THE POINT.** Each handle stays an Object3D the game
+  writes exactly as before; `rigCommit()` runs once at the end of the pose, after poseLock, and maps
+  handles onto bones. A retarget that edited 80 sites would be unreviewable. Proved live rather than
+  assumed: driving the handles hard moves `humL`'s child 79 mm, `head`'s 53 mm, `femR`'s 61 mm.
+
+- **SCALE IS DERIVED AND LANDS WITHIN 5 mm.** `standM / posedUnits / gScale` puts the model at
+  0.566 m against the primitive bird's measured 0.571 m — from a formula, not a fitted number.
+
+- **I GUESSED TWO BONE NAMES AND THE BIND REFUSED THE MODEL.** The left leg's suffixes are not the
+  mirror of the right's: right `_076/_077`, left `_092/_00`, numbered in creation order rather than
+  symmetrically. The bind named exactly which keys were missing, which is why it cost one render.
+  A battery now parses the GLB and checks every name in the recipe against the file.
+
+- **THE FIRST RENDER ONLY WORKED BECAUSE A RACE WENT MY WAY.** `installBird` attached to the keas
+  that existed when the 5.4 MB fetch resolved — and keas are built by `startGame`, which on a fast
+  machine happens BEFORE the fetch finishes. The other way round the model would never have
+  appeared, with nothing in G.bird to say so. Both directions covered.
+
+- **MY OWN PROBE WAS WRONG BEFORE THE CODE WAS.** It measured each driven bone's own origin and
+  reported four zeros — which reads as "the rig is dead" and is really "rotating a bone moves its
+  CHILDREN, not itself". Worth writing down because the wrong reading pointed at the wrong file.
+
+- **AND ONE ASSERTION THAT DID NOT ASSERT.** The battery's angle test — "a 0.5 rad delta rotates the
+  bone by 0.5 rad" — **cannot tell a conjugation from a raw euler write**, because rotating about
+  the bone's own local x is also a rotation of 0.5 rad. The sabotage that deleted the conjugation
+  outright stayed GREEN. What separates a retarget from a distortion is WHICH AXIS, so the battery
+  now takes the bone's world delta and checks its axis is the bird-frame x it was asked for.
+
+- **KNOWN AND NOT YET DONE:** the feet float 77 mm (P5c); 60 of 161 joints are the cockatoo crest
+  (P5d); the plumage is black and a kea is olive (P5d); and the wing loses the per-primary feather
+  spread because the model carries no bones for it, so `open` folds into ulna/metacarpus extension —
+  recorded in the recipe rather than quietly dropped.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, ten P5b sabotages all ten red, seal
+  12/12 headless, diff 28/27 flagged and subjects 16/2 missing both unchanged from the tip because
+  the model is off. Render: `gauntlet/capture/P5b_bird_primitive_vs_model.png`.

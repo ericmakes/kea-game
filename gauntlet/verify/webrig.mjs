@@ -152,6 +152,14 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
     try { grass = JSON.parse(process.env.KEAGRASS); }
     catch (e) { throw new Error('webrig: KEAGRASS is not valid JSON — ' + e.message); }
   }
+  /* REPLAT P5b: KEABIRD reaches the bird model tier. Same seam and same reason as the three above —
+     the model is a look decision and has to be shootable without a rebuild. Nested one level, so
+     KEABIRD='{"bones":{"head":"..."}}' reaches a leaf. */
+  let bird = null;
+  if (process.env.KEABIRD) {
+    try { bird = JSON.parse(process.env.KEABIRD); }
+    catch (e) { throw new Error('webrig: KEABIRD is not valid JSON — ' + e.message); }
+  }
   let mats = null;
   if (process.env.KEAMATS) {
     try { mats = JSON.parse(process.env.KEAMATS); }
@@ -170,8 +178,9 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
        because `tint` is a valid KEY and `asfalt` is not a family. game.mjs knows the names, so
        game.mjs reports what it ignored and assertBooted refuses the pass below. */
   }
-  if (nopost || nosky || nomats || film || sky || mats || grass)
-    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt, gr) => {
+  if (nopost || nosky || nomats || film || sky || mats || grass || bird)
+    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt, gr, bd) => {
+      if (bd) globalThis.__KEA_BIRD__ = bd;
       if (np) globalThis.__KEA_NOPOST__ = true;
       if (ns) globalThis.__KEA_NOSKY__ = true;
       if (f) globalThis.__KEA_FILM__ = f;
@@ -179,7 +188,7 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
       if (nm) globalThis.__KEA_NOMATS__ = true;
       if (mt) globalThis.__KEA_MATS__ = mt;
       if (gr) globalThis.__KEA_GRASS__ = gr;
-    }, nopost, film, nosky, sky, nomats, mats, grass);
+    }, nopost, film, nosky, sky, nomats, mats, grass, bird);
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);

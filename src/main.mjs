@@ -62,6 +62,18 @@ if (!cfg.nomats && !globalThis.__KEA_NOMATS__) {
   }
 }
 
+/* REPLAT P5b: THE BIRD MODEL, wired here for the same reasons the two above are — game.mjs keeps
+   its single import, and a look feature must not be able to take the game down. Off unless
+   KEABIRD='{"model":true}'; a failed load leaves the primitive bird and says so in G.bird. */
+if (!cfg.nobird && !globalThis.__KEA_NOBIRD__) {
+  try {
+    const { installBird } = await import('./bird.mjs');
+    await installBird(KEAGAME);
+  } catch (e) {
+    console.error('bird: the model tier failed to install, staying on the primitive bird —', e);
+  }
+}
+
 /* THE FILM CAMERA goes on after boot, because it attaches to the renderer the boot creates.
    Wired HERE and not in game.mjs so that file keeps the single import the gauntlet's specimen
    loader asserts — see src/post.mjs. If the post stack cannot build, the game keeps playing on the
