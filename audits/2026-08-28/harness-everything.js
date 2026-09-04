@@ -5839,6 +5839,87 @@ C.section('REPLAT P5b: the rig adapter');
        'and `open` drives the ulna and metacarpus, not the humerus — the model has no per-primary '+
        'feather bones for the old spread, so it folds into extension ('+O.join(', ')+')'); }
 
+  /* ---- (6b) THE FIVE P5d2 LOOK FIXES, EACH ASSERTED ----
+     THESE WERE ALL UNASSERTED WHEN FIRST SHIPPED and a seven-way sabotage came back seven green:
+     the jaw sign could flip, the wing-open gate could be deleted, the shading could go back to the
+     floor-clamped ratio that dimmed the bird to mud, and nothing would have gone red. Proof in the
+     same breath as the change is the law and this pass did not have it. */
+  { const P=B.plume, bsrc=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
+    ok(!!P,'there is a plumage palette (KEABIRD.plume)');
+
+    /* (i) THE BILL RESTS SHUT, AND THE SIGN IS THE WHOLE POINT. Swept and measured on the posed
+       bird as the angle between the mandibles' length axes: +0.6 gives 6.8 degrees, 0 gives 35.5,
+       and -0.62 — the first value shipped — gives about 70, wider than the pose it was meant to
+       close. A negative jawShut is not a tuning, it is the sign error. */
+    ok(P.jawShut>0.3&&P.jawShut<1.0,'the jaw-shut offset is POSITIVE and closes the bill — '+
+       'negative forces a 70 degree gape ('+P.jawShut+')');
+    ok(/jaw\.rotation\.x \+ \(B\.plume\?B\.plume\.jawShut:0\)/.test(code),
+       'and it is ADDED to what the game asks, so the beak still opens from a closed rest');
+
+    /* (ii) A KEA SHOWS NO RED UNTIL IT OPENS. Both the coverts and the barred underside live under
+       a folded wing, so both are gated on the wing's own open state. Measured on the render: 0 of
+       810,000 pixels read scarlet on the folded bird. */
+    ok(/c = mix\(c, uCov, vKeaCv\*uOpen\);/.test(bsrc),
+       'the coverts are gated on wing-open — a kea shows no red while perched');
+    ok(/float fl = vKeaFl\*uOpen;/.test(bsrc),
+       'and so is the barred underside, for the same reason');
+    ok(/U\.uOpen\.value=clamp\(/.test(code),
+       'and uOpen is DRIVEN from the wing every frame, not pinned to a constant');
+    ok(P.openLo>0&&P.openHi>P.openLo,'with a real gate window ('+P.openLo+'..'+P.openHi+')');
+
+    /* (iii) NEITHER MASK MAY TOUCH THE DORSAL SURFACE. The first pass tested the normal's local Y
+       on a model yawed 45 degrees and put scarlet on the OUTSIDE of a folded wing. */
+    { const m=bsrc.match(/if\(t==='near' && nd < (-?[0-9.]+)\)/);
+      ok(!!m,'the covert bake tests the normal against the bird\'s up vector');
+      ok(!!m&&parseFloat(m[1])<-0.2,'and only accepts clearly VENTRAL faces ('+(m?m[1]:'?')+')');
+      ok(/nor\.getX\(v\)\*up\.x/.test(bsrc),
+         'against the measured up vector carried into mesh-local space, not the raw local Y'); }
+
+    /* (iv) THE SHADING IS CENTRED ON 1, NOT FLOOR-CLAMPED. On a BLACK cockatoo a floor-clamped
+       lum/mean put nearly the whole bird on its floor: the palette was dimmed to 0.55 of itself and
+       the bird came out mud. Centring keeps the mean texel at exactly the palette colour. */
+    ok(/float shade=1\.0\+\(lum\/max\(uMean,1e-3\)-1\.0\)\*uDetail;/.test(bsrc),
+       'the source shading modulates AROUND the palette rather than scaling it down from a floor');
+    ok(P.detail>0.1&&P.detail<0.9,'with a real detail amount ('+P.detail+')');
+    ok(P.shadeLo>0.4&&P.shadeHi<1.35,'and a guard on the extremes, which is where the cockatoo\'s '+
+       'bare red face lives ('+P.shadeLo+'..'+P.shadeHi+')');
+    ok(/uMean:\{value:P\.mean\}/.test(bsrc)&&/B\.plume\.mean=/.test(bsrc),
+       'and the mean it divides by is MEASURED off the texture, not typed');
+
+    /* (v) THE PALETTE IS ASSERTED AGAINST THE PLATE'S OWN RATIOS, not against a hex I chose.
+       kea_underwing_01, sampled: covert 121,33,12 and flight ground 101,91,60. Those two settled
+       arguments the eye was losing — the coverts are a deep BRICK, and the flight ground is OLIVE,
+       where the first pass had orange over gold and the underwing read as hazard tape. */
+    const ch=(h)=>({r:(h>>16)&255,g:(h>>8)&255,b:h&255});
+    { const c=ch(P.covert);
+      ok(c.g/c.r<0.40,'the coverts are a DEEP RED, not orange — the plate is 33/121 = 0.27 green '+
+         'over red ('+(c.g/c.r).toFixed(2)+')');
+      ok(c.b/c.r<0.25,'and barely any blue, as the plate has ('+(c.b/c.r).toFixed(2)+')');
+      /* AND THE RATIOS ALONE CANNOT TELL BRICK FROM ORANGE, which a sabotage proved: 0xD93A0B —
+         the orange the first pass shipped — has g/r 0.27 and b/r 0.05 and passes both tests above.
+         What separates them is the RED CHANNEL'S MAGNITUDE. The plate's covert is 121 in a
+         photograph, which lifts to about 169 as albedo; orange sits at 217. So the band comes off
+         the measurement rather than off a preference. */
+      ok(c.r>140&&c.r<196,'and it is BRICK rather than orange — the plate\'s 121 lifts to about '+
+         '169 as albedo, where orange sits at 217 (red channel '+c.r+')'); }
+    { const f=ch(P.flight);
+      ok(f.g/f.r>0.75&&f.g/f.r<1.05,'the flight-feather ground is OLIVE, not gold — the plate is '+
+         '91/101 = 0.90 ('+(f.g/f.r).toFixed(2)+')');
+      ok(f.b/f.r<0.75,'with the blue well down ('+(f.b/f.r).toFixed(2)+')'); }
+    { const b2=ch(P.body);
+      ok(b2.g/b2.r>0.70&&b2.g/b2.r<1.0,'the body is a warm olive, R>=G ('+(b2.g/b2.r).toFixed(2)+')');
+      ok(b2.b/b2.r<0.70,'and warm rather than grey ('+(b2.b/b2.r).toFixed(2)+')'); }
+    { const bl=ch(P.bill);
+      ok(bl.b>bl.g&&bl.g>bl.r,'the bill is SLATE — the one patch on the plate where B > G > R ('+
+         [bl.r,bl.g,bl.b].join(',')+')'); }
+
+    /* (vi) AND THE SCALLOPING IS NOT ATTEMPTED, ON PURPOSE. A kea's every body feather is
+       dark-rimmed and the cockatoo's albedo has no such edging; tinting cannot synthesise it. It
+       needs a painted map, which is a different piece. Recorded so nobody reads its absence as an
+       oversight — and so nobody fakes it with a noise term. */
+    ok(!/scallop/i.test(bsrc),'no scalloping is faked in the shader — it needs a painted albedo '+
+       'and is filed as its own piece'); }
+
   /* ---- (7) THE PRIMITIVE BIRD IS STILL THE ONE THAT SHIPS ----
      Everything above is inert until Eric flips KEABIRD.model. The handles the 80 writes use must
      still be built by buildMesh, or turning the model OFF would leave no bird at all. */

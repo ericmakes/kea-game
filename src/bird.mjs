@@ -50,8 +50,11 @@ function keaRegions(THREE,sk,P,upLocal){
       const w=W.getComponent(v,k); if(w<=0)continue;
       const t=kind[J.getComponent(v,k)]||'body';
       let c;
-      if(t==='near')      c = nd < -0.25 ? C.covert : C.body;   // ventral inner wing only
-      else if(t==='far')  c = nd < -0.10 ? C.flight : C.body;   // barred underside; dorsal stays body
+      /* THE COVERTS AND THE BARRED UNDERSIDE ARE NOT BAKED INTO THE TINT ANY MORE. Both live under
+         a folded wing on a real kea, so both are carried as MASKS and gated on wing-open in the
+         shader. What is baked here is what the bird looks like with the wing SHUT. */
+      if(t==='near')      c = C.body;
+      else if(t==='far')  c = C.body;
       else if(t==='bill') c = C.bill;
       else if(t==='foot') c = C.foot;
       else if(t==='crown')c = C.crown;
@@ -63,15 +66,23 @@ function keaRegions(THREE,sk,P,upLocal){
     out[v*3]=r/tot; out[v*3+1]=gr/tot; out[v*3+2]=b2/tot;
   }
   g.setAttribute('aKeaTint',new THREE.BufferAttribute(out,3));
-  /* the flight-feather mask travels separately so the barring knows where to go */
+  /* THE TWO WING MASKS. Both are strictly VENTRAL — a kea shows neither from above, and the first
+     pass leaked scarlet onto the outside of a folded wing by testing at -0.15 in the wrong space.
+     -0.35 is deliberately tighter than the geometry needs: a folded wing curls its coverts outward,
+     so a loose threshold catches feathers that will face the camera when the wing shuts. */
+  const cm=new Float32Array(g.attributes.position.count);
   const fm=new Float32Array(g.attributes.position.count);
   for(let v=0;v<g.attributes.position.count;v++){
-    let f=0,tot=0;
+    let c2=0,f=0,tot=0;
     const nd = nor.getX(v)*up.x + nor.getY(v)*up.y + nor.getZ(v)*up.z;
     for(let k=0;k<4;k++){ const w=W.getComponent(v,k); if(w<=0)continue;
-      if(kind[J.getComponent(v,k)]==='far' && nd < -0.10) f+=w; tot+=w; }
-    fm[v]=tot>0?f/tot:0;
+      const t=kind[J.getComponent(v,k)];
+      if(t==='near' && nd < -0.35) c2+=w;
+      if(t==='far'  && nd < -0.35) f+=w;
+      tot+=w; }
+    cm[v]=tot>0?c2/tot:0; fm[v]=tot>0?f/tot:0;
   }
+  g.setAttribute('aKeaCovert',new THREE.BufferAttribute(cm,1));
   g.setAttribute('aKeaFlight',new THREE.BufferAttribute(fm,1));
   for(const k in hist)hist[k]=Math.round(hist[k]);
   return hist;
@@ -83,30 +94,48 @@ function keaRegions(THREE,sk,P,upLocal){
    being replaced by a flat decal. The flight feathers additionally get procedural barring, because
    a black cockatoo's texture has none and a kea's underwing is unmistakable without it. */
 function keaRecolour(THREE,mat,P){
+  const U={
+    uCov :{value:new THREE.Color(P.covert).convertSRGBToLinear()},
+    uFli :{value:new THREE.Color(P.flight).convertSRGBToLinear()},
+    uBar :{value:new THREE.Color(P.bar).convertSRGBToLinear()},
+    uBarN:{value:P.barN}, uBarW:{value:P.barW}, uMean:{value:P.mean},
+    uDetail:{value:P.detail}, uShLo:{value:P.shadeLo}, uShHi:{value:P.shadeHi},
+    uOpen:{value:0},
+  };
+  mat.userData.keaU=U;
   mat.onBeforeCompile=(sh)=>{
-    sh.uniforms.uBar={value:new THREE.Color(P.bar).convertSRGBToLinear()};
-    sh.uniforms.uBarN={value:P.barN}; sh.uniforms.uBarW={value:P.barW};
-    sh.uniforms.uMean={value:P.mean};
-    sh.vertexShader='attribute vec3 aKeaTint;\nattribute float aKeaFlight;\n'+
-      'varying vec3 vKeaTint;\nvarying float vKeaFl;\nvarying vec3 vKeaLocal;\n'+
+    Object.assign(sh.uniforms,U);
+    sh.vertexShader='attribute vec3 aKeaTint;\nattribute float aKeaFlight;\nattribute float aKeaCovert;\n'+
+      'varying vec3 vKeaTint;\nvarying float vKeaFl;\nvarying float vKeaCv;\nvarying vec3 vKeaLocal;\n'+
       sh.vertexShader.replace('#include <begin_vertex>',
-        '#include <begin_vertex>\n\tvKeaTint=aKeaTint;\n\tvKeaFl=aKeaFlight;\n\tvKeaLocal=position;');
-    sh.fragmentShader='uniform vec3 uBar;\nuniform float uBarN,uBarW,uMean;\n'+
-      'varying vec3 vKeaTint;\nvarying float vKeaFl;\nvarying vec3 vKeaLocal;\n'+sh.fragmentShader.replace(
+        '#include <begin_vertex>\n\tvKeaTint=aKeaTint;\n\tvKeaFl=aKeaFlight;\n'+
+        '\tvKeaCv=aKeaCovert;\n\tvKeaLocal=position;');
+    sh.fragmentShader='uniform vec3 uCov,uFli,uBar;\nuniform float uBarN,uBarW,uMean,uDetail,uShLo,uShHi,uOpen;\n'+
+      'varying vec3 vKeaTint;\nvarying float vKeaFl;\nvarying float vKeaCv;\nvarying vec3 vKeaLocal;\n'+
+      sh.fragmentShader.replace(
       '#include <color_fragment>',
       `#include <color_fragment>
       {
         vec3 c = vKeaTint;
-        /* THE BARRING ONLY EXISTS WHERE THE FLIGHT FEATHERS DO, and it fades in with the same mask
-           that tinted them, so it cannot spill onto the body at a boundary. */
-        if(vKeaFl>0.01){
+        /* NOTHING RED UNTIL THE WING OPENS. uOpen is driven from the wing's own open state every
+           frame, so a perched kea is olive all over and the colour is a thing it DOES rather than a
+           thing it wears. */
+        c = mix(c, uCov, vKeaCv*uOpen);
+        float fl = vKeaFl*uOpen;
+        if(fl>0.004){
+          vec3 f = uFli;
           float t=fract(vKeaLocal.z*uBarN);
-          c=mix(c,uBar,step(1.0-uBarW,t)*vKeaFl);
+          f = mix(f, uBar, step(1.0-uBarW,t));
+          c = mix(c, f, fl);
         }
+        /* THE SHADING IS CENTRED ON 1, NOT CLAMPED FROM BELOW. A black cockatoo's texels sit far
+           under the mean, so a floor-clamped ratio put the whole bird on its floor and dimmed the
+           palette to mud. Centring keeps the mean texel at exactly the palette colour and lets the
+           source's feather shading modulate around it. */
         float lum=dot(diffuseColor.rgb,vec3(0.2126,0.7152,0.0722));
-        diffuseColor.rgb = c * clamp(lum/max(uMean,1e-3),0.35,1.9);
+        float shade=1.0+(lum/max(uMean,1e-3)-1.0)*uDetail;
+        diffuseColor.rgb = c * clamp(shade,uShLo,uShHi);
       }`);
-    mat.userData.keaPl=sh.uniforms;
   };
   mat.needsUpdate=true;
 }

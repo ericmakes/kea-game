@@ -1788,3 +1788,38 @@ DO NOT reach for "just extend the radius" instead. It was measured and it is wor
 nothing: at 40 m with the count raised to hold density the edge does not disappear, it MOVES, and
 `edgefind` scores it 16.90 against the 14 m field's 5.92, because at that range the fade compresses
 into a handful of pixels near the horizon. A bigger disc is still a disc.
+
+### 83. THE KEA'S UNDERWING FLASH IS A SLIVER, NOT A FLASH — THE COVERT MASK IS TOO SMALL
+Filed 2026-09-04, session 28 (REPLAT P5d2). The gate works; the region it gates is the wrong shape.
+WHAT IS RIGHT: a kea shows no red until it opens, and that is now true and measured — **0 of 810,000
+pixels** read scarlet on a folded bird, because the coverts and the barred underside are both tied
+to the wing's own open state and driven every frame.
+WHAT IS WRONG: with the wing OPEN, only **124** pixels on the bird read scarlet. The covert mask
+catches **106 of 3,009 vertices** — a thin strip along the wing's leading edge where
+`kea_underwing_01` shows a broad flash across the whole inner wing. Opening the wing therefore
+reveals almost nothing, which is the opposite of the bird's most recognisable feature.
+WHY IT IS SMALL: the mask is `bone is Humerus AND normal·up < -0.35`. That is a sound test and it
+was tightened to -0.35 precisely because -0.15 leaked scarlet onto the OUTSIDE of a folded wing. But
+a folded wing curls its coverts outward, so the only vertices that stay reliably ventral are the few
+along the fold line. **The normal cannot separate what the pose keeps moving.**
+THE FIX, for whoever takes it: define the coverts by POSITION rather than by normal — the proximal
+ventral quadrant of the wing, measured in the wing's own frame (along the humerus, below its axis).
+Position does not change with the fold, so the mask can be as broad as the plate without leaking.
+`aKeaCovert` is already a separate baked attribute and the shader already gates it, so this is a
+change to one bake loop and nothing else.
+DO NOT reach for loosening the normal threshold instead: that is the change that put red on the
+outside of a folded wing, and the 0-pixel result above is what it costs to undo.
+
+### 84. THE KEA'S FEATHER SCALLOPING NEEDS A PAINTED ALBEDO
+Filed 2026-09-04, session 28 (REPLAT P5d2), on Eric's instruction not to attempt it in that pass.
+`kea_underwing_01` shows every body feather **dark-rimmed** — a scalloped, scaled look that is most
+of what makes a kea read as a kea in a close frame. The base mesh is a black palm cockatoo whose
+albedo has silky, unscalloped plumage, and the recolour takes hue from a palette and DETAIL from
+that texture's luminance. There is no scalloping in the source to take, so no palette or tint can
+synthesise it.
+IT MUST NOT BE FAKED WITH NOISE. A procedural rim would have to key off UV or position and would
+tile visibly against feather flow; the battery asserts no `scallop` term exists in the shader for
+exactly that reason.
+WHAT IT ACTUALLY NEEDS: a painted albedo over the model's existing UVs — either hand-painted in
+Blender's texture paint over the current map, or a feather-edge generator baked to UV space. Either
+way it is a texture piece with its own proof, not a tuning of P5d.

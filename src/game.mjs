@@ -876,11 +876,13 @@ const KEABIRD={
      possible rest for a bird that spends the game perched: it photographed as a fairground ride.
      Its own 22 s clip contains the pose we want. Scanned by measuring metacarpus separation across
      the whole clip: it runs from 26.5 model units (folded) to 55.2 (spread), and the tightest frame
-     is t=4.81 s. So the animation is evaluated ONCE at that time and the result captured as the
+     is t=4.81 s - but the BILL gapes there, so span and gape were scored TOGETHER across 90
+     samples (each normalised to its own range) and t=5.49 s wins: span 26.9 against a 26.5 minimum,
+     for a gape of 0.659 against 0.806. The clip is evaluated ONCE there and the result captured as the
      rest every delta is measured from — the fold comes from the person who rigged the bird rather
      than from me guessing three joint angles.
      restT IS A KNOB because it is a look decision: sweep it and every perched frame changes. */
-  restT:4.81,
+  restT:5.49,
   /* ---- THE KEA PALETTE — REPLAT P5d ----
      Read off kea_underwing_01, which is the one plate that shows body, underwing, flight feathers,
      bill and feet in a single frame under one light. A kea is NOT the olive-green a description
@@ -892,16 +894,48 @@ const KEABIRD={
      plumage becomes olive plumage rather than a flat olive decal. What it cannot supply is the
      kea's scalloped feather EDGING, which is a texture feature the source does not have. */
   plume:{
-    body   :0x7A6B3E,   // warm olive-brown breast and mantle
-    crown  :0x6E6047,   // browner and greyer over the head
-    covert :0xD93A0B,   // the underwing coverts: vivid orange-scarlet
-    flight :0xC9A93A,   // flight-feather ground: yellow-olive
-    bar    :0x221E14,   // and the bold black barring across it
-    bill   :0x5A6068,   // slate grey, hooked
-    foot   :0x8A8B86,   // grey and scaly
-    barN   :0.28,       // bars per model unit along the feather — swept, not guessed
+    /* SAMPLED OFF kea_underwing_01, not chosen. The plate is a photograph so its pixels carry the
+       overcast light with them; what is taken is the RELATIONSHIPS, lifted about 1.4x into albedo:
+           breast  #554029    mantle #725b43    crown #72635f    bill  #647181
+           covert  #79210c    flight #655b3c    bar   #524e40    foot  #737b88
+       Two of those settled arguments the eye was losing. The coverts are a DEEP BRICK RED, not the
+       orange the first pass used - 121,33,12, barely any green in it at all. And the flight-feather
+       ground is OLIVE at 101,91,60, not the gold that made the underwing read as hazard tape. */
+    body   :0x7C7340,   // warm olive-green, the plate's breast lifted to albedo
+    crown  :0x6E6152,   // browner and greyer over the head, less saturated than the body
+    covert :0xA82A10,   // deep brick red - the plate's 121,33,12, not orange
+    flight :0xA29260,   // yellow-OLIVE ground, not gold
+    bar    :0x2A2418,   // near-black barring across it
+    bill   :0x616B78,   // slate blue-grey: the one patch where B > G > R
+    foot   :0x848D9C,   // grey, faintly blue
+    barN   :0.28,       // bars per model unit along the feather
     barW   :0.42,       // duty cycle of the dark bar
     mean   :0.34,       // the source texture's mean luminance, MEASURED at load and overwritten
+    /* HOW MUCH OF THE SOURCE TEXTURE'S SHADING SURVIVES, AND WHY IT IS NOT A CLAMP ANY MORE.
+       The first cut multiplied the palette by clamp(lum/mean, lo, hi). On a BLACK cockatoo that is
+       a disaster: a black texel is lum/mean ~ 0.26, so most of the bird sat on the FLOOR and the
+       whole animal came out at 0.55 of its palette colour — dark, flat, and nothing like the plate.
+       Centring on 1 instead keeps the MEAN texel at exactly the palette colour and lets detail
+       modulate around it: shade = 1 + (lum/mean - 1) * detail. The bird is then the colour it was
+       given, wearing the source's feather shading rather than being dimmed by it.
+       The clamp survives only as a guard on the extremes — the bare red face is the bright end. */
+    /* shadeHi PULLED IN FROM 1.45. The cockatoo's wing texture has bright feather edges, and at
+       1.45 they lifted the whole dorsal surface to a pale khaki that read as a different bird from
+       the side than from the front. 1.18 keeps the detail and stops the wash. */
+    detail :0.45, shadeLo:0.62, shadeHi:1.18,
+    /* THE RESTING BILL IS SHUT. The clip never fully closes it - gape runs 0.297 to 1.284 rad over
+       all 22 s and even the best folded frame sits at 0.659 - so a bird posed from it gapes
+       permanently. This offset shuts it, applied on top of whatever the game asks of the jaw, so
+       `jaw.rotation.x` still opens and closes the beak from a CLOSED rest. */
+    /* +0.60, AND THE SIGN WAS THE WHOLE PROBLEM. The first value was -0.62, which forced the bill
+       to a 70-degree gape — wider than the rest pose it was meant to close. Swept and measured on
+       the posed bird as the angle between the two mandibles' length axes: +0.6 gives 6.8 degrees,
+       0 gives 35.5, and -0.62 gives about 70. Not a number to guess the sign of. */
+    jawShut:0.60,
+    /* WING-OPEN GATE. A kea shows NO red until it opens: the coverts and the barred underside are
+       both hidden under a folded wing, so both are tied to how far the wing actually IS open rather
+       than painted on and hoped for. Below openLo nothing shows at all. */
+    openLo :0.14, openHi:0.55,
   },
   /* THE WING HAS THREE SEGMENTS AND THE OLD RIG HAD ONE, so the single `w.rotation` drives the
      chain in these proportions: the humerus takes the stroke, the ulna and metacarpus follow it
@@ -5405,7 +5439,9 @@ class Kea{
     put('body', R.x, R.y, R.z);
     put('neck', N.x, N.y, N.z);
     put('head', H.x, H.y, H.z);
-    put('jaw',  this.jaw.rotation.x, 0, 0);
+    /* THE BILL RESTS SHUT. jawShut is added to whatever the game asks, so `jaw.rotation.x` still
+       opens and closes the beak — from a closed rest instead of a permanent gape. */
+    put('jaw',  this.jaw.rotation.x + (B.plume?B.plume.jawShut:0), 0, 0);
     put('tail', this.tail.rotation.x, 0, 0);
     for(const w of this.wings){
       const sd=w.userData.side, L=sd<0, open=w.userData.open||0;
@@ -5417,6 +5453,11 @@ class Kea{
     }
     this.legs.forEach((l,i)=>{ put(i?'femL':'femR', l.rotation.x, 0, 0);
       put(i?'tibL':'tibR', -l.rotation.x*0.6, 0, 0); });
+    /* AND THE WING-OPEN GATE, driven from the wing's own state. The coverts and the barred
+       underside only exist on screen while the wing is actually open — which is what a kea does. */
+    { const U=M.sk&&M.sk.material&&M.sk.material.userData.keaU;
+      if(U&&B.plume){ const o=(this.wings[0]&&this.wings[0].userData.open)||0;
+        U.uOpen.value=clamp((o-B.plume.openLo)/Math.max(1e-4,B.plume.openHi-B.plume.openLo),0,1); } }
   }
   freeCage(){
     this.caged=0; this.vy=3.2; this.grounded=false; G.squawk=null;
