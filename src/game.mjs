@@ -760,6 +760,49 @@ function grassTier(){
 const HEADLESS = (typeof window!=='undefined' && window.__KEA_HEADLESS__) || (typeof window==='undefined');
 
 /* ---------- palette ---------- */
+/* ============================================================
+   CREDITS — REPLAT P5 (2026-09-04). ATTRIBUTION IS A CONDITION OF USE, NOT A COURTESY.
+   ============================================================
+   Every asset before P5 was CC0 from Poly Haven. assets/LICENCES.md credits those authors anyway,
+   because they did the work — but nothing obliged it, and so this game shipped for months with no
+   credits surface at all and nobody noticed.
+   THE PALM COCKATOO BASE MESH IS CC-BY, and Sketchfab's own licence field for it reads "Author must
+   be credited. Commercial use is allowed." That is a CONDITION. A credit that lives only in a
+   markdown file in the repo is not a credit to a player who has the game and not the repo, so it
+   has to reach the screen — and something has to stop the next asset being added without one.
+   THE LEDGER IS THE SOURCE OF TRUTH AND THIS BLOCK IS CHECKED AGAINST IT. assets/LICENCES.md
+   carries a machine-readable `<!-- ASSET ... attrib=required ... -->` marker per attribution-
+   required asset; a battery parses those and asserts the set matches this block exactly, in both
+   directions. Add an asset without a credit and the gate goes red; delete a credit for an asset
+   still in the ledger and the gate goes red. That is the only way an obligation survives contact
+   with a hurried session.
+   CC0 ENTRIES ARE LISTED TOO, and deliberately. They do not have to be, which is exactly why a
+   human would drop them first under time pressure. */
+const CREDITS=[
+  {what:'kea base mesh', title:'Rockatoo character', author:'Macauley.B',
+   lic:'CC-BY 4.0', url:'sketchfab.com/Macauley.B', required:true},
+  {what:'HDRI skies', title:'pizzo_pernice · kloofendal_43d_clear · dry_field',
+   author:'Andreas Mischok, Greg Zaal — Poly Haven', lic:'CC0', url:'polyhaven.com', required:false},
+  {what:'scanned materials', title:'eight PBR sets', author:'Poly Haven', lic:'CC0',
+   url:'polyhaven.com', required:false},
+];
+/* Rendered into the title screen at boot. Plain text, no innerHTML from any field that could ever
+   come from outside this block — these are constants, but the habit is cheap and the alternative
+   is a credits line that is also an injection point the day one of them is fetched. */
+function creditsRender(){
+  if(typeof document==='undefined')return 0;
+  const el=document.getElementById('credits'); if(!el)return 0;
+  el.textContent='';
+  const head=document.createElement('b'); head.textContent='ASSETS  ';
+  el.appendChild(head);
+  CREDITS.forEach((c,i)=>{
+    if(i)el.appendChild(document.createTextNode('  ·  '));
+    el.appendChild(document.createTextNode(
+      c.what+': '+c.title+' — '+c.author+' ('+c.lic+')'));
+  });
+  return CREDITS.length;
+}
+
 const PAL={ // v6 (2026-08-26): colours lifted from the real country — Lindis tussock gold, greywacke, beech, hard alpine snow
   ground:0x96762E, ground2:0x7A6830, ground3:0x54772F, gravel:0x9B9891, tussock:0xC9992F, tussock2:0xA07C24,
   tarmac:0x63666C, road:0x4E5257, roadLine:0xE8E4D6, snow:0xF6FAFD, snowShade:0xC5D4E2,
@@ -6624,6 +6667,9 @@ function boot(opts){
   { const ar=SAVE.peekArrival();
     if(ar&&ar.to===G.biome){ const r=ar.run||{};
       setTimeout(()=>startGame(r.mode||1,{colossal:!!r.colossal}),0); } }
+  /* REPLAT P5: the credits reach the screen at boot, before anything is played. A CC-BY asset's
+     credit is a condition of use, so it cannot be behind a menu the player may never open. */
+  creditsRender();
   document.getElementById('btnagain').onclick=()=>location.reload();
   document.getElementById('cfgo').onclick=()=>closeCaseFile(true);
   document.getElementById('cfskip').onclick=()=>closeCaseFile(false);
@@ -6680,6 +6726,9 @@ if(typeof globalThis!=='undefined'){
     /* REPLAT P4. GRASS is the recipe; grassTier/grassReject/grassBladeGeo are exported because the
        gate proves the ARITHMETIC — tier thresholds, the reject mask, blade topology — rather than
        photographing its consequences, none of which a headless battery could otherwise reach. */
+    /* REPLAT P5: the credits block and its renderer, so a battery can cross-check the licence
+       ledger against what a player actually sees. */
+    CREDITS, creditsRender,
     GRASS, grassTier, grassCuts, grassBladeGeo, grassLattice, GRASS_GLSL_V,
     /* REPLAT P4e. The ground term's fbm has to be comparable to the blade shader's AS TEXT, because
        "a similar noise field" is how the seam comes back. */

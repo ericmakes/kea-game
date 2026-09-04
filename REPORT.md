@@ -1,72 +1,68 @@
-# REPORT — TODO 81 closed, and P5 stopped at the decision point (session 23, 2026-09-04)
+# REPORT — P5a: the first CC-BY asset, and the obligation it brought (session 24, 2026-09-04)
 
-Branch `replat-b`. **CERTIFIED-SHIP** at specimen `5c9fa1dd77d46eec3d6da3b630cd4149`.
-Two commits: TODO 81 (rig calibration), and this P5 plan. **`src/` is untouched by P5.**
+Branch `replat-b`. **CERTIFIED-SHIP** at specimen `1d175922c03eb13d6e30788e34795bac`.
+Twelve sabotages, all twelve red. **Nothing in `assets/models` yet — that part is yours.**
 
-## TODO 81 — DONE, AND THE REFERENCE WAS THE WRONG HALF
+## THE THING I DID NOT EXPECT TO FIND
 
-You asked me to reground the tow-wheel floor against the now-deterministic reading. Doing that
-properly meant re-deriving the *reference* too — and `absent:440` turned out to be the only
-reference in `subjects.mjs` with **no derivation recorded beside it**, and it does not reproduce.
+You picked F, the palm cockatoo. It is **the project's first CC-BY asset**, and that turned out to
+change an obligation nobody had booked. Sketchfab's licence field for it reads:
 
-Measured the way every other reference in that file was — same vantage, same stage, the real
-classifier imported from `subjects.mjs` rather than a copy, with the bull wheel taken out of the
-scene and held out every frame — the box scores **0, 0, 0**. The scarlet window sees the wheel and
-nothing else in it. (The carpark frame from the same camera, which is how the `hutgreen` reference
-was taken, scores 11 — so that is not where 440 came from either.)
+> **"Author must be credited. Commercial use is allowed."**
 
-| | staged | floor | reference | separation |
-|---|---|---|---|---|
-| **before** | 490–2038 *(nondeterministic)* | 1500 | 440 | 3.4× — a coin flip against a reference that was never measured |
-| **after** | **838 ±1** *(deterministic)* | **400** | **0** | **∞** — 2.1× headroom under the reading, nothing at all in the box without it |
+Everything before it was CC0 from Poly Haven, where `LICENCES.md` credits authors because they did
+the work and *nothing demands it*. This one demands it — and **the game had no credits surface at
+all.** A credit that lives only in a markdown file in the repo is not a credit to a player who has
+the game and not the repo. So the ledger line you asked for was necessary and not sufficient.
 
-The floor moved **down**, and that is grounding rather than weakening: 1500 was fitted to the top of
-a nondeterministic spread and was unmeetable by the frame the rig actually produces. 400 is 0.48 of
-the deterministic reading, in line with the sibling kea test in the same vantage (70 against 128).
-The calibration script validates its own stage copy — it reproduces the shipped 838 before its
-absent number is trusted. `subjects` is back to **2 missing**, the two known TODO 75 reds.
+## WHAT SHIPPED
 
-## P5 — I STOPPED WHERE THE BRIEF SAID TO STOP
+- **`CREDITS` in `src/game.mjs`** — one source of truth. Lists the CC-BY cockatoo **and** the CC0
+  Poly Haven authors, who are in there precisely because nothing compels it and they would be the
+  first line dropped in a hurry. A battery keeps them.
+- **Rendered on the title screen at boot**, before anything is played — not behind a menu a player
+  may never open. Built from text nodes, **never `innerHTML`** (asserted: they are constants today,
+  and the day one is fetched an innerHTML credits line is an injection point). Shot:
+  `gauntlet/capture/P5_credits_title.png`.
+- **The ledger and the game cross-check, both directions.** `assets/LICENCES.md` now carries a
+  machine-readable `<!-- ASSET ... -->` marker per asset from P5 on — invisible in rendered
+  markdown, load-bearing for the gate. Add an asset and forget the credit: **red**. Delete a credit
+  while the ledger still lists the asset: **red**. Neither is catchable by reading.
+- **A landed file cannot sit on a `PENDING` md5.** Either the file exists and its md5 matches, or it
+  does not exist and the md5 says PENDING. Sabotaged both ways.
+- **Blender 5.2.1 LTS installed** and verified headless with glTF import. The first attempt died on
+  `No space left on device`; after you cleared space it went through clean.
 
-Full plan and sourcing in **`P5.md`**. Three things you should know before you read it.
+## YOUR MOVE — the drop
 
-**1. P5 is not what the REPLAT clause says it is.** The clause says "retarget the existing
-animations". There are no animation clips. There is a hand-written procedural rig with **80 pose-
-write sites across 13 joints** — including a `jaw`, five **individually fanning** tail feathers, and
-a `neck` that *scales*. So P5 is **re-binding a procedural rig onto a skeleton**, and the model's
-bone structure matters more than its mesh. A pretty model with eight anonymous bones costs more to
-adopt than a plain one with thirteen named ones.
+1. Download **Rockatoo character** from
+   [sketchfab.com/3d-models/rockatoo-character-1595e8668689427f87cffb2b0daf99e5](https://sketchfab.com/3d-models/rockatoo-character-1595e8668689427f87cffb2b0daf99e5)
+   — GLB if offered; FBX or `.blend` is fine, Blender is in now and can convert.
+2. Put it at **`assets/models/rockatoo.glb`** — that exact path. The ledger marker names it and the
+   battery checks it.
+3. Tell me. **The gate will be RED the moment it lands, by design** — the marker says `PENDING` and
+   a file on a PENDING md5 is exactly what the battery refuses. My first act is to hash it, write
+   the md5 in, and record the real geometry and the bone names.
 
-**2. The free rigged-parrot pool is thin, and the obvious answer is disqualified.** I downloaded
-three.js's `Parrot.glb` — the internet's default free parrot — and opened it: `skins: 0`,
-`JOINTS_0: false`, 12 morph targets. **No bones at all.** Poly Haven has 521 models and zero birds;
-Quaternius has no bird pack. The shortlist is three CC-BY Sketchfab models and two OpenGameArt ones,
-all licences verified from the publisher's own API or licence field.
+## WHAT I STILL CANNOT KNOW
 
-**3. The finding that is not on any product page.** I opened both OpenGameArt `.blend` files
-directly and read their armatures out: **every bone in both is called `Bone.0NN`.** Anonymous. And
-the CC-BY one has **nine bones against the thirteen joints the rig drives** — the jaw and the tail
-fan would both have to go.
+**Whether its bones are named.** Sketchfab's API does not expose a skeleton, and both candidates I
+could actually download had armatures of `Bone.001 … Bone.0NN`. One animation clip proves the
+cockatoo is *rigged*; it does not prove the rig is *legible*. If it is anonymous, P5b's joint map
+becomes a hand-built index table — and I will say so rather than quietly hard-code it.
 
-## THREE DECISIONS THAT ARE YOURS
+## ONE MISTAKE, CAUGHT
 
-- **Which base model, or none.** My honest read is that **A (shabdar44's macaw, CC-BY, 378k faces,
-  has a beak bone)** is the only candidate that moves toward the Birds of War target; the rest are
-  sideways moves from the procedural bird. It needs decimation and its silhouette is a macaw, not a
-  kea. "None of these — widen the search or buy one" is a legitimate answer. **I have not picked.**
-- **Blender is not installed.** The brief said it was available; it is not. `brew` is, and `blender`
-  is a cask at 5.2.1. Every route from here needs it. ~1GB on your machine, so I have not run it.
-- **Sketchfab downloads need an account.** Metadata is public — that is where the spec table comes
-  from — but `/download` returns `"Authentication credentials were not provided."`
-
-**No renders of my own**, and I want to be straight about that: I cannot render what I cannot
-download, and cannot open a `.blend` without Blender. `gauntlet/capture/P5_candidate_thumbnails.png`
-holds the publishers' thumbnails — all wings-spread, tiny, not good enough to judge on. **The
-Sketchfab viewer links in `P5.md` are better than any render I would have made**: you can orbit the
-model and inspect its rig. Judge there.
+Undoing a sabotage with `git checkout -- assets/LICENCES.md` **wiped the uncommitted ledger
+section** — the P5 entry had not been committed, so restoring "the file" restored the version
+without it, and the batteries went red for a reason unrelated to the sabotage. Recovered from the
+sabotage script's own backup. The rule I stepped outside of: while work is uncommitted, restore from
+the harness's backup, never from git.
 
 ## PROOF
 
-Nine batteries ALL PASS · gate CERTIFIED-SHIP · `subjects` 16 checked, 2 missing (back to the two
-known TODO 75 reds) · 28_skifield_base scarlet 838 against floor 400 on two further full capture
-passes · nothing in `assets/`, nothing in `LICENCES.md`, no change to `src/` from P5.
+Nine batteries ALL PASS · gate CERTIFIED-SHIP · twelve sabotages all red (credit deleted, credit
+un-required, author misspelled, renderer not called, element removed from the page, `innerHTML`
+substituted, marker deleted, `attrib=required` dropped, CC0 authors dropped, `md5` field dropped,
+file landed on PENDING, md5 claimed for an absent file) · bundle builds · credits legible on the
+title screen.

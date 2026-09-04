@@ -5597,4 +5597,92 @@ C.section('REPLAT P4e: the field stops being a disc');
   X.boot({biome:'carpark'}); X.startGame(1); tick(6);
 }
 
+/* ============================================================
+   REPLAT P5 — ATTRIBUTION IS A CONDITION OF USE, SO THE GATE ENFORCES IT.
+   ============================================================
+   Every asset before P5 was CC0 and attribution was a courtesy. The palm cockatoo base mesh is
+   CC-BY and Sketchfab's own licence field reads "Author must be credited." That is a condition, and
+   a condition that lives only in a markdown file in the repo is not met for a player who has the
+   game and not the repo.
+   SO THE LEDGER AND THE GAME ARE CROSS-CHECKED, IN BOTH DIRECTIONS. assets/LICENCES.md carries a
+   machine-readable `<!-- ASSET ... -->` marker per asset added from P5 onward; this section parses
+   them and asserts the attribution-required set matches CREDITS exactly. Add an asset and forget
+   the credit: red. Delete a credit while the asset is still in the ledger: red. Neither is
+   catchable by reading, which is the whole point. */
+C.section('REPLAT P5: the licence ledger and the credits agree');
+{
+  const fsx=require('fs'), pathx=require('path');
+  const ROOT=pathx.resolve(__dirname,'..','..');
+  const led=fsx.readFileSync(pathx.join(ROOT,'assets/LICENCES.md'),'utf8');
+
+  /* ---- (1) THE MARKERS PARSE AT ALL ---- */
+  const marks=[];
+  for(const m of led.matchAll(/<!--\s*ASSET\s+([^>]*?)-->/g)){
+    const raw=m[1], o={};
+    for(const kv of raw.matchAll(/(\w+)=(?:"([^"]*)"|(\S+))/g)) o[kv[1]]=kv[2]!==undefined?kv[2]:kv[3];
+    marks.push(o);
+  }
+  ok(marks.length>0,'the licence ledger carries machine-readable ASSET markers ('+marks.length+')');
+  for(const m of marks){
+    ok(!!m.file&&!!m.md5,'every marker names a file and an md5 ('+(m.file||'?')+')');
+    ok(!!m.licence,'and its licence ('+(m.licence||'?')+')'); }
+
+  /* ---- (2) A LANDED FILE CANNOT SIT ON A PENDING md5 ----
+     The ledger's promise is that a later session can re-verify the BYTES rather than trust them.
+     PENDING is legitimate only while the file genuinely is not there — Eric downloads the cockatoo
+     from Sketchfab, whose /download endpoint needs an account. The moment it lands, PENDING is a
+     lie, and this is what catches it. */
+  for(const m of marks){
+    const abs=pathx.join(ROOT,'assets',m.file), here=fsx.existsSync(abs);
+    if(m.md5==='PENDING'){
+      ok(!here,'`'+m.file+'` is marked PENDING and is genuinely NOT in the tree — a landed file on '+
+         'a PENDING md5 would make the ledger decoration');
+    } else {
+      ok(here,'`'+m.file+'` is in the tree, as its recorded md5 claims');
+      if(here){ const got=require('crypto').createHash('md5')
+          .update(fsx.readFileSync(abs)).digest('hex');
+        ok(got===m.md5,'and its bytes match the ledger ('+got.slice(0,12)+' vs '+
+           String(m.md5).slice(0,12)+')'); } } }
+
+  /* ---- (3) EVERY ATTRIBUTION-REQUIRED ASSET IS CREDITED IN THE GAME ---- */
+  const need=marks.filter(m=>m.attrib==='required');
+  const cred=X.CREDITS||[];
+  ok(Array.isArray(cred)&&cred.length>0,'the game carries a CREDITS block ('+cred.length+' entries)');
+  for(const m of need){
+    const hit=cred.find(c=>c.required&&c.author===m.author&&c.title===m.title);
+    ok(!!hit,'`'+m.title+'` by '+m.author+' is CC-BY, so it MUST be credited in game — and it is'+
+       (hit?'':' NOT. This is a licence breach, not a style problem.'));
+    if(hit)ok(/CC-BY/i.test(hit.lic),'and the credit names the licence ('+hit.lic+')'); }
+
+  /* ---- (4) AND NO CREDIT CLAIMS AN OBLIGATION THE LEDGER DOES NOT HAVE ----
+     The reverse direction. A required credit with no ledger row behind it means the ledger lost an
+     asset, which is the same failure seen from the other end. */
+  for(const c of cred.filter(x=>x.required)){
+    ok(need.some(m=>m.author===c.author&&m.title===c.title),
+       'the required credit for `'+c.title+'` has a ledger row behind it'); }
+
+  /* ---- (5) THE CREDITS REACH A PLAYER, NOT JUST A FILE ----
+     A credit that never renders is not a credit. There is no DOM in node, so what is proved here is
+     that the renderer exists, is wired into boot, and writes into an element the shipped page
+     actually has — the three ways this silently becomes a no-op. */
+  { const src=require('../2026-08-26/keasrc').specimenSource();
+    const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+    ok(typeof X.creditsRender==='function','there is a credits renderer');
+    ok(/creditsRender\(\);/.test(code),'and it is CALLED at boot, not merely defined');
+    const html=fsx.readFileSync(pathx.join(ROOT,'index.html'),'utf8');
+    ok(/id="credits"/.test(html),'and the shipped page has the element it writes into');
+    ok(/getElementById\('credits'\)/.test(code),'which is the element it looks for');
+    /* IT MUST NOT BUILD THE LINE WITH innerHTML. These are constants today; the day one of them is
+       fetched, an innerHTML credits line is an injection point. Cheap habit, permanent property. */
+    const fn=String(X.creditsRender);
+    ok(!/innerHTML/.test(fn),'the credits line is built from text nodes, never innerHTML'); }
+
+  /* ---- (6) THE CC0 ENTRIES ARE THERE TOO, WHICH IS THE ONE NOBODY WOULD MISS ----
+     They are not obliged and that is exactly why they would be the first to go. */
+  ok(cred.some(c=>!c.required&&/CC0/i.test(c.lic)),
+     'the CC0 authors are credited as well, though nothing compels it');
+
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4);
+}
+
 process.exitCode=C.report()?1:0;

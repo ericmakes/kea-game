@@ -4556,3 +4556,64 @@ plan. **`src/` is untouched by P5 — the brief said plan and report before chan
   back to the two known TODO 75 reds — with 28_skifield_base reading 838 against its new floor of
   400 on two further full capture passes. Nothing in `assets/`, nothing in `LICENCES.md`, no change
   to `src/` from P5. **Stopped at the three decisions that are Eric's.**
+
+## SESSION 24 — 2026-09-04, P5a: the first CC-BY asset, and the obligation it brought with it
+
+Lock taken (none held), released as the final act. Tip certified before anything moved (specimen
+`5c9fa1dd77d46eec3d6da3b630cd4149`). Shipped at specimen `1d175922c03eb13d6e30788e34795bac`,
+bundle `01f8640310f5f07f24e62984f42607b2`. **No vantage re-pinned; nothing in `assets/models` yet.**
+
+Eric chose candidate **F, Macauley.B's black palm cockatoo (CC-BY 4.0)**, cleared the disk, and
+takes the Sketchfab download himself.
+
+- **BLENDER IS IN.** 5.2.1 LTS, verified headless (`bpy` 5.2.1, glTF importer present). The first
+  attempt died on `No space left on device` at 99% full — reported rather than worked around, and
+  Eric cleared 2.4 GiB, after which it went through clean.
+
+- **THE PROJECT'S FIRST CC-BY ASSET CHANGED AN OBLIGATION NOBODY HAD BOOKED.** Everything before it
+  was CC0 from Poly Haven, where the ledger credits authors because they did the work and not
+  because anything demands it. Sketchfab's licence field for the cockatoo reads **"Author must be
+  credited."** That is a condition of use — and **the game had no credits surface at all.** A credit
+  that lives only in a markdown file in the repo is not a credit to a player who has the game and
+  not the repo. So the credit had to reach the screen, and something had to stop the next asset
+  arriving without one.
+
+- **THE LEDGER AND THE GAME NOW CROSS-CHECK, IN BOTH DIRECTIONS.** `assets/LICENCES.md` carries a
+  machine-readable `<!-- ASSET ... -->` marker per asset from P5 onward — invisible in rendered
+  markdown, load-bearing for the gate — and a battery asserts the attribution-required set matches
+  `CREDITS` in `src/game.mjs` exactly. Add an asset and forget the credit: red. Delete a credit
+  while the ledger still lists the asset: red. **Neither is catchable by reading**, which is the
+  whole reason it is arithmetic and not a convention.
+
+- **AND A LANDED FILE CANNOT SIT ON A PENDING md5.** The ledger's standing promise is that a later
+  session can re-verify the BYTES rather than trust them. `PENDING` is legitimate only while the
+  file genuinely is not in the tree; the moment it lands, PENDING is a lie. Both directions
+  sabotaged: dropping a dummy file in while the marker says PENDING goes red, and claiming a real
+  md5 for a file that is not there goes red.
+
+- **THE CC0 AUTHORS ARE CREDITED TOO, AND THAT IS ASSERTED.** Nothing compels it, which is exactly
+  why they would be the first line dropped under time pressure. The battery keeps them.
+
+- **THE CREDIT IS PROVED WHERE A PLAYER SEES IT, NOT ONLY IN A UNIT TEST.** There is no DOM in node,
+  so the battery proves the three ways this silently becomes a no-op — the renderer exists, it is
+  CALLED at boot, and the shipped `index.html` has the element it writes into — and a title-screen
+  shot (`gauntlet/capture/P5_credits_title.png`) shows the line rendering between the controls and
+  the crimes strip. It is built from text nodes and **never `innerHTML`**, asserted: these are
+  constants today, and the day one of them is fetched an innerHTML credits line is an injection
+  point.
+
+- **A MISTAKE I MADE AND CAUGHT: `git checkout -- assets/LICENCES.md` TO UNDO A SABOTAGE WIPED THE
+  UNCOMMITTED LEDGER SECTION.** The P5 entry had not been committed yet, so restoring "the file"
+  restored the version without it, and the batteries went red for a reason that had nothing to do
+  with the sabotage. Recovered from the sabotage script's own backup. The lesson is the one the
+  script already knew and I stepped outside of: **restore from the backup the harness took, never
+  from git, while the work is uncommitted.**
+
+- **WHAT IS STILL UNKNOWN AND CANNOT BE KNOWN UNTIL THE BYTES ARRIVE:** whether the cockatoo's bones
+  are NAMED. Sketchfab's API does not expose a skeleton, and both candidates I could actually
+  download had armatures of `Bone.001 … Bone.0NN`. One animation clip proves it is rigged; it does
+  not prove the rig is legible. If it is anonymous, P5b's joint map is a hand-built index table and
+  that will be said out loud rather than quietly hard-coded.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, **twelve P5a sabotages, all twelve
+  red**, bundle builds, credits render on the title screen and are legible in the shot.

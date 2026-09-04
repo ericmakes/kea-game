@@ -188,3 +188,61 @@ rock rather than as a casting.
 **IT IS A DIRECTIONAL SET, so it is NOT in the isotropic group** that gets per-tile rotation — see
 the `iso` flag in the MATS block. Form lines must stay level, for the same reason weatherboard laps
 and corrugate ribs must.
+
+---
+
+## RIGGED BIRD BASE MESH  (REPLAT P5 — the kea as a real asset, 2026-09-04)
+
+**THIS IS THE PROJECT'S FIRST CC-BY ASSET, and that changes an obligation.** Every asset above this
+line is CC0 from Poly Haven: attribution is given because the authors did the work, not because the
+licence demands it. This one demands it. Sketchfab's own licence field for it reads:
+
+> **"Author must be credited. Commercial use is allowed."**
+
+So the credit is not a courtesy here, it is a condition of use — and a ledger line is no longer
+enough on its own. **It must also be visible to a player**, which is why `CREDITS` now exists in
+`src/game.mjs` and renders on the title screen, and why a battery cross-checks this table against
+it. An asset whose credit is only in a file nobody ships is not credited.
+
+| field | value |
+|---|---|
+| model | **Rockatoo character** |
+| author / licensor | **Macauley.B** — https://sketchfab.com/Macauley.B |
+| source | Sketchfab, uid `1595e8668689427f87cffb2b0daf99e5` |
+| viewer | https://sketchfab.com/3d-models/rockatoo-character-1595e8668689427f87cffb2b0daf99e5 |
+| licence | **CC Attribution 4.0 (CC-BY 4.0)** — http://creativecommons.org/licenses/by/4.0/ |
+| requirement | Author must be credited. Commercial use is allowed. |
+| published | 2021-08-13 |
+| geometry | 17,229 faces / 8,559 vertices |
+| animations | 1 clip |
+| file | `models/rockatoo.glb` |
+| md5 | **PENDING — file not yet in tree** |
+
+<!-- ASSET file=models/rockatoo.glb md5=PENDING attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+**THAT HTML COMMENT ABOVE IS LOAD-BEARING.** It is invisible in rendered markdown and it is the
+machine-readable half of this row: the batteries parse `ASSET` markers out of this file and check
+them against `CREDITS` in `src/game.mjs` and against the bytes on disk. Prose is for people and
+drifts; the marker is for the gate and cannot. Every asset added from P5 onward carries one.
+
+**WHY THIS ONE, out of 158.** The candidate pool was enumerated rather than browsed: Sketchfab's
+public search API over `[parrot, macaw, cockatoo, kea, parrot rigged, bird rigged, crow rigged,
+raven rigged]` x `[cc0, by]`, downloadable only, gave 158 distinct models. **There is no kea 3D
+model anywhere** — Sketchfab, CGTrader and TurboSquid all searched for `kea` and `Nestor notabilis`;
+the only kea asset on the internet is a skull scan. So the bird is an adapted parrot whatever we do.
+A **black palm cockatoo** is the closest animal in the pool to a kea: massive hooked bill, stocky
+body, heavy head, zygodactyl feet. Eric chose it over a technically better robin rig (78k faces,
+twelve clips) precisely because anatomy beats polish when the target is a specific bird.
+
+**A PROVENANCE NOTE THAT IS NOT HIDDEN.** The uploader's description reads *"A blackpalm cockatoo
+bird named rockatoo. Owned by Ardacious."* — so the CHARACTER appears to be a third party's
+original character, while the 3D model is licensed CC-BY by Macauley.B. We are using it as a base
+MESH of a cockatoo and re-sculpting and recolouring it into a kea, so the character identity is
+discarded rather than adopted. Recorded here rather than left for someone to find, because "owned
+by" beside a CC-BY grant is exactly the kind of thing that should be a decision and not a surprise.
+
+**THE md5 IS PENDING ON PURPOSE AND CANNOT SILENTLY STAY THAT WAY.** Eric downloads the file from
+Sketchfab (its `/download` endpoint needs an account, which is why the bytes are not fetched here).
+The battery asserts, for every row in this ledger: **either the file exists and its md5 matches,
+or the file does not exist and the md5 says PENDING.** A landed file sitting on a PENDING md5 is a
+red gate, so the ledger cannot drift into decoration.
