@@ -4493,3 +4493,66 @@ P4e. **Nothing re-pinned — 27 of 28 vantages flagged.**
   known TODO 75 reds plus 28_skifield_base, now deterministic and filed as TODO 81**. Bird
   readability held: 03_kea_plate 8213 against 1600, 13_idle_preen 5131 against 900. sidebyside 33
   pairs. **ALL OF IT LEFT FLAGGED — the look is Eric's.**
+
+## SESSION 23 — 2026-09-04, TODO 81 grounded, and P5 stopped at the decision point
+
+Lock taken (none held), released as the final act. Tip certified before anything moved (specimen
+`5c9fa1dd77d46eec3d6da3b630cd4149`, matching the log's P4e line). Two commits: TODO 81, and the P5
+plan. **`src/` is untouched by P5 — the brief said plan and report before changing the rig.**
+
+- **TODO 81: THE FLOOR WAS THE WRONG HALF TO BE LOOKING AT.** Eric called option (c) — reground the
+  tow-wheel floor against the deterministic reading. Doing it properly meant re-deriving the
+  REFERENCE, and `absent:440` turned out to be **the only reference in subjects.mjs with no
+  derivation recorded beside it**. Re-measured the way every other one was — same vantage, same
+  stage, the real classifier IMPORTED from subjects.mjs rather than copied, with the wheel taken out
+  of the scene and held out every frame — the box scores **0, 0, 0**. The carpark frame from the
+  same camera (which is how the hutgreen reference was taken) scores 11, so that is not its origin
+  either. before: staged 490..2038 nondeterministic, floor 1500, ref 440, 3.4x. after: staged
+  838 +/-1, floor 400, ref 0, infinite. **The floor moved DOWN and the argument for why that is
+  grounding rather than weakening is written into the file beside it**, because a later session will
+  read the diff and not the reasoning. The calibration script validates its own stage copy before
+  its absent number is trusted.
+
+- **P5 IS NOT WHAT THE REPLAT CLAUSE SAYS IT IS, and reading the code before sourcing is what found
+  that.** The clause says "retarget the existing animations to its skeleton". **There are no
+  animation clips.** There is a hand-written procedural rig with **80 pose-write sites across 13
+  joints** — `wings` 27, `head` 19, `body` 17, `neck` 16 (which SCALES), `tailF` 11 across five
+  individually fanning feathers, `jaw` 9, `tail` 8, `legs` 3 — plus `beakTip` as the read-only world
+  anchor the missions attach to. So P5 is RE-BINDING a procedural rig onto a skeleton, and a
+  candidate's BONE STRUCTURE matters more than its mesh. That reframing is the session's main
+  finding and it is what the shortlist was sourced against.
+
+- **THE INTERNET'S DEFAULT FREE PARROT IS DISQUALIFIED, AND ONLY BY OPENING IT.** three.js ships
+  `Parrot.glb` and every tutorial uses it. Downloaded and parsed: `skins: 0`, `JOINTS_0: false`,
+  **12 morph targets**. It is morph-target animated with no bones at all — you cannot write
+  `jaw.rotation.x` onto a morph target. Not visible from any product page.
+
+- **AND THE CC0 SOURCES THIS PROJECT ALREADY TRUSTS HAVE NO BIRDS.** Poly Haven: 521 model assets,
+  zero birds (statues and props). Quaternius: 80+ packs, no bird pack. The pool is genuinely thin,
+  and saying so is more useful than presenting five near-identical bad options as a choice.
+
+- **THE FINDING THAT IS ON NO PRODUCT PAGE.** Both OpenGameArt candidates downloaded fine, so I
+  opened the `.blend` files directly — the data region before the `DNA1` block carries the real
+  names — and read their armatures out. **Every bone in both is `Bone.0NN`. Anonymous.** And the
+  CC-BY one has **nine bones against the thirteen joints the rig drives**: the jaw and the five-
+  feather tail fan would both have to go. With bones called `Bone.014` the handle-to-bone map cannot
+  be written from the file; it has to be established by eye and hard-coded as an index, which is
+  exactly the constant a battery cannot check and a later session cannot re-derive.
+
+- **TWO THINGS THE BRIEF ASSUMED THAT ARE NOT TRUE ON THIS MACHINE, both reported rather than worked
+  around.** Blender is NOT installed (`brew` is, `blender` is a cask at 5.2.1, ~1GB — not run,
+  because installing software on Eric's machine is his call). And **Sketchfab downloads need an
+  account**: the metadata API is public, which is where the whole spec table came from, but
+  `/download` returns `"Authentication credentials were not provided."` A, B and C are all Sketchfab.
+
+- **NO RENDERS, SAID PLAINLY.** The brief asked for a shortlist with renders. I cannot render a
+  model I cannot download and cannot open a `.blend` without Blender. What exists is the publishers'
+  own thumbnails, all wings-spread and tiny, and they are not good enough to judge on — **the
+  Sketchfab viewer links are strictly better than any render I would have made**, because Eric can
+  orbit the model and inspect the rig. Presenting a contact sheet as if it were a judged strip would
+  have been the wrong kind of tidy.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, subjects 16 checked **2 missing** —
+  back to the two known TODO 75 reds — with 28_skifield_base reading 838 against its new floor of
+  400 on two further full capture passes. Nothing in `assets/`, nothing in `LICENCES.md`, no change
+  to `src/` from P5. **Stopped at the three decisions that are Eric's.**

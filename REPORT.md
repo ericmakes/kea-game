@@ -1,109 +1,72 @@
-# REPORT — REPLAT P4e, the field stops being a disc (session 22, 2026-09-04)
+# REPORT — TODO 81 closed, and P5 stopped at the decision point (session 23, 2026-09-04)
 
 Branch `replat-b`. **CERTIFIED-SHIP** at specimen `5c9fa1dd77d46eec3d6da3b630cd4149`.
-**Nothing re-pinned. 27 of 28 vantages flagged. Seventeen sabotages, all seventeen red.**
+Two commits: TODO 81 (rig calibration), and this P5 plan. **`src/` is untouched by P5.**
 
-## READ THIS FIRST — WHAT THIS PIECE DID NOT DO
+## TODO 81 — DONE, AND THE REFERENCE WAS THE WRONG HALF
 
-You asked for the transition to be invisible **at the play camera and from the air**. It is at the
-play camera. **From the air it is not, and I am not going to dress that up.** The far tier of real
-blades stops at 28 m because of a hard measured wall:
+You asked me to reground the tow-wheel floor against the now-deterministic reading. Doing that
+properly meant re-deriving the *reference* too — and `absent:440` turned out to be the only
+reference in `subjects.mjs` with **no derivation recorded beside it**, and it does not reproduce.
 
-| at the Retina framebuffer, DPR 2, `perf.mjs bird`, best-of-12, interleaved ×3 | ms |
-|---|---|
-| no far tier, no ground term | **31.5** |
-| ground term only | 30.3 — free, inside the noise |
-| **far tier 225k over 28 m — SHIPPED** | **40.7  (+9 ms)** |
-| far tier 450k over 40 m | 48.0  (+16 ms) |
-| 450k over 40 m, seg 1, no shadow receive | 40.1 |
+Measured the way every other reference in that file was — same vantage, same stage, the real
+classifier imported from `subjects.mjs` rather than a copy, with the bull wheel taken out of the
+scene and held out every frame — the box scores **0, 0, 0**. The scarlet window sees the wheel and
+nothing else in it. (The carpark frame from the same camera, which is how the `hutgreen` reference
+was taken, scores 11 — so that is not where 440 came from either.)
 
-Dropping the shadow *receive* saves 2.4 ms and is kept. **`seg 1` saves nothing at all** — so the
-cost is FILL, not vertices, and the map is 240 m across. Geometry to the horizon is not affordable
-on your machine. The answer is alpha **cards** — one quad carrying fifteen blades, which is exactly
-the ratio the fill measurement says is needed — and that wants a CC0 alpha atlas, a licence line,
-alpha-to-coverage and its own LOD handover. That is a piece, not a tuning, and shipping it
-half-built would have put a second ring in the field. **TODO 82.**
+| | staged | floor | reference | separation |
+|---|---|---|---|---|
+| **before** | 490–2038 *(nondeterministic)* | 1500 | 440 | 3.4× — a coin flip against a reference that was never measured |
+| **after** | **838 ±1** *(deterministic)* | **400** | **0** | **∞** — 2.1× headroom under the reading, nothing at all in the box without it |
 
-## THE MEASUREMENT THAT DECIDED IT
+The floor moved **down**, and that is grounding rather than weakening: 1500 was fitted to the top of
+a nondeterministic spread and was unmeetable by the frame the rig actually produces. 400 is 0.48 of
+the deterministic reading, in line with the sibling kea test in the same vantage (70 against 128).
+The calibration script validates its own stage copy — it reproduces the shipped 838 before its
+absent number is trusted. `subjects` is back to **2 missing**, the two known TODO 75 reds.
 
-I built the finder first: `gauntlet/verify/edgefind.mjs` + its contract test. It reports
-FINDABILITY — peak step over the typical step *elsewhere* in the same scan, so a lighting gradient
-scores ~1 and a line scores high.
+## P5 — I STOPPED WHERE THE BRIEF SAID TO STOP
 
-**Then the measurement moved the instrument.** Shot under control — the same image rows, same light,
-same fog, once with blades and once without:
+Full plan and sourcing in **`P5.md`**. Three things you should know before you read it.
 
-    bare ground   rgb 178.1 166.5 128.9   chroma 49   luma 166.3
-    with blades   rgb 181.9 157.9  99.7   chroma 82   luma 158.8
+**1. P5 is not what the REPLAT clause says it is.** The clause says "retarget the existing
+animations". There are no animation clips. There is a hand-written procedural rig with **80 pose-
+write sites across 13 joints** — including a `jaw`, five **individually fanning** tail feathers, and
+a `neck` that *scales*. So P5 is **re-binding a procedural rig onto a skeleton**, and the model's
+bone structure matters more than its mesh. A pretty model with eight anonymous bones costs more to
+adopt than a plain one with thirteen named ones.
 
-Red does not move, luminance moves 4.5%, **chroma moves by two thirds**. The seam is *saturation*.
-I was about to certify "no colour seam is findable" with a detector structurally unable to see one,
-so it grew a chroma channel and a selftest case the other two must be blind to.
+**2. The free rigged-parrot pool is thin, and the obvious answer is disqualified.** I downloaded
+three.js's `Parrot.glb` — the internet's default free parrot — and opened it: `skins: 0`,
+`JOINTS_0: false`, 12 morph targets. **No bones at all.** Poly Haven has 521 models and zero birds;
+Quaternius has no bird pack. The shortlist is three CC-BY Sketchfab models and two OpenGameArt ones,
+all licences verified from the publisher's own API or licence field.
 
-Two of your three options then lost:
+**3. The finding that is not on any product page.** I opened both OpenGameArt `.blend` files
+directly and read their armatures out: **every bone in both is called `Bone.0NN`.** Anonymous. And
+the CC-BY one has **nine bones against the thirteen joints the rig drives** — the jaw and the tail
+fan would both have to go.
 
-- **A bigger disc is still a disc.** At 40 m with the count raised to hold density the edge does not
-  go away, it *moves*, and scores **worse** — 16.90 against 5.92 — because at that range the fade
-  compresses into a handful of pixels near the horizon.
-- **Painting the ground cannot do it alone.** Setting the terrain albedo to **black** beyond the
-  blades moves luminance 18% and blue by one and a half levels; fog is 0.55% at twelve metres. An
-  albedo multiplier does not reach whatever the rest of that pixel is.
-- **Geometry does**, because what makes a bladed pixel different is *occlusion*.
+## THREE DECISIONS THAT ARE YOURS
 
-## WHAT SHIPPED
+- **Which base model, or none.** My honest read is that **A (shabdar44's macaw, CC-BY, 378k faces,
+  has a beak bone)** is the only candidate that moves toward the Birds of War target; the rest are
+  sideways moves from the procedural bird. It needs decimation and its silhouette is a macaw, not a
+  kea. "None of these — widen the search or buy one" is a legitimate answer. **I have not picked.**
+- **Blender is not installed.** The brief said it was available; it is not. `brew` is, and `blender`
+  is a cask at 5.2.1. Every route from here needs it. ~1GB on your machine, so I have not run it.
+- **Sketchfab downloads need an account.** Metadata is public — that is where the spec table comes
+  from — but `/download` returns `"Authentication credentials were not provided."`
 
-A third instanced tier over an **annulus** (225k, 28 m, rMin 0.24), plus a ground term that carries
-the colour past it and costs nothing. `fadeBand` became **per layer** — that is the lever that
-dissolves the handover rather than relocating it: 0.11 → 12.79, 0.30 → 7.17, **0.55 → 5.77**, with
-the peak moving off the texture channel entirely at 0.55.
-
-**Measured result:** the colour seam across the old boundary is gone — the blue gap across it was
-18.3 levels, now **2.7**. Findability at the play camera is 6.16 against P4d's 5.97: unchanged in
-magnitude, but the peak has moved off *texture* onto *chroma*, where the frame's ambient variation
-already sat. The hard cliff is gone.
-
-Also fixed, because the far tier exposed it: **`keaCut` was a hard axis-aligned box test**, so grass
-stopped dead along a ruled line at every tarmac edge. Invisible while the field faded out at 14 m
-and the car park is 30 away. Now a signed distance with a 1.1 m verge whose *width* is
-noise-perturbed — never its position, so no blade can enter a cut-out.
-
-## TODO 80 — CLOSED, BOTH HALVES
-
-The hills' sculpt only ever scaled x and z, and **at the pole x and z are zero**, so it multiplied
-nothing — which is why a sculpt loop that looks like it should have fixed the flat cap never could.
-18 bands now, displaced along the vertex's own radius in 3D. And they wear `groundTint`, closing the
-horizon colour seam recorded as open in P4b, P4c *and* P4d. See `P4e_todo80_hills_AB.png`.
-
-## THREE THINGS THAT WENT WRONG, WORTH YOUR TIME
-
-- **The shader failed to compile for an hour while the game looked fine.** The far-grass function
-  went in the shared GLSL block while its uniforms were declared only for the grass family. Every
-  batteries-green signal held, and the measured effect of the whole feature was *one grey level* —
-  which reads as "the fix does not work", not "the shader is dead". `MATBREAK_OK` validates that the
-  patch targets exist; it cannot know whether the result compiles.
-- **The first far tier photographed as sheaves of wheat** — big, few blades, visibly coarser at
-  thirty metres than at three. And rMin 0.30 of 52 m left a **1.6 m ring of bare ground** between
-  the tiers. Coverage is bought with count; tiers must overlap.
-- **A false alarm that was a real bug.** `28_skifield_base` read 1215 against a floor of 1500 and
-  looked like the far tier burying the bull wheel. Three takes of one unchanged build read **490,
-  1067, 2038** — a coin flip straddling its own floor, because `rotation.z += dt*2.4` integrates
-  wall-clock deltas and the rig's clock pin cannot reach an integrator. Now `= G.time*2.4` and four
-  takes read **838, 838, 838, 838**. It is below the floor. **I did not lower the floor** — TODO 81
-  lays out the three ways out and leaves the choice to you, because it is a composition call.
-
-## FRAMES
-
-`P4e_proof_edge_AB.png` (play camera, before/after) · `P4e_proof_air_AB.png` (from the air) ·
-`P4e_proof_wide_AFTER.png` · `P4e_todo80_hills_AB.png`.
+**No renders of my own**, and I want to be straight about that: I cannot render what I cannot
+download, and cannot open a `.blend` without Blender. `gauntlet/capture/P5_candidate_thumbnails.png`
+holds the publishers' thumbnails — all wings-spread, tiny, not good enough to judge on. **The
+Sketchfab viewer links in `P5.md` are better than any render I would have made**: you can orbit the
+model and inspect its rig. Judge there.
 
 ## PROOF
 
-Nine batteries ALL PASS · gate CERTIFIED-SHIP · gate-selftest ALL PASS · edgefind-selftest ALL PASS ·
-seventeen sabotages all red (two were green until the assertions were fixed: a far tier of *zero*
-blades satisfied "its count matches the recipe", and a hill-tint threshold the untinted palette
-already met) · 30/30 vantages, no retakes, no GAVE UP · diff 28/27 flagged (worst 0.2552) · boxdiff
-12/8 · pxdiff 28 over band · subjects 16 checked, **3 missing** — the two known TODO 75 reds plus
-28_skifield_base, now deterministic and filed · readability held: 03 reads 8213/1600, 13 reads
-5131/900 · sidebyside 33 pairs.
-
-**Everything left flagged. The look is yours.**
+Nine batteries ALL PASS · gate CERTIFIED-SHIP · `subjects` 16 checked, 2 missing (back to the two
+known TODO 75 reds) · 28_skifield_base scarlet 838 against floor 400 on two further full capture
+passes · nothing in `assets/`, nothing in `LICENCES.md`, no change to `src/` from P5.
