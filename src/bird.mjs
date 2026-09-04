@@ -8,6 +8,109 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
+/* ---- WHICH PART OF THE BIRD IS THIS VERTEX? — REPLAT P5d ----
+   The recolour needs regions and the model has one material for the whole animal, so the regions
+   are DERIVED: from which bone owns the vertex, and — where bones cannot tell dorsal from ventral —
+   from the vertex normal. The underwing is the case that forces this: coverts and the wing's upper
+   surface are weighted to the SAME humerus, and only the normal separates them.
+   Computed once on the shared geometry before any bird is cloned. */
+const REGION={BODY:0,COVERT:1,FLIGHT:2,BILL:3,FOOT:4,CROWN:5};
+function keaRegions(THREE,sk,P,upLocal){
+  const g=sk.geometry, nor=g.attributes.normal;
+  const J=g.attributes.skinIndex, W=g.attributes.skinWeight;
+  const bones=sk.skeleton.bones;
+  const kind=bones.map(b=>{ const n=b.name;
+    if(/Mandible|Bone047/.test(n))return 'bill';
+    if(/Finger|Tarsus|Leg_/.test(n))return 'foot';
+    if(/Metacarpus|Ulna/.test(n))return 'far';      // distal wing: flight feathers
+    if(/Humerus/.test(n))return 'near';             // proximal wing: coverts territory
+    if(/_Head_|Neck/.test(n))return 'crown';
+    return 'body'; });
+  const col=(h)=>new THREE.Color(h).convertSRGBToLinear();
+  const C={body:col(P.body),crown:col(P.crown),covert:col(P.covert),flight:col(P.flight),
+           bill:col(P.bill),foot:col(P.foot)};
+  /* A PER-VERTEX TINT, BLENDED BY BONE WEIGHT — not a winner-take-all region id.
+     The first cut picked the dominant bone and wrote an integer region, and every boundary where
+     two bones share a vertex about equally flickered between two palette entries from one vertex to
+     the next. On the throat, where neck, head and body all meet, that photographed as a RAINBOW
+     COLLAR. Blending by the same weights the skin already uses makes the boundaries as smooth as
+     the deformation is, and costs nothing at runtime because it is baked here. */
+  const out=new Float32Array(g.attributes.position.count*3);
+  const up=upLocal;                       // the bird's UP, expressed in this mesh's local space
+  const hist={};
+  for(let v=0;v<g.attributes.position.count;v++){
+    let r=0,gr=0,b2=0,tot=0;
+    /* WHICH WAY THIS VERTEX FACES, IN THE BIRD'S OWN FRAME. The covert test used nor.getY(v) — the
+       normal's local Y — and this model is yawed about 45 degrees with a rotated mesh space, so
+       "local down" is not "down" and the test selected the wrong half of the wing: the scarlet came
+       out on the OUTSIDE of a folded wing, where a kea has none. Dotted against the measured up
+       vector instead. */
+    const nd = nor.getX(v)*up.x + nor.getY(v)*up.y + nor.getZ(v)*up.z;
+    for(let k=0;k<4;k++){
+      const w=W.getComponent(v,k); if(w<=0)continue;
+      const t=kind[J.getComponent(v,k)]||'body';
+      let c;
+      if(t==='near')      c = nd < -0.25 ? C.covert : C.body;   // ventral inner wing only
+      else if(t==='far')  c = nd < -0.10 ? C.flight : C.body;   // barred underside; dorsal stays body
+      else if(t==='bill') c = C.bill;
+      else if(t==='foot') c = C.foot;
+      else if(t==='crown')c = C.crown;
+      else                c = C.body;
+      r+=c.r*w; gr+=c.g*w; b2+=c.b*w; tot+=w;
+      hist[t]=(hist[t]||0)+w;
+    }
+    if(tot<=0){ r=C.body.r; gr=C.body.g; b2=C.body.b; tot=1; }
+    out[v*3]=r/tot; out[v*3+1]=gr/tot; out[v*3+2]=b2/tot;
+  }
+  g.setAttribute('aKeaTint',new THREE.BufferAttribute(out,3));
+  /* the flight-feather mask travels separately so the barring knows where to go */
+  const fm=new Float32Array(g.attributes.position.count);
+  for(let v=0;v<g.attributes.position.count;v++){
+    let f=0,tot=0;
+    const nd = nor.getX(v)*up.x + nor.getY(v)*up.y + nor.getZ(v)*up.z;
+    for(let k=0;k<4;k++){ const w=W.getComponent(v,k); if(w<=0)continue;
+      if(kind[J.getComponent(v,k)]==='far' && nd < -0.10) f+=w; tot+=w; }
+    fm[v]=tot>0?f/tot:0;
+  }
+  g.setAttribute('aKeaFlight',new THREE.BufferAttribute(fm,1));
+  for(const k in hist)hist[k]=Math.round(hist[k]);
+  return hist;
+}
+
+/* ---- THE RECOLOUR, as a shader term on the model's own material ----
+   Same idiom as P3's paint mode: the texture supplies DETAIL through its luminance and the palette
+   supplies HUE, so the source's silky feather shading survives the change of species instead of
+   being replaced by a flat decal. The flight feathers additionally get procedural barring, because
+   a black cockatoo's texture has none and a kea's underwing is unmistakable without it. */
+function keaRecolour(THREE,mat,P){
+  mat.onBeforeCompile=(sh)=>{
+    sh.uniforms.uBar={value:new THREE.Color(P.bar).convertSRGBToLinear()};
+    sh.uniforms.uBarN={value:P.barN}; sh.uniforms.uBarW={value:P.barW};
+    sh.uniforms.uMean={value:P.mean};
+    sh.vertexShader='attribute vec3 aKeaTint;\nattribute float aKeaFlight;\n'+
+      'varying vec3 vKeaTint;\nvarying float vKeaFl;\nvarying vec3 vKeaLocal;\n'+
+      sh.vertexShader.replace('#include <begin_vertex>',
+        '#include <begin_vertex>\n\tvKeaTint=aKeaTint;\n\tvKeaFl=aKeaFlight;\n\tvKeaLocal=position;');
+    sh.fragmentShader='uniform vec3 uBar;\nuniform float uBarN,uBarW,uMean;\n'+
+      'varying vec3 vKeaTint;\nvarying float vKeaFl;\nvarying vec3 vKeaLocal;\n'+sh.fragmentShader.replace(
+      '#include <color_fragment>',
+      `#include <color_fragment>
+      {
+        vec3 c = vKeaTint;
+        /* THE BARRING ONLY EXISTS WHERE THE FLIGHT FEATHERS DO, and it fades in with the same mask
+           that tinted them, so it cannot spill onto the body at a boundary. */
+        if(vKeaFl>0.01){
+          float t=fract(vKeaLocal.z*uBarN);
+          c=mix(c,uBar,step(1.0-uBarW,t)*vKeaFl);
+        }
+        float lum=dot(diffuseColor.rgb,vec3(0.2126,0.7152,0.0722));
+        diffuseColor.rgb = c * clamp(lum/max(uMean,1e-3),0.35,1.9);
+      }`);
+    mat.userData.keaPl=sh.uniforms;
+  };
+  mat.needsUpdate=true;
+}
+
 export async function installBird(K){
   const B=K.KEABIRD;
   if(!B||!B.model){ K.G.bird={mode:'primitive',why:'KEABIRD.model is off'}; return; }
@@ -30,23 +133,88 @@ export async function installBird(K){
     const bones={}; let missing=[];
     for(const [k,n] of Object.entries(B.bones)){ if(by[n])bones[k]=by[n]; else missing.push(k+'='+n); }
     if(missing.length){ K.G.bird={mode:'primitive',why:'bones missing: '+missing.join(', ')}; return false; }
+    /* EVALUATE THE CLIP AT THE FOLDED FRAME AND MAKE THAT THE REST. Done before anything is
+       measured or bound, so the scale box, the ground offset and every bone rest all describe the
+       perched bird rather than the spread bind pose. The mixer is used once and dropped — nothing
+       animates at runtime; the game poses this skeleton itself. */
+    if(gltf.animations&&gltf.animations.length&&B.restT>0){
+      const mx=new THREE.AnimationMixer(root);
+      mx.clipAction(gltf.animations[0]).play();
+      mx.setTime(Math.min(B.restT,gltf.animations[0].duration));
+      /* NO stopAllAction() HERE — it resets every track and puts the bind pose straight back, which
+         is exactly what the first cut did: the clip was evaluated, then thrown away, and the box
+         came back byte-identical to the spread pose. The mixer is simply dropped; the bones keep
+         the values it wrote. */
+      root.updateMatrixWorld(true);
+    }
     root.updateMatrixWorld(true);
+    /* REGIONS AND RECOLOUR, once per bird because SkeletonUtils.clone gives each its own geometry
+       reference — cheap either way, and it keeps the material per-bird so a future variant strip
+       can tint two birds differently. */
+    if(B.plume){
+      /* the bird's UP, carried into the mesh's own local space, because that is the space the
+         geometry normals live in */
+      sk.updateWorldMatrix(true,false);
+      const inv=new THREE.Matrix4().copy(sk.matrixWorld).invert();
+      const upLocal=new THREE.Vector3(0,1,0).transformDirection(inv).normalize();
+      const hist=keaRegions(THREE,sk,B.plume,upLocal);
+      K.G.bird.regions=hist;
+      /* THE TEXTURE'S MEAN LUMINANCE IS MEASURED, not typed: the palette divides by it, so a
+         guessed value would silently darken or blow out the whole bird. Sampled off the decoded
+         image the loader already has. */
+      const m=sk.material;
+      if(m.map&&m.map.image&&!B._meanDone){
+        try{
+          const im=m.map.image, cv=document.createElement('canvas');
+          const W2=Math.min(128,im.width||128), H2=Math.min(128,im.height||128);
+          cv.width=W2; cv.height=H2;
+          const cx=cv.getContext('2d',{willReadFrequently:true});
+          cx.drawImage(im,0,0,W2,H2);
+          const d=cx.getImageData(0,0,W2,H2).data;
+          let sum=0,n=0;
+          for(let i=0;i<d.length;i+=4){ if(d[i+3]<8)continue;
+            sum+=(0.2126*d[i]+0.7152*d[i+1]+0.0722*d[i+2])/255; n++; }
+          if(n>0){ B.plume.mean=+(sum/n).toFixed(4); B._meanDone=true;
+            K.G.bird.texMean=B.plume.mean; }
+        }catch(e){ K.G.bird.texMeanWhy=String(e&&e.message||e); }
+      }
+      keaRecolour(THREE,m,B.plume);
+    }
     const frame=K.keaBirdFrame(THREE,bones);
     /* THE MODEL IS YAWED. Undo the measured bird frame so the asset faces the way the game's whole
        codebase already assumes — "body front is local -z", which the flight and tug code both
        depend on. Derived from the skeleton, never a typed-in 45 degrees. */
     const yaw=new THREE.Object3D();
     yaw.quaternion.copy(frame.quat).invert();
-    /* SCALE IS DERIVED, NOT TYPED: the posed box height against the kea's real standing height,
-       divided back out of the group scale the bird already carries. */
+    /* SCALE AND GROUND ARE MEASURED OFF THIS MESH, NOT OFF A CONSTANT — REPLAT P5d.
+       They used to come from KEABIRD.posedUnits, a number taken from the model as downloaded. Then
+       P5d deleted the crest, which was 70% of the vertices AND the tallest part of the bird, and
+       that constant was instantly wrong: the bird came out 0.30 m tall and floating 186 mm. A
+       recorded measurement of a mesh that can be edited is a trap, so the box is measured HERE,
+       after the edit, every time. posedUnits stays in the recipe as the reading for the unmodified
+       file and is asserted against this, so the two cannot silently disagree.
+       THE FEET ARE PUT ON THE GROUND BY THE SAME MEASUREMENT. The model's lowest vertex is not at
+       its origin, which is where the 77 mm float came from. */
     const gScale=0.7*(kea.size||1);
-    const s=(B.standM/B.posedUnits)/gScale;
-    yaw.scale.setScalar(s);
     yaw.add(root);
+    yaw.scale.setScalar(1); yaw.position.set(0,0,0);
+    yaw.updateMatrixWorld(true);
+    const bb=new THREE.Box3().setFromObject(root);
+    const posed=Math.max(1e-6, bb.max.y-bb.min.y);
+    const s=(B.standM/posed)/gScale;
+    yaw.scale.setScalar(s);
+    /* lift so the lowest vertex lands on y=0 in the bird's own group */
+    yaw.position.y = -bb.min.y * s;
     kea.g.add(yaw);
+    /* the fold, measured rather than assumed — the number the recipe's restT was chosen from */
+    { const a=new THREE.Vector3().setFromMatrixPosition(bones.metaL.matrixWorld);
+      const c=new THREE.Vector3().setFromMatrixPosition(bones.metaR.matrixWorld);
+      K.G.bird.wingSpanUnits=+a.distanceTo(c).toFixed(1); }
     kea._model={root,sk,yaw,bones,frame,
       rig:K.keaRigBind(THREE,bones,frame),
-      posScale:1/s};
+      posScale:1/s, posedUnits:+posed.toFixed(2), scale:s, groundLift:+(-bb.min.y*s).toFixed(4)};
+    K.G.bird.posedUnits=+posed.toFixed(2);
+    K.G.bird.scale=+s.toFixed(6);
     /* the primitive bird stays in the tree as the HANDLE hierarchy — every one of the 80 pose
        writes still lands on it — but its geometry is hidden. Nothing about update() changes. */
     kea.body.visible=false;

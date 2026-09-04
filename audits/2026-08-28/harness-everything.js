@@ -5644,6 +5644,23 @@ C.section('REPLAT P5: the licence ledger and the credits agree');
         ok(got===m.md5,'and its bytes match the ledger ('+got.slice(0,12)+' vs '+
            String(m.md5).slice(0,12)+')'); } } }
 
+  /* ---- (2b) AND EVERY ASSET IN THE TREE HAS A ROW — THE LAW, STATED THE OTHER WAY ROUND ----
+     REPLAT.md's condition is "no asset lands without its licence line". Checking markers against
+     files only catches a row whose file is missing; it cannot catch a FILE WHOSE ROW IS MISSING,
+     which is the direction the law is actually about. Deleting the derived cockatoo's whole ledger
+     section left every assertion green until this was added.
+     Scoped to models/ because that is the tier where a file is added one at a time by hand; the
+     texture and HDRI tiers arrive as whole publisher sets and carry their own tables. */
+  { const dir=pathx.join(ROOT,'assets/models');
+    if(fsx.existsSync(dir)){
+      const have=new Set(marks.map(m=>m.file));
+      const orphans=fsx.readdirSync(dir).filter(f=>/\.(glb|gltf|fbx)$/i.test(f))
+        .filter(f=>!have.has('models/'+f));
+      ok(orphans.length===0,'every model file in the tree has a licence row'+
+         (orphans.length?' — UNLICENSED IN TREE: '+orphans.join(', ')+
+          ' (REPLAT.md: no asset lands without its licence line)':' ('+
+          fsx.readdirSync(dir).filter(f=>/\.(glb|gltf|fbx)$/i.test(f)).length+' checked)')); } }
+
   /* ---- (3) EVERY ATTRIBUTION-REQUIRED ASSET IS CREDITED IN THE GAME ---- */
   const need=marks.filter(m=>m.attrib==='required');
   const cred=X.CREDITS||[];
@@ -5732,8 +5749,22 @@ C.section('REPLAT P5b: the rig adapter');
   /* ---- (3) THE SCALE IS DERIVED, NOT TYPED ---- */
   ok(B.standM>0.3&&B.standM<0.8,'the kea\'s standing height is a real bird height ('+B.standM+' m)');
   ok(B.posedUnits>50,'and the model\'s posed height is recorded to divide by ('+B.posedUnits+' units)');
-  ok(/B\.standM\/B\.posedUnits/.test(fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8')),
-     'and the loader DERIVES the scale from those two rather than carrying a magic number');
+  /* THE SCALE IS DERIVED FROM A MEASUREMENT TAKEN AT LOAD, NOT FROM THE RECORDED CONSTANT.
+     This assertion used to require `B.standM/B.posedUnits` in the loader and it went red the moment
+     the loader got BETTER: P5d deleted the crest, which was 70% of the vertices and the tallest
+     part of the bird, and `posedUnits` — a number recorded from the unmodified download — was
+     instantly wrong by a third. A recorded measurement of a mesh that can be edited is a trap, so
+     the box is now measured after every edit. The recipe keeps posedUnits as the reading for the
+     UNMODIFIED file and the loader publishes what it actually measured, so the two can be compared
+     rather than assumed equal. */
+  { const bsrc=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
+    ok(/B\.standM\/posed/.test(bsrc),
+       'the loader derives the scale from standM over a box it MEASURED, not from the recorded '+
+       'posedUnits, which goes stale the moment the mesh is edited');
+    ok(/setFromObject\(root\)/.test(bsrc),'and the box is measured off the loaded mesh');
+    ok(!/scale\.setScalar\(0\.0[0-9]+\)/.test(bsrc),'with no literal scale left in the loader');
+    ok(/K\.G\.bird\.posedUnits=/.test(bsrc),
+       'and it publishes what it measured, so a stale recipe value can be seen rather than trusted'); }
 
   /* ---- (4) THE CONJUGATION IS CORRECT, MEASURED ON A SYNTHETIC SKELETON ----
      Built here rather than loaded, so the arithmetic is tested without a GPU or a 5 MB fetch. The

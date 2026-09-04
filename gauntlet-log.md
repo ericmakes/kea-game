@@ -4727,3 +4727,73 @@ red. Seal mission still 12/12.
 - **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, ten P5b sabotages all ten red, seal
   12/12 headless, diff 28/27 flagged and subjects 16/2 missing both unchanged from the tip because
   the model is off. Render: `gauntlet/capture/P5b_bird_primitive_vs_model.png`.
+
+## SESSION 27 — 2026-09-04, P5d: the crest is gone and the bird is olive
+
+Lock taken (none held), released as the final act. Tip certified before anything moved. Shipped at
+`b4a5bd63cb69a25e99a49e463b18eb30`. **Model still OFF by default** — nothing re-pinned. Seven
+sabotages, all seven red.
+
+- **THE CREST WAS 70% OF THE MESH.** 7,121 of 10,108 vertices carried a majority weight from a
+  `FeatherHead` bone — a black palm cockatoo's crest is dozens of individual quills and each one
+  costs geometry. Removing it took the model from 16,989 triangles to **4,927**, so the right look
+  and a 71% saving were the same act. **Two independent counts agreed exactly**: a JS census of the
+  GLB's own JOINTS_0/WEIGHTS_0 predicted 7,121 and Blender deleted 7,121. The crown underneath is
+  intact — no hole, no bald patch.
+
+- **BLENDER PICKED THE WRONG MESH AND REPORTED SUCCESS.** The file carries a stray 42-vertex
+  `Icosphere` with no parent and no vertex groups, and `next(o for o in objects if type=='MESH')`
+  took it alphabetically: 0 vertices deleted, "AFTER bones=101" printed, and it looked like it had
+  worked. Now the mesh is chosen by what it IS — skinned, most vertices — and ASSERTED. The stray is
+  dropped from the export while we are there.
+
+- **THE BIND POSE IS WINGS-SPREAD AND THE ANIMATION'S t=0 IS NOT.** The first coloured render came
+  out looking like a fairground ride, and zeroing my wing drive changed nothing — the spread was the
+  model's own bind pose. Scanned the clip by measuring metacarpus separation across all 22 s: it
+  runs 26.5 units folded to 55.2 spread, tightest at **t=4.81 s**. So the clip is evaluated once at
+  that frame and the result captured as the rest every delta is measured from. **The fold comes from
+  the person who rigged the bird**, not from me guessing three joint angles. Verified by
+  measurement: bind 55.9 -> folded 26.5.
+
+- **AND `stopAllAction()` PUT THE BIND POSE STRAIGHT BACK.** The first cut evaluated the clip and
+  then called it, which resets every track — the box came back byte-identical to the spread pose and
+  the fold silently did not happen. Caught because the measurement disagreed with the intent, not
+  because the frame looked wrong.
+
+- **A RECORDED MEASUREMENT OF A MESH THAT CAN BE EDITED IS A TRAP.** Scale came from
+  `KEABIRD.posedUnits`, read off the model as downloaded. Deleting the crest — the tallest part of
+  the bird — made it wrong by a third instantly: the bird came out 0.30 m and floating 186 mm. The
+  box is now measured at load, after any edit, and the feet are grounded by the same measurement.
+  The recipe keeps posedUnits as the reading for the unmodified file and the loader publishes what
+  it actually measured. **My own battery went red on this**, correctly — it required the old
+  expression and the loader had got better.
+
+- **A WINNER-TAKE-ALL REGION ID PHOTOGRAPHED AS A RAINBOW COLLAR.** The recolour first picked the
+  dominant bone per vertex and wrote an integer region; every boundary where two bones share a
+  vertex about equally flickered between palette entries from one vertex to the next, and the
+  throat — where neck, head and body all meet — came out striped red, yellow and blue. Blending the
+  tint by the same weights the SKIN already uses makes the boundaries exactly as smooth as the
+  deformation, and it is baked at load so it costs nothing.
+
+- **AND THE COVERT TEST WAS IN THE WRONG SPACE.** It read `normal.getY(v) < -0.15` to find the
+  ventral inner wing, but this model is yawed about 45 degrees with a rotated mesh space, so "local
+  down" is not down — the scarlet came out on the OUTSIDE of a folded wing, where a kea has none.
+  Dotted against the measured up vector carried into mesh-local space instead.
+
+- **THE LAW WAS ENFORCED IN ONLY ONE DIRECTION.** The ledger battery checked every marker against
+  the files, which catches a row whose file is missing. It could not catch **a file whose row is
+  missing** — deleting the derived cockatoo's entire ledger section left everything green. That is
+  the direction REPLAT's "no asset lands without its licence line" is actually about, and it is now
+  asserted over `assets/models/`.
+
+- **CC-BY REQUIRES CHANGES TO BE INDICATED, so they are** — the derived `kea_base.glb` has its own
+  ledger row naming what was removed, its own md5, and the original stays in the tree so the
+  derivation can be re-run rather than trusted.
+
+- **WHAT IS STILL WRONG, PLAINLY:** scarlet still shows on the folded wing where a kea shows none;
+  the tail renders as bare quills; the body is browner than the plate; and the residual foot float
+  is pose-dependent, so the static ground offset does not hold once the legs are posed. All P5c/P5d
+  iteration, all visible in `gauntlet/capture/P5d_kea_four_angles.png`.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, seven P5d sabotages all seven red,
+  asset tier 29 MB.

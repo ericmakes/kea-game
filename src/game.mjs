@@ -870,7 +870,39 @@ const KEABIRD={
     femR :'cockatoo_Femur_R_bone_076',   tibR :'cockatoo_Tibia_R_bone_077',
     femL :'cockatoo_Femur_l_bone_092',   tibL :'cockatoo_Tibia_l_bone_00',
   },
-  crestPrefix:'cockatoo_FeatherHead',   // 60 joints a kea does not have — P5d
+  crestPrefix:'cockatoo_FeatherHead',   // 60 joints a kea does not have — removed in P5d
+  /* ---- THE REST POSE COMES FROM THE RIGGER, NOT FROM THE BIND POSE — REPLAT P5d ----
+     The model's BIND pose is wings-SPREAD, which is how rigs are usually bound and is the worst
+     possible rest for a bird that spends the game perched: it photographed as a fairground ride.
+     Its own 22 s clip contains the pose we want. Scanned by measuring metacarpus separation across
+     the whole clip: it runs from 26.5 model units (folded) to 55.2 (spread), and the tightest frame
+     is t=4.81 s. So the animation is evaluated ONCE at that time and the result captured as the
+     rest every delta is measured from — the fold comes from the person who rigged the bird rather
+     than from me guessing three joint angles.
+     restT IS A KNOB because it is a look decision: sweep it and every perched frame changes. */
+  restT:4.81,
+  /* ---- THE KEA PALETTE — REPLAT P5d ----
+     Read off kea_underwing_01, which is the one plate that shows body, underwing, flight feathers,
+     bill and feet in a single frame under one light. A kea is NOT the olive-green a description
+     suggests: the body is a warm olive-BROWN with dark feather scalloping, browner over the crown,
+     and the famous colour is confined to the underwing — vivid orange-scarlet coverts over
+     yellow-olive flight feathers with bold black barring.
+     THE TEXTURE STILL DOES THE WORK. This is the P3 'paint mode' idiom: the model's own baseColor
+     supplies feather detail as LUMINANCE and the palette supplies hue, so a black cockatoo's silky
+     plumage becomes olive plumage rather than a flat olive decal. What it cannot supply is the
+     kea's scalloped feather EDGING, which is a texture feature the source does not have. */
+  plume:{
+    body   :0x7A6B3E,   // warm olive-brown breast and mantle
+    crown  :0x6E6047,   // browner and greyer over the head
+    covert :0xD93A0B,   // the underwing coverts: vivid orange-scarlet
+    flight :0xC9A93A,   // flight-feather ground: yellow-olive
+    bar    :0x221E14,   // and the bold black barring across it
+    bill   :0x5A6068,   // slate grey, hooked
+    foot   :0x8A8B86,   // grey and scaly
+    barN   :0.28,       // bars per model unit along the feather — swept, not guessed
+    barW   :0.42,       // duty cycle of the dark bar
+    mean   :0.34,       // the source texture's mean luminance, MEASURED at load and overwritten
+  },
   /* THE WING HAS THREE SEGMENTS AND THE OLD RIG HAD ONE, so the single `w.rotation` drives the
      chain in these proportions: the humerus takes the stroke, the ulna and metacarpus follow it
      softened. The primitive bird's per-primary feather spread (`feathers[wi][i]`) has NO bone to

@@ -223,6 +223,35 @@ it. An asset whose credit is only in a file nobody ships is not credited.
 | md5 | `fa371ff7da2f70034a3a27bb244c6cf9` |
 | sha256 | `b51837f5db6c84b40555e15ceaba7df95f8702e77ee768fe76405ea4c3c9218a` |
 
+### THE DERIVED FILE — `models/kea_base.glb`  (REPLAT P5d, 2026-09-04)
+
+**CC-BY 4.0 REQUIRES THAT CHANGES BE INDICATED, so they are, here and in the in-game credits.**
+This is `rockatoo.glb` with the cockatoo's crest removed — the geometry and its sixty joints, on
+Eric's explicit call that a kea has a smooth rounded crown and that a crown faked from crest bones
+is still a cockatoo. Modified with Blender 5.2.1; the script is in the session log.
+
+| field | value |
+|---|---|
+| derived from | `models/rockatoo.glb` (Macauley.B, CC-BY 4.0) — the row above |
+| licence | **CC-BY 4.0, unchanged** — a derivative of a CC-BY work carries the same terms |
+| changes | 60 `cockatoo_FeatherHead*` joints deleted; 7,121 vertices whose majority weight was theirs deleted; one stray 42-vertex `Icosphere` dropped |
+| geometry | 161 -> **101 bones**, 10,108 -> **2,987 vertices**, 16,989 -> **4,927 triangles** |
+| file | `models/kea_base.glb`, 2138948 bytes |
+| md5 | `b9bc87f239501c1068c0b4624b0620b6` |
+
+<!-- ASSET file=models/kea_base.glb md5=b9bc87f239501c1068c0b4624b0620b6 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+**THE CREST WAS 70% OF THE MESH, which nobody would guess from looking at it.** 7,121 of 10,108
+vertices carried a majority weight from a `FeatherHead` bone — a black palm cockatoo's crest is
+dozens of individual quills and each one costs geometry. Removing it is therefore not only the
+right look, it takes the model from 16,989 triangles to 4,927. The two independent counts agreed
+exactly: a JS census of the GLB's own JOINTS_0/WEIGHTS_0 predicted 7,121 and Blender deleted 7,121.
+
+**IT IS A SEPARATE FILE AND THE ORIGINAL STAYS.** Both are in the tree with their own md5s, so the
+derivation can be re-run and re-checked rather than trusted, and the unmodified upstream is always
+there to go back to.
+
+
 <!-- ASSET file=models/rockatoo.glb md5=fa371ff7da2f70034a3a27bb244c6cf9 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
 
 **THE VERIFICATION PROTOCOL IS WEAKER FOR THIS ASSET THAN FOR THE POLY HAVEN ONES, AND PRETENDING
