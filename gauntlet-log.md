@@ -4617,3 +4617,60 @@ takes the Sketchfab download himself.
 
 - **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, **twelve P5a sabotages, all twelve
   red**, bundle builds, credits render on the title screen and are legible in the shot.
+
+## SESSION 25 — 2026-09-04, the cockatoo landed, and the bones are NAMED
+
+Lock taken (none held), released as the final act. `src/game.mjs` unchanged — specimen stays
+`1d175922c03eb13d6e30788e34795bac`. The change is the asset and its ledger row.
+
+- **THE PENDING RULE FIRED IN THE REAL CASE, WHICH IS THE ONLY TEST THAT COUNTS.** P5a asserted that
+  a landed file cannot sit on a `PENDING` md5 and proved it by sabotage. Eric dropped
+  `assets/models/rockatoo.glb` and the battery went red **before I touched anything** — the same
+  finding, on a file nobody planted. A rule that has only ever fired against its own sabotage is a
+  rule you hope works; this one has now met the situation it was written for.
+
+- **AND THE MD5 GUARD IS LIVE IN BOTH DIRECTIONS.** Appending a single byte to the 5.4 MB file is
+  caught (`c66d6923…` against `fa371ff7…`); removing the file while the ledger claims a real hash is
+  caught. Restored, green.
+
+- **THE ANSWER TO THE QUESTION P5 HAS BEEN CARRYING SINCE SOURCING: THE BONES ARE NAMED.** Both
+  candidates that could be downloaded for inspection had armatures of `Bone.001 … Bone.0NN`, and the
+  whole risk of P5b was a hand-built index table nobody could re-derive. This skeleton is
+  anatomical: `Ilium`, `Scapula`, `Neck`, `Head`, **`UpperMandible` and `LowerMandible`**,
+  `Humerus/Ulna/Metacarpus` per wing, `Femur/Tibia/Tarsus/Leg` per leg, `Tail`/`TailEnd`, and
+  twenty-four toe joints. **Every joint the procedural rig drives has a named home**, and several
+  are finer than what it has: the rig writes one `jaw` and the model has two mandibles; it writes
+  one `wings[i]` per side and the model has three wing segments; it fans five `tailF` and the model
+  has thirty tail-feather chains.
+
+- **TWO FINDINGS THAT ARE JOBS, NOT TRIVIA.** Sixty of the 161 joints — **37% of the skeleton** —
+  are the cockatoo CREST (`FeatherHead_*`), and a kea has no crest. And the feet are
+  `FingerBF / FingerBB / FingerSB / FingerSF`: big-front, big-back, small-back, small-front, three
+  segments each, both feet. **That is zygodactyl** — two forward, two back — which is exactly what
+  the brief asks of the kea's feet and exactly what the current cone-stack does not have. It came
+  free with the species choice.
+
+- **VERIFIED THROUGH three's OWN GLTFLoader, not just by parsing the bytes.** Parsing proves the
+  file is well-formed; loading proves the ENGINE can consume it, which is the claim P5b rests on.
+  SkinnedMesh true, 161 bones, 16,989 triangles, `MeshStandardMaterial` with baseColor and normal
+  maps already — it drops into the P3 PBR pipeline without a material rewrite. Getting there took
+  two failed attempts worth recording: the dev server serves `dist/`, not `node_modules/`, and a
+  `setContent` page sits on `chrome-error:` so its relative module URLs resolve against the wrong
+  origin. Fixed by serving the repo root and navigating to a real page on it.
+
+- **THE TWO SIZE FIGURES ARE BOTH TRUE AND MEAN DIFFERENT THINGS.** The raw POSITION accessor spans
+  169.6 units — the BIND pose, wings spread. The loaded scene's box is 75.9 x 96.5 x 76.5 — the
+  model POSED. The one to scale against is the posed height, 96.5, which puts the factor near
+  0.0052 for a 0.5 m bird. Written down because picking the wrong one silently gives a bird twice
+  the size it should be.
+
+- **AN INTEGRITY GAP I WILL NOT PAPER OVER.** The ledger's protocol says the md5 comes from the
+  PUBLISHER'S API and is compared against the download, so a mismatch means the bytes were altered
+  in transit. **Sketchfab publishes no checksum** — the download is generated per request. So this
+  hash is of the file AS RECEIVED: it detects any later alteration in this tree, which is most of
+  the value, but it cannot prove the download matched what Macauley.B uploaded. Recorded in the
+  ledger beside the hash rather than left to look like the same guarantee the Poly Haven rows carry.
+
+- **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, the PENDING rule and the md5 guard
+  both demonstrated on the real file, the asset tier is 27 MB total (still well under the git-lfs
+  threshold the ledger names).

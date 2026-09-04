@@ -213,12 +213,77 @@ it. An asset whose credit is only in a file nobody ships is not credited.
 | licence | **CC Attribution 4.0 (CC-BY 4.0)** — http://creativecommons.org/licenses/by/4.0/ |
 | requirement | Author must be credited. Commercial use is allowed. |
 | published | 2021-08-13 |
-| geometry | 17,229 faces / 8,559 vertices |
-| animations | 1 clip |
-| file | `models/rockatoo.glb` |
-| md5 | **PENDING — file not yet in tree** |
+| geometry (page) | 17,229 faces / 8,559 vertices |
+| geometry (file) | **16,989 triangles / 10,108 vertices** — read out of the GLB, not off the page |
+| animations | 1 clip, `Animation_01`, 22.47 s, 311 channels (translation + rotation) |
+| skin | **161 joints, anatomically named** — see the readout below |
+| textures | 3 PNG: baseColor 334 KB, metallicRoughness 126 B (a placeholder), normal 305 KB |
+| model bounds | 169.6 x 94.5 x 134.6 model units — **not metres**, needs a scale normalisation |
+| file | `models/rockatoo.glb`, 5,460,720 bytes |
+| md5 | `fa371ff7da2f70034a3a27bb244c6cf9` |
+| sha256 | `b51837f5db6c84b40555e15ceaba7df95f8702e77ee768fe76405ea4c3c9218a` |
 
-<!-- ASSET file=models/rockatoo.glb md5=PENDING attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+<!-- ASSET file=models/rockatoo.glb md5=fa371ff7da2f70034a3a27bb244c6cf9 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+**THE VERIFICATION PROTOCOL IS WEAKER FOR THIS ASSET THAN FOR THE POLY HAVEN ONES, AND PRETENDING
+OTHERWISE WOULD BE THE WORST THING IN THIS FILE.** The rule at the top says the recorded md5 is
+taken *from the publisher's API* and compared against the downloaded file, so a mismatch means the
+bytes were altered in transit. **Sketchfab publishes no checksum** — its download is generated per
+request and there is nothing authoritative to compare against. So the hash above is of **the file as
+received**. It detects any later alteration of the bytes in this tree, which is most of the value;
+it does NOT prove the download matched what Macauley.B uploaded. That is a real gap in the chain and
+it is recorded rather than papered over. The same will be true of any Sketchfab asset.
+
+### THE SKELETON, READ OUT OF THE FILE — and it is the good outcome
+
+The open question through all of P5's sourcing was whether the bones would be NAMED. Both candidates
+that could be downloaded for inspection had armatures of `Bone.001 … Bone.0NN`, which would have made
+the joint map a hand-built index table. This one is anatomical:
+
+    _rootJoint
+      Ilium ....................... pelvis / body root
+        Scapula ................... shoulder girdle
+          Neck -> Bone051 -> Head
+            UpperMandible, LowerMandible ...... A REAL TWO-PART BEAK
+            FeatherHead_* x60 ................. the cockatoo CREST
+          Humerus_r/l -> Ulna_r/l -> Metacarpus_r/l ..... three-segment wings
+        Femur_R/l -> Tibia_R/l -> Tarsus_R/l -> Leg_R/L
+          FingerBF, FingerBB, FingerSB, FingerSF (x3 segments, both feet)
+        Tail -> TailEnd -> TailEnd_LongFeather x30, FeatherTail_r/l
+
+**Every joint the procedural rig drives has a named home, and several are finer than what it has
+now.** The current `Kea` writes one `wings[i]` group per side; the model has humerus/ulna/metacarpus.
+It writes one `jaw`; the model has an upper and a lower mandible. It fans five `tailF` groups; the
+model has thirty tail-feather chains. **The rig can be bound without inventing anything**, which is
+the outcome P5b was most at risk from.
+
+### VERIFIED THROUGH three's OWN GLTFLoader, not just by parsing the bytes
+
+Parsing the JSON myself proves the file is well-formed; this proves the **engine** can consume it,
+which is the claim P5b actually rests on. Loaded in a headless browser through
+`three/addons/loaders/GLTFLoader.js`:
+
+    SkinnedMesh   true            bones 161          triangles 16,989
+    clips         Animation_01, 22.47 s
+    material      MeshStandardMaterial, baseColor map + normal map, roughness 0.93
+    joints found  Head 1 · Neck 1 · Mandible 2 · wing 6 · leg 6 · toe 24 · tail 45 · crest 60
+
+**It arrives as a `MeshStandardMaterial` with a normal map already**, so it drops into the P3 PBR
+pipeline without a material rewrite.
+
+**THE TWO SIZE FIGURES ARE BOTH TRUE AND MEAN DIFFERENT THINGS, which is worth writing down before
+someone picks the wrong one.** The raw POSITION accessor spans 169.6 units across — that is the
+BIND pose, wings spread. The loaded scene's bounding box is 75.9 x 96.5 x 76.5 — that is the model
+POSED, perched and folded. The number to scale the game bird against is the posed height, 96.5
+units: a kea stands about 0.5 m, so the scale factor lands near **0.0052**. Derived properly in P5c
+against `kea_scale_01` rather than taken from this note.
+
+**TWO THINGS TO DEAL WITH IN P5d, both concrete:**
+- **60 of the 161 joints are the crest** (`FeatherHead_*`). A kea has no crest. That is 37% of the
+  skeleton driving geometry that has to go or be repurposed into a crown.
+- **FOUR TOES PER FOOT, arranged BF / BB / SB / SF** — big-front, big-back, small-back, small-front.
+  That is **zygodactyl**, two forward and two back, which is exactly what the brief asks of the kea's
+  feet and exactly what the current cone-stack does not have. It came free with the species choice.
 
 **THAT HTML COMMENT ABOVE IS LOAD-BEARING.** It is invisible in rendered markdown and it is the
 machine-readable half of this row: the batteries parse `ASSET` markers out of this file and check
