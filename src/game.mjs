@@ -957,6 +957,35 @@ const KEABIRD={
      quietly dropped. */
   wingChain:[1.0, 0.55, 0.30],
   openChain:[0.0, 0.62, 0.85],
+  /* ---- THE ASTRA HARVEST — REPLAT P5F (2026-09-05) ----
+     GPT-6 Astra delivered a kea with painted feather SCALLOPING — the one thing the note above
+     says the palette route cannot supply ("what it cannot supply is the kea's scalloped feather
+     EDGING, which is a texture feature the source does not have"). Its mesh is not ours and its
+     UV layout is not ours, so the paint was BAKED onto our layout by proximity rather than
+     swapped in. P5F.md required that compatibility be decided by measurement before any
+     transplant, and it was:
+         per-region colour distance from Astra's own paint, mean over 52 skinned regions
+           straight material swap ..... 72.3   <- a mismatched atlas. NOT USED.
+           proximity bake ............  3.5
+           control (rockatoo/ours) ...  0.4    <- the floor the instrument can measure at all
+     The control is the pair whose UVs are known compatible — ours IS rockatoo with vertices
+     deleted — so 0.4 is instrument noise and 72.3 is a real mismatch, not a tuning gap.
+     IT IS OFF BY DEFAULT, like the model itself. `KEABIRD='{"model":true,"astraTex":{"on":true}}'`
+     turns it on. Eric judges the strip; nothing about the shipped bird moves until he does. */
+  astraTex:{
+    on:false,
+    base  :'tex/kea_astra_baked_basecolour_2048.png',
+    normal:'tex/kea_astra_baked_normal_2048.png',
+    /* Astra's own material settings, which P5F.md names as the STARTING point, not the answer. */
+    roughness:0.84, normalScale:0.6,
+    /* AND THE ONE DELIBERATE DEPARTURE FROM THEM: alphaMode. Astra's material is MASK at cutoff
+       0.45 because ITS wings are individual alpha CARDS that need cutting out. Ours is a solid
+       closed body — P5d's de-crested mesh — and 6.5% of our vertices bake to texels whose alpha
+       sits under that cutoff, inherited from the feather cards the colour was pulled off. Honour
+       MASK here and we punch 6.5% of holes in a solid bird. The RGB at those texels is correct
+       feather colour; only the alpha is meaningless to us, so it is ignored. */
+    opaque:true,
+  },
 };
 for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_BIRD__)||{})){
   if(!(k in KEABIRD))continue;
