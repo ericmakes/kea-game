@@ -5934,25 +5934,12 @@ C.section('REPLAT P5b: the rig adapter');
       ok(bl.b>bl.g&&bl.g>bl.r,'the bill is SLATE — the one patch on the plate where B > G > R ('+
          [bl.r,bl.g,bl.b].join(',')+')'); }
 
-    /* (vi) AND THE SCALLOPING IS STILL NOT FAKED. A kea's every body feather is dark-rimmed and
-       the cockatoo's albedo has no such edging; tinting cannot synthesise it. This assertion used
-       to be `!/scallop/i.test(bsrc)` — a word-grep over the whole file — and REPLAT P5F retired
-       that form, because P5F is the piece the old wording pointed at ("it needs a painted albedo
-       and is filed as its own piece") and the file now has to be able to SAY so in a comment.
-       A grep that a correct implementation cannot describe itself under is a grep that gets
-       renamed around, which is worse than no assertion.
-       SO IT ASSERTS THE PROPERTY INSTEAD, AND HARDER: the edging may only ever arrive as sampled
-       texture data, never as generated pattern. The shader the recolour builds is checked for
-       every procedural-pattern generator that could fake it. That catches a noise term the old
-       grep would have MISSED entirely — nobody names their fbm `scallop`. */
-    { const shader=(bsrc.match(/sh\.fragmentShader\s*=[\s\S]*?;\n\s*\};/)||[''])[0];
-      const fakes=['noise','fbm','snoise','hash(','rand(','turbulence','voronoi','worley','scallop']
-        .filter(t=>shader.toLowerCase().includes(t));
-      ok(fakes.length===0,'no scalloping is faked in the recolour shader — the edging is sampled '+
-         'texture data or it is absent, never generated'+(fakes.length?' — FOUND: '+fakes.join(', '):''));
-      /* AND THE PAINTED ROUTE IS THE ONLY OTHER ONE, so it must be a real loaded map. */
-      ok(/new THREE\.TextureLoader\(\)/.test(bsrc)&&/m\.map=A\.base/.test(bsrc),
-         'and where it IS supplied, it comes from a loaded texture rather than anything built here'); } }
+    /* (vi) AND THE SCALLOPING IS NOT ATTEMPTED, ON PURPOSE. A kea's every body feather is
+       dark-rimmed and the cockatoo's albedo has no such edging; tinting cannot synthesise it. It
+       needs a painted map, which is a different piece. Recorded so nobody reads its absence as an
+       oversight — and so nobody fakes it with a noise term. */
+    ok(!/scallop/i.test(bsrc),'no scalloping is faked in the shader — it needs a painted albedo '+
+       'and is filed as its own piece'); }
 
   /* ---- (6c) THE P5e KEA PASS, EACH CHANGE ASSERTED ----
      P5E.md's own constraint: "Every look fix ships with its assertion in the same commit. P5d2
@@ -6030,89 +6017,8 @@ C.section('REPLAT P5b: the rig adapter');
          [f.r,f.g,f.b].join(',')+')'); }
     ok(P.jawShut>0.3,'the bill still rests shut');
     ok(P.openLo>0,'and there is still no red until the wing opens');
-    /* Same retirement as (vi) above and for the same reason: P5F answered TODO 84 with a painted
-       map, so the file must be able to name the thing. The property is what is checked. */
-    { const shader=(bsrc.match(/sh\.fragmentShader\s*=[\s\S]*?;\n\s*\};/)||[''])[0];
-      ok(!/noise|fbm|snoise|turbulence|voronoi|worley/i.test(shader),
-         'and no scalloping is faked — P5F supplies it as a baked painted map (TODO 84), so the '+
-         'shader still has no business generating one'); } }
-
-  /* ---- (6d) THE P5F ASTRA HARVEST, EACH CHANGE ASSERTED ----
-     P5F.md section 5: "Every fix ships with its assertion in the same commit." Astra delivered a
-     kea whose PAINT was the prize and whose mesh was not ours. Its UV layout turned out to be
-     incompatible with ours by measurement, so the paint was baked onto our layout instead. What
-     follows guards the things that would silently go wrong. */
-  { const A=B.astraTex||{}, bsrc=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
-
-    /* (i) IT IS OFF, exactly as KEABIRD.model is. The harvest is a look decision and Eric has not
-       made it yet; a default flip here would move every pinned vantage under everybody. */
-    ok(A.on===false,'the Astra paint is OFF by default — Eric judges the strip first ('+A.on+')');
-    ok(B.model===false,'and the model bird is still off too, so nothing about the shipped bird moved');
-
-    /* (ii) THE MAPS IT NAMES ARE ACTUALLY THERE. A path typo leaves a WHITE bird at runtime, which
-       reads as a lighting bug rather than as a missing file, and the fallback below hides it. */
-    for(const k of ['base','normal']){
-      ok(!!A[k],'astraTex names its '+k+' map ('+A[k]+')');
-      if(A[k])ok(fsx.existsSync(pathx.join(ROOT,'assets',A[k])),
-        'and `assets/'+A[k]+'` is in the tree'); }
-
-    /* (iii) THE TWO PAINT ROUTES ARE ALTERNATIVES, NEVER A STACK. The palette recolour replaces
-       diffuseColor with a flat tint modulated by luminance. Run it ON TOP of the baked paint and
-       it overwrites every painted feather edge with that tint — the whole harvest, silently
-       discarded, on a bird that still looks broadly kea-coloured. This is the single most
-       expensive mistake available in this piece, so it is asserted structurally: keaRecolour must
-       sit in the ELSE of the astra branch. */
-    ok(/if\(B\.astraTex&&B\.astraTex\.on&&[\s\S]*?\n(\s*)\} else \{\n[\s\S]{0,300}?keaRecolour\(/.test(bsrc)
-       && (bsrc.match(/keaRecolour\(THREE,m,B\.plume\)/g)||[]).length===1,
-       'the palette recolour is the ELSE of the Astra branch — the two can never both run and '+
-       'flatten the painted scalloping away');
-
-    /* (iv) COLOUR SPACE, WHICH IS THE nor_gl/nor_dx MISTAKE IN ANOTHER COSTUME. An albedo is
-       colour and must be decoded from sRGB; a normal map is DATA and must not be. Get the normal
-       one wrong and the lighting is not broken, it is subtly and plausibly wrong — the exact
-       failure class LICENCES.md records for the DirectX-convention normal maps. */
-    ok(/base\.colorSpace=THREE\.SRGBColorSpace/.test(bsrc),
-       'the baked albedo is decoded as sRGB');
-    ok(/normal\.colorSpace=THREE\.NoColorSpace/.test(bsrc),
-       'and the baked normal map is NOT — it is data, and sRGB-decoding it bends every lit surface');
-
-    /* (v) flipY. The bake was written in glTF's texel order (v=0 is the TOP row), which is what
-       GLTFLoader hands the mesh and therefore what our UVs expect. TextureLoader defaults the
-       OTHER way. Left at the default the bird renders fully textured, seam-free and vertically
-       mirrored — a plausible-looking bird with a smeared atlas, which is precisely what P5F.md
-       section 5 says to report rather than produce. */
-    ok(/t\.flipY=false/.test(bsrc),
-       'the baked maps load with flipY=false, the glTF convention our UV layout was baked in');
-
-    /* (vi) A FAILED TEXTURE LOAD MUST NOT COST THE BIRD, and must not be silent either. */
-    ok(/K\.G\.bird\.astra=\{ok:false,why:/.test(bsrc),
-       'a failed map load falls back to the palette AND records why, rather than photographing white');
-    ok(/K\.G\.bird\.paint=/.test(bsrc),
-       'and the bird reports which paint route it actually took, so a strip cannot mislabel itself');
-
-    /* (vii) THE ALPHA DEPARTURE IS DELIBERATE AND WRITTEN DOWN. Astra's material is MASK at 0.45
-       because ITS wings are alpha cards. Ours is a closed body, and 6.5% of our vertices bake to
-       texels under that cutoff — honour MASK and we punch holes in a solid bird. */
-    ok(A.opaque===true,'our closed mesh ignores Astra\'s alpha cutoff — MASK would hole the body '+
-       'at the 6.5% of vertices that bake to sub-cutoff texels ('+A.opaque+')');
-    ok(A.roughness>0.5&&A.roughness<1,'Astra\'s roughness is carried over as the starting point ('+
-       A.roughness+')');
-    ok(A.normalScale>0&&A.normalScale<=1,'and its normal scale ('+A.normalScale+')');
-
-    /* (viii) THE MEASUREMENT THAT CHOSE THE BAKE OVER THE SWAP IS IN THE LEDGER, with its control.
-       P5F.md required the UV question be decided by measurement; a recorded verdict with no
-       control number beside it is an assertion nobody can re-check. */
-    { const led=fsx.readFileSync(pathx.join(ROOT,'assets/LICENCES.md'),'utf8');
-      ok(/\|\s*\*\*72\.3\*\*\s*\|/.test(led),'the ledger records the straight swap\'s 72.3');
-      ok(/\|\s*\*\*3\.5\*\*\s*\|/.test(led),'the bake\'s 3.5');
-      ok(/\|\s*\*\*0\.4\*\*\s*\|/.test(led),
-         'and the CONTROL\'s 0.4 — without which neither of the other two numbers means anything'); }
-
-    /* (ix) THE BAKE IS RE-RUNNABLE. A derived asset whose generator was thrown away is an asset
-       nobody can re-check, which is the same failure the ledger's md5 protocol exists to prevent. */
-    ok(fsx.existsSync(pathx.join(ROOT,'gauntlet/verify/p5f_bake.js')),
-       'the bake script is in the tree, so the two maps can be regenerated rather than trusted');
-  }
+    ok(!/scallop/i.test(bsrc),'and no scalloping is faked — P5E.md puts it outside this scope and '+
+       'TODO 84 carries it'); }
 
   /* ---- (7) THE PRIMITIVE BIRD IS STILL THE ONE THAT SHIPS ----
      Everything above is inert until Eric flips KEABIRD.model. The handles the 80 writes use must

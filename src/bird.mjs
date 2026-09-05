@@ -164,26 +164,6 @@ export async function installBird(K){
   /* ONE LOAD, MANY BIRDS. SkeletonUtils.clone is the only correct way to copy a SkinnedMesh —
      Object3D.clone() shares the skeleton, so two birds would pose as one. */
   K.G.bird={mode:'model',url:B.url,birds:0,bones:0};
-  /* ---- LOAD THE BAKED ASTRA MAPS ONCE, BEFORE ANY BIRD IS ATTACHED — REPLAT P5F ----
-     One load for every bird, and a failure here must NOT cost the bird: it falls back to the
-     palette recolour and says so in G.bird, exactly as a failed model load falls back to the
-     primitive. A texture that silently did not arrive would photograph as a white bird and look
-     like a lighting bug. */
-  if(B.astraTex&&B.astraTex.on){
-    try{
-      const tl=new THREE.TextureLoader();
-      const get=u=>new Promise((res,rej)=>tl.load(u,res,undefined,rej));
-      const [base,normal]=await Promise.all([get(B.astraTex.base),get(B.astraTex.normal)]);
-      base.colorSpace=THREE.SRGBColorSpace;      // painted albedo
-      normal.colorSpace=THREE.NoColorSpace;      // a normal map is data, never colour
-      for(const t of [base,normal]){ t.flipY=false; t.wrapS=t.wrapT=THREE.ClampToEdgeWrapping;
-        t.anisotropy=8; t.needsUpdate=true; }
-      K.G.bird.astra={ok:true,base,normal,w:base.image&&base.image.width};
-    }catch(e){
-      K.G.bird.astra={ok:false,why:String(e&&e.message||e)};
-      console.error('bird: the baked Astra maps did not load, staying on the palette —',e);
-    }
-  }
   const attach=(kea)=>{
     const root=skeletonClone(gltf.scene);
     let sk=null; root.traverse(o=>{ if(o.isSkinnedMesh)sk=o; });
@@ -237,24 +217,7 @@ export async function installBird(K){
             K.G.bird.texMean=B.plume.mean; }
         }catch(e){ K.G.bird.texMeanWhy=String(e&&e.message||e); }
       }
-      /* ---- THE ASTRA HARVEST — REPLAT P5F ----
-         When the baked maps are on they carry HUE as well as detail, so the palette recolour is
-         not merely unnecessary, it would overwrite the painted scalloping with a flat tint and
-         throw the whole harvest away. The two are alternatives, never a stack. */
-      if(B.astraTex&&B.astraTex.on&&K.G.bird.astra&&K.G.bird.astra.ok){
-        const A=K.G.bird.astra;
-        m.map=A.base; m.normalMap=A.normal;
-        m.normalScale=new THREE.Vector2(B.astraTex.normalScale,B.astraTex.normalScale);
-        m.roughness=B.astraTex.roughness; m.metalness=0;
-        /* our mesh is closed; Astra's alpha belongs to ITS feather cards — see KEABIRD.astraTex */
-        if(B.astraTex.opaque){ m.transparent=false; m.alphaTest=0; m.depthWrite=true; }
-        m.color=new THREE.Color(0xffffff);
-        m.needsUpdate=true;
-        K.G.bird.paint='astra-baked';
-      } else {
-        keaRecolour(THREE,m,B.plume);
-        K.G.bird.paint='palette';
-      }
+      keaRecolour(THREE,m,B.plume);
     }
     /* ---- THE EYE-RING, TWO SMALL MESHES ON THE HEAD BONE ----
        P5E.md allows geometry "if the texture route fights the UVs", and it does: the source is one
