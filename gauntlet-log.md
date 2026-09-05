@@ -4873,3 +4873,91 @@ after the face work, as the brief instructs.**
 - **VERIFIED:** nine batteries ALL PASS, gate CERTIFIED-SHIP, seal 12/12 headless, model off by
   default so no vantage moved. Ledger rows for `kea_bill.glb` with its md5 and the change named, as
   CC-BY requires. Render: `gauntlet/capture/P5e_step2_face.png`.
+
+## SESSION 30 — 2026-09-05, P6A: the model-swap seam, and nothing changed
+
+The piece whose success condition is that the game looks and behaves exactly as it did. It does.
+
+- **THE REGISTRY IS 26 ENTRIES, NOT A DEMO.** Both biomes' hero tier goes through it: hut, picnic
+  table, handbag, chilly bin, bench, tent, bin, the DON'T FEED sign, four kea-crossing diamonds,
+  the roadworks paddle, trailer, nest, paddock fence, gate, four parked cars, campervan, DOC ute,
+  the SW rope-tow shed, the trailhead board, the unattended pack, the ski field's tow shed, its
+  lodge and three gear racks. 63 named anchors. Every one ships `source:'primitive'`.
+
+- **THE COLLIDER AND THE ANCHORS COME FROM THE ENTRY, AND THAT IS PROVEN BY DESTRUCTION.** The
+  battery reads every anchor of every placed prop, then hides all 26 bodies, moves them to
+  (999,999,999) and scales them to a thousandth — and reads every anchor again. Not one moves, and
+  neither does a collider. `src/models.mjs` is separately asserted to contain no reference to
+  `G.colliders`, no collider emit and no anchor computation at all, so the guarantee is a property
+  of the code rather than a promise in a comment.
+
+- **THE ANCHORS WERE ALREADY GEOMETRY-INDEPENDENT, which is why this was safe.** Every mission
+  anchor in the game was a literal offset from a prop's placement, not a point read off a mesh. The
+  seam's job was to NAME them. Two exceptions were real: the DOC ute's cage hint and its jailbreak
+  latch both projected a hand-typed offset through the group's `matrixWorld`. The hint's new value
+  is bit-identical; the latch differs by **1.8e-15 m**, the last bit of a double, against mission
+  ranges of 1.5 m.
+
+- **MY OWN INVARIANT WAS A LOTTERY TWICE BEFORE IT WAS A TRIPWIRE, and both causes are worth
+  keeping.** First cut hashed each mesh's geometry `parameters` — and three.js serialises an
+  ExtrudeGeometry's shape **with its uuid**, which is twelve draws off the seeded `Math.random`. So
+  a bench edit in the carpark reported drift in the **ski field**. Second cut hashed colliders with
+  `JSON.stringify`, and three sites push raw literals into `G.colliders` with their own key order
+  while `addBoxCollider` uses another — so it compared spelling, not geometry. Normalised: fixed
+  field order, fixed precision, absent `ry` === 0.
+
+- **THE COLLIDER PUSH ORDER IS LOAD-BEARING AND I NEARLY LOST IT.** `pushOut()` walks
+  `G.colliders` and mutates the bird's position as it goes, so for a bird standing inside two
+  overlapping boxes the ORDER matters, not just the contents. Most builders pushed their collider
+  partway through their body. So a body calls `p.collide()` at exactly the line `addBoxCollider`
+  used to be on, `placeProp` emits anything the body did not ask for as a backstop, and the
+  collider digest is ORDERED so a reshuffle is a red battery rather than a bird walking through a
+  wall in a corner nobody photographs.
+
+- **THE BATTERY PASSED FIRST TRY, WHICH IS WHY I SABOTAGED IT EIGHT WAYS — AND ONE HOLE WAS REAL.**
+  Moving the bin lid anchor a millimetre in the registry **passed every anchor check**, because the
+  mission reads the entry and so the mission moved with it. A seam whose two halves agree with each
+  other proves only that they agree. So the question is now asked from outside the seam: walk every
+  interactable, call the `getPos()` the game itself calls, and hash the answers against the
+  PRE-SEAM tree — 65 points in the carpark, 12 in the ski field, plus every teaching hint. That
+  bites at a millimetre. The other seven sabotages (a widened collider, an entry shipping as a
+  model, `models.mjs` reaching for `G.colliders`, an anchor reading a mesh, `propReg` dropped from
+  the dispatcher sweep, a wrong ledger md5, the body deleted instead of hidden) all bit already.
+
+- **THE SWAP PROOF NEEDED A CONTROL SHOT BEFORE IT MEANT ANYTHING.** First reading said the live
+  revert did not return to baseline (0.9787). It did — the bench stands in the grass field, and
+  `src/game.mjs`'s own REPLAT P4c note records that the field's content is a **step function of
+  camera position**. Shooting the same frame twice with nothing changed gives 0.9788. So the proof
+  carries an A2 control and every claim is held to it: flip-back-via-reload 0.9786, live revert
+  0.9784, control 0.9788 — indistinguishable; the swap itself 0.5618 at the bench. Attributed, not
+  tuned around.
+
+- **LOADING A GLB COSTS 44 SEEDED RANDOM DRAWS** — three.js takes uuids for every geometry,
+  material and texture off the same stream the rig seeds — so a swapped page's grass resolves
+  differently from an unswapped one. Measured (13,776 against 13,820), not guessed. It cannot reach
+  the shipped game: no entry ships as a model, so nothing is fetched and no draw is consumed.
+
+- **THE BASELINES WERE ALREADY NINE PIECES STALE and that is not this piece's doing.** The last
+  full re-pin was P3b; P4, P4b–P4e and all of P5 landed after it, so 27 of 28 vantages flag against
+  the pinned set on an **untouched** tree. So the tripwire for a nothing-changes piece was the tree
+  as it stood: 30 frames shot before a line was edited, 30 after, same seed, same rig. **28 of 30
+  green.** The two that moved are `03_kea_plate` and `27_travel_card`, which are two of the three
+  the untouched-vs-untouched control also flagged — and `03` was re-shot three more times on the
+  final tree at 0.9994 / 0.9997 / 0.9644, with run2-vs-run3 at 0.9646 on identical code. It is
+  bimodal churn on that vantage, not drift. `27_travel_card` has never been pinned at all.
+  **NOTHING WAS RE-PINNED.**
+
+- **THE PLACEHOLDER GLB IS GENERATED, NOT DOWNLOADED.** P6A.md forbids sourcing a model and
+  requires a swap proof, so `gauntlet/verify/mkplaceholder.mjs` writes a 1688-byte binary glTF from
+  twenty lines of arithmetic — provenance stronger than any download's, because you can re-run it
+  and md5 the result. It is 190 x 98 x 60 model units (the bench's proportions in centimetres) with
+  its origin at the foot, deliberately, so a broken normalisation cannot look correct. Its JSON
+  chunk pads with **spaces**, not zeros: the first cut zero-padded, three.js loaded it perfectly
+  and `JSON.parse` refused it, which is the sort of almost-valid asset that only bites the second
+  tool to read it.
+
+- **VERIFIED:** nine batteries ALL PASS with no assertion edits, gate CERTIFIED-SHIP, seal 12/12
+  headless, mesh and collider digests byte-identical in both biomes, 28 of 30 vantages matching the
+  pre-change tree with the two exceptions matched by an untouched control, nothing re-pinned. Swap
+  proof: `gauntlet/capture/P6A_{A,A2,B,C,D,E}_*.png`. Deferred and filed: the ski lodge deck
+  (TODO 85), git-lfs (TODO 86).

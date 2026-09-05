@@ -160,6 +160,20 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
     try { bird = JSON.parse(process.env.KEABIRD); }
     catch (e) { throw new Error('webrig: KEABIRD is not valid JSON — ' + e.message); }
   }
+  /* REPLAT P6A: KEAPROPS reaches the prop registry, same seam and same reason as the four above —
+     a model swap is a look decision and it has to be shootable without a rebuild. Nested TWO levels
+     because an entry is a row of blocks: KEAPROPS='{"bench":{"material":{"nightTint":true}}}'
+     reaches a leaf.
+     THERE IS DELIBERATELY NO KEY LIST HERE, for the reason KEAGRASS's note gives at length: the
+     ids and the column names live in game.mjs, game.mjs reports every path it refused in
+     G.propsState.ignored, and assertBooted fails the pass on that report. A list kept in this file
+     would drift and would then refuse a legitimate swap, which is the most annoying possible
+     failure because it looks like the seam is broken. */
+  let props = null;
+  if (process.env.KEAPROPS) {
+    try { props = JSON.parse(process.env.KEAPROPS); }
+    catch (e) { throw new Error('webrig: KEAPROPS is not valid JSON — ' + e.message); }
+  }
   let mats = null;
   if (process.env.KEAMATS) {
     try { mats = JSON.parse(process.env.KEAMATS); }
@@ -178,8 +192,11 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
        because `tint` is a valid KEY and `asfalt` is not a family. game.mjs knows the names, so
        game.mjs reports what it ignored and assertBooted refuses the pass below. */
   }
-  if (nopost || nosky || nomats || film || sky || mats || grass || bird)
-    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt, gr, bd) => {
+  const nopropmodels = !!process.env.NOPROPMODELS;
+  if (nopost || nosky || nomats || film || sky || mats || grass || bird || props || nopropmodels)
+    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt, gr, bd, pr, npm) => {
+      if (pr) globalThis.__KEA_PROPS__ = pr;
+      if (npm) globalThis.__KEA_NOPROPMODELS__ = true;
       if (bd) globalThis.__KEA_BIRD__ = bd;
       if (np) globalThis.__KEA_NOPOST__ = true;
       if (ns) globalThis.__KEA_NOSKY__ = true;
@@ -188,7 +205,7 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
       if (nm) globalThis.__KEA_NOMATS__ = true;
       if (mt) globalThis.__KEA_MATS__ = mt;
       if (gr) globalThis.__KEA_GRASS__ = gr;
-    }, nopost, film, nosky, sky, nomats, mats, grass, bird);
+    }, nopost, film, nosky, sky, nomats, mats, grass, bird, props, nopropmodels);
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);

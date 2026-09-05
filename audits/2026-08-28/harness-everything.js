@@ -6037,4 +6037,407 @@ C.section('REPLAT P5b: the rig adapter');
   X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }
 
+/* ============================================================================================
+   REPLAT P6A — THE MODEL-SWAP SEAM. The success condition is that NOTHING CHANGED.
+   ============================================================================================
+   P6A.md's contract is unusual: the piece is judged by what it did NOT do. So this section is
+   mostly invariants, and the numbers it holds them to were measured on the PRE-SEAM tree — the
+   commit before the registry existed — rather than read back off the build it is testing. A
+   self-consistent measurement would pass on any world; these numbers only pass on THIS one.
+
+   HOW THE PRE-SEAM NUMBERS WERE TAKEN. Boot each biome under the gauntlet seed, walk the scene,
+   and hash every MESH's world transform, geometry parameters, material and shadow flags. Meshes
+   only, deliberately: the seam gives three props a Group they did not have before (the bench, the
+   paddock fence and the roadworks paddle all used to add straight to the scene), and a pure Group
+   is not a thing anyone can see. What a reader CAN see is a mesh, and not one of them moved.
+   THE UUIDS HAD TO COME OUT OF THAT HASH. three.js serialises an ExtrudeGeometry's shape with its
+   uuid, and a uuid is twelve draws from the seeded Math.random — so a first cut of this digest
+   compared random numbers and reported drift in the SKI FIELD from a change to a carpark bench.
+   THE COLLIDER HASH IS NORMALISED FOR THE SAME CLASS OF REASON. Three sites pushed raw literals
+   into G.colliders with their own key order while addBoxCollider used another, so a JSON.stringify
+   digest compared spelling. Fixed field order, fixed precision, absent ry === 0. */
+C.section('REPLAT P6A: the model-swap seam');
+{
+  const crypto=require('crypto'), fs=require('fs'), path=require('path');
+  const ROOT=path.resolve(__dirname,'..','..');
+  const THREE=H.THREE||require('three');
+
+  /* the pre-seam readings, one line per biome, taken on the commit before the registry landed */
+  const PRESEAM={
+    carpark :{mesh:'1c53ebbf15dcb55c', col:'1b025c57715cb017', meshes:1029, tris:223592,
+              inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
+              foodSrc:2, gravel:26, stones:26, wear:6, nightMats:6},
+    skifield:{mesh:'28d3d95a94deefcc', col:'fc06ef03250ea1ed', meshes:364, tris:43014,
+              inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
+              foodSrc:0, gravel:0, stones:0, wear:0, nightMats:6},
+  };
+  const worldRead=(biome)=>{
+    X.setSeed(20260828);
+    { let t=20260828>>>0; Math.random=()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t);
+        r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; }
+    X.boot({biome}); X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe();
+    G.scene.updateMatrixWorld(true);
+    const mh=crypto.createHash('md5'); let meshes=0, tris=0;
+    const v=new THREE.Vector3(), q=new THREE.Quaternion(), s=new THREE.Vector3();
+    G.scene.traverse(o=>{
+      if(!o.isMesh)return;
+      meshes++;
+      o.matrixWorld.decompose(v,q,s);
+      const g=o.geometry, p=g&&g.parameters, m=o.material;
+      const pos=g&&g.attributes&&g.attributes.position;
+      if(pos)tris+=(g.index?g.index.count:pos.count)/3;
+      mh.update([v.x.toFixed(5),v.y.toFixed(5),v.z.toFixed(5),
+                 q.x.toFixed(5),q.y.toFixed(5),q.z.toFixed(5),q.w.toFixed(5),
+                 s.x.toFixed(5),s.y.toFixed(5),s.z.toFixed(5),
+                 (g?g.type:'-'),
+                 (p?JSON.stringify(p).replace(/"uuid":"[^"]*",?/g,''):'-'),
+                 (m?(m.type+':'+(m.color?m.color.getHexString():'-')+':'+
+                   (m.roughness!==undefined?m.roughness.toFixed(3):'-')):'-'),
+                 (o.castShadow?'C':'-')+(o.receiveShadow?'R':'-')+(o.visible?'V':'-')].join('|')+'\n');
+    });
+    const CF=c=>[c.kind,(c.x||0).toFixed(6),(c.z||0).toFixed(6),(c.w||0).toFixed(6),(c.d||0).toFixed(6),
+      (c.top||0).toFixed(6),(c.ridge||0).toFixed(6),(c.slope||0).toFixed(6),
+      c.solid?1:0,(c.ry||0).toFixed(6),c.slide?1:0,c.hut?1:0].join(',');
+    const ch=crypto.createHash('md5');
+    for(const c of G.colliders)ch.update(CF(c)+'\n');
+    return {mesh:mh.digest('hex').slice(0,16), col:ch.digest('hex').slice(0,16),
+            meshes, tris:Math.round(tris),
+            inter:G.inter.length, props:G.props.length, colliders:G.colliders.length,
+            cars:G.cars.length, sheep:G.sheep.length, strips:G.strips.length,
+            hints:G.hints.length, snow:G.snow.length, foodSrc:(G.foodSrc||[]).length,
+            gravel:(G.gravel||[]).length, stones:(G.stones||[]).length, wear:(G.wear||[]).length,
+            nightMats:(G.nightMats||[]).length, CF};
+  };
+
+  /* ---- (1) THE WORLD IS THE WORLD IT WAS ---- */
+  for(const biome of ['carpark','skifield']){
+    const r=worldRead(biome), want=PRESEAM[biome];
+    ok(r.mesh===want.mesh, biome+': every mesh is where it was before the seam, with the geometry, '+
+       'material and shadow flags it had — world mesh digest '+r.mesh+' against '+want.mesh);
+    ok(r.col===want.col, biome+': every collider is where it was, in the order it was pushed — '+
+       'collider digest '+r.col+' against '+want.col);
+    for(const k of ['meshes','tris','inter','props','colliders','cars','sheep','strips','hints',
+                    'snow','foodSrc','gravel','stones','wear','nightMats'])
+      ok(r[k]===want[k], biome+': '+k+' is unchanged at '+want[k]+' (got '+r[k]+')');
+  }
+
+  /* ---- (2) THE REGISTRY IS A REGISTRY, and every row carries the six columns P6A.md names ---- */
+  const P=X.PROPS, ALL=P.ALL, IDS=Object.keys(ALL);
+  ok(IDS.length>=20,'the registry holds a real prop tier, not a demo ('+IDS.length+' entries)');
+  let shipsModel=[], noBuild=[], badCol=[], badAnchor=[], badMat=[], badFit=[];
+  for(const id of IDS){ const e=ALL[id];
+    if(e.source!=='primitive')shipsModel.push(id);
+    if(typeof e.build!=='function')noBuild.push(id);
+    if(!Array.isArray(e.collider))badCol.push(id);
+    for(const c of e.collider){
+      if(c.kind==='box'){ if(!(c.w>0&&c.d>0&&isFinite(c.top)))badCol.push(id+'.box'); }
+      else if(c.kind==='roof'){ if(!(c.w>0&&c.d>0&&isFinite(c.ridge)&&isFinite(c.slope)))badCol.push(id+'.roof'); }
+      else badCol.push(id+'.'+c.kind); }
+    for(const [n,a] of Object.entries(e.anchors))
+      if(!(isFinite(a.x)&&isFinite(a.z)&&(a.y===undefined||isFinite(a.y))))badAnchor.push(id+'.'+n);
+    if(!e.material||typeof e.material.keepModelPBR!=='boolean'||typeof e.material.nightTint!=='boolean')badMat.push(id);
+    if(!e.fit||!(e.fit.standM===null||e.fit.standM>0)||!['x','y','z'].includes(e.fit.axis))badFit.push(id);
+    if(!e.biome)badMat.push(id+'.biome');
+  }
+  ok(shipsModel.length===0,'NOTHING SHIPS SWAPPED — every entry is source:primitive ('+
+     (shipsModel.join(', ')||'none is not')+')');
+  ok(noBuild.length===0,'every entry names a primitive builder, so a failed model always has '+
+     'something to fall back to ('+(noBuild.join(', ')||'all do')+')');
+  ok(badCol.length===0,'every declared collider is a shape groundHeightAt can read ('+
+     (badCol.join(', ')||'all are')+')');
+  ok(badAnchor.length===0,'every declared anchor is a finite point ('+(badAnchor.join(', ')||'all are')+')');
+  ok(badMat.length===0,'every entry declares a material policy and a biome ('+(badMat.join(', ')||'all do')+')');
+  /* A MISSPELLED FAMILY MUST NOT LOOK LIKE A POLICY, and the first cut of this registry had three
+     of them: 'wood' and 'metal' have never been families, and it is 'corrugate' not 'corrugated'.
+     None would have done anything at all. defineProp throws on an unknown name now — which is why
+     this reads the FAMILY LIST rather than re-typing it, and why the throw is driven below. */
+  { const fams=Object.keys(X.MATS.families);
+    const bad=IDS.filter(id=>ALL[id].material.family!==null&&!fams.includes(ALL[id].material.family));
+    ok(bad.length===0,'every declared material family is one of the '+fams.length+' P3 families ('+
+       (bad.map(b=>b+'='+ALL[b].material.family).join(', ')||'all are')+')');
+    let threw=false;
+    try{ P.define('__p6a_bad_family__',{build(){},material:{family:'metal'}}); }catch(e){ threw=true; }
+    ok(threw,'and defineProp REFUSES an unknown family rather than silently ignoring it');
+    delete ALL.__p6a_bad_family__;
+    let threw2=false;
+    try{ P.define('__p6a_no_build__',{}); }catch(e){ threw2=true; }
+    ok(threw2,'and refuses an entry with no primitive builder');
+    delete ALL.__p6a_no_build__;
+    let threw3=false;
+    try{ P.define('bench',{build(){}}); }catch(e){ threw3=true; }
+    ok(threw3,'and refuses a duplicate id, so two rows cannot claim one object'); }
+  ok(badFit.length===0,'every entry declares a usable model normalisation ('+(badFit.join(', ')||'all do')+')');
+
+  /* ---- (3) THE ANCHORS DO NOT COME FROM THE GEOMETRY ----
+     The claim P6A.md calls the highest-risk thing in the piece, driven rather than argued: read
+     every anchor of every placed prop, then DESTROY the bodies — hide them, move them, scale them
+     to nothing — and read them all again. A single anchor that consulted a mesh moves. */
+  X.setSeed(20260828); X.boot({biome:'carpark'});
+  {
+    const reg=G.propReg;
+    ok(reg.length>=20,'the carpark places a real prop tier through the registry ('+reg.length+')');
+    const snap=()=>reg.map(p=>Object.keys(p.entry.anchors).sort().map(n=>{
+      const a=P.anchor(p,n); return p.id+'.'+n+'='+a.x.toFixed(9)+','+a.y.toFixed(9)+','+a.z.toFixed(9);
+    }).join(';')).join('|');
+    const before=snap();
+    let moved=0;
+    for(const p of reg)for(const o of p.body){ o.visible=false; o.position.set(999,999,999);
+      o.scale.setScalar(0.001); moved++; }
+    G.scene.updateMatrixWorld(true);
+    ok(moved>0,'there were bodies to destroy ('+moved+' meshes)');
+    ok(snap()===before,'EVERY ANCHOR IN THE WORLD SURVIVES THE BODY BEING DESTROYED — '+
+       'not one of them reads a mesh');
+    /* and the colliders are equally untouched, for the same reason */
+    const colBefore=G.colliders.map(c=>JSON.stringify(c)).join('|');
+    G.scene.updateMatrixWorld(true);
+    ok(G.colliders.map(c=>JSON.stringify(c)).join('|')===colBefore,
+       'and so is every collider — the physical world does not consult a vertex either');
+  }
+
+  /* ---- (4) THE COLLIDER IS THE ENTRY'S, NOT THE BODY'S ----
+     Recompute each placement's colliders straight from its entry and its transform, and check the
+     ones actually in G.colliders are those, by value. This is what makes "a swapped model must not
+     silently change what the bird can perch on" a property rather than a promise. */
+  X.setSeed(20260828); X.boot({biome:'carpark'});
+  {
+    let n=0, wrong=[];
+    for(const p of G.propReg){
+      const want=p.entry.collider.map(c=>P.collider(p,c));
+      if(want.length!==p.colliders.length){ wrong.push(p.id+' count'); continue; }
+      for(let i=0;i<want.length;i++){ n++;
+        if(JSON.stringify(want[i])!==JSON.stringify(p.colliders[i]))wrong.push(p.id+'['+i+']');
+        if(G.colliders.indexOf(p.colliders[i])<0)wrong.push(p.id+'['+i+'] not in the world'); }
+    }
+    ok(n>0,'there are registry colliders to check ('+n+')');
+    ok(wrong.length===0,'every emitted collider is exactly what the entry declares, transformed by '+
+       'the placement ('+(wrong.join(', ')||'all '+n+' of them')+')');
+  }
+
+  /* ---- (5) BOTH DIRECTIONS, AT THE REGISTRY ----
+     P6A.md: "A registry that can only go one way is half a seam." The browser half is proved in
+     pictures by gauntlet/verify/p6a-swap.mjs; this is the half a battery can see. Flip an entry to
+     source:'model', rebuild, and check that the world is IDENTICAL — because the primitive body is
+     always built (a GLB is a fetch, and a fetch can fail), the collider and the anchors come from
+     the entry either way, and the only thing that changes headless is which source the placement
+     says it WANTS. Then flip it back and check it is identical again. */
+  {
+    const e=ALL.bench, was={source:e.source, url:e.url, fit:Object.assign({},e.fit)};
+    const read=()=>{ const r=worldRead('carpark');
+      const p=P.placed('bench');
+      return {mesh:r.mesh, col:r.col, colliders:r.colliders,
+              anchors:Object.keys(p.entry.anchors).map(n=>{const a=P.anchor(p,n);
+                return n+'='+a.x+','+a.y+','+a.z;}).join(';'),
+              mode:p.mode, source:p.source, body:p.body.length,
+              vis:p.body.filter(o=>o.visible).length}; };
+    const prim=read();
+    e.source='model'; e.url='models/placeholder_box.glb';
+    e.fit=Object.assign({},e.fit,{standM:0.98,axis:'y',ground:true});
+    const asModel=read();
+    e.source=was.source; e.url=was.url; e.fit=was.fit;
+    const back=read();
+
+    ok(prim.source==='primitive'&&asModel.source==='model'&&back.source==='primitive',
+       'the entry flips both ways and the placement reports which it wants ('+
+       prim.source+' -> '+asModel.source+' -> '+back.source+')');
+    ok(asModel.mode==='primitive','and headless it STAYS on the primitive body, because nothing '+
+       'fetched a GLB — a battery must never depend on the network');
+    ok(asModel.body===prim.body&&asModel.vis===prim.vis,
+       'the primitive body is built and visible either way, so a failed load has something to '+
+       'fall back to ('+asModel.vis+' of '+asModel.body+' meshes)');
+    ok(asModel.col===prim.col,'THE COLLIDER WORLD IS BYTE-IDENTICAL with the entry asking for a '+
+       'model ('+asModel.col+')');
+    ok(asModel.colliders===prim.colliders,'and the collider COUNT is unchanged ('+asModel.colliders+')');
+    ok(asModel.anchors===prim.anchors,'THE ANCHORS ARE IDENTICAL with the entry asking for a model');
+    ok(asModel.mesh===prim.mesh,'and so is every mesh in the world — asking for a model changes '+
+       'nothing until one actually arrives');
+    ok(back.mesh===prim.mesh&&back.col===prim.col&&back.anchors===prim.anchors,
+       'AND THE FLIP BACK RETURNS THE WORLD EXACTLY — the seam goes both ways');
+  }
+
+  /* ---- (5b) EVERY MISSION ANCHOR RESOLVES TO THE POINT IT RESOLVED TO BEFORE ----
+     THIS IS THE ASSERTION THE SECTION BELOW CANNOT MAKE, and it was added because the section
+     below was SABOTAGED AND DID NOT BITE. Moving the bin lid anchor a millimetre in the registry
+     passed every check in (6), because (6) asks whether the mission reads the entry — and it does,
+     so the mission moved with it. A seam whose two halves agree with each other proves only that
+     they agree.
+     So this asks the question from outside the seam entirely: walk every interactable in the world,
+     call the getPos() the game itself calls, and hash the answers against what the PRE-SEAM tree
+     answered. Sixty-five points in the carpark, twelve in the ski field, plus every teaching hint —
+     which are placed points too, and two of them moved from raw arithmetic to a declared anchor in
+     this piece. One millimetre anywhere and this goes red. */
+  {
+    const digest=(biome)=>{
+      X.setSeed(20260828);
+      { let t=20260828>>>0; Math.random=()=>{ t+=0x6D2B79F5; let r=Math.imul(t^t>>>15,1|t);
+          r^=r+Math.imul(r^r>>>7,61|r); return ((r^r>>>14)>>>0)/4294967296; }; }
+      X.boot({biome}); X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe(); X.startGame(1); tick(4);
+      const rows=[];
+      for(const it of G.inter){ let q=null;
+        try{ q=it.getPos?it.getPos():null; }catch(e){ q=null; }
+        rows.push([it.kind,(it.label||'').replace(/\s*\(\d+\/\d+\)\s*$/,''),
+          q?+q.x.toFixed(6):null,q?+q.y.toFixed(6):null,q?+q.z.toFixed(6):null]); }
+      rows.sort((a,b)=>(a[1]+a[0]).localeCompare(b[1]+b[0])||a[2]-b[2]);
+      const hints=G.hints.map(h=>[h.mid,+h.x.toFixed(6),+h.y.toFixed(6),+h.z.toFixed(6),h.r]).sort();
+      const md=o=>crypto.createHash('md5').update(JSON.stringify(o)).digest('hex').slice(0,16);
+      return {n:rows.length, inter:md(rows), hints:md(hints), hn:hints.length};
+    };
+    const WANT={carpark :{n:65, inter:'4a9acee400d03854', hn:9, hints:'6e9458ae1276c86f'},
+                skifield:{n:12, inter:'d468e22d35759485', hn:4, hints:'1383d48400f14029'}};
+    for(const b of ['carpark','skifield']){
+      const r=digest(b), w=WANT[b];
+      ok(r.n===w.n,b+': the same number of interactables answer ('+r.n+' against '+w.n+')');
+      ok(r.inter===w.inter,b+': EVERY MISSION ANCHOR RESOLVES TO THE POINT IT RESOLVED TO BEFORE '+
+         'THE SEAM — '+r.n+' interactables, digest '+r.inter+' against '+w.inter);
+      ok(r.hn===w.hn,b+': the same number of teaching hints ('+r.hn+' against '+w.hn+')');
+      ok(r.hints===w.hints,b+': and every hint is at the point it was, including the two that '+
+         'stopped being hand-written arithmetic in this piece — digest '+r.hints+' against '+w.hints);
+    }
+  }
+
+  /* ---- (6) THE MISSION ANCHORS THAT ACTUALLY MATTER ----
+     The seal is the canary; the rest of these are the anchors P6A.md names by hand. Every one is
+     read through the live interactable rather than through the registry, so this checks the WIRING
+     and not just the arithmetic. */
+  X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4);
+  {
+    const seal=G.inter.find(t=>t.strip&&/DOOR SEAL/.test(t.label));
+    ok(!!seal,'the caravan door seal is still a strip tear on a registry-placed campervan');
+    ok(seal&&seal.strip.N===12,'and it is still a TWELVE step path (N '+(seal&&seal.strip.N)+')');
+    const van=P.placed('campervan');
+    ok(!!van&&van.id==='campervan','the campervan is a placement');
+    /* the bead is drawn in the placement's frame, so the strip's own world head must agree with
+       the entry's declared door anchor to within the bead's own offset */
+    { const a=P.anchor(van,'door'), q=seal.getPos();
+      ok(Math.hypot(q.x-a.x,q.z-a.z)<1.6,'and the seal frontier is at the declared door anchor '+
+         '('+q.x.toFixed(2)+','+q.z.toFixed(2)+' against '+a.x.toFixed(2)+','+a.z.toFixed(2)+')'); }
+    const named=[['bin','lid','PECK BIN LID'],['bin','body','TIP THE BIN'],
+                 ['doc_ute','latch','PECK THE LATCH'],['sheep_pen','twine','BALING TWINE'],
+                 ['trailer','tarp','TUG TARP'],['chilly_bin','latch','TUG LATCH'],
+                 ['roadworks_paddle','face','ROADWORKS PADDLE'],['sign_dontfeed','panel','TEAR DOWN SIGN'],
+                 ['tent','guyA','GUY-LINE'],['handbag','clasp','HANDBAG'],['trail_pack','zip','UNATTENDED PACK']];
+    for(const [id,an,frag] of named){
+      const p=P.placed(id), it=G.inter.find(i=>i.label&&i.label.includes(frag));
+      if(!p){ ok(false,'prop '+id+' is placed'); continue; }
+      if(!it){ ok(false,'the '+frag+' interactable exists'); continue; }
+      const a=P.anchor(p,an), q=it.getPos();
+      ok(Math.abs(q.x-a.x)<1e-9&&Math.abs(q.y-a.y)<1e-9&&Math.abs(q.z-a.z)<1e-9,
+         frag+' reads the '+id+'.'+an+' anchor exactly ('+q.x.toFixed(6)+','+q.y.toFixed(6)+','+
+         q.z.toFixed(6)+')');
+    }
+    /* the wipers and the aerial are read off their MESHES on purpose — they are the anchors a
+       model would have to bring geometry for, and the entry records where they must land */
+    for(const id of ['car_red','car_blue','car_white','car_yellow']){
+      const p=P.placed(id);
+      ok(!!p&&p.colliders.length===1,id+' is a placement with exactly its declared collider');
+      ok(!!p.entry.anchors.wiperL&&!!p.entry.anchors.wiperR&&!!p.entry.anchors.aerial,
+         'and it declares where a model must put its wipers and its aerial');
+    }
+  }
+
+  /* ---- (7) THE CONFIG SEAM REFUSES LOUDLY ----
+     A misspelled id must not look like a swap that did nothing — the failure that cost session 17
+     a whole variant strip on KEAMATS, met here before it can happen again. */
+  {
+    const src=fs.readFileSync(path.join(ROOT,'src','game.mjs'),'utf8');
+    ok(/function propsConfig\(\)/.test(src),'there is a KEAPROPS merge');
+    ok(/PROPSIGNORED\.push\(id\+' \(no such prop\)'\)/.test(src),
+       'and an unknown prop id is REPORTED rather than ignored');
+    ok(/matMerge\(PROPS\[id\],over,id,2,PROPSIGNORED\)/.test(src),
+       'and a leaf that does not exist on the entry goes through the same depth-limited merge '+
+       'KEASKY and KEAMATS use, so a typo cannot look like a tuning');
+    ok(/ignored:PROPSIGNORED\.slice\(\)/.test(src),
+       'and what was refused travels out in G.propsState for the rig to fail the pass on');
+    const wr=fs.readFileSync(path.join(ROOT,'gauntlet','verify','webrig.mjs'),'utf8');
+    ok(/KEAPROPS/.test(wr)&&/__KEA_PROPS__/.test(wr),
+       'and the rig can set it without a rebuild, the way it can set the sky, the materials, the '+
+       'grass and the bird');
+  }
+
+  /* ---- (8) THE MODEL TIER CANNOT REACH THE COLLIDERS OR THE ANCHORS ----
+     Stated as a property of the source rather than as a promise in a comment: the file that
+     installs models has no reference to G.colliders, no reference to the anchor table, and never
+     calls the collider emitter. If a later session adds one, this goes red. */
+  {
+    const m=fs.readFileSync(path.join(ROOT,'src','models.mjs'),'utf8');
+    ok(!/G\.colliders/.test(m),'src/models.mjs never touches G.colliders');
+    ok(!/\.collide\(/.test(m),'and never emits a collider');
+    ok(!/entry\.anchors\s*\[/.test(m)&&!/propAnchor/.test(m),
+       'and never computes an anchor — both are the registry\'s, decided at build time');
+    ok(/for\(const o of p\.body\)o\.visible=false;/.test(m),
+       'the primitive body is HIDDEN rather than deleted, so the way back needs nothing restored');
+    ok(/export function revertProp/.test(m),'and there is a way back that does not need a reload');
+    ok(/CACHE/.test(m),'one fetch per url however many props share it');
+    ok(/m\.clone\(\)/.test(m),'and the materials are cloned per prop, or tinting one bin would '+
+       'tint all four');
+    ok(/failed\.push/.test(m),'a failed load is recorded and the game keeps playing');
+    const mn=fs.readFileSync(path.join(ROOT,'src','main.mjs'),'utf8');
+    ok(/installModels/.test(mn)&&/await import\('\.\/models\.mjs'\)/.test(mn),
+       'it is wired from main.mjs behind a dynamic import, so game.mjs keeps the single import the '+
+       'specimen loader asserts');
+    ok(/catch \(e\)/.test(mn.slice(mn.indexOf('installModels'))),
+       'and it cannot take the game down');
+  }
+
+  /* ---- (9) THE PLACEHOLDER ASSET LANDED THE WAY EVERY ASSET HAS TO ---- */
+  {
+    const glb=path.join(ROOT,'assets','models','placeholder_box.glb');
+    ok(fs.existsSync(glb),'the placeholder GLB is in the tree');
+    if(fs.existsSync(glb)){
+      const b=fs.readFileSync(glb);
+      ok(b.toString('ascii',0,4)==='glTF'&&b.readUInt32LE(4)===2,'and it is a real binary glTF 2.0');
+      ok(b.readUInt32LE(8)===b.length,'whose header length agrees with the file ('+b.length+' bytes)');
+      const jl=b.readUInt32LE(12);
+      let j=null; try{ j=JSON.parse(b.toString('utf8',20,20+jl)); }catch(e){}
+      ok(!!j,'and whose JSON chunk parses — space-padded, as the spec requires, not zero-padded');
+      ok(j&&j.meshes&&j.meshes.length===1,'one mesh');
+      const led=fs.readFileSync(path.join(ROOT,'assets','LICENCES.md'),'utf8');
+      const row=led.match(/<!-- ASSET file=models\/placeholder_box\.glb md5=([0-9a-f]{32})[^>]*-->/);
+      ok(!!row,'it has its licence-ledger row, like any other asset');
+      if(row)ok(row[1]===crypto.createHash('md5').update(b).digest('hex'),
+        'and the bytes on disk are the bytes the ledger names');
+      ok(/CC0/.test(led.slice(led.indexOf('THE PLACEHOLDER BOX'))),'recorded as CC0');
+      ok(fs.existsSync(path.join(ROOT,'gauntlet','verify','mkplaceholder.mjs')),
+         'and the generator that made it is in the tree, so the provenance is re-runnable rather '+
+         'than asserted');
+    }
+  }
+
+  /* ---- (10) AND THE SEAM IS ACTUALLY USED ---- */
+  X.setSeed(20260828); X.boot({biome:'carpark'});
+  {
+    const st=G.propsState;
+    ok(st&&st.placed>=20,'the carpark builds its prop tier through the registry ('+
+       (st&&st.placed)+' placements)');
+    ok(st.model===0&&st.wantModel.length===0,'and not one of them is swapped');
+    ok(st.ignored.length===0,'and no KEAPROPS path was refused on a plain boot');
+    ok(st.anchors>=40,'the registry carries a real anchor table ('+st.anchors+' named points)');
+    /* WHAT EACH BODY ACTUALLY WEARS IS MEASURED, so the census cannot drift from the world the way
+       a declared list would. The hut is the one worth naming: two families off one prop. */
+    { const fams=Object.keys(X.MATS.families);
+      const bad=Object.entries(st.families).filter(([id,fs])=>fs.some(f=>!fams.includes(f)));
+      ok(bad.length===0,'every family a placed body actually resolved is a real one ('+
+         (bad.map(b=>b[0]).join(', ')||'all are')+')');
+      ok(Object.keys(st.families).length>0,'and the measurement found some ('+
+         Object.entries(st.families).map(([k,v])=>k+':'+v.join('+')).join(', ')+')');
+      const hut=st.families.hut||[];
+      ok(hut.includes('weatherboard')&&hut.includes('corrugate'),
+         'the hut wears TWO scanned families off one prop, which is why `family` on an entry is '+
+         'recorded intent for a model and not a claim about the primitive ('+hut.join('+')+')'); }
+    const src=fs.readFileSync(path.join(ROOT,'src','game.mjs'),'utf8');
+    ok(!/addBoxCollider\(x,z,1\.9,0\.6,0\.62,true\)/.test(src),
+       'and the migrated props no longer push their own colliders at the call site');
+    ok(X.WORLDREGS.includes('propReg'),'propReg is emptied by the dispatcher like every other '+
+       'list a build fills, so a second boot cannot leave the first map\'s placements on the board');
+    X.boot({biome:'skifield'});
+    ok(G.propReg.length>0&&G.propReg.every(p=>p.entry.biome==='skifield'||p.entry.biome==='*'),
+       'and a build only places props that belong to its map ('+
+       G.propReg.map(p=>p.id).join(', ')+')');
+    X.boot({biome:'carpark'});
+    ok(G.propReg.length===st.placed,'and rebuilding the carpark places exactly the same tier again ('+
+       G.propReg.length+')');
+  }
+
+  X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
 process.exitCode=C.report()?1:0;

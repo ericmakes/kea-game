@@ -113,6 +113,17 @@ Real GLBs for the highest-impact props: wheelie bins, cars, picnic set,
 signs — the close-range detail tier. Fills out from there.
 PROOF: per-prop presence and placement assertions; licences recorded.
 
+**P6A — the model-swap seam. SHIPPED 2026-09-05.** See P6A.md. The prop
+registry landed before any model did: 26 entries covering both biomes' hero
+tier, each declaring id, source, transform, collider, anchors, material policy
+and biome, with the collider and the anchors emitted from the ENTRY and never
+from a mesh. Zero visual change — mesh digest, collider digest, all sixty-five
+carpark mission-anchor positions and every teaching hint byte-identical to the
+pre-seam tree, all nine batteries green with no assertion edits, nothing
+re-pinned. Adding a model is now a registry line and a file. The swap is proved
+both ways on the bench with a generated placeholder GLB
+(`gauntlet/verify/p6a-swap.mjs`). **Every real prop ships `source:'primitive'`.**
+
 ---
 
 ## 3. THE REFERENCE BOARD GAINS A NEW WALL

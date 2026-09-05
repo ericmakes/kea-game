@@ -1823,3 +1823,43 @@ exactly that reason.
 WHAT IT ACTUALLY NEEDS: a painted albedo over the model's existing UVs — either hand-painted in
 Blender's texture paint over the current map, or a feather-edge generator baked to UV space. Either
 way it is a texture piece with its own proof, not a tuning of P5d.
+
+### 85. THE SKI LODGE DECK IS NOT IN THE PROP REGISTRY
+Filed 2026-09-05, session 30 (REPLAT P6A), deliberately left out of that piece and written down
+rather than half-done. Every other structure in both biomes is now a registry entry; the lodge's
+deck is not. It is decking, a rail run, two tables, a bench and a flight of steps, drawn in WORLD
+coordinates inside `buildSkifield` with **three `railTop` colliders interleaved through the
+geometry** — so extracting it is not the mechanical lift the other twenty-six were, and P6A's
+success condition was that nothing moves.
+WHY IT CAN WAIT: it is furniture rather than a building, and a GLB batch will deliver the lodge
+itself long before it delivers the deck a kea stands on.
+WHAT IT NEEDS: probably three entries (`lodge_deck`, `deck_table` placed twice, `deck_steps`),
+with the railTop colliders declared on the entries instead of called inline — and the same
+before/after mesh-digest discipline P6A used, because the deck is in the 29_lodge_deck vantage.
+
+### 86. GIT-LFS IS NOW UNAVOIDABLE AND IS ITS OWN PIECE
+Filed 2026-09-05, session 30 (REPLAT P6A), which P6A.md explicitly forbade folding in. The asset
+tier is ~30 MB today (`assets/models/kea_astra.glb` alone is 19 MB) and P6A just made adding models
+cheap, which means the tier is about to grow on purpose. Every GLB is a binary blob that git stores
+whole, per revision — and the bird alone has already been through four derivations in the tree.
+THE DECISION IS NOT "TURN LFS ON": it is a choice between git-lfs, a fetch-on-build step, and
+shipping the assets out of band, and it interacts with how `dist/` is deployed and with whether a
+fresh clone can run the gauntlet offline (it can today, which is worth something). LICENCES.md's
+own size note already flagged the threshold: "if the asset tier grows past a few tens of MB, that
+is the moment to reach for git-lfs or a fetch-on-build step". It has.
+
+### 87. A SWAPPED MODEL CANNOT BE DRESSED INTO A P3 SCANNED FAMILY
+Filed 2026-09-05, session 30 (REPLAT P6A), found while writing the material-policy column and
+written down rather than half-built. A registry entry's `material.keepModelPBR:false` currently
+strips the model's own maps and applies the entry's declared `color`. What it does NOT do is what
+the column implies it might: dress the model into the P3 scanned family the entry names, so a
+grey-boxed GLB picks up real albedo, normal and roughness.
+WHY IT IS NOT A ONE-LINER: `installMaterials` has already run by the time `installModels` does —
+main.mjs awaits the scanned sets before the model tier, deliberately, so a swapped prop lands into a
+finished world rather than a half-dressed one. Pushing a new material into `matFam(f).mats` after
+that install does nothing, because the install is what applies the maps. Doing it properly means
+either a re-dress pass the material tier exposes, or moving the model tier ahead of the material
+tier and accepting that a model then loads before the world it stands in is dressed.
+IN THE MEANTIME: `material.family` is validated against the real seven names and recorded as INTENT
+for whoever brings the file, and each placement records the families its primitive body actually
+resolved (`propsState().families`) so the intent can be checked against the thing being replaced.

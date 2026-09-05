@@ -74,6 +74,24 @@ if (!cfg.nobird && !globalThis.__KEA_NOBIRD__) {
   }
 }
 
+/* REPLAT P6A: THE PROP MODEL TIER, wired here for the same three reasons the four above are —
+   game.mjs keeps its single import, a GLB fetch is async, and a look feature must not be able to
+   take the game down. It runs AFTER the bird, because the bird is the one model whose absence
+   would leave no protagonist and it should not queue behind a batch of scenery.
+   IT DOES NOTHING UNLESS A REGISTRY ENTRY ASKS FOR IT. No entry ships source:'model', so on a
+   normal boot this awaits one filtered array and returns; G.models.mode is 'none' and says so.
+       KEAPROPS='{"bench":{"source":"model","url":"models/placeholder_box.glb"}}'
+   is the way to turn one on, and __KEA_NOPROPMODELS__ is the way to force every one of them off
+   for a like-for-like frame against the primitive world. */
+if (!cfg.nopropmodels && !globalThis.__KEA_NOPROPMODELS__) {
+  try {
+    const { installModels } = await import('./models.mjs');
+    await installModels(KEAGAME);
+  } catch (e) {
+    console.error('models: the prop model tier failed to install, every prop stays primitive —', e);
+  }
+}
+
 /* THE FILM CAMERA goes on after boot, because it attaches to the renderer the boot creates.
    Wired HERE and not in game.mjs so that file keeps the single import the gauntlet's specimen
    loader asserts — see src/post.mjs. If the post stack cannot build, the game keeps playing on the

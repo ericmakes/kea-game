@@ -2222,6 +2222,8 @@ const G={
   score:0, combo:0, comboT:0, wanted:0, wantedT:0,
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
   stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0, biome:null, vs:null, foodSrc:[],
+  propReg:[],                     // REPLAT P6A: the placed world props, one record per registry entry placed
+
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
   colossal:false, level:1
@@ -3170,7 +3172,10 @@ function snowSpot(x,z,r,env){
    !HEADLESS branch, so a second build left the first map drifts on the board and drew its own on top
    of them - invisible under node, two maps worth of snow in the browser. A drift is a fact about one
    map. */
-const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow'];
+/* REPLAT P6A adds propReg, for the reason every name on this line is here: it is a LIST a build
+   fills, so a second build must not leave the first map's prop records on the board describing
+   meshes in a scene that was thrown away. It is the registry's own G.towWheel lesson. */
+const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow','propReg'];
 /* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
    sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
    thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
@@ -3203,6 +3208,201 @@ const WORLDHANDLES=['towWheel','ladder','signG','nestG','uteG','paddle','snowCap
 const WORLDLISTS=['gravel','stones','wear'];
 const WORLDFLAGS={nestY:0,gymOut:false,paddleFlipped:false,paddleDone:false,paddleFlips:0,_qtDone:0};
 
+/* ---------- THE PROP REGISTRY — REPLAT P6A (2026-09-05) ----------
+   Eric will obtain and adapt GLB models for essentially every object in this game, in batches, at
+   unknown future dates. Without a seam each arriving model is a mini-refactor of buildWorld: find
+   the primitive, tear it out, wire a loader, re-hook the collider, the mission anchors, the
+   night-tint and the material handling, and re-prove all of it. Twenty models, twenty refactors,
+   twenty chances to break a mission anchor. With a seam an arriving model is a line of
+   configuration and a file.
+
+   THIS BLOCK ADDS NO MODELS AND CHANGES NO VISUALS. Every entry ships `source:'primitive'` and
+   calls the builder it always called, at the point in the build it always ran, with the arithmetic
+   it always used. The gauntlet's own numbers say so: G.world carries the mesh digest, the collider
+   digest and the per-biome counts, and the P6A battery holds all three to the values measured on
+   the pre-seam tree.
+
+   ---- WHY A REGISTRY AND NOT JUST A LOADER ----
+   A loader would let a model replace a primitive's MESH. The reason this is a registry is the other
+   four columns — collider, anchors, material policy and biome. Those are what actually break when a
+   model arrives, and they are what a future session, or a future Eric handing a batch of GLBs to a
+   fresh assistant, needs written down in ONE place rather than inferred from twenty call sites.
+
+   ---- THE COLLIDER DOES NOT COME FROM THE MODEL ----
+   Declared here, as data, emitted by placeProp, and IDENTICAL whichever source is live. A swapped
+   model must not silently change what the bird can perch on, walk into or peck; if a model warrants
+   a different collider that is a separate, judged decision and it is made by editing this line.
+   `kind:'box'` takes FULL width and depth, exactly as addBoxCollider does, and is halved on the way
+   out; `kind:'roof'` passes through verbatim because that is the shape groundHeightAt reads. Local
+   to the prop's own origin, rotated and translated by the placement.
+
+   ---- THE ANCHORS DO NOT COME FROM THE MODEL EITHER ----
+   The named points missions attach to — the caravan door seal, the wiper, the bin lid, the tow
+   rope — are the highest-risk thing in this piece, and the reason they are safe is that they were
+   ALREADY independent of the geometry: every one of them was a literal offset from the prop's
+   placement, not a point read off a mesh. So the seam's job is to NAME them here and hand them out
+   through propAnchor(), which composes the declared local point with the placement transform and
+   never touches a vertex. A model can therefore not move an anchor, and the battery proves it by
+   moving the body and re-reading every anchor in the world.
+
+   ---- WHY THE PRIMITIVE IS ALWAYS BUILT, EVEN FOR source:'model' ----
+   The bird's pattern, for the bird's reasons (see src/bird.mjs). A GLB is fetched, so it is async
+   and it can fail, and a look feature must not be able to take the game down. So the body is built
+   at build time — which is also what keeps the seeded random stream bit-identical, since a prop
+   that skipped its builder would stop drawing and reshuffle the country downstream of it — and the
+   model tier, when it lands, HIDES the body and adds the model beside it in the same group. A
+   failed load leaves the primitive visible and says why in G.models. The cost is that a swapped
+   prop still allocates its primitive geometry; that is written down rather than quietly paid.
+
+   ---- THE ORDER OF THE COLLIDER PUSHES IS PRESERVED ON PURPOSE ----
+   pushOut() walks G.colliders and mutates the bird's position as it goes, so for a bird standing
+   inside two overlapping boxes the ORDER of the array is load-bearing, not just its contents. Most
+   builders pushed their collider partway through their body rather than at the end. So a body says
+   where its collider lands by calling p.collide() at exactly the line addBoxCollider used to be on,
+   and placeProp emits anything the body did not ask for as a backstop. G.world.colliderDigest is
+   an ordered hash, so a reshuffle shows up as a red battery rather than as a bird that walks
+   through a wall in a corner nobody photographs. */
+const PROPS={}, PROPSIGNORED=[]; let PROPSCFGDONE=false;
+const PROPDEFAULTS={
+  biome:'carpark',
+  source:'primitive',     // or 'model'
+  url:null,               // 'models/<file>.glb', served out of assets/ — needs its licence row
+  /* MODEL NORMALISATION, the bird's own pattern: a target size in GAME METRES and the axes the
+     asset arrives on, so a model is brought to this game's units and orientation by measurement
+     rather than by a typed-in scale that is wrong the moment the file is re-exported. `standM` is
+     the height the prop should occupy; null means "trust the file's own units". */
+  fit:{standM:null,axis:'y',ry:0,ground:true},
+  at:{x:0,y:0,z:0,ry:0,scale:1},
+  collider:[],
+  anchors:{},
+  /* MATERIAL POLICY.
+     `family` NAMES A REAL P3 SCANNED FAMILY OR NOTHING, and defineProp throws on anything else.
+     It is the family a MODEL should be dressed in — the intent recorded for whoever brings the
+     file — and it is deliberately NOT a claim about what the primitive body wears, because a
+     primitive body wears as many families as it has colours: the ski lodge alone is untinted
+     ranger green, a corrugate roof and cream piles. What the body actually resolved is MEASURED
+     instead, per placement, off the materials themselves (`p.families`), which cannot be wrong the
+     way a declaration can.
+     `keepModelPBR` decides whether a model arrives wearing its own maps or is overridden.
+     `color` is consulted only when keepModelPBR is false; null means "keep whatever the file came
+     with", so an override can drop bad MAPS without also inventing a hue.
+     `nightTint` enrols the prop's materials in the night lerp either way, which is the half a
+     bare loader would have dropped on the floor. */
+  material:{family:null,keepModelPBR:true,nightTint:false,color:null},
+  build:null,
+};
+function defineProp(id,e){
+  if(PROPS[id])throw new Error('defineProp: '+id+' is already registered');
+  const d=PROPDEFAULTS;
+  const o={id,
+    biome:e.biome||d.biome,
+    source:e.source||d.source,
+    url:e.url||d.url,
+    fit:Object.assign({},d.fit,e.fit),
+    at:Object.assign({},d.at,e.at),
+    collider:(e.collider||d.collider).slice(),
+    anchors:Object.assign({},e.anchors),
+    material:Object.assign({},d.material,e.material),
+    build:e.build};
+  if(typeof o.build!=='function')throw new Error('defineProp: '+id+' has no primitive builder');
+  /* A MISSPELLED FAMILY MUST NOT LOOK LIKE A POLICY. 'corrugated' is not a family and 'metal' has
+     never been one — both were in the first cut of this registry, and neither would have done
+     anything at all. Checked against MATS.families, which is where the seven names actually live. */
+  if(o.material.family!==null&&!(o.material.family in MATS.families))
+    throw new Error('defineProp: '+id+' names no such material family: '+o.material.family+
+      ' (known: '+Object.keys(MATS.families).join(', ')+')');
+  if(o.source==='model'&&!o.url)throw new Error('defineProp: '+id+' is source:model with no url');
+  PROPS[id]=o; return o;
+}
+function propOf(id){ const e=PROPS[id]; if(!e)throw new Error('placeProp: no prop registered as "'+id+'"'); return e; }
+/* KEAPROPS REACHES ANY ENTRY, same seam and same reason as KEASKY, KEAMATS, KEAGRASS and KEABIRD:
+   a swap is a look decision and it has to be shootable without a rebuild.
+       KEAPROPS='{"bench":{"source":"model","url":"models/placeholder_box.glb"}}'
+   Only keys that already exist on the entry are honoured, and every path that was refused travels
+   out in G.propsCfg.ignored for the rig to fail the pass on — a misspelled id must not look like a
+   swap that did nothing. */
+function propsConfig(){
+  const cfg=(typeof globalThis!=='undefined'&&globalThis.__KEA_PROPS__)||{};
+  for(const [id,over] of Object.entries(cfg)){
+    if(!PROPS[id]){ PROPSIGNORED.push(id+' (no such prop)'); continue; }
+    matMerge(PROPS[id],over,id,2,PROPSIGNORED);
+    if(PROPS[id].source==='model'&&!PROPS[id].url)PROPSIGNORED.push(id+'.source (model with no url)');
+  }
+}
+/* WORLD-SPACE FROM PROP-SPACE, and it is the only conversion in the seam. Scale, then the
+   placement yaw, then the placement origin — the same composition Object3D applies to the group,
+   written out because an anchor must be answerable without a matrix update mid-frame. */
+function propLocalToWorld(p,a){
+  const s=p.at.scale; let x=a.x*s, y=(a.y||0)*s, z=a.z*s;
+  const ry=p.at.ry;
+  if(ry){ const sn=Math.sin(ry), cs=Math.cos(ry); const tx=x*cs+z*sn, tz=-x*sn+z*cs; x=tx; z=tz; }
+  return {x:p.at.x+x, y:(p.at.y||0)+y, z:p.at.z+z};
+}
+function propAnchor(p,name){
+  const a=p.entry.anchors[name];
+  if(!a)throw new Error('prop '+p.id+': no anchor "'+name+'" (has '+Object.keys(p.entry.anchors).join(', ')+')');
+  return propLocalToWorld(p,a);
+}
+function propCollider(p,c){
+  const w=propLocalToWorld(p,{x:c.x||0,y:0,z:c.z||0});
+  const ry=(c.ry||0)+p.at.ry, s=p.at.scale;
+  if(c.kind==='roof')
+    return {kind:'roof',x:w.x,z:w.z,w:c.w*s,d:c.d*s,ridge:c.ridge*s,slope:c.slope,
+            slide:!!c.slide,hut:!!c.hut};
+  /* FULL DIMS IN, HALF-EXTENTS OUT — the addBoxCollider convention, kept so a collider line reads
+     the same in an entry as it did at the call site it was lifted from. */
+  return {kind:'box',x:w.x,z:w.z,w:c.w*s/2,d:c.d*s/2,top:c.top*s,
+          solid:c.solid!==false,ry:ry||0};
+}
+function placeProp(id,over){
+  const e=propOf(id);
+  const at=Object.assign({},e.at,over&&over.at);
+  const g=new THREE.Group();
+  g.position.set(at.x,at.y||0,at.z);
+  if(at.ry)g.rotation.y=at.ry;
+  if(at.scale!==1)g.scale.setScalar(at.scale);
+  G.scene.add(g);
+  const p={id,entry:e,at,group:g,mode:'primitive',body:[],colliders:[],model:null,
+           source:(over&&over.source)||e.source};
+  p.collide=()=>{ if(p._collided)return p.colliders; p._collided=true;
+    for(const c of e.collider){ const out=propCollider(p,c); G.colliders.push(out); p.colliders.push(out); }
+    return p.colliders; };
+  p.anchor=(name)=>propAnchor(p,name);
+  /* THE BODY IS WHATEVER THE BUILDER PUT IN THIS GROUP, recorded rather than re-parented. Most
+     builders already made their own group at the prop's position and hung everything off it, so
+     this group IS that group and not one level more — which is why the mesh digest does not move.
+     The two that added straight to the scene gain one empty Group above them and nothing else. */
+  e.build(g,p);
+  p.body=g.children.slice();
+  /* WHAT THIS BODY ACTUALLY WEARS, measured rather than declared. Every material that belongs to a
+     P3 family carries its name in userData.matFamily, so this is a read and not a guess — and it is
+     the line a future model author wants: "the hut is weatherboard and corrugate", from the hut. */
+  { const fams=new Set();
+    g.traverse(o=>{ const m=o.isMesh&&o.material;
+      if(m&&m.userData&&m.userData.matFamily)fams.add(m.userData.matFamily); });
+    p.families=Array.from(fams).sort(); }
+  p.collide();
+  (G.propReg=G.propReg||[]).push(p);
+  return p;
+}
+/* THE PLACEMENT, BY ID. propAt() was already taken by the loose-carryable helper and the two are
+   different things: that one MAKES a carryable, this one FINDS a placed world prop. */
+function propPlaced(id){ return (G.propReg||[]).find(p=>p.id===id)||null; }
+/* WHAT THE SEAM ACTUALLY DID, for the batteries and the rig to read rather than infer. */
+function propsState(){
+  const reg=G.propReg||[];
+  return {registered:Object.keys(PROPS).length,
+          placed:reg.length,
+          primitive:reg.filter(p=>p.mode==='primitive').length,
+          model:reg.filter(p=>p.mode==='model').length,
+          wantModel:reg.filter(p=>p.source==='model').map(p=>p.id),
+          colliders:reg.reduce((n,p)=>n+p.colliders.length,0),
+          anchors:reg.reduce((n,p)=>n+Object.keys(p.entry.anchors).length,0),
+          families:Object.fromEntries(reg.filter(p=>p.families&&p.families.length)
+                                         .map(p=>[p.id,p.families])),
+          ignored:PROPSIGNORED.slice()};
+}
+
 /* ---------- THE BIOME REGISTRY (TODO 36, the tour chassis) ----------
    The tour turns this game into separate maps, one diorama per biome. Nothing about that can start
    until there is a seam to put the second map through, and this is it: the world is no longer THE
@@ -3221,12 +3421,19 @@ function biomeOf(id){ return BIOMES[id]||BIOMES[BIOME_DEFAULT]; }
 function buildWorld(biome){
   const b=biomeOf(biome||G.biome||BIOME_DEFAULT);
   G.biome=b.id;
+  /* REPLAT P6A: THE KEAPROPS OVERRIDES ARE APPLIED ONCE, HERE, and not at module scope, because
+     the entries are declared next to the builders they wrap — which is further down the file than
+     any module-scope line that could merge them. First build, before a single prop is placed. */
+  if(!PROPSCFGDONE){ PROPSCFGDONE=true; propsConfig(); }
   for(const r of WORLDREGS)if(Array.isArray(G[r]))G[r].length=0;
   for(const h of WORLDHANDLES)G[h]=null;                 // TODO 62: and the handles, above the biome
   for(const l of WORLDLISTS)G[l]=[];
   for(const k in WORLDFLAGS)G[k]=WORLDFLAGS[k];
   b.build();
   matUVSweep();
+  /* REPLAT P6A: the prop seam reports what it placed, rebuilt per build for the same reason G.mats
+     is — a state block that is mutated rather than rebuilt drifts from the registry. */
+  G.propsState=propsState();
   /* REPLAT P3: the provenance block is REBUILT once the map has built its materials, not mutated,
      so it can never drift from the registry. initScene declares the slot before anything exists
      (mode 'none', zero materials, exactly like G.ibl); this is where the material counts become
@@ -3343,11 +3550,7 @@ function buildCarpark(){
       G.scene.add(hm);
     } }
   // THE SKI FIELD (SW): rope-tow base, rack of skis, the most documented crime scene in the country
-  { const bx=-40,bz=-40;
-    const base=new THREE.Group(); base.position.set(bx,0,bz); G.scene.add(base);
-    box(3.2,2.0,2.4,0x4E6E8E,0,1.0,0,base);
-    const shR=box(3.6,0.14,2.8,PAL.hutRoof,0,2.1,0,base); shR.rotation.z=0.06;
-    G.colliders.push({kind:'box',solid:true,x:bx,z:bz,w:1.7,d:1.3,top:2.0});
+  { const B=placeProp('sw_tow_shed'), bx=B.at.x, bz=B.at.z;
     const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.16,14),mat(PAL.red));
     wheel.rotation.x=Math.PI/2; wheel.position.set(bx+2.1,2.2,bz); G.scene.add(wheel); G.towWheel=wheel;
     cyl(0.09,0.09,2.2,PAL.metal,bx+2.1,1.1,bz,null,8);
@@ -3372,19 +3575,14 @@ function buildCarpark(){
       onDone(p){ award(35,'BINDING: CHEWED',p); done('s_binding'); AU.pop(); burst(p,PAL.dark,8); }});
   }
   // THE TRAILHEAD (SE): the big DOC sign, an unattended pack, a boot rail
-  { const tx=44,tz=-40;
-    const sg=new THREE.Group(); sg.position.set(tx,0,tz); G.scene.add(sg);
-    cyl(0.09,0.11,2.3,PAL.woodD,-0.9,1.15,0,sg,7); cyl(0.09,0.11,2.3,PAL.woodD,0.9,1.15,0,sg,7);
-    box(2.2,1.1,0.09,0x2A5A3E,0,1.9,0,sg);
-    G.colliders.push({kind:'box',solid:true,x:tx,z:tz,w:1.15,d:0.15,top:2.45});
+  { const SG=placeProp('doc_board'), sg=SG.group, tx=SG.at.x, tz=SG.at.z;
     { const pth=[]; for(let i=0;i<=5;i++)pth.push({x:-1.0+i*0.4,y:2.12,z:0.07});
       addStrip({group:sg,path:pth,thick:{x:0.4,y:0.28,z:0.04},color:PAL.paper,
         label:'PEEL THE 3 HR RETURN STICKER',need:0.5,range:1.25,owner:null,mission:'t_sign',
         propName:'track sticker',propBuilder:PB.longSticker,propExtra:{shiny:true},points:30,doneText:'TRACK TIME: REVISED'});
     }
-    const pk=new THREE.Group(); pk.position.set(tx-2.6,0,tz+1.2); G.scene.add(pk);
-    rbox(0.7,1.0,0.5,0.08,0x8E3A2E,0,0.5,0,pk); rbox(0.6,0.3,0.45,0.06,0x6E2A22,0,1.05,0,pk);
-    addTear({label:'UNZIP THE UNATTENDED PACK',need:1.8,range:1.2,air:true,keepMesh:true,getPos:()=>({x:tx-2.6,y:0.7,z:tz+1.2}),
+    const PK=placeProp('trail_pack'), pk=PK.group;
+    addTear({label:'UNZIP THE UNATTENDED PACK',need:1.8,range:1.2,air:true,keepMesh:true,getPos:()=>PK.anchor('zip'),
       onDone(p){ award(35,'PACK: OPENED',p); done('t_pack');
         const mb=spawnLoose('muesli bar',PB.muesli,{x:tx-2.4,y:1.1,z:tz+1.4},{food:true}); mb.snack='t_bar'; mb.vy=1.4; mb.vx=0.6; AU.pop(); }});
     box(1.6,0.06,0.1,PAL.woodD,tx+2.2,0.75,tz+1.0); cyl(0.05,0.05,0.75,PAL.woodD,tx+1.5,0.37,tz+1.0,null,6); cyl(0.05,0.05,0.75,PAL.woodD,tx+2.9,0.37,tz+1.0,null,6);
@@ -3439,12 +3637,12 @@ function buildCarpark(){
     const gr=sph(grr,gcol,gx,0.16,gz,null,5); gr.scale.y=0.5;
     G.gravel.push({x:gx,z:gz,r:grr,color:gcol}); } // gravel scatter
 
-  buildHut(-24,-9);
-  buildPicnic(15,-13);
-  buildBench(28,0);
-  buildTent(33,-8);
-  buildBin(7,-6);
-  buildSign(2,24.5,'DON\'T FEED\nTHE KEA');
+  buildHut();
+  buildPicnic();
+  buildBench();
+  buildTent();
+  buildBin();
+  buildSign();
   { // kea-crossing diamonds: seeded scatter across half the areas
     let ks=29; const kr=()=>{ ks=(ks*16807)%2147483647; return ks/2147483647; };
     const spots=[[-16,12,0.5],[24,-20,-0.6],[-18,-2.5,1.2],[-28,31.2,0],[23,36.6,Math.PI],[-33,-31,0.8],[37,-33,-0.9]];
@@ -3452,16 +3650,10 @@ function buildCarpark(){
     for(let i=0;i<4;i++){ const sp=spots[i]; mkKeaSign(sp[0]+(kr()-0.5)*2,sp[1]+(kr()-0.5)*2,sp[2]+(kr()-0.5)*0.4); }
   }
   { // the verge: a roadworks paddle, STOP one side and GO the other, nobody minding it
-    const px=7, pz=29.0;
-    cyl(0.035,0.04,1.05,PAL.metal,px,0.52,pz,null,7);
-    const pad=new THREE.Group(); pad.position.set(px,1.12,pz); G.scene.add(pad);
-    const disc=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.035,18),mat(PAL.bad));
-    disc.rotation.x=1.57; pad.add(disc);
-    const back=new THREE.Mesh(new THREE.CircleGeometry(0.275,18),bmat(PAL.green));
-    back.position.z=-0.024; back.rotation.y=Math.PI; pad.add(back);
+    const P=placeProp('roadworks_paddle'), px=P.at.x, pz=P.at.z, pad=P.pad;
     G.paddle=pad; G.paddleFlipped=false;
     addPeck({label:'FLIP THE ROADWORKS PADDLE',needHits:2,range:1.35,repeat:true,
-      getPos:()=>({x:px,y:1.12,z:pz}),
+      getPos:()=>P.anchor('face'),
       onDone(p){ G.paddleFlipped=!G.paddleFlipped; G.paddleFlips=(G.paddleFlips||0)+1;
         const to=G.paddleFlipped?1:0, from=G.paddleFlipped?0:1;
         TW.add(0.5,u=>{ pad.rotation.y=(from+(to-from)*u)*Math.PI; });
@@ -3470,18 +3662,18 @@ function buildCarpark(){
           done('r_paddle'); noise({x:px,y:1.0,z:pz},6,'misdeed',null); }
       }});                                  // repeat: it flips back and forth, but it only pays once
   }
-  buildTrailer(-14,20);
+  buildTrailer();
   buildNest(G.nestPos.x,G.nestPos.z);
-  buildSheepPen(-38,4);
+  buildSheepPen();
   buildConeStack(20,29.5);
 
   // parked vehicles in bays
-  G.cars.push(mkCar(-9,16.4,0, PAL.red,'hatch'));
-  G.cars.push(mkCar(-2.4,16.4,0, PAL.blue,'hatch'));
-  G.cars.push(mkCar(4.2,16.4,0, PAL.white,'ute'));
-  G.cars.push(mkCar(10.8,16.4,0, PAL.yellow,'hatch'));
-  G.cars.push(mkCampervan(-11,8));
-  G.cars.push(mkDocUte(12,7));
+  G.cars.push(placeCar('car_red'));
+  G.cars.push(placeCar('car_blue'));
+  G.cars.push(placeCar('car_white'));
+  G.cars.push(placeCar('car_yellow'));
+  G.cars.push(mkCampervan());
+  G.cars.push(mkDocUte());
   addHint('roofhonk',0,0.8,26,6,'traffic passes here — a roof looks very rideable');
   addHint('jam',0,0.8,34,5,'stand your ground and see what the traffic does');
   addHint('q_median',0,0.4,34,4,'the centre line: stay on foot, collect a honk');
@@ -3597,6 +3789,67 @@ const SKISNOW={x0:-52,x1:52,z0:-52,z1:52};        // up here the whole map is sn
 const SKITOW={x:4, base:24, top:-40, towers:[18,8,-2,-12,-22,-32], rope:3.2, ret:2.9};
 const SKIPISTE={x0:10,x1:30,z0:-44,z1:30};
 const SKILODGE={x:-22,z:8,w:11,d:7,h:3.0,deck:4.4};
+/* ---- THE SKI FIELD'S THREE STRUCTURES — REPLAT P6A ----
+   Same treatment as the carpark's, and the same reason: all three were inline blocks inside
+   buildSkifield with their colliders as literals underneath them. Their transforms come from the
+   SKITOW / SKILODGE constants the map already keeps, so the entries reference those rather than
+   copying the numbers — one source of truth, as the tow-tower spacing and the lodge dims already
+   are. The gear rack is ONE entry placed THREE times, off the map's own RACKS table, which is the
+   same repeated-prop shape as the four kea-crossing diamonds.
+   THE DECK IS NOT HERE, deliberately. It is decking, rails, two tables and a run of steps drawn in
+   world coordinates with three railTop colliders interleaved through them, and it is furniture
+   rather than a building — a GLB batch would deliver the lodge long before it delivered the deck.
+   Registering it is a piece of its own and it is written down here rather than half-done. */
+defineProp('tow_shed',{
+  biome:'skifield', at:{x:SKITOW.x,z:SKITOW.base},
+  collider:[{kind:'box',w:3.4,d:2.6,top:2.2,solid:true}],
+  anchors:{roof:{x:0,y:2.3,z:0}, window:{x:0,y:0.75,z:1.34}, wheel:{x:0,y:2.5,z:-2.0}},
+  material:{family:'corrugate',nightTint:false},
+  build(shed,p){
+    box(3.4,2.2,2.6,0x4E6E8E,0,1.1,0,shed);
+    const sr=box(3.8,0.16,3.0,PAL.hutRoof,0,2.3,0,shed); sr.rotation.z=0.07;
+    box(1.0,1.1,0.08,PAL.woodD,0,0.75,1.34,shed);                     // the ticket window, shuttered
+    p.collide();
+  },
+});
+defineProp('ski_lodge',{
+  biome:'skifield', at:{x:SKILODGE.x,z:SKILODGE.z},
+  collider:[{kind:'roof',w:(SKILODGE.w+0.6)/2,d:SKILODGE.d*0.55,ridge:SKILODGE.h+1.32,slope:0.48},
+            {kind:'box',w:SKILODGE.w,d:SKILODGE.d,top:SKILODGE.h+0.4,solid:true}],
+  anchors:{roof:{x:0,y:SKILODGE.h+1.32,z:0},
+           door:{x:-SKILODGE.w/2+1.2,y:1.4,z:SKILODGE.d/2+0.03},
+           chimney:{x:2.0,y:SKILODGE.h+2.3,z:-0.4}},
+  material:{family:'weatherboard',nightTint:false},
+  build(g,p){
+    const L=SKILODGE;
+    box(L.w+0.3,0.5,L.d+0.3,PAL.paper,0,0.25,0,g);                     // piles, cream, forty winters old
+    box(L.w,L.h,L.d,PAL.ranger,0,L.h/2+0.4,0,g);
+    for(const s of [-1,1]){ const rf=box(L.w+0.6,0.16,L.d*0.62,PAL.hutRoof,0,L.h+1.0,s*L.d*0.26,g); rf.rotation.x=s*0.44; }
+    p.collide();
+    for(const wx of [-3.4,0,3.4]){ const pane=new THREE.Mesh(new THREE.PlaneGeometry(2.2,1.1),bmat(PAL.glass));
+      pane.position.set(wx,2.2,L.d/2+0.02); g.add(pane);
+      box(2.4,0.1,0.08,PAL.paper,wx,1.58,L.d/2+0.03,g,{noshadow:true}); }
+    box(1.0,2.0,0.1,PAL.woodD,-L.w/2+1.2,1.4,L.d/2+0.03,g);            // the door, out onto the deck
+    /* REPLAT P3: THE LODGE CHIMNEY IS BRICK, and it was wearing the gravel grey. 0x9B9891 is
+       PAL.gravel, so once that colour became the scanned gravel family this chimney would have
+       been rendered in driveway gravel — the same colour-as-a-key hazard MATFAM's note describes,
+       found by the material census rather than by eye. It takes the hut chimney's own grey, which
+       is the brick family: two chimneys, one material, and the brick family stops resting on a
+       single 0.7 m surface. */
+    cyl(0.22,0.26,1.2,0x8C8F93,2.0,L.h+1.5,-0.4,g,8); cyl(0.16,0.16,0.5,PAL.dark,2.0,L.h+2.3,-0.4,g,7);
+  },
+});
+defineProp('gear_rack',{
+  biome:'skifield', at:{x:0,z:0},
+  collider:[],                        // the rail collider is railTop's, emitted by the map with its yaw
+  anchors:{rail:{x:0,y:0.995,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    box(2.4,0.09,0.14,PAL.woodD,0,0.95,0,g);
+    cyl(0.06,0.07,0.95,PAL.woodD,-1.1,0.47,0,g,6); cyl(0.06,0.07,0.95,PAL.woodD,1.1,0.47,0,g,6);
+    box(2.4,0.07,0.1,PAL.woodD,0,0.3,0.12,g);
+  },
+});
 const SKINEST={x:-40,z:32};
 function buildSkifield(){
   G.nestPos={x:SKINEST.x,z:SKINEST.z};
@@ -3651,11 +3904,7 @@ function buildSkifield(){
 
   // THE ROPE TOW: engine shed and bull wheel at the bottom, six towers, a return at the top
   { const T=SKITOW;
-    const shed=new THREE.Group(); shed.position.set(T.x,0,T.base); G.scene.add(shed);
-    box(3.4,2.2,2.6,0x4E6E8E,0,1.1,0,shed);
-    const sr=box(3.8,0.16,3.0,PAL.hutRoof,0,2.3,0,shed); sr.rotation.z=0.07;
-    box(1.0,1.1,0.08,PAL.woodD,0,0.75,1.34,shed);                     // the ticket window, shuttered
-    addBoxCollider(T.x,T.base,3.4,2.6,2.2,true);
+    const SH=placeProp('tow_shed'); const shed=SH.group;
     const wheel=new THREE.Mesh(new THREE.CylinderGeometry(1.0,1.0,0.18,16),mat(PAL.red));
     wheel.rotation.x=Math.PI/2; wheel.position.set(T.x,2.5,T.base-2.0); G.scene.add(wheel); G.towWheel=wheel;
     cyl(0.1,0.12,2.5,PAL.metal,T.x,1.25,T.base-2.0,null,8);
@@ -3685,23 +3934,13 @@ function buildSkifield(){
 
   // THE DAY LODGE, and the deck it eats its lunch on
   { const L=SKILODGE, x=L.x, z=L.z;
-    const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
-    box(L.w+0.3,0.5,L.d+0.3,PAL.paper,0,0.25,0,g);                     // piles, cream, forty winters old
-    box(L.w,L.h,L.d,PAL.ranger,0,L.h/2+0.4,0,g);
-    for(const s of [-1,1]){ const rf=box(L.w+0.6,0.16,L.d*0.62,PAL.hutRoof,0,L.h+1.0,s*L.d*0.26,g); rf.rotation.x=s*0.44; }
-    G.colliders.push({kind:'roof',x,z,w:(L.w+0.6)/2,d:L.d*0.55,ridge:L.h+1.32,slope:0.48});
-    addBoxCollider(x,z,L.w,L.d,L.h+0.4,true);
-    for(const wx of [-3.4,0,3.4]){ const pane=new THREE.Mesh(new THREE.PlaneGeometry(2.2,1.1),bmat(PAL.glass));
-      pane.position.set(wx,2.2,L.d/2+0.02); g.add(pane);
-      box(2.4,0.1,0.08,PAL.paper,wx,1.58,L.d/2+0.03,g,{noshadow:true}); }
-    box(1.0,2.0,0.1,PAL.woodD,-L.w/2+1.2,1.4,L.d/2+0.03,g);            // the door, out onto the deck
+    const LD=placeProp('ski_lodge'), g=LD.group;
     /* REPLAT P3: THE LODGE CHIMNEY IS BRICK, and it was wearing the gravel grey. 0x9B9891 is
        PAL.gravel, so once that colour became the scanned gravel family this chimney would have
        been rendered in driveway gravel — the same colour-as-a-key hazard MATFAM's note describes,
        found by the material census rather than by eye. It takes the hut chimney's own grey, which
        is the brick family: two chimneys, one material, and the brick family stops resting on a
        single 0.7 m surface. */
-    cyl(0.22,0.26,1.2,0x8C8F93,2.0,L.h+1.5,-0.4,g,8); cyl(0.16,0.16,0.5,PAL.dark,2.0,L.h+2.3,-0.4,g,7);
     const dz=z+L.d/2+L.deck/2;
     box(L.w,0.18,L.deck,PAL.wood,x,0.62,dz);
     for(const px of [-L.w/2+0.4,0,L.w/2-0.4])for(const pz of [-L.deck/2+0.3,L.deck/2-0.3])
@@ -3724,10 +3963,7 @@ function buildSkifield(){
      bonus the moment it is carried twenty-two metres from where it was built. */
   { const RACKS=[[-16,18.5,0.2],[-28,18.5,-0.15],[SKITOW.x+3.4,SKITOW.base+1.8,0.6]];
     for(const [rx,rz,ry] of RACKS){
-      const g=new THREE.Group(); g.position.set(rx,0,rz); g.rotation.y=ry; G.scene.add(g);
-      box(2.4,0.09,0.14,PAL.woodD,0,0.95,0,g);
-      cyl(0.06,0.07,0.95,PAL.woodD,-1.1,0.47,0,g,6); cyl(0.06,0.07,0.95,PAL.woodD,1.1,0.47,0,g,6);
-      box(2.4,0.07,0.1,PAL.woodD,0,0.3,0.12,g);
+      placeProp('gear_rack',{at:{x:rx,z:rz,ry}});
       railTop(rx,rz,2.4,0.4,0.995,ry); }                   // TODO 63, and rotated with its own rack
     /* THE GEAR IS PLACED IN THE RACK OWN FRAME (TODO 63). It was world coordinates guessed off the
        rack position, which put every ski 0.6 metres in FRONT of a rotated rail - so the new rail
@@ -4173,8 +4409,25 @@ const PB={
 };
 
 /* ---------- set pieces ---------- */
-function buildHut(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
+/* ---- THE HUT — REPLAT P6A ----
+   The biggest body in the game and the one with the most attached to it, so the split is worth
+   stating: the ENTRY is the building — walls, veranda, roof, chimney, the eave snow cap. The beam
+   with its six bird spikes, the ladder, the tradie's toolbox and the three lead-head nails are
+   SATELLITES placed off the entry's transform, because they are separate objects that happen to
+   live against the hut and a hut GLB would not bring them.
+   TWO COLLIDERS, BOTH DECLARED: the box the bird walks into and the ROOF wedge it slides down.
+   `kind:'roof'` passes through verbatim, half-extents and all, because that is the shape
+   groundHeightAt reads — and `slide:true, hut:true` are the flags the snow mission keys on, which
+   is precisely the sort of thing that would be lost if a collider were ever derived from a mesh. */
+defineProp('hut',{
+  biome:'carpark', at:{x:-24,z:-9},
+  collider:[{kind:'roof',w:4.0,d:3.05,ridge:4.05,slope:0.52,slide:true,hut:true},
+            {kind:'box',w:7,d:5.4,top:2.6,solid:true}],
+  anchors:{chimney:{x:2.4,y:4.9,z:-1.6}, door:{x:0,y:0.95,z:2.76},
+           roof:{x:0,y:3.5,z:0}, snowcap:{x:0,y:3.0,z:2.4},
+           beam:{x:0,y:3.35,z:3.4}, ladder:{x:3.2,y:0,z:3.0}, toolbox:{x:4.3,y:0.2,z:4.2}},
+  material:{family:'weatherboard',nightTint:false},
+  build(g,p){
   const wall=rbox(7,2.6,5.4,0.1,PAL.hut,0,1.3,0,g);
   /* THE FIVE FAKE WEATHERBOARD LINES ARE GONE — REPLAT P3. They were 20 mm slabs standing proud of
      the wall every 480 mm, standing in for a lap line. The scan has real ones, at the real
@@ -4205,8 +4458,6 @@ function buildHut(x,z){
     box(0.05,1.02,0.02,0x8E4A3A,wx,1.6,2.76,g,{noshadow:true}); box(1.24,0.05,0.02,0x8E4A3A,wx,1.6,2.76,g,{noshadow:true}); }
   rbox(0.7,1.6,0.7,0.08,0x8C8F93,2.4,4.0,-1.6,g); rbox(0.86,0.12,0.86,0.04,PAL.dark,2.4,4.82,-1.6,g); // chimney
   { const _ch=new THREE.Object3D(); _ch.position.set(2.4,4.95,-1.6); g.add(_ch); G.chimneyRef=_ch; }
-  addHint('q_chimney',x+2.4,4.9,z-1.6,4,'that chimney is begging to be stood on');
-  addHint('snow',x,3.5,z,5,'the roof snow is loaded — peck it loose on somebody');
   // gable roof, ridge along x
   const rl=new THREE.Mesh(new THREE.BoxGeometry(7.8,0.18,3.6),mat(PAL.hutRoof));
   for(let ri=0;ri<12;ri++){ const rg=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,3.5,5),mat(0x4A545C));
@@ -4218,10 +4469,15 @@ function buildHut(x,z){
   const sn=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.2,1.2),mat(PAL.snow)); sn.position.set(0,3.0,2.4); sn.rotation.x=-0.62; g.add(sn);
   for(const bx of [-0.8,0,0.85]){ const sb=sph(rnd(0.32,0.42),PAL.snow,bx,0.16,rnd(-0.1,0.1),sn,9); sb.scale.y=0.55; }
   sph(0.3,PAL.snowShade,0.4,0.1,0.3,sn,8).scale.y=0.5;
-  G.snowCap={mesh:sn,hut:{x,z},loaded:true,reloadT:0};
-  // roof collider (slide zone)
-  G.colliders.push({kind:'roof',x:x,z:z,w:4.0,d:3.05,ridge:4.05,slope:0.52,slide:true,hut:true});
-  addBoxCollider(x,z,7,5.4,2.6,true);
+  G.snowCap={mesh:sn,hut:{x:g.position.x,z:g.position.z},loaded:true,reloadT:0};
+  p.collide();
+  },
+});
+function buildHut(){
+  const P=placeProp('hut'), x=P.at.x, z=P.at.z;
+  const A=n=>P.anchor(n);
+  { const c=A('chimney'); addHint('q_chimney',c.x,c.y,c.z,4,'that chimney is begging to be stood on'); }
+  { const r=A('roof');    addHint('snow',r.x,r.y,r.z,5,'the roof snow is loaded — peck it loose on somebody'); }
   // beam out front with bird spikes + ladder + tradie toolbox
   cyl(0.12,0.12,3.4,PAL.wood,x-4.6,1.7,z+3.4,null,8);
   cyl(0.12,0.12,3.4,PAL.wood,x+4.6,1.7,z+3.4,null,8);
@@ -4247,39 +4503,70 @@ function buildHut(x,z){
   }
 }
 
-function buildPicnic(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
-  for(let i=0;i<3;i++) rbox(2.4,0.09,0.4,0.03,PAL.wood,0,0.78,-0.44+i*0.44,g);
-  for(let i=0;i<6;i++) rbox(0.34,0.02,1.24,0.008,i%2?PAL.red:PAL.white,-0.9+i*0.36,0.845,0,g,{noshadow:true}); // gingham runner
-  rbox(2.4,0.1,0.42,0.04,PAL.wood,0,0.46,-0.95,g); rbox(2.4,0.1,0.42,0.04,PAL.wood,0,0.46,0.95,g);
-  rbox(0.14,0.8,1.1,0.05,PAL.woodD,-1,0.4,0,g); rbox(0.14,0.8,1.1,0.05,PAL.woodD,1,0.4,0,g);
-  addBoxCollider(x,z,2.4,1.3,0.85,true);
+/* ---- THE PICNIC SET, THREE ENTRIES — REPLAT P6A ----
+   P6 names "picnic set" as a hero prop, and it is three objects, not one: a table, a handbag on
+   it and a chilly bin beside it. They get three entries because they will arrive as three files,
+   they carry three different colliders and two of them carry mission anchors. The old builder drew
+   all three plus a sandwich, which is exactly the "twenty call sites" shape this seam exists to
+   undo — the sandwich is loose loot and stays a satellite.
+   THE HANDBAG'S TRANSFORM IS ITS OWN, not an offset typed twice: its entry says (15.7, 0.95, -13.2)
+   because that is where the bag is, and the peck anchor is the bag's own origin. */
+defineProp('picnic_table',{
+  biome:'carpark', at:{x:15,z:-13},
+  collider:[{kind:'box',w:2.4,d:1.3,top:0.85,solid:true}],
+  anchors:{top:{x:0,y:0.85,z:0},spread:{x:0,y:0.92,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    for(let i=0;i<3;i++) rbox(2.4,0.09,0.4,0.03,PAL.wood,0,0.78,-0.44+i*0.44,g);
+    for(let i=0;i<6;i++) rbox(0.34,0.02,1.24,0.008,i%2?PAL.red:PAL.white,-0.9+i*0.36,0.845,0,g,{noshadow:true}); // gingham runner
+    rbox(2.4,0.1,0.42,0.04,PAL.wood,0,0.46,-0.95,g); rbox(2.4,0.1,0.42,0.04,PAL.wood,0,0.46,0.95,g);
+    rbox(0.14,0.8,1.1,0.05,PAL.woodD,-1,0.4,0,g); rbox(0.14,0.8,1.1,0.05,PAL.woodD,1,0.4,0,g);
+  },
+});
+defineProp('handbag',{
+  biome:'carpark', at:{x:15.7,y:0.95,z:-13.2},
+  collider:[],
+  anchors:{clasp:{x:0,y:0,z:0}},
+  material:{family:null,nightTint:false},
+  build(hb,p){
+    rbox(0.5,0.34,0.3,0.09,PAL.plum,0,0,0,hb);
+    const hbFlap=new THREE.Group(); hbFlap.position.set(0,0.16,-0.14); hb.add(hbFlap);
+    rbox(0.46,0.05,0.3,0.02,0x8A5E82,0,0,0.14,hbFlap); sph(0.035,PAL.yellow,0,0.03,0.27,hbFlap,7);
+    const strap=new THREE.Mesh(new THREE.TorusGeometry(0.16,0.025,6,12),mat(0x8A5E82)); strap.position.set(0,0.2,0); hb.add(strap);
+    hb.userData.flap=hbFlap;
+  },
+});
+defineProp('chilly_bin',{
+  biome:'carpark', at:{x:12.6,z:-11.6},
+  collider:[{kind:'box',w:0.9,d:0.6,top:0.72,solid:true}],
+  anchors:{latch:{x:0,y:0.7,z:0},lid:{x:0,y:0.67,z:0}},
+  material:{family:null,nightTint:false},
+  build(cb,p){
+    rbox(0.9,0.6,0.6,0.1,PAL.blue,0,0.3,0,cb); rbox(0.94,0.08,0.64,0.03,0x477BA8,0,0.56,0,cb,{noshadow:true});
+    const lidG=new THREE.Group(); lidG.position.set(0,0.62,-0.32); cb.add(lidG);
+    p.lid=rbox(0.96,0.14,0.66,0.05,PAL.white,0,0.05,0.32,lidG);
+    rbox(0.3,0.06,0.12,0.025,PAL.dark,0,0.14,0.5,lidG); // handle
+    p.lidG=lidG;
+  },
+});
+function buildPicnic(){
+  const T=placeProp('picnic_table'), x=T.at.x, z=T.at.z;
   addFoodSrc('picnic spread',x,z,2.4);        // TODO 21
   propAt('sandwich',x-0.6,0.92,z+0.15,PB.sandwich,{food:true,owner:'trish',snack:'sandwich'});
   // handbag: peck open, then passport + cash pop out
-  const hb=new THREE.Group(); hb.position.set(x+0.7,0.95,z-0.2); G.scene.add(hb);
-  rbox(0.5,0.34,0.3,0.09,PAL.plum,0,0,0,hb);
-  const hbFlap=new THREE.Group(); hbFlap.position.set(0,0.16,-0.14); hb.add(hbFlap);
-  rbox(0.46,0.05,0.3,0.02,0x8A5E82,0,0,0.14,hbFlap); sph(0.035,PAL.yellow,0,0.03,0.27,hbFlap,7);
-  const strap=new THREE.Mesh(new THREE.TorusGeometry(0.16,0.025,6,12),mat(0x8A5E82)); strap.position.set(0,0.2,0); hb.add(strap);
-  hb.userData.flap=hbFlap;
-  addPeck({label:'PECK OPEN HANDBAG',needHits:2,mesh:hb,getPos:()=>({x:x+0.7,y:0.95,z:z-0.2}),range:1.4,owner:'trish',
+  const HB=placeProp('handbag'), hb=HB.group;
+  addPeck({label:'PECK OPEN HANDBAG',needHits:2,mesh:hb,getPos:()=>HB.anchor('clasp'),range:1.4,owner:'trish',
     onDone(p){ AU.pop(); TW.add(0.4,u=>{hb.userData.flap.rotation.x=-1.7*u; hb.rotation.z=0.25*Math.sin(u*Math.PI);});
       spawnLoose('passport',PB.passport,{x:p.x-0.2,y:1.1,z:p.z},{shiny:true,owner:'trish',mission:'passport'});
       spawnLoose('cash ($1300)',PB.cash,{x:p.x+0.25,y:1.1,z:p.z+0.2},{shiny:true,owner:'trish'});
       award(15,'HANDBAG BREACHED',p);
     }});
   // chilly bin: two-kea job. latch tear only advances while a second kea holds the lid handle.
-  const cb=new THREE.Group(); cb.position.set(x-2.4,0,z+1.4); G.scene.add(cb);
-  rbox(0.9,0.6,0.6,0.1,PAL.blue,0,0.3,0,cb); rbox(0.94,0.08,0.64,0.03,0x477BA8,0,0.56,0,cb,{noshadow:true});
-  const lidG=new THREE.Group(); lidG.position.set(0,0.62,-0.32); cb.add(lidG);
-  const lid=rbox(0.96,0.14,0.66,0.05,PAL.white,0,0.05,0.32,lidG);
-  rbox(0.3,0.06,0.12,0.025,PAL.dark,0,0.14,0.5,lidG); // handle
-  G.chillyLidG=lidG;
-  addBoxCollider(x-2.4,z+1.4,0.9,0.6,0.72,true);
-  addFoodSrc('chilly bin',x-2.4,z+1.4,1.8);   // TODO 21
-  G.chilly={x:x-2.4,z:z+1.4,lid,open:false,
-    latch:addTear({label:'TUG LATCH',coop:'HOLD LID',need:1.6,mesh:cb,getPos:()=>({x:x-2.4,y:0.7,z:z+1.4}),range:1.5,owner:'trish',needsPartner:true,
+  const CB=placeProp('chilly_bin'), cb=CB.group, lid=CB.lid;
+  G.chillyLidG=CB.lidG;
+  addFoodSrc('chilly bin',CB.at.x,CB.at.z,1.8);   // TODO 21
+  G.chilly={x:CB.at.x,z:CB.at.z,lid,open:false,
+    latch:addTear({label:'TUG LATCH',coop:'HOLD LID',need:1.6,mesh:cb,getPos:()=>CB.anchor('latch'),range:1.5,owner:'trish',needsPartner:true,
       onDone(p){ G.chilly.open=true; AU.pop();
         TW.add(0.5,u=>{ G.chillyLidG.rotation.x=-2.0*Math.min(1,u*1.3)+Math.sin(u*Math.PI*2.5)*0.15*(1-u); });
         spawnLoose('pavlova',PB.pav,{x:p.x,y:0.9,z:p.z},{food:true,shiny:false,owner:'trish',mission:'pav'});
@@ -4287,11 +4574,31 @@ function buildPicnic(x,z){
       }})};
 }
 
-function buildBench(x,z){
-  for(let i=0;i<2;i++) rbox(1.9,0.075,0.26,0.03,PAL.wood,x,0.55,z-0.14+i*0.28);
-  rbox(0.12,0.55,0.5,0.04,PAL.woodD,x-0.8,0.27,z); rbox(0.12,0.55,0.5,0.04,PAL.woodD,x+0.8,0.27,z);
-  for(let i=0;i<2;i++) rbox(1.9,0.22,0.075,0.03,PAL.wood,x,0.82+i*0.28,z-0.28);
-  addBoxCollider(x,z,1.9,0.6,0.62,true);
+/* ---- THE SWAP DEMO PROP — REPLAT P6A ----
+   P6A.md asks for ONE low-risk prop with no mission anchors, proved both ways, and this is it. The
+   bench qualifies on every count the brief names: it is a discrete object a GLB would obviously
+   replace, it carries a collider the bird stands on, it is in a biome the rig photographs, and
+   NOTHING in the game attaches a mission to its geometry. The boots and the backpack sit BESIDE it
+   and are placed off this entry's own transform, so they are satellites of the bench rather than
+   parts of it — which is exactly the granularity the seam needs: the registry entry is the
+   swappable BODY, never the builder function that happens to have drawn its neighbours too.
+   ITS ANCHOR IS DECLARED EVEN THOUGH NOTHING READS IT. `seat` is where a bird lands on it, and it
+   is here so the both-ways proof has an anchor to hold constant across a swap on a prop where an
+   anchor moving could not break a mission. An anchor-free prop with a declared anchor is the safe
+   place to prove the anchor contract. */
+defineProp('bench',{
+  biome:'carpark', at:{x:28,z:0},
+  collider:[{kind:'box',w:1.9,d:0.6,top:0.62,solid:true}],
+  anchors:{seat:{x:0,y:0.62,z:0}},
+  material:{family:null,nightTint:false},
+  build(h){
+    for(let i=0;i<2;i++) rbox(1.9,0.075,0.26,0.03,PAL.wood,0,0.55,-0.14+i*0.28,h);
+    rbox(0.12,0.55,0.5,0.04,PAL.woodD,-0.8,0.27,0,h); rbox(0.12,0.55,0.5,0.04,PAL.woodD,0.8,0.27,0,h);
+    for(let i=0;i<2;i++) rbox(1.9,0.22,0.075,0.03,PAL.wood,0,0.82+i*0.28,-0.28,h);
+  },
+});
+function buildBench(){
+  const p=placeProp('bench'), x=p.at.x, z=p.at.z;
   propAt('boot',x-0.7,0.1,z+0.8,PB.boot,{owner:'tom'});
   propAt('boot',x-0.3,0.1,z+0.9,PB.boot,{owner:'tom'});
   // backpack: peck open -> gopro
@@ -4306,13 +4613,27 @@ function buildBench(x,z){
       spawnLoose('GoPro',PB.gopro,{x:p.x,y:0.7,z:p.z+0.3},{shiny:true,owner:'tom'}); award(15,'BACKPACK RAIDED',p); }});
 }
 
-function buildTent(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g); G.tent={g,x,z,lines:2,down:false};
+/* REPLAT P6A. THE CAMPFIRE IS NOT PART OF THE TENT and it never was — its meshes went straight to
+   the scene, not into the tent's group. It is a satellite below, placed off this entry's transform,
+   so swapping the tent for a model cannot take the fire with it. The two guy-lines are anchors
+   because both are mission tears; the pegs are not, because nothing attaches to them. */
+defineProp('tent',{
+  biome:'carpark', at:{x:33,z:-8},
+  collider:[{kind:'box',w:2,d:2,top:1.1,solid:true}],
+  anchors:{guyA:{x:-1.28,y:0.4,z:0.48},guyB:{x:1.28,y:0.4,z:-0.48},peak:{x:0,y:1.52,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
   const t=new THREE.Mesh(new THREE.ConeGeometry(1.5,1.5,4),mat(0xE8946A)); t.position.y=0.75; t.rotation.y=Math.PI/4;
-  t.castShadow=!HEADLESS; g.add(t); G.tent.body=t; hull(t,0.03);
+  t.castShadow=!HEADLESS; g.add(t); p.tentBody=t; hull(t,0.03);
   const dfl=new THREE.Mesh(new THREE.ConeGeometry(0.55,0.9,4),mat(0xD3805A)); dfl.position.set(0,0.46,0.72); dfl.rotation.y=Math.PI/4; g.add(dfl);
   sph(0.05,PAL.yellow,0,1.52,0,g,7); cyl(0.02,0.02,1.5,PAL.metal,0,0.75,0,g,5);
   for(const [px,pz] of [[-1.3,0.5],[1.3,-0.5],[-0.5,-1.3],[0.5,1.3]]) cyl(0.02,0.03,0.14,PAL.woodD,px,0.06,pz,g,5).rotation.z=0.3;
+  },
+});
+function buildTent(){
+  const P=placeProp('tent'), g=P.group, x=P.at.x, z=P.at.z, t=P.tentBody;
+  const A=n=>P.anchor(n);
+  G.tent={g,x,z,lines:2,down:false,body:t};
   { const fx=x+2.6, fz=z+1.8; // campfire by the tent
     for(let i=0;i<7;i++){ const a=i/7*Math.PI*2; const st=sph(0.11,0x7A7468,0,0,0,null,6); st.position.set(fx+Math.cos(a)*0.5,0.07,fz+Math.sin(a)*0.5); G.scene.add(st); }
     const l1=cyl(0.06,0.07,0.7,PAL.woodD,fx-0.1,0.12,fz,null,6); l1.rotation.z=1.35; G.scene.add(l1);
@@ -4324,10 +4645,9 @@ function buildTent(x,z){
     const fl=new THREE.PointLight(0xFF9A3C,0,9,2); fl.position.set(fx,0.8,fz); G.scene.add(fl);
     G.fire={light:fl,flame,inner,x:fx,z:fz};
   }
-  addBoxCollider(x,z,2,2,1.1,true);
   [[-1.6,0.6],[1.6,-0.6]].forEach((o,i)=>{
     const rope=cyl(0.02,0.02,1.4,PAL.paper,o[0]*0.8,0.35,o[1]*0.8,g,5); rope.rotation.z=o[0]>0?-1.1:1.1;
-    addTear({label:'CHEW GUY-LINE',need:1.0,mesh:rope,getPos:()=>({x:x+o[0]*0.8,y:0.4,z:z+o[1]*0.8}),range:1.4,owner:'tom',
+    addTear({label:'CHEW GUY-LINE',need:1.0,mesh:rope,getPos:()=>A(i?'guyB':'guyA'),range:1.4,owner:'tom',
       onDone(p){ G.tent.lines--;
         TW.add(0.3,u=>{rope.scale.x=1+Math.sin(u*Math.PI*4)*0.4*(1-u); rope.rotation.x=Math.sin(u*28)*0.5*(1-u);},()=>{rope.visible=false;}); // TWANG
         if(G.tent.lines<=0&&!G.tent.down){ G.tent.down=true; AU.whoosh();
@@ -4340,16 +4660,28 @@ function buildTent(x,z){
   });
 }
 
-function buildBin(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
-  const body=cyl(0.45,0.4,1.1,PAL.green,0,0.55,0,g,14);
-  for(const ry of [0.3,0.65,0.95]) { const rib=new THREE.Mesh(new THREE.TorusGeometry(0.44-((ry-0.3)*0.02),0.02,6,16),mat(0x4E8248)); rib.position.y=ry; rib.rotation.x=1.57; g.add(rib); }
-  const lid=cyl(0.5,0.5,0.1,PAL.dark,0,1.15,0,g,14);
-  sph(0.06,PAL.dark,0,1.24,0,g,8);
-  const peel=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.44),bmat(0xE8E2D2)); peel.position.set(0,0.65,0.452); g.add(peel); // taped notice
-  addBoxCollider(x,z,0.95,0.95,1.2,true);
+/* REPLAT P6A. `lid` is the anchor the PECK BIN LID mission attaches to and `body` is the TIP THE
+   BIN tear's — both were already literal offsets from the placement rather than points read off
+   the mesh, which is why a model can be dropped in behind them without a mission noticing. */
+defineProp('bin',{
+  biome:'carpark', at:{x:7,z:-6},
+  collider:[{kind:'box',w:0.95,d:0.95,top:1.2,solid:true}],
+  anchors:{lid:{x:0,y:1.1,z:0},body:{x:0,y:0.7,z:0},mouth:{x:0,y:1.3,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    const body=cyl(0.45,0.4,1.1,PAL.green,0,0.55,0,g,14);
+    for(const ry of [0.3,0.65,0.95]) { const rib=new THREE.Mesh(new THREE.TorusGeometry(0.44-((ry-0.3)*0.02),0.02,6,16),mat(0x4E8248)); rib.position.y=ry; rib.rotation.x=1.57; g.add(rib); }
+    p.lid=cyl(0.5,0.5,0.1,PAL.dark,0,1.15,0,g,14);
+    sph(0.06,PAL.dark,0,1.24,0,g,8);
+    const peel=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.44),bmat(0xE8E2D2)); peel.position.set(0,0.65,0.452); g.add(peel); // taped notice
+    p.collide();
+  },
+});
+function buildBin(){
+  const P=placeProp('bin'), g=P.group, lid=P.lid, x=P.at.x, z=P.at.z;
+  const A=n=>P.anchor(n);
   G.bin={g,lid,open:false,tipped:false,x,z};
-  addPeck({label:'PECK BIN LID',needHits:3,mesh:g,getPos:()=>({x,y:1.1,z}),range:1.4,owner:'rex',
+  addPeck({label:'PECK BIN LID',needHits:3,mesh:g,getPos:()=>A('lid'),range:1.4,owner:'rex',
     onDone(p){ G.bin.open=true; AU.clang();
       TW.add(0.55,u=>{ lid.rotation.z=1.5*Math.min(1,u*1.4)+Math.sin(u*22)*0.12*(1-u); lid.position.x=0.62*u; lid.position.y=1.15-0.18*u+Math.sin(u*Math.PI)*0.35; });
       spawnLoose('shiny can',PB.can,{x:x+0.5,y:1.3,z:z+0.2},{shiny:true,mission:'can',vy:2.6});
@@ -4360,7 +4692,7 @@ function buildBin(x,z){
       spawnLoose('rubbish',PB.rubbish,{x:x-0.5,y:1.2,z:z-0.3},{}); spawnLoose('rubbish',PB.rubbish,{x:x+0.2,y:1.2,z:z-0.6},{});
       award(20,'BIN BREACHED',p); noise(p,8,'misdeed','rex');
     }});
-  addTear({label:'TIP THE BIN',need:1.6,mesh:g,getPos:()=>({x,y:0.7,z}),range:1.5,owner:'rex',locked:()=>!G.bin.open,
+  addTear({label:'TIP THE BIN',need:1.6,mesh:g,getPos:()=>A('body'),range:1.5,owner:'rex',locked:()=>!G.bin.open,
     onDone(p){ if(G.bin.tipped)return; G.bin.tipped=true; AU.clang();
       TW.add(0.6,u=>{ g.rotation.z=1.52*Math.min(1,u*1.25)+Math.sin(u*18)*0.1*(1-u); g.position.y=0.45*Math.min(1,u*1.3)*(1-u*0.0)+Math.sin(u*Math.PI)*0.12; g.position.y=Math.sin(Math.min(1,u*1.3)*Math.PI*0.5)*0.45; },
         ()=>{ burst({x:x,y:0.5,z:z},0xE2D8BE,8); spawnLoose('rubbish',PB.rubbish,{x:x+0.9,y:0.6,z:z+0.2},{}); });
@@ -4374,11 +4706,87 @@ function drawKeaSil(c,cx,cy,sc,col){ // traced verbatim from the reference road 
   for(let i=1;i<KP.length;i++)c.lineTo(KP[i][0],KP[i][1]);
   c.closePath(); c.fill(); c.restore();
 }
-function mkKeaSign(x,z,ry){ // the classic yellow diamond: kea silhouette + CAUTION NEXT 5 km
-  const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=ry||0; G.scene.add(g);
+/* ---- THE KEA-CROSSING DIAMOND — REPLAT P6A, AND THE ENTRY THAT IS PLACED FOUR TIMES ----
+   Four of these go out per carpark, at coordinates that come from a SEEDED SHUFFLE, so their
+   transform cannot be a declaration — it is decided at build time. This is why placeProp takes a
+   per-placement `at` override: one registry row describes the OBJECT (its body, its absent
+   collider, its material policy, its biome) and four placements say where the four of them are.
+   The same override is what lets the nest be declared once and placed in two maps. */
+/* ---- THE THREE CARPARK STRUCTURES THAT WERE NEVER EVEN A FUNCTION — REPLAT P6A ----
+   The SW rope-tow shed, the trailhead's DOC board and the unattended pack were written inline
+   inside buildCarpark, with their colliders pushed as raw literals a few lines under their
+   geometry. They are exactly the case P6A.md opens with: nothing named them, so nothing could
+   swap them, and a model arriving for any of the three would have meant reading forty lines of
+   map to find out where its collider was. Now each is a row.
+   THE RAW PUSHES BECOME DECLARED BOXES, and note the units: those three literals were HALF
+   extents, because they went into G.colliders directly rather than through addBoxCollider. The
+   entries state the full dimensions, which is the convention everywhere else in this file, and
+   propCollider halves them on the way out. The collider digest is what proves the conversion. */
+defineProp('sw_tow_shed',{
+  biome:'carpark', at:{x:-40,z:-40},
+  collider:[{kind:'box',w:3.4,d:2.6,top:2.0,solid:true}],
+  anchors:{roof:{x:0,y:2.1,z:0}, wheel:{x:2.1,y:2.2,z:0}, rack:{x:-0.4,y:0.9,z:1.9}},
+  material:{family:'corrugate',nightTint:false},
+  build(base,p){
+    box(3.2,2.0,2.4,0x4E6E8E,0,1.0,0,base);
+    const shR=box(3.6,0.14,2.8,PAL.hutRoof,0,2.1,0,base); shR.rotation.z=0.06;
+    p.collide();
+  },
+});
+defineProp('doc_board',{
+  biome:'carpark', at:{x:44,z:-40},
+  collider:[{kind:'box',w:2.3,d:0.3,top:2.45,solid:true}],
+  anchors:{face:{x:0,y:1.9,z:0.07}},
+  material:{family:null,nightTint:false},
+  build(sg,p){
+    cyl(0.09,0.11,2.3,PAL.woodD,-0.9,1.15,0,sg,7); cyl(0.09,0.11,2.3,PAL.woodD,0.9,1.15,0,sg,7);
+    box(2.2,1.1,0.09,0x2A5A3E,0,1.9,0,sg);
+    p.collide();
+  },
+});
+defineProp('trail_pack',{
+  biome:'carpark', at:{x:41.4,z:-38.8},
+  collider:[],
+  anchors:{zip:{x:0,y:0.7,z:0}},
+  material:{family:null,nightTint:false},
+  build(pk,p){
+    rbox(0.7,1.0,0.5,0.08,0x8E3A2E,0,0.5,0,pk); rbox(0.6,0.3,0.45,0.06,0x6E2A22,0,1.05,0,pk);
+  },
+});
+
+/* ---- THE ROADWORKS PADDLE — REPLAT P6A ----
+   The disc SPINS: the flip tween writes pad.rotation.y, so the disc has to stay a group of its own
+   INSIDE the prop rather than becoming the prop's own group. That is the general shape for any
+   prop with a moving part — the placement group is the object's pose in the world, and anything
+   that animates hangs off it. `face` is the peck anchor and it is the disc's centre, which is
+   where it has always been. */
+defineProp('roadworks_paddle',{
+  biome:'carpark', at:{x:7,z:29.0},
+  collider:[],
+  anchors:{face:{x:0,y:1.12,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    cyl(0.035,0.04,1.05,PAL.metal,0,0.52,0,g,7);
+    const pad=new THREE.Group(); pad.position.set(0,1.12,0); g.add(pad);
+    const disc=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.035,18),mat(PAL.bad));
+    disc.rotation.x=1.57; pad.add(disc);
+    const back=new THREE.Mesh(new THREE.CircleGeometry(0.275,18),bmat(PAL.green));
+    back.position.z=-0.024; back.rotation.y=Math.PI; pad.add(back);
+    p.pad=pad;
+  },
+});
+defineProp('keasign',{
+  biome:'carpark', at:{x:0,z:0},
+  collider:[],
+  anchors:{plate:{x:0,y:2.25,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){ mkKeaSignBody(g,p); },
+});
+function mkKeaSign(x,z,ry){ return placeProp('keasign',{at:{x,z,ry:ry||0}}).group; }
+function mkKeaSignBody(g,P){
   cyl(0.05,0.06,2.3,PAL.metal,0,1.15,0,g,8);
   if(HEADLESS){ const d=rbox(0.95,0.95,0.05,0.03,PAL.yellow,0,2.25,0,g,{noshadow:true}); d.rotation.z=Math.PI/4;
-    rbox(0.85,0.34,0.05,0.02,PAL.yellow,0,1.45,0,g,{noshadow:true}); return g; }
+    rbox(0.85,0.34,0.05,0.02,PAL.yellow,0,1.45,0,g,{noshadow:true}); return; }
   const cv=document.createElement('canvas'); cv.width=cv.height=256; const c=cv.getContext('2d');
   c.clearRect(0,0,256,256);
   c.save(); c.translate(128,128); c.rotate(Math.PI/4);
@@ -4396,10 +4804,31 @@ function mkKeaSign(x,z,ry){ // the classic yellow diamond: kea silhouette + CAUT
   const sub=new THREE.Mesh(new THREE.PlaneGeometry(0.88,0.33),
     new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(c2v),side:THREE.DoubleSide}));
   sub.position.set(0,1.42,0.03); g.add(sub);
-  return g;
 }
-function buildSign(x,z,text){
-  const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
+/* REPLAT P6A. The DON'T FEED THE KEA sign carries NO collider — it never had one — and that
+   absence is now declared rather than merely absent from a builder, so a model arriving with a
+   fat trunk cannot quietly grow one. Its text is a per-entry knob because the panel is drawn, not
+   modelled; a GLB replacing this prop would bring its own and `keepModelPBR` says so. */
+defineProp('sign_dontfeed',{
+  biome:'carpark', at:{x:2,z:24.5},
+  collider:[],
+  anchors:{panel:{x:0,y:1.6,z:0},face:{x:0,y:1.9,z:0.05}},
+  material:{family:null,nightTint:false},
+  build(g,p){ buildSignBody(g,p,"DON'T FEED\nTHE KEA"); },
+});
+function buildSign(){
+  const P=placeProp('sign_dontfeed'), g=P.group, x=P.at.x, z=P.at.z;
+  const A=n=>P.anchor(n);
+  G.signG=g;
+  addTear({label:'TEAR DOWN SIGN',need:3.0,mesh:g,getPos:()=>A('panel'),range:1.6,owner:'rex',mission:'sign',wobble:true,
+    keepMesh:true,
+    onDone(p){ AU.whoosh();
+      TW.add(0.8,u=>{ const f=Math.min(1,u*1.15); g.rotation.x=1.52*f*f + Math.sin(Math.max(0,u-0.7)*30)*0.06*(1-u);
+        g.position.y=-0.35*f; },
+        ()=>{ AU.clang(); burst({x:x,y:0.3,z:z+1.6},0xC8BFA8,10); G.shake=Math.max(G.shake||0,0.25); });
+      award(50,'SIGN? WHAT SIGN?',p); noise(p,12,'misdeed','rex'); done('sign'); }});
+}
+function buildSignBody(g,P,text){
   cyl(0.07,0.075,1.7,PAL.metal,0,0.85,0,g,10);
   cyl(0.1,0.12,0.06,PAL.metal,0,0.03,0,g,10);
   const panel=rbox(1.7,1.0,0.08,0.05,PAL.paper,0,1.9,0,g);
@@ -4414,18 +4843,20 @@ function buildSign(x,z,text){
     const plate=new THREE.Mesh(new THREE.PlaneGeometry(1.58,0.9),new THREE.MeshLambertMaterial({map:new THREE.CanvasTexture(cv)}));
     plate.position.set(0,1.9,0.046); g.add(plate);
   }
-  G.signG=g;
-  addTear({label:'TEAR DOWN SIGN',need:3.0,mesh:g,getPos:()=>({x,y:1.6,z}),range:1.6,owner:'rex',mission:'sign',wobble:true,
-    keepMesh:true,
-    onDone(p){ AU.whoosh();
-      TW.add(0.8,u=>{ const f=Math.min(1,u*1.15); g.rotation.x=1.52*f*f + Math.sin(Math.max(0,u-0.7)*30)*0.06*(1-u);
-        g.position.y=-0.35*f; },
-        ()=>{ AU.clang(); burst({x:x,y:0.3,z:z+1.6},0xC8BFA8,10); G.shake=Math.max(G.shake||0,0.25); });
-      award(50,'SIGN? WHAT SIGN?',p); noise(p,12,'misdeed','rex'); done('sign'); }});
+  P.collide();
 }
 
-function buildTrailer(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
+/* REPLAT P6A. `tarp` is the coop TUG TARP anchor; `bed` is where the freed loot lands. The tarp
+   MESH is still handed to the tear as its wobble target, and that is deliberate: a mesh is what
+   the animation moves, an anchor is what the mission measures from, and the seam only guarantees
+   the second. A model swap that brought no tarp mesh would lose the wobble and keep the mission,
+   which is the right way round. */
+defineProp('trailer',{
+  biome:'carpark', at:{x:-14,z:20},
+  collider:[{kind:'box',w:2.6,d:1.6,top:1.1,solid:true}],
+  anchors:{tarp:{x:0,y:1.0,z:0},bed:{x:0,y:1.1,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
   rbox(2.6,0.5,1.6,0.08,0x596068,0,0.55,0,g);
   for(const rx of [-1.32,1.32]) rbox(0.06,0.34,1.6,0.02,PAL.metal,rx,0.85,0,g,{noshadow:true});
   rbox(1.0,0.08,0.08,0.03,PAL.metal,-1.75,0.5,0,g,{noshadow:true}); cyl(0.14,0.14,0.1,PAL.rubber,-2.2,0.24,0,g,10).rotation.x=1.57; // drawbar + jockey wheel
@@ -4433,8 +4864,14 @@ function buildTrailer(x,z){
   const tarp=rbox(2.8,0.34,1.8,0.14,PAL.teal,0,0.95,0,g); tarp.scale.y=0.6;
   for(const sz of [-0.55,0.55]) { const st=rbox(0.08,0.42,1.86,0.02,0xD3A34E,sz*2,0.94,0,tarp?g:g,{noshadow:true}); st.position.set(sz*1.8,0.94,0); tarp.userData.straps=tarp.userData.straps||[]; tarp.userData.straps.push(st); }
   blob(g,1.8,0.5);
-  addBoxCollider(x,z,2.6,1.6,1.1,true);
-  G.tarp=addTear({label:'TUG TARP',coop:'BOTH KEAS MUST TUG',need:2.4,mesh:tarp,getPos:()=>({x,y:1.0,z}),range:2.1,owner:null,needsBoth:true,mission:'tarp',
+  p.tarp=tarp;
+  p.collide();
+  },
+});
+function buildTrailer(){
+  const P=placeProp('trailer'), g=P.group, tarp=P.tarp, x=P.at.x, z=P.at.z;
+  const A=n=>P.anchor(n);
+  G.tarp=addTear({label:'TUG TARP',coop:'BOTH KEAS MUST TUG',need:2.4,mesh:tarp,getPos:()=>A('tarp'),range:2.1,owner:null,needsBoth:true,mission:'tarp',
     keepMesh:true,
     onDone(p){ AU.whoosh(); AU.rip();
       (tarp.userData.straps||[]).forEach(st=>st.visible=false);
@@ -4448,27 +4885,80 @@ function buildTrailer(x,z){
       award(60,'THE BIG PULL',p); done('tarp'); }});
 }
 
-function buildNest(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); G.scene.add(g);
+/* ---- THE NEST KNOLL — REPLAT P6A ----
+   BOTH BIOMES PLACE IT, at coordinates the MAP owns (TODO 39), so this is the entry whose `at` is
+   always overridden at the call site. That is what the per-placement override on placeProp is for
+   and this is the prop that needed it: one declaration, two maps, two positions. `cup` is the
+   anchor the finale and the bank check read as G.nestY — declared here so a nest model has one
+   number to hit.
+   Its collider is NOT solid: you walk onto a knoll, you do not walk into it. */
+defineProp('nest',{
+  biome:'*', at:{x:-4,z:-33},
+  collider:[{kind:'box',w:4.6,d:4.6,top:1.0,solid:false}],
+  anchors:{cup:{x:0,y:1.1,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
   const knoll=sph(3.2,PAL.rock,0,-1.4,0,g,12); knoll.scale.y=0.75;
   const moss=sph(3.0,PAL.mint,0,-1.15,0,g,12); moss.scale.y=0.62;
   /* the five cone tufts on the knoll went with the rest of the old grass at P4b. THIS ONE WAS NOT
      HEADLESS-GUARDED, so unlike the other two it DOES move the seeded stream — which is why it is
      called out here rather than quietly removed: everything built after buildNest lands somewhere
      slightly different, and that is a deliberate, recorded cost of "remove it entirely". */
-  addBoxCollider(x,z,4.6,4.6,1.0,false);
+  p.collide();
   const ring=new THREE.Mesh(new THREE.TorusGeometry(0.85,0.22,7,14),mat(PAL.woodD));
   ring.position.y=1.05; ring.rotation.x=1.57; ring.castShadow=!HEADLESS; g.add(ring);
   for(let i=0;i<7;i++){ const tw=cyl(0.03,0.03,rnd(0.6,1),PAL.wood,rnd(-0.7,0.7),1.05,rnd(-0.7,0.7),g,5); tw.rotation.set(1.57,0,rnd(0,3)); }
   for(const [ex,ez] of [[-0.22,0.1],[0.2,-0.15]]){ const egg=sph(0.11,0xF6EFE0,ex,1.12,ez,g,9); egg.scale.y=1.25; }
   sph(0.05,PAL.keaOrange,0.4,1.08,0.3,g,6).scale.set(1,0.3,2); // stray feather
-  G.nestG=g; G.nestY=1.1;
+  },
+});
+function buildNest(x,z){
+  const P=placeProp('nest',{at:{x,z}});
+  G.nestG=P.group; G.nestY=P.entry.anchors.cup.y;
 }
 
-function buildSheepPen(x,z){
-  for(let i=0;i<4;i++){ const px=x-4+i*2.7;
-    cyl(0.06,0.06,0.9,PAL.woodD,px,0.45,z-3,null,6); cyl(0.06,0.06,0.9,PAL.woodD,px,0.45,z+3,null,6);
-    box(2.7,0.08,0.08,PAL.wood,px+1.35>x+4?px:px+1.35,0.7,z-3); box(2.7,0.08,0.08,PAL.wood,px+1.35>x+4?px:px+1.35,0.7,z+3); }
+/* ---- THE PADDOCK: FENCE AND GATE, TWO ENTRIES — REPLAT P6A ----
+   They are two objects because the gate SWINGS and the fence does not, and a swap has to respect
+   that: the gate's group is what the twine tween rotates, so a gate model inherits the swing for
+   free while a fence model cannot accidentally acquire it. The two hang posts stay with the fence
+   below — they are fence posts that a gate happens to hang on, they do not swing, and a gate GLB
+   would not bring them.
+   BOTH POSITIONS ARE DECLARED ABSOLUTELY, even though the gate's has always been derived from the
+   pen's (x-4.2, z-3). A registry entry that has to be read together with another entry's
+   arithmetic to find out where its object is would defeat the point of writing it down.
+   THE TWINE ANCHOR BELONGS TO THE FENCE, NOT THE GATE, and that is the whole reason to be careful
+   here: the chew target is a fixed point in the world, and hanging it off the gate would have made
+   it swing away from the bird as the gate opened. */
+defineProp('sheep_pen',{
+  biome:'carpark', at:{x:-38,z:4},
+  collider:[],
+  anchors:{centre:{x:0,y:0.5,z:0}, twine:{x:-4.2,y:0.7,z:2.86}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    /* the fence is drawn in WORLD coordinates off the placement, unchanged, because every rail's
+       run-off test (`px+1.35>x+4`) is written in them and rewriting it in local space would be a
+       silent chance to move a rail. The meshes land in this group all the same. */
+    const x=p.at.x, z=p.at.z;
+    for(let i=0;i<4;i++){ const px=x-4+i*2.7;
+      cyl(0.06,0.06,0.9,PAL.woodD,px-x,0.45,-3,g,6); cyl(0.06,0.06,0.9,PAL.woodD,px-x,0.45,3,g,6);
+      box(2.7,0.08,0.08,PAL.wood,(px+1.35>x+4?px:px+1.35)-x,0.7,-3,g); box(2.7,0.08,0.08,PAL.wood,(px+1.35>x+4?px:px+1.35)-x,0.7,3,g); }
+  },
+});
+defineProp('pen_gate',{
+  biome:'carpark', at:{x:-42.2,z:1},
+  collider:[],
+  anchors:{hinge:{x:0,y:0.66,z:0}},
+  material:{family:null,nightTint:false},
+  build(gate,p){
+    for(let i=0;i<3;i++) box(0.07,0.07,5.7,PAL.wood,0,0.36+i*0.3,2.85,gate);
+    { const br=box(0.06,1.15,0.06,PAL.wood,0,0.66,2.85,gate); br.rotation.x=1.1; } // the brace
+  },
+});
+function buildSheepPen(){
+  const P=placeProp('sheep_pen');
+  buildSheepPenRest(P.at.x,P.at.z,P);
+}
+function buildSheepPenRest(x,z,P){
   for(let i=0;i<3;i++){ const s=new THREE.Group(); s.position.set(x+rnd(-3,3),0,z+rnd(-2,2)); G.scene.add(s);
     const body=sph(0.55,PAL.white,0,0.62,0,s,10); body.scale.set(1,0.85,1.3); hull(body,0.04);
     sph(0.34,0xEDEBE2,0.2,0.86,0.3,s,8); sph(0.3,0xEDEBE2,-0.24,0.8,-0.3,s,8); sph(0.28,0xEDEBE2,0.1,0.9,-0.45,s,8);
@@ -4482,14 +4972,12 @@ function buildSheepPen(x,z){
   { // the gate, hung shut with baling twine, the way every farm gate in the country is
     const gx=x-4.2;
     cyl(0.075,0.085,1.2,PAL.woodD,gx,0.6,z-3,null,7); cyl(0.075,0.085,1.2,PAL.woodD,gx,0.6,z+3,null,7);
-    const gate=new THREE.Group(); gate.position.set(gx,0,z-3); G.scene.add(gate);
-    for(let i=0;i<3;i++) box(0.07,0.07,5.7,PAL.wood,0,0.36+i*0.3,2.85,gate);
-    { const br=box(0.06,1.15,0.06,PAL.wood,0,0.66,2.85,gate); br.rotation.x=1.1; } // the brace
+    const gate=placeProp('pen_gate').group;
     const twine=new THREE.Group(); twine.position.set(gx,0.67,z+2.86); G.scene.add(twine);
     for(let i=0;i<3;i++){ const w=cyl(0.028,0.028,0.44,0xD8CBA0,0,i*0.055-0.055,0,twine,6); w.rotation.x=1.57; }
     G.penGate=gate;
     addTear({label:'CHEW THE BALING TWINE',need:1.4,range:1.35,air:true,keepMesh:true,
-      getPos:()=>({x:gx,y:0.7,z:z+2.86}),
+      getPos:()=>P.anchor('twine'),
       onDone(p){ award(30,'TWINE: CHEWED. THE GATE IS A SUGGESTION NOW.',p); done('q_twine');
         AU.rip(); burst(p,0xD8CBA0,7); twine.visible=false;
         spawnLoose('length of twine',PB.twine,{x:gx-0.5,y:0.5,z:z+2.5},{});
@@ -4513,9 +5001,40 @@ function spawnLoose(name,builder,p,opts){
 }
 
 /* ---------- vehicles ---------- */
+/* ---- THE FOUR PARKED CARS ARE REGISTRY ENTRIES; TRAFFIC IS NOT — REPLAT P6A ----
+   mkCar has two callers with opposite lifetimes. The four in the bays are WORLD props: they are
+   there when the map is built, they never move, and they are exactly what P6 means by "cars". The
+   traffic is SPAWNED mid-run, despawned at the far end of the road, and a registry entry for a
+   thing that does not exist at build time would be a lie. So mkCar becomes the shared BODY and
+   `carEntry` declares one registry row per bay; spawnTraffic keeps calling mkCar directly.
+   THE COLLIDER STOPS BEING READ BACK OFF THE ARRAY. `car.collider=G.colliders[G.colliders.length-1]`
+   worked only because addBoxCollider had just pushed it; the placement hands back its own colliders
+   by identity, which is both clearer and immune to anything else pushing in between. */
+function carEntry(id,x,z,ry,color,type){
+  return defineProp(id,{
+    biome:'carpark', at:{x,z,ry},
+    collider:[{kind:'box',w:2.2,d:4.3,top:1.35,solid:true}],
+    /* the two wiper roots and the aerial root, in the car's own frame — the anchors the RIP WIPER
+       and SNAP AERIAL missions have always measured from, named at last. `wsz` is the windscreen
+       set-back, which differs between a hatch and a ute. */
+    anchors:{wiperL:{x:-0.45,y:0.92,z:type==='ute'?0.35:0.85},
+             wiperR:{x: 0.45,y:0.92,z:type==='ute'?0.35:0.85},
+             aerial:{x:0.8,y:1.35,z:-1.3},
+             roof  :{x:0,y:1.42,z:type==='ute'?-0.7:-0.2}},
+    material:{family:null,nightTint:false},
+    build(g,p){ p.car=mkCarBody(g,p,color,type); },
+  });
+}
 function mkCar(x,z,ry,color,type){
   const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=ry; G.scene.add(g);
-  const car={g,x,z,ry,type,parked:true,speed:0,dir:1,stopped:false,stopT:0,driverOut:false,honkT:0,wipers:[]};
+  const car=mkCarBody(g,null,color,type);
+  car.x=x; car.z=z; car.ry=ry;
+  addBoxCollider(x,z,2.2,4.3,1.35,true); car.collider=G.colliders[G.colliders.length-1];
+  mkCarTears(g,car);
+  return car;
+}
+function mkCarBody(g,P,color,type){
+  const car={g,x:g.position.x,z:g.position.z,ry:g.rotation.y,type,parked:true,speed:0,dir:1,stopped:false,stopT:0,driverOut:false,honkT:0,wipers:[]};
   const bodyG=car.bodyG=new THREE.Group(); g.add(bodyG);
   const shell=rbox(2.0,0.55,4.2,0.16,color,0,0.56,0,bodyG); hull(shell,0.03);
   const cabZ=type==='ute'?-0.7:-0.2;
@@ -4534,9 +5053,12 @@ function mkCar(x,z,ry,color,type){
     const hub=cyl(0.16,0.16,0.26,PAL.metal,wx,0.34,wz,g,10); hub.rotation.z=1.57;
   }
   blob(g,1.9,0.55).position.z=0;
-  addBoxCollider(x,z,2.2,4.3,1.35,true); car.collider=G.colliders[G.colliders.length-1];
+  if(P){ P.collide(); car.collider=P.colliders[0]; }
+  return car;
+}
+function mkCarTears(g,car){
   // wipers ×2 at windscreen base
-  const wsz=type==='ute'?0.35:0.85;
+  const wsz=car.type==='ute'?0.35:0.85;
   for(let i=0;i<2;i++){
     const wg=new THREE.Group(); wg.position.set(-0.45+i*0.9,0.92,wsz); wg.rotation.z=0.5; g.add(wg); PB.wiper(wg);
     const t=addTear({label:'RIP WIPER',need:1.4,mesh:wg,car,owner:'driver',mission:'wiper',range:1.6,air:true,fx:'snapoff',
@@ -4552,9 +5074,70 @@ function mkCar(x,z,ry,color,type){
     onDone(p){ spawnLoose('aerial',PB.aerial,p,{shiny:true}); award(15,'AERIAL: SNAPPED',p); noise(p,7,'misdeed',null,car); }});
   return car;
 }
+/* THE PARKED FOUR. Colour and body style are declaration, not argument — a bay is a registry row. */
+carEntry('car_red',   -9,  16.4,0,PAL.red,   'hatch');
+carEntry('car_blue',  -2.4,16.4,0,PAL.blue,  'hatch');
+carEntry('car_white',  4.2,16.4,0,PAL.white, 'ute');
+carEntry('car_yellow',10.8,16.4,0,PAL.yellow,'hatch');
+function placeCar(id){
+  const P=placeProp(id), car=P.car;
+  mkCarTears(P.group,car);
+  return car;
+}
 
-function mkCampervan(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=0.2; G.scene.add(g);
+/* ---- THE CAMPERVAN — REPLAT P6A, AND THE HIGHEST-RISK ENTRY IN THE PIECE ----
+   The door seal is the canary that has caught more regressions than any other check in this
+   gauntlet, and it lives on this prop. It is safe across a swap for the reason every anchor here
+   is: the twelve-step bead path is drawn in the PLACEMENT'S OWN FRAME and always was — one wall-
+   normal x, a run of y and z — so it is a fact about where the van is, not about which mesh is
+   standing there. What a model WOULD have to bring is the door geometry the bead is drawn against,
+   and `door`/`step`/`wall` are declared here so that a future entry can say where they must land.
+   THE DRAWBAR COLLIDER STOPS BEING TRIGONOMETRY AT THE CALL SITE. It was
+   addBoxCollider(x+Math.sin(0.2)*3.4, z+Math.cos(0.2)*3.4, ..., 0.2) — the van's own yaw written
+   out by hand in two places. In the entry it is simply local z 3.4, and the placement rotates it. */
+defineProp('campervan',{
+  biome:'carpark', at:{x:-11,z:8,ry:0.2},
+  collider:[{kind:'box',w:2.8,d:5.8,top:2.5,solid:true},
+            {kind:'box',x:0,z:3.4,w:0.9,d:1.5,top:0.6,solid:true}],   // the drawbar
+  anchors:{door :{x:1.50,y:1.02,z:0.6},      // the door centre, in the wall plane the bead runs in
+           step :{x:1.61,y:0.28,z:0.6},
+           roof :{x:0,y:2.5,z:0},
+           mirrorL:{x:-1.3,y:1.8,z:-2.6}, mirrorR:{x:1.3,y:1.8,z:-2.6},
+           drawbar:{x:0,y:0.46,z:3.92}},
+  material:{family:null,nightTint:false},
+  build(g,p){ p.van=mkCampervanBody(g,p); },
+});
+function mkCampervan(){
+  const P=placeProp('campervan'), g=P.group, x=P.at.x, z=P.at.z;
+  G.vanTop={x,z,top:2.5,w:1.2,d:2.7};
+  // Registered the way G.wear and G.stones are: a data record with the meshes on it, so the gate
+  // can read the door orientation off the scene instead of a reader projecting it out of dims.
+  G.vanDoor=Object.assign({axis:'x',wallAt:1.47,cz:0.6,cy:1.02,group:g},P.doorParts);
+  // door rubber seal — worked off bit by bit with the beak, comes away intact
+  { const pth=[]; // beading around the REORIENTED frame edges: up the handle edge, across the head, down the hinge edge
+    // The path was ALREADY drawn in the wall plane (one x, varying y and z) - it was the slabs that
+    // were turned the wrong way, and the bead was left hanging in space beside them. Now it hugs
+    // the door it seals: the door edge sits at z 0.12 and z 1.08, y 0.2625..1.7775, so the bead
+    // runs that seam at z 0.12 / 1.08 and y 0.27..1.77. It rides out to x 1.50 with the frame,
+    // which puts it BETWEEN the frame face (1.495) and the door face (1.516) - a seam bead - and
+    // 0.255 further from the van than before, so the tear reach (range 1.7) only gets easier.
+    // Segment counts 5 + 3 + 4 are held deliberately: N = path.length-1 = 12 steps (FLAKES law 10).
+    for(let i=0;i<=5;i++)pth.push({x:1.50,y:0.27+i*0.30,z:0.12});
+    for(let i=1;i<=3;i++)pth.push({x:1.50,y:1.77,z:0.12+i*0.32});
+    for(let i=1;i<=4;i++)pth.push({x:1.50,y:1.77-i*0.375,z:1.08});
+    addStrip({group:g,path:pth,thick:{x:0.05,y:0.055,z:0.055},color:0x1A1D20,
+      label:'WORK THE DOOR SEAL',need:0.55,range:1.7,owner:'trish',mission:'seal',
+      propName:'door seal',propBuilder:PB.longSeal,points:45,doneText:'THE WHOLE SEAL. INTACT.',noiseAmt:9});
+  }
+  // wing mirrors ×2
+  for(const s of [-1,1]){ const mg=new THREE.Group(); mg.position.set(s*1.3,1.8,-2.6); g.add(mg); PB.mirror(mg);
+    addTear({label:'RIP MIRROR',need:1.6,mesh:mg,owner:'trish',range:1.6,air:true,fx:'snapoff',
+      getPos:()=>{const v=new THREE.Vector3();mg.getWorldPosition(v);return v;},
+      onDone(p){ spawnLoose('wing mirror',PB.mirror,p,{shiny:true,owner:'trish'}); award(20,'MIRROR, MIRROR, GONE',p); noise(p,8,'misdeed','trish'); }});
+  }
+  return {g,x,z,parked:true,van:true};
+}
+function mkCampervanBody(g,P){
   const shell=rbox(2.4,2.1,5.6,0.3,PAL.white,0,1.35,0,g); hull(shell,0.02);
   rbox(2.56,0.6,5.7,0.2,0,0,0.85,0,g,{noshadow:true,mats:mat(0x1E2226)}); // Crusader black skirt
   rbox(2.56,0.12,5.7,0.05,0,0,1.22,0,g,{noshadow:true,mats:mat(0x7BC043)}); // green accent stripe
@@ -4606,61 +5189,53 @@ function mkCampervan(x,z){
   { const sw=cyl(0.34,0.34,0.12,PAL.rubber,-0.62,1.05,-2.85,g,12); sw.rotation.x=1.57; } // spare wheel
   box(0.42,0.14,0.02,PAL.white,0.55,0.75,-2.84,g,{noshadow:true}); // number plate
   blob(g,2.2,0.5);
-  addBoxCollider(x,z,2.8,5.8,2.5,true,0.2);
-  addBoxCollider(x+Math.sin(0.2)*3.4,z+Math.cos(0.2)*3.4,0.9,1.5,0.6,true,0.2); // drawbar
-  G.vanTop={x,z,top:2.5,w:1.2,d:2.7};
-  // Registered the way G.wear and G.stones are: a data record with the meshes on it, so the gate
-  // can read the door orientation off the scene instead of a reader projecting it out of dims.
-  G.vanDoor={axis:'x',wallAt:1.47,cz:0.6,cy:1.02,frame:dFrame,door:dDoor,pane:dPane,step:dStep,grip:dGrip,group:g};
-  // door rubber seal — worked off bit by bit with the beak, comes away intact
-  { const pth=[]; // beading around the REORIENTED frame edges: up the handle edge, across the head, down the hinge edge
-    // The path was ALREADY drawn in the wall plane (one x, varying y and z) - it was the slabs that
-    // were turned the wrong way, and the bead was left hanging in space beside them. Now it hugs
-    // the door it seals: the door edge sits at z 0.12 and z 1.08, y 0.2625..1.7775, so the bead
-    // runs that seam at z 0.12 / 1.08 and y 0.27..1.77. It rides out to x 1.50 with the frame,
-    // which puts it BETWEEN the frame face (1.495) and the door face (1.516) - a seam bead - and
-    // 0.255 further from the van than before, so the tear reach (range 1.7) only gets easier.
-    // Segment counts 5 + 3 + 4 are held deliberately: N = path.length-1 = 12 steps (FLAKES law 10).
-    for(let i=0;i<=5;i++)pth.push({x:1.50,y:0.27+i*0.30,z:0.12});
-    for(let i=1;i<=3;i++)pth.push({x:1.50,y:1.77,z:0.12+i*0.32});
-    for(let i=1;i<=4;i++)pth.push({x:1.50,y:1.77-i*0.375,z:1.08});
-    addStrip({group:g,path:pth,thick:{x:0.05,y:0.055,z:0.055},color:0x1A1D20,
-      label:'WORK THE DOOR SEAL',need:0.55,range:1.7,owner:'trish',mission:'seal',
-      propName:'door seal',propBuilder:PB.longSeal,points:45,doneText:'THE WHOLE SEAL. INTACT.',noiseAmt:9});
-  }
-  // wing mirrors ×2
-  for(const s of [-1,1]){ const mg=new THREE.Group(); mg.position.set(s*1.3,1.8,-2.6); g.add(mg); PB.mirror(mg);
-    addTear({label:'RIP MIRROR',need:1.6,mesh:mg,owner:'trish',range:1.6,air:true,fx:'snapoff',
-      getPos:()=>{const v=new THREE.Vector3();mg.getWorldPosition(v);return v;},
-      onDone(p){ spawnLoose('wing mirror',PB.mirror,p,{shiny:true,owner:'trish'}); award(20,'MIRROR, MIRROR, GONE',p); noise(p,8,'misdeed','trish'); }});
-  }
-  return {g,x,z,parked:true,van:true};
+  P.collide();
+  P.doorParts={frame:dFrame,door:dDoor,pane:dPane,step:dStep,grip:dGrip};
 }
 
-function mkDocUte(x,z){
-  const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=-0.15; G.scene.add(g); G.uteG=g;
-  /* THE CAGE HINT BELONGS TO THE THING THAT OWNS THE CAGE (TODO 58). It used to be added in
-     startGame, off G.uteG.localToWorld with no guard - which was fine while every world had a ute
-     and a throw in every mode the day one did not. There is no guard here and there does not need
-     to be one: a map with no ute never calls this, so it never has the hint, and no if has to
-     remember that. */
-  /* updateMatrixWorld FIRST, and this is not defensive - it is the whole difference between the old
-     site and this one. localToWorld in r128 just multiplies by matrixWorld and does not compute it,
-     and nothing has computed this group matrix yet at build time (in startGame the renderer had
-     been through several frames). Without this line the hint lands at the LOCAL offset, which is
-     1.1 metres behind the world origin - and the battery caught it, because the cage teaching
-     started firing in the middle of the carpark. */
-  { g.updateMatrixWorld(true);
-    const up=new THREE.Vector3(0,1.2,-1.1); g.localToWorld(up);
-    /* TODO 52: co-op took the mash away (piece 15), so the old single line became a lie in one of
-       the two modes. A function, because the mode is not known until somebody reads it. */
-    /* TODO 55: free, because what this teaches is a MECHANIC and there is no mission called cage to
-       retire it. It is live while the bird is out and near the ute - a caged bird never reaches
-       hintScan at all, the caged branch of update returns before it. */
+/* ---- THE DOC UTE — REPLAT P6A ----
+   TWO ANCHORS REPLACE TWO localToWorld CALLS, and that is the whole argument of this piece in one
+   prop. The cage hint and the PECK THE LATCH mission both used to project a local offset through
+   the group's matrixWorld — which is correct, and is also exactly the thing that breaks when the
+   group stops holding the mesh those offsets were measured against. Declared here, they are facts
+   about where the ute IS, and a model can be dropped in behind them untouched.
+   THE CRATE STAYS INSIDE THE BODY, and that is a judged call rather than an oversight: a DOC
+   kea-transport crate bolted to the tray is part of the vehicle a modeller would deliver. If a
+   future ute GLB arrives without one, the crate becomes its own entry parented to `tray` — which
+   is a decision to make with the file in hand, not now. */
+defineProp('doc_ute',{
+  biome:'carpark', at:{x:12,z:7,ry:-0.15},
+  collider:[{kind:'box',w:2.2,d:4.5,top:1.4,solid:true}],
+  anchors:{cage:{x:0,y:1.2,z:-1.1},          // the teaching hint, and the crate's own origin
+           latch:{x:0.44,y:1.76,z:-1.1},     // the jailbreak peck, crate-local 0.44/0.34/0 lifted out
+           bonnet:{x:-0.3,y:1.0,z:-2.0}, tray:{x:0.3,y:0.95,z:1.1}},
+  material:{family:null,nightTint:false},
+  build(g,p){ mkDocUteBody(g,p); },
+});
+function mkDocUte(){
+  const P=placeProp('doc_ute'), g=P.group, x=P.at.x, z=P.at.z;
+  G.uteG=g;
+  { const up=P.anchor('cage');
     addHint('cage',up.x,up.y,up.z,6,()=>coopCell()
       ? 'the night ranger cages troublemakers - only a mate can peck the latch open'
       : 'the night ranger cages troublemakers - a mate pecks the latch, or mash your way out',
       {free:true}); }
+  addPeck({label:'PECK THE LATCH',needHits:4,repeat:true,mesh:P.cageG,range:1.5,owner:null,
+    getPos:()=>P.anchor('latch'),
+    locked:()=>!jailFull()||vsOn(),   // TODO 24: in a match nobody lets you out - mash your own way
+    onDone(p){ const k=jailedKea(); if(k){ k.freeCage&&k.freeCage(); award(40,'JAILBREAK',p); } this.done=false; this.hits=0; }});
+  // keys on the bonnet, radio on the tray — Rex's prized possessions
+  propAt('ute keys',x-0.3,1.0,z-2.0,PB.keys,{shiny:true,owner:'rex',mission:'keys'});
+  propAt('DOC radio',x+0.3,0.95,z+1.1,PB.radio,{shiny:true,owner:'rex',guarded:true,mission:'radio'});
+  return {g,x,z,parked:true};
+}
+function mkDocUteBody(g,P){
+  /* THE CAGE HINT BELONGS TO THE THING THAT OWNS THE CAGE (TODO 58), and REPLAT P6A moved it up to
+     the placement, where the registry can answer it from a DECLARED anchor rather than by
+     projecting a hand-typed offset through this group's matrix. The old note about
+     updateMatrixWorld is now moot for the same reason it was load-bearing then: propAnchor composes
+     scale, yaw and origin arithmetically and never reads a matrix, so there is no matrix to be
+     stale. TODO 52's two-mode text and TODO 55's `free` both survive verbatim at the call site. */
   const shell=rbox(2.0,0.55,4.4,0.16,PAL.ranger,0,0.56,0,g); hull(shell,0.03);
   rbox(1.76,0.68,1.6,0.22,PAL.ranger,0,1.1,-0.9,g);
   pane(1.66,0.46,1.5,0.16,PAL.glass,0,1.16,-0.9,g);
@@ -4676,23 +5251,15 @@ function mkDocUte(x,z){
   rbox(1.2,0.5,0.06,0.04,PAL.paper,0,1.0,2.21,g,{noshadow:true}); // kea-warning decal panel
   const doc=cyl(0.22,0.22,0.01,PAL.white,0.95,0.62,-0.9,g,12); doc.rotation.z=1.57; // door roundel
   blob(g,1.9,0.55);
-  addBoxCollider(x,z,2.2,4.5,1.4,true,-0.15);
+  P.collide();
   { const cg=new THREE.Group(); cg.position.set(0,1.42,-1.1); g.add(cg); // DOC kea-transport crate
     box(0.82,0.05,0.64,PAL.woodD,0,0.03,0,cg,{noshadow:true});
     box(0.82,0.05,0.64,0x8F8878,0,0.62,0,cg,{noshadow:true});
     for(const [cx,cz] of [[-0.38,-0.29],[0.38,-0.29],[-0.38,0.29],[0.38,0.29]]) box(0.05,0.6,0.05,0x8F8878,cx,0.32,cz,cg,{noshadow:true});
     for(let i=-2;i<=2;i++){ cyl(0.012,0.012,0.56,PAL.metal,i*0.16,0.32,-0.3,cg,5); cyl(0.012,0.012,0.56,PAL.metal,i*0.16,0.32,0.3,cg,5); }
     const latch=sph(0.05,PAL.sun,0.44,0.34,0,cg,6);
-    G.cage={g:cg,latch};
-    addPeck({label:'PECK THE LATCH',needHits:4,repeat:true,mesh:cg,range:1.5,owner:null,
-      getPos:()=>{ const v=new THREE.Vector3(0.44,0.34,0); cg.localToWorld(v); return {x:v.x,y:v.y,z:v.z}; },
-      locked:()=>!jailFull()||vsOn(),   // TODO 24: in a match nobody lets you out - mash your own way
-      onDone(p){ const k=jailedKea(); if(k){ k.freeCage&&k.freeCage(); award(40,'JAILBREAK',p); } this.done=false; this.hits=0; }});
+    G.cage={g:cg,latch}; P.cageG=cg;
   }
-  // keys on the bonnet, radio on the tray — Rex's prized possessions
-  propAt('ute keys',x-0.3,1.0,z-2.0,PB.keys,{shiny:true,owner:'rex',mission:'keys'});
-  propAt('DOC radio',x+0.3,0.95,z+1.1,PB.radio,{shiny:true,owner:'rex',guarded:true,mission:'radio'});
-  return {g,x,z,parked:true};
 }
 
 /* traffic cars share mkCar but start on road */
@@ -6980,6 +7547,16 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
     WORLDREGS,WORLDHANDLES,WORLDLISTS,WORLDFLAGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
+    /* REPLAT P6A: THE PROP SEAM. Exported as a block for the same reason SKY is — the batteries pin
+       the registry itself rather than re-typing twenty-six rows of it, and src/models.mjs reads one
+       source of truth for what wants a model, where it stands and what its material policy is.
+       `nightTint` and `matFam` are here because the model tier has to apply the SAME two policies a
+       primitive body gets, and a loader with its own copy of either would drift from the world it
+       is dropping a model into. */
+    PROPS:{ALL:PROPS,define:defineProp,of:propOf,place:placeProp,placed:propPlaced,
+           anchor:propAnchor,localToWorld:propLocalToWorld,collider:propCollider,
+           state:propsState,ignored:PROPSIGNORED,defaults:PROPDEFAULTS},
+    nightTint, matFam, propsState,
     /* REPLAT P2: the sky recipe is exported so the batteries pin the CONSTANTS rather than
        re-typing the numbers, and so src/sky.mjs reads one source of truth for the HDRI path,
        the env intensity and the measured rotation instead of keeping a second copy. */
