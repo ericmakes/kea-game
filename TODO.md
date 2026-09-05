@@ -1863,3 +1863,63 @@ tier and accepting that a model then loads before the world it stands in is dres
 IN THE MEANTIME: `material.family` is validated against the real seven names and recorded as INTENT
 for whoever brings the file, and each placement records the families its primitive body actually
 resolved (`propsState().families`) so the intent can be checked against the thing being replaced.
+
+## FOUND IN SESSION 31 (appended 2026-09-06 by the post-P6A re-pin)
+
+### 88. THE CAPTURE CLOCK PIN IS OFF BY ONE FRAME'S dt, AND IT IS WHY EIGHT VANTAGES ARE BIMODAL
+Found 2026-09-06 while re-pinning the set, chasing why 03_kea_plate is bimodal on identical code.
+TODO 30 said "FREEZE THE CLOCK FOR THE WHOLE PASS" and QUIET does:
+    { const _cl=()=>{ try{ KEAGAME.G.time=12.0; }catch(e){} requestAnimationFrame(_cl); };
+      requestAnimationFrame(_cl); }
+That callback is registered AFTER the game's own frame loop, so the per-frame order is:
+    frame(now)  dt = clamp((now-last)/1000, 0.001, 0.05)
+    update(dt)  G.time += dt   then   U.uTime.value = G.time
+    render()    draws with uTime = 12.0 + dt
+    _cl         puts G.time back to 12.0
+**The value frozen is the value BETWEEN frames. The value rendered is 12.0 + dt.**
+AND dt IS QUANTISED BY VSYNC, which is why the symptom is two states rather than noise. Probed in
+the page over six runs of 03_kea_plate, uTime at shutter was exactly 12.0167 on four (one 60 Hz
+interval) and exactly 12.0333 on two (two intervals — a dropped frame). Nothing else differed: the
+grass anchor was `[1.5, 1]` and the camera `[1.35, 0.95, 1.15]` in all six, so the 0.5 m snap of
+REPLAT P4c is NOT the cause and neither is the camera.
+WHAT IT COSTS: 0.0167 s x flutterHz 2.7 = 0.045 rad of flutter phase, and across a close-range
+grass field that is ~23,800 changed pixels — 03_kea_plate reads 0-248 px within a state and
+23,681-23,823 px between states. Eight of twenty-eight vantages are affected (02, 03, 06, 13, 16,
+21, 25, 29) and the split measured over eleven runs is 6-5 on seven of them and 7-4 on the eighth,
+i.e. a fair coin. So there is no consensus state to pin: whichever is pinned, about half of future
+sweeps read the vantage as drifted.
+THE FIX BELONGS IN THE GAME FILE, not in QUIET, because the pin has to be applied where the clock
+is ADVANCED rather than in a callback that runs after the frame it was meant to pin. One line in
+`update`, immediately after `G.time+=dt`:
+    if(G.timeLock!==undefined)G.time=G.timeLock;
+and the rig sets `G.timeLock=12.0` once instead of rewriting `G.time` every frame. `travelUpdate`'s
+`v.t` wants the same treatment and TODO 89 is the vantage that needs it.
+WHY IT IS NOT DONE IN THE RE-PIN: it changes every grass-bearing frame in the set, so it is a piece
+with a re-pin of its own, and it must not land in the same commit as pins taken under the old
+behaviour. THE PRIZE IS LARGE: eight vantages stop being bimodal, `stability.mjs` stops reporting
+four unstable frames it cannot fix, and TODO 77's churn recalibration becomes meaningful — see the
+session 31 note in BASELINE.md for why the ceilings could not honestly be re-fit today.
+
+### 89. 27_travel_card HAS NO camLock, SO ITS CAMERA IS A FUNCTION OF THE FRAME-TIME HISTORY
+Filed 2026-09-06, session 31, as the answer to "should 27_travel_card join the pinned set". It
+should, and it cannot yet, and this is the one line in the way.
+It is the ONLY shot in the sweep that does not set `G.camLock`, so it is the only one whose camera
+is whatever the game leaves it at. Its stage pins `G.travel.t` and that pin WORKS — probed across
+six runs, `t` is exactly 0.85 and `u` exactly 0.5 every time. The camera still lands 2.8 m apart in
+y (20.238 to 23.068), because both stages that place it are RELATIVE:
+    the follow cam   cam.position += (target - cam.position) * (1 - 0.0018^dt)
+    the travel blend cam.position = lerp(cam.position, anchor, e)
+so the resting position depends on the entire dt sequence, and the anchor it is easing from is the
+flyover at (7, 26, 34) — twenty-five metres up. Ten pairwise distances over five sweeps: 736, 3259,
+3954, 26913, 30236, 30921, 96949, 102834, 103658, 103863. The worst pair moves a fifth of the frame.
+THE FIX IS TO GIVE IT A camLock, like all twenty-eight pinned vantages have. Pick the framing from
+the state it is MEANT to photograph — the beat at u=0.5, which is what the stage already asks for —
+read the camera back out of the page once, and write it in as a literal. Fixing TODO 88 alone would
+make `u` exact but would NOT fix this, because the follow-cam smoother is history-dependent
+whatever the clock does; the camLock is the part that actually pins it.
+THEN PIN IT. It is the only frame in the set that photographs the travel beat and the biome label,
+which is the tour chassis's own UI, and the card is already deterministic — it is raised from
+`updateUI` off `G.travel.phase` and the pin holds the phase indefinitely.
+AND WHILE THAT IS OPEN: 26_tour_brochure is ready to be pinned TODAY. All ten pairwise distances
+across five independent sweeps are exactly 0 px — it is a DOM screen with no 3D world in it. Both
+have been named as unpinned every run for five sessions; adding a vantage is Eric's call.

@@ -405,3 +405,120 @@ it** — a real recalibration wants `crossrun` with RUNS=5 on a quiet machine an
 26_tour_brochure and 27_travel_card shoot every pass and have still never been pinned. Unchanged by
 this re-pin and flagged for the fourth time — `repin.mjs` now prints them by name on every run, so
 this can stop depending on somebody remembering. Adding a vantage is a decision for Eric.
+
+## FULL RE-PIN 2026-09-06 (session 31, specimen 3b83b706927a5b8bd3b8289b53fe21b6 — post-P6A)
+
+The set was **nine pieces stale**. The last full re-pin was P3b; P4, P4b, P4c, P4d, P4e, TODO 81,
+P5a/b/d/d2/e and P6A all landed after it, so 27 of 28 vantages flagged against the pinned set on an
+UNTOUCHED tree. What the stale pins were hiding is not subtle — see 05_tussock_ground, where the
+P3b pin is flat gold cardboard spikes standing in dirt and the new pin is a tussock field with
+blade texture and rolling hills behind it. That is REPLAT P4 arriving. **Nothing red was pinned
+green:** every difference between the old pin and the new one is the intended work of a piece that
+was certified and judged when it shipped.
+
+### THE PINS CAME FROM A MEASURED CONSENSUS, AND FOR EIGHT VANTAGES FROM ELEVEN RUNS
+
+`repin.mjs`, per TODO 73: five full independent sweeps into five directories, then the per-vantage
+medoid — each run's frame scored by its total pixel distance to the same frame in every other run.
+
+**FIVE SWEEPS, NOT FOUR, AND THE ODD NUMBER WAS THE POINT.** Eight vantages turned out to sit in
+one of TWO discrete states (below), and with an even number of runs a 2-2 split ties the medoid and
+the winner is "whichever was listed first" — arbitrary, and invisible in the output.
+
+**THEN N WAS RAISED TO ELEVEN ON THOSE EIGHT, AND IT CHANGED AN ANSWER.** A targeted sweep is eight
+shots rather than thirty, so six more cost about four minutes. On 03_kea_plate the five-run
+consensus put runs {2,3,4} in the majority and pinned run 3 — and at eleven runs **those same three
+runs are the minority** and the majority is {1,5,6,7,8,11}. The five-run pin was the wrong state.
+It was not bad luck: the split at eleven runs is 6-5, so a five-run sample is close to a coin flip.
+
+    02_hut_snow      6 / 5      03_kea_plate     6 / 5      06_skyline       7 / 4
+    13_idle_preen    6 / 5      16_trish         6 / 5      21_night_camp    6 / 5
+    25_preen_follow  6 / 5      29_lodge_deck    6 / 5
+
+**PIN PROVENANCE: run1 9, run2 8, run4 4, run3 3, run5 2, run6 1, run10 1.** A run is disqualified
+per frame, never wholesale — the fourth independent confirmation of that. The partitions differ per
+vantage (03 splits {1,5,6,7,8,11}, 06 splits {1,3,5,8,11,6,7}, 21 splits {2,5,6,9,10,11}), which is
+what you expect when the cause is decided per SHOT: capture.mjs launches a fresh browser per frame.
+
+Three vantages are perfectly reproducible across all five sweeps (spread 0, all ten pairs at 0 px):
+08_readability_320, 15_sign, 30_groomed_band.
+
+### THE EIGHT ARE BIMODAL, AND THE CAUSE IS MEASURED: THE CLOCK PIN IS OFF BY ONE FRAME
+
+Not churn, and not the machine. `03_kea_plate` reads **0 and 248 px within a cluster and
+23,681-23,823 px between clusters** — a wall three orders of magnitude wide. Probed in the page
+across six runs, the grass anchor is `[1.5, 1]` every single time and the camera is
+`[1.35, 0.95, 1.15]` every single time, so the 0.5 m grass snap of REPLAT P4c is **not** the cause.
+The only thing that differs is `uTime` at render, and it takes exactly one of two values:
+
+    uTime AT RENDER   12.0167  12.0167  12.0167  12.0167   (one 60 Hz frame of dt)
+                      12.0333  12.0333                     (two — a dropped frame)
+
+QUIET pins `G.time=12.0` in a `requestAnimationFrame` callback registered AFTER the game's own
+frame loop, so per frame the order is: `update(dt)` does `G.time+=dt` and writes `uTime=G.time`,
+`render()` draws with it, and only THEN does the pin put `G.time` back. **The value frozen is the
+value between frames; the value rendered is `12.0 + dt`** — and dt is quantised by vsync, which is
+why the result is two states rather than noise. 0.0167 s x flutterHz 2.7 = 0.045 rad of flutter
+phase, which across a close-range grass field is 23,800 pixels. **TODO 88** carries the fix.
+
+**SO THERE IS NO CONSENSUS STATE TO PIN ON THESE EIGHT.** The medoid picks the marginal majority,
+which is the best available choice and is barely better than a coin flip. Expect roughly four of
+the eight to flag on any given sweep until TODO 88 lands. That is a property of the rig, recorded
+here, not a reason to touch a threshold.
+
+### VERIFIED ON A FRESH SIXTH SWEEP, not on the sweeps the pins came from
+
+    diff       28 compared, 2 flagged (03_kea_plate 0.9648, 13_idle_preen 0.9645) — both bimodal,
+               both landed in the other state; the other six of the eight landed in the pinned one
+    pxdiff     28 compared, 15 over band, 4 over churn only (loudest 23,872 px on 13_idle_preen)
+    boxdiff    12 subjects compared, 4 changed (04_flight_underwing 0.8955, 03, 13, 25) — three are
+               bimodal vantages in the other state; 04 has the same multi-state signature
+    subjects   16 checked, 2 missing — 25_preen_follow beak and 29_lodge_deck hutgreen, THE SAME
+               TWO known-red from TODO 75 that session 17 recorded. No new regression.
+    stability  4 bimodal vantages, 3 takes each, 4 unstable — 0.9646 / 0.9643 / 0.9877 / 0.9725,
+               the same numbers as the cross-run distances, which is expected: capture.mjs uses one
+               browser per shot, so "take to take" and "run to run" are the same measurement here
+
+### THE CHURN CEILINGS WERE NOT RE-FIT, AND NOW THERE IS A REASON RATHER THAN A DOUBT
+
+15 of 28 exceed their recorded ceiling, up from 5 at P3b, and every large one is grass-bearing
+(05_tussock_ground 512x, 11_trailhead 806x, 14_player_view 4187x, 16_trish 892x, 25_preen_follow
+883x). Sessions 15b, 17 and 19 all declined to re-fit them on the grounds that "a set of ceilings
+whose violators change completely between two sessions is not measuring the vantages, it is
+measuring the machine". **That diagnosis was wrong, and the conclusion was right anyway.** The
+violators change because the state is decided by a coin flip per shot, not because the machine is
+unstable — so a ceiling fitted today would be a ceiling fitted to a coin flip. TODO 77's
+recalibration is now blocked on TODO 88, and should happen in the same breath as it, when a
+same-state reshoot is the only kind there is.
+
+### 27_travel_card IS STILL NOT IN THE SET, AND THIS TIME THE ANSWER IS NO WITH A REASON
+
+Eric asked for a decision. **No — not as it stands, and the precondition is one line.**
+
+It is the only shot in the sweep with **no `camLock`**, so it is the only one whose camera is
+whatever the game leaves it at. Probed across six runs its `travel.t` is pinned to exactly 0.85
+every time — the stage's pin works, and `u` is exactly 0.5 — and yet the camera lands:
+
+    camera y at shutter   20.884  20.238  20.604  22.309  23.068  23.066
+    spread                x 1.358 m    y 2.830 m    z 3.680 m
+
+The follow cam is an exponential smoother whose rate is `sm = 1 - 0.0018^dt`, applied to the
+camera's PREVIOUS position, and the travel blend then lerps that toward the flyover anchor at
+(7, 26, 34). Both are relative, so the resting position is a function of the whole frame-time
+history, and there is no camLock to overwrite it. Measured over five sweeps its ten pairwise
+distances run **736, 3259, 3954, 26913, 30236, 30921, 96949, 102834, 103658, 103863** — the worst
+pair moves a fifth of the frame. Pinning that adds a tripwire that is red most of the time for a
+reason nobody can act on, which is what 22_torch_beam cost the set for four builds.
+
+**IT SHOULD JOIN THE SET, once it can hold still.** It is the only frame that photographs the
+travel beat and the biome label — the tour chassis's own UI — and the card itself is already
+deterministic (raised from `updateUI` off `G.travel.phase`, which the pin holds indefinitely). Give
+it a `camLock` like every other vantage and it is pinnable; **TODO 89** carries it.
+
+### 26_tour_brochure IS READY TO BE PINNED TODAY, AND THAT IS ERIC'S CALL, NOT THIS TOOL'S
+
+Measured, and it is the cleanest frame in the sweep: **all ten pairwise distances across five
+independent sweeps are exactly 0 px.** It is a DOM screen with no 3D world in it — no grass, no
+camera, nothing for the clock to reach. It has shot every pass for five sessions and been named as
+unpinned every time. Adding a vantage is a decision for Eric and `repin.mjs` will keep saying so,
+but the measurement no longer has anything to say against it.

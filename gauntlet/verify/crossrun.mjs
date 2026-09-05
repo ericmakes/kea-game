@@ -40,7 +40,19 @@ export function shootRun(dir,ids){
   fs.mkdirSync(dir,{recursive:true});
   const env=ids&&ids.length?`SHOTS=${ids.join(',')} `:'';
   execSync(`${env}node gauntlet/verify/capture.mjs`,{cwd:ROOT,stdio:'ignore'});
-  for(const f of fs.readdirSync(CAP).filter(f2=>f2.endsWith('.png')))
+  /* A RUN DIRECTORY MUST CONTAIN ONLY WHAT THIS RUN SHOT. It used to copy every png in the capture
+     directory, which is correct for a full sweep and quietly wrong for a TARGETED one: SHOTS=03
+     re-shoots one frame and leaves the other twenty-nine sitting there from whatever ran last, so
+     the directory came out looking like a full sweep and carried twenty-nine STALE frames.
+     THAT IS NOT COSMETIC — repin.mjs forms its consensus from these directories. Six targeted
+     sweeps would have contributed six identical stale copies of every vantage they did not shoot,
+     and a medoid scored by total distance to the others hands the pin to whichever frame has the
+     most duplicates. It would have pinned the stale one, from a run that never photographed it,
+     with the tool reporting a healthy eleven-run consensus. Found while raising N on the eight
+     bimodal vantages, which is the first thing in this repo to mix targeted and full sweeps.
+     The filter mirrors capture.mjs's own ONLY test (startsWith), so "03" still means 03_kea_plate. */
+  const keep=f=>!ids||!ids.length||ids.some(o=>f.startsWith(o));
+  for(const f of fs.readdirSync(CAP).filter(f2=>f2.endsWith('.png')).filter(keep))
     fs.copyFileSync(path.join(CAP,f),path.join(dir,f));
   return dir;
 }

@@ -58,6 +58,19 @@ try{
   const s1=shootRun(R('s1'),[PICK]), s2=shootRun(R('s2'),[PICK]);
   ok(fs.existsSync(path.join(s1,PICK+'.png'))&&fs.existsSync(path.join(s2,PICK+'.png')),
     'two real runs each produced the frame, in their own process');
+  /* A TARGETED RUN DIRECTORY HOLDS ONLY WHAT IT SHOT, and this is the assertion that was missing
+     when it did not. shootRun used to copy every png in the capture directory, so `SHOOT=dir` with
+     one id produced a directory that LOOKED like a full sweep and carried twenty-nine stale frames
+     from whatever ran last. repin.mjs forms its consensus from these directories and scores the
+     medoid by total distance to the others, so several targeted sweeps would have handed the pin
+     to a stale duplicate — with the tool reporting a healthy eleven-run consensus. Found in
+     session 31 while raising N on the bimodal vantages, the first thing here to mix targeted and
+     full sweeps. It was invisible to this file because nothing looked at what ELSE was in there. */
+  const strays=fs.readdirSync(s1).filter(f=>f.endsWith('.png')&&f!==PICK+'.png');
+  ok(strays.length===0, 'and a targeted run directory holds ONLY the frame it shot'+
+    (strays.length?' — found '+strays.length+' stale: '+strays.slice(0,4).join(', '):''));
+  ok(fs.readdirSync(s1).filter(f=>f.endsWith('.png')).length===1,
+    'exactly one png, so a consensus formed from targeted sweeps cannot be fed a duplicate');
   const r5=compare([s1,s2],[PICK]);
   ok(r5.length===1 && r5[0].samples.length===1, 'and they compare as one pair');
   // NOT a multiple of the recorded ceiling: a real pair can legitimately be 0 (the two runs land in

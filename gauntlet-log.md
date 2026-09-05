@@ -4961,3 +4961,80 @@ The piece whose success condition is that the game looks and behaves exactly as 
   pre-change tree with the two exceptions matched by an untouched control, nothing re-pinned. Swap
   proof: `gauntlet/capture/P6A_{A,A2,B,C,D,E}_*.png`. Deferred and filed: the ski lodge deck
   (TODO 85), git-lfs (TODO 86).
+
+## SESSION 31 — 2026-09-06, the full re-pin, and the bimodality turned out to be one line
+
+The set was nine pieces stale and now it is not. The interesting part is what measuring it properly
+found on the way.
+
+- **THE STALE PINS WERE HIDING REPLAT P4 ENTIRELY.** Old pin against new at 05_tussock_ground: flat
+  gold cardboard spikes standing in dirt, against a tussock field with blade texture and rolling
+  hills behind it. Same story at 21_night_camp. Nothing red was pinned green — every difference is
+  the intended work of a piece that was certified and judged when it shipped.
+
+- **FIVE SWEEPS, NOT FOUR, AND THE ODD NUMBER WAS LOAD-BEARING.** Eight of twenty-eight vantages
+  sit in one of two discrete states. With an even number of runs a 2-2 split ties the medoid and
+  `repin.mjs` breaks the tie on run order — arbitrary, and invisible in the output.
+
+- **THEN N WENT TO ELEVEN ON THOSE EIGHT AND IT CHANGED AN ANSWER.** A targeted sweep is eight
+  shots rather than thirty, so six more cost four minutes. At five runs, 03_kea_plate's majority was
+  {2,3,4} and the pin was run 3. At eleven runs **those three are the minority** — the majority is
+  {1,5,6,7,8,11}. The five-run pin was the wrong state. Not bad luck either: the split at eleven is
+  6-5, so five runs is close to a coin flip. Eric's instruction was that 03 "especially must come
+  from consensus, not a single sweep"; five sweeps would still have got it wrong.
+
+- **THE CAUSE IS ONE LINE, AND IT IS NOT WHAT THE FILE ALREADY WARNS ABOUT.** `src/game.mjs`'s
+  REPLAT P4c note records at length that the grass field is a step function of camera position, so
+  that was the obvious suspect. It is innocent: probed in the page across six runs the grass anchor
+  is `[1.5, 1]` every time and the camera `[1.35, 0.95, 1.15]` every time. The only thing that
+  differs is `uTime` at render, and it takes exactly one of two values — **12.0167 or 12.0333**, one
+  or two 60 Hz frames of dt.
+  QUIET pins `G.time=12.0` in a requestAnimationFrame registered AFTER the game's frame loop, so
+  `update` does `G.time+=dt`, writes `uTime` from it, `render` draws, and only THEN does the pin put
+  it back. **What is frozen is the value between frames; what is rendered is `12.0 + dt`.** dt is
+  quantised by vsync, which is why the symptom is two states and not noise. 0.045 rad of flutter
+  phase across a close-range grass field is 23,800 pixels. TODO 88.
+
+- **SO THERE IS NO CONSENSUS STATE TO PIN ON THOSE EIGHT, and the note says so** rather than
+  presenting a medoid as if it settled the matter. Expect ~4 of the 8 to flag on any sweep until 88
+  lands. The fresh verification sweep flagged 2.
+
+- **THE CHURN CEILINGS STILL WERE NOT RE-FIT, and the standing reason was wrong.** 15 of 28 now
+  exceed, up from 5 at P3b. Sessions 15b, 17 and 19 all declined on the grounds that violators
+  changing between sessions means "it is measuring the machine". It is not: they change because the
+  state is a coin flip decided per SHOT — capture.mjs launches a browser per frame, which is also
+  why the 3/2 partitions differ per vantage. Right conclusion, wrong diagnosis, and TODO 77 is now
+  properly blocked on 88 instead of on a shrug.
+
+- **27_travel_card: NO, AND THE PRECONDITION IS ONE LINE.** It is the only shot in the sweep with no
+  `camLock`. Its `travel.t` pin works perfectly — exactly 0.85, `u` exactly 0.5, all six probe runs
+  — and the camera still lands 2.8 m apart in y, because the follow cam is an exponential smoother
+  on its own previous position and the travel blend is a relative lerp toward a flyover anchor 25 m
+  up. Ten pairwise distances over five sweeps run 736 to 103,863 px; the worst pair moves a fifth of
+  the frame. It should join the set — it is the only frame photographing the travel beat and the
+  biome label — once it has a camLock. TODO 89.
+  **26_tour_brochure, by contrast, is pinnable today: ten pairs, all exactly 0 px.** It is a DOM
+  screen with no 3D world in it. Adding a vantage stays Eric's call.
+
+- **TWO TOOL BUGS FOUND BY USING THEM, one of which would have mis-pinned this very session.**
+  `shootRun` copied every png in the capture directory, which is right for a full sweep and quietly
+  wrong for a targeted one: `SHOOT=dir` with one id left twenty-nine STALE frames sitting there from
+  whatever ran last. `repin.mjs` forms its consensus from those directories and scores the medoid by
+  total distance to the others — so six targeted sweeps would have handed the pin to a stale
+  duplicate of a frame they never photographed, with the tool reporting a healthy eleven-run
+  consensus. Caught because this is the first thing in the repo to mix targeted and full sweeps.
+  Fixed, and `crossrun-selftest.mjs` now asserts it (68 stale frames against the old code).
+  Also: `repin.mjs` printed the `RUNS` default rather than the number of runs it used, so a
+  five-run consensus reported "4 runs" — and that line is what gets pasted into BASELINE.md as the
+  pin's own provenance. And its unpinned report listed forty proof frames from previous pieces,
+  burying the one thing it exists to say; it filters to numbered vantages now.
+
+- **AND I DELETED SIX SWEEPS WITH A SHELL BUG.** `for k in $BI` does not word-split in zsh, so a
+  cleanup loop meant to keep eight frames per directory compared every filename against one long
+  string and kept none. Cost four minutes of re-shooting; the five full sweeps were untouched. The
+  frames are kept on disk as the pin's evidence, which is `repin.mjs`'s own argument for `DIRS=`.
+
+- **VERIFIED:** gate CERTIFIED-SHIP on the same specimen every sweep was shot from
+  (3b83b706927a5b8bd3b8289b53fe21b6); fresh sixth sweep — diff 26 of 28 green, subjects the same two
+  known-red from TODO 75 and no new regression, boxdiff 4 changed of which 3 are bimodal vantages in
+  the other state; crossrun-selftest ALL PASS. All 28 pinned, nothing added to the set.

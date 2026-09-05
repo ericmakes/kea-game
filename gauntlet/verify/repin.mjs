@@ -97,17 +97,32 @@ try{
   const w=Math.max(...rows.map(r=>r.id.length));
   for(const r of rows){
     if(r.skip){ console.log('- '+r.id.padEnd(w)+'  only '+r.runs+' run(s) produced this frame — NOT pinned'); continue; }
-    console.log((DRY?'· ':'✓ ')+r.id.padEnd(w)+'  medoid run '+r.win+
+    console.log((DRY?'· ':'✓ ')+r.id.padEnd(w)+'  medoid run '+r.win+' of '+r.runs+
       '   totals ['+r.sums.join(' ')+']   spread '+r.spread);
   }
   console.log('\nPIN PROVENANCE  '+Object.keys(prov).sort().map(k=>'run'+k+' '+prov[k]).join(', ')+
     '   (a run is disqualified per frame, never wholesale)');
-  console.log('REPIN: '+RUNS+' runs, '+(rows.length-thin)+' vantages '+(DRY?'would be':'')+' pinned'+
+  /* THE RUN COUNT IS THE NUMBER OF RUNS THIS ACTUALLY USED, not the RUNS default. With
+     DIRS=/a,/b,/c,/d,/e it printed "4 runs" from a five-run consensus — and that line is what gets
+     pasted into BASELINE.md as the pin's provenance, so it was a tool misreporting its own
+     evidence. Per vantage the count can be lower still (a targeted sweep carries only some
+     frames), which is why the per-row `runs` is what the skip check reads. */
+  console.log('REPIN: '+(DIRS.length||RUNS)+' run directories, '+
+    (rows.length-thin)+' vantages '+(DRY?'would be':'')+' pinned'+
     (thin?', '+thin+' skipped for want of a consensus':'')+(DRY?'  [DRY RUN — nothing written]':''));
   /* NOT IN THE SET, AND THE TOOL SAYS SO EVERY TIME rather than leaving it to be remembered. */
-  /* probe_*.png are probe.mjs's output, not vantages, and they sit in the same directory — so
-     they are excluded here rather than reported as unpinned vantages every single run. */
-  const shot=new Set(fs.readdirSync(dirs[0]).filter(f=>f.endsWith('.png')&&!f.startsWith('probe_')));
+  /* A VANTAGE IS A NUMBERED FRAME, and that is now the filter rather than "everything except
+     probe_*". The capture directory also holds every PROOF frame any piece has ever shot —
+     P4d_proof_wide_AB, P5e_step2_face, P6A_B_bench_model and about forty others — and they are not
+     vantages, have no baseline and never will. Listing them buried the one thing this line exists
+     to say (26_tour_brochure and 27_travel_card are waiting on a decision) under forty rows of
+     noise, which is the same as not saying it.
+     THE UNION OF EVERY RUN DIRECTORY, not dirs[0], because a TARGETED sweep carries only the
+     frames it was asked for — `SHOOT=dir repin.mjs 03_kea_plate` writes one file — and reading the
+     first directory alone would report the other twenty-seven as unpinned. */
+  const shot=new Set();
+  for(const d of dirs) for(const f of fs.readdirSync(d))
+    if(/^\d\d_.*\.png$/.test(f))shot.add(f);
   const unpinned=[...shot].filter(f=>!fs.existsSync(path.join(BASE,f)));
   if(unpinned.length) console.log('UNPINNED, and still not pinned by this tool — adding a vantage '+
     'is a decision for Eric, not a side effect of a re-pin: '+unpinned.map(f=>f.replace(/\.png$/,'')).join(', '));
