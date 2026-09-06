@@ -1993,3 +1993,49 @@ registering the station without the village goes red on both.
 AND SABOTAGE FOUND A REAL GAP IN THE NEW WORK: the cross-map mission-id check compared one-player
 lists only, so a deliberate collision on `tarp` came back green, because `tarp` is a COOP mission
 that only exists in mode 2. Half the ids on every map were outside the check. Both modes now.
+
+### 91. camp_van IS A PLACEHOLDER WHITE BOX — REFINE OR REPLACE IN THE MODEL PASS
+Filed 2026-09-06, session 32, by Eric when he judged the campground first pins. Deferred
+deliberately, not overlooked: the campground passed with it in frame.
+WHAT IT IS: `defineProp('camp_van')` — a plain white rbox shell with a black skirt, four wheels, a
+window band, and an awning made of one 2.5 x 4.0 m plank on a rail. It reads as a bread loaf.
+WHY IT WAS BUILT THAT WAY: the piece landed while the bird was parked pending externally-sourced
+models, so nothing that needs an asset could be sourced, and P6A's registry exists precisely so a
+placeholder can be swapped by editing one row. It is `source:'primitive'`, biome `campground`, with
+its collider and its `roof` / `door` / `awning` anchors already declared.
+IT IS DELIBERATELY PLAIN, and that part should survive a refinement: it carries NO wipers, NO
+mirrors and NO door seal, because those are the CARPARK campervan's mission anchors and a prop name
+is a detector in this engine. Whatever replaces it must not acquire them.
+THE FIND IT: `PROPS.ALL` filtered to biome 'campground' IS the model-pass work list — the battery
+asserts it can be read that way — so this row needs no separate hunting.
+THE AWNING IS THE WEAKEST PART and is worth a look even without a model: fabric sag on a rail is
+two triangles and a sine, and the plank is what makes the whole site read as a toy.
+
+### 92. THE RIVER-FLAT GRASS MAY READ AS MOWN LAWN — REVISIT bare AGAINST THE nz_ PLATES
+Filed 2026-09-06, session 32, by Eric on the campground first pins.
+THE NUMBER: `GRASS.biomes.campground.bare = 0.10`, against the carpark's 0.18 and the ski field's
+0.34. `bare` is the lever that decides how much ground has no blade on it, so 0.10 is the lushest
+ground in the tour by a wide margin — and the intent was "somebody grazes this", which is not the
+same as "somebody mows this". Photographed at 31/32/33 it may have crossed into lawn.
+WHY IT WAS SET THERE AND WHAT MUST NOT BE UNDONE: the heights (0.18-0.42) sit deliberately inside
+the band the carpark's were LOCKED at against the SUBJECT FLOORS — the P4b measurement where
+h 0.30-0.78 buried the bird and put three classifiers red at once (03_kea_plate 465 against a floor
+of 1600). Raising `bare` is safe; raising HEIGHT to compensate is the move that costs the bird.
+DO IT AGAINST THE PLATES, NOT BY EYE: the nz_ wall is what governs the country, and a grazed river
+flat in those photographs is patchy, tufted and shows dirt between clumps — measure the bare
+fraction off a plate rather than picking a number that looks better in one frame.
+AND IT IS A RE-PIN: 31, 32 and 33 are all grass-dominated, so any change here re-pins all three.
+
+### 93. THE SHELTER'S CONCRETE PAD IS BRIGHT IN FRAME — FIX WITH WEAR, NOT A HAND TINT
+Filed 2026-09-06, session 32, by Eric on 31_camp_shelter, WITH the method specified.
+THE PROBLEM: the cook shelter's pad is the `concrete` P3 scanned family doing exactly what it does,
+and against this map's green pasture and muted track it is the brightest thing in the frame — it
+pulls the eye off the structure standing on it.
+ERIC'S CONSTRAINT, AND IT IS THE WHOLE POINT OF THE ENTRY: **fix it with WEAR AND EDGE STAINING,
+not with a hand tint.** Darkening the material is a lie that spreads — `concrete` is a shared family
+and the ski field's tow-top footing wears it too, so tinting it here either tints that or forks the
+family. What a real campground slab has is a scuffed centre where everybody walks, dirt washed
+against its edges, and moss in the corners. G.wear already exists in the carpark and does exactly
+this: a circle of the surface's own colour, darkened, laid on top and REGISTERED as a record.
+SO THE SHAPE OF THE FIX is a wear pass on the pad, reusing the carpark's own idiom, not a colour
+edit. Cheaper than it sounds and it is the same tool.

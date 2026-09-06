@@ -522,3 +522,55 @@ independent sweeps are exactly 0 px.** It is a DOM screen with no 3D world in it
 camera, nothing for the clock to reach. It has shot every pass for five sessions and been named as
 unpinned every time. Adding a vantage is a decision for Eric and `repin.mjs` will keep saying so,
 but the measurement no longer has anything to say against it.
+
+## NEW VANTAGES 2026-09-06 (session 32 — the campground joins the set, 28 -> 31)
+
+Eric judged 31_camp_shelter, 32_camp_sites and 33_camp_gate and called them in. **Adding a vantage
+is his decision and it stayed his decision** — `repin.mjs` refuses to pin a frame with no baseline,
+and rather than loosen that refusal it gained a second, explicit list: `FIRSTPIN=<ids>`. Naming an
+id there that ALREADY has a baseline is an error rather than a no-op, because FIRSTPIN means "this
+has never been pinned" and if it has, the caller believes something untrue about the set. Everything
+else is identical — same sweeps, same per-vantage medoid, same provenance line. It exists because
+three more maps are coming and each arrives as a set of first pins; doing that by hand three more
+times is how a consensus quietly becomes one sweep again.
+
+**PINNED FROM AN ELEVEN-RUN CONSENSUS ON ONE OF THEM AND FIVE ON THE OTHER TWO.** All three came
+back with the two-cluster signature TODO 88 diagnoses — grass-heavy frames whose wind phase is
+decided by whether the last frame before the shutter took one vsync interval or two:
+
+    31_camp_shelter   {3,5,1,4} agree at 0-7 px      | run 2 stands  4,144 away   4/1
+    33_camp_gate      {2,3,5,4} agree at 0-94 px     | run 1 stands 10,671 away   4/1
+    32_camp_sites     {1,2,4} agree at 0-114 px      | {3,5} stand   9,877 away   3/2
+
+**32 WAS ONLY A 3-OF-5 MAJORITY, SO N WENT TO ELEVEN ON IT.** Session 31 learned what a 3/2 split
+is worth: 03_kea_plate's five-run medoid picked the state that turned out to be the MINORITY at
+eleven runs. A targeted sweep of one vantage is one shot, so six more cost about a minute. At eleven
+the split is 6/5 — {1,2,4,6,7,11} against {3,5,8,9,10} — and the medoid stayed in the same cluster
+it chose at five. Confirmed rather than assumed.
+
+PIN PROVENANCE: run1 1, run2 1, run3 1.
+
+### VERIFIED ON A FRESH SWEEP, not on the sweeps the pins came from
+
+    31_camp_shelter   ssim 1.0000      21 px
+    33_camp_gate      ssim 1.0000       0 px
+    32_camp_sites     ssim 0.9885    9,826 px  <- landed in the OTHER cluster, at exactly the
+                                                 inter-cluster distance measured above
+
+### THEIR CHURN CEILINGS WERE NOT FITTED, AND THAT IS THE SAME DECISION AS LAST SESSION'S
+
+The three have no entry in pxdiff's CHURN table, so they take the DEFAULT of 200 — which for a
+grass-dominated frame is a guaranteed standing warning, and 32 duly reports 49x. **Fitting a ceiling
+now would be fitting it to a coin flip**, which is precisely why session 31 declined to re-fit the
+existing 28 and why TODO 77 is blocked on TODO 88 rather than on a shrug. What is recorded instead
+is the measurement TODO 77 will need when it runs: **the inter-cluster distances are ~4,100 px at
+31, ~9,900 px at 32 and ~10,700 px at 33, and within a cluster all three reshoot at 0-114 px.** Fix
+the clock pin and the second number is the only one left.
+
+### AND THE THREE THINGS ERIC DEFERRED WHEN HE JUDGED THEM
+
+Filed rather than carried in anybody's head: TODO 91 (camp_van is a placeholder white box — refine
+or replace in the model pass), TODO 92 (the river-flat grass may read as mown lawn; revisit `bare`
+against the nz_ plates, and NOT by raising blade height, which is the move that buries the bird),
+TODO 93 (the shelter's concrete pad is bright in frame — fix with wear and edge staining, never a
+hand tint, because `concrete` is a shared family and the ski field's footing wears it too).

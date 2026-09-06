@@ -1,5 +1,6 @@
 // REPIN — the consensus re-pin, as an instrument instead of a hand procedure.
 // Usage: node gauntlet/verify/repin.mjs [ids]    env: RUNS (default 4), DRY=1, KEEP=1
+//        FIRSTPIN=<ids> ...      pin vantages that have NO baseline yet (Eric's call, see below)
 //        SHOOT=<dir> node gauntlet/verify/repin.mjs [ids]      one sweep into <dir>, then stop
 //        DIRS=<d1>,<d2>,<d3>[,...] node gauntlet/verify/repin.mjs [ids]   consensus from those
 //
@@ -27,6 +28,15 @@
 // "winner" is just the first one - so such a vantage is reported and left alone. Same for a vantage
 // with no baseline: adding one is a new-vantage decision for Eric, not a side effect of a re-pin
 // (26_tour_brochure and 27_travel_card have been waiting on that call for three sessions).
+//
+// FIRSTPIN IS HOW ERIC'S DECISION GETS EXPRESSED, and it is deliberately a SECOND, EXPLICIT list
+// rather than a loosening of the rule above. The refusal is the safety property - a re-pin must
+// never quietly enlarge the pinned set - so the ids to first-pin have to be NAMED, and naming one
+// that already has a baseline is refused as a mistake rather than treated as a re-pin. Everything
+// else is identical: the same N sweeps, the same per-vantage medoid, the same provenance line. It
+// exists because the tour has three more maps to come and each one arrives as a set of first pins;
+// doing that by hand three more times is how a consensus quietly becomes one sweep again.
+//     FIRSTPIN=31_camp_shelter,32_camp_sites,33_camp_gate DIRS=/a,/b,/c node repin.mjs
 import fs from 'fs'; import path from 'path'; import os from 'os';
 import {shootRun} from './crossrun.mjs';
 import {pxdelta} from './pxdiff.mjs';
@@ -36,6 +46,7 @@ const ROOT=path.resolve(HERE,'..','..');
 const CAP=path.resolve(HERE,'..','capture'), BASE=path.join(CAP,'baseline');
 
 const IDS=(process.argv[2]||'').split(',').filter(Boolean);
+const FIRST=(process.env.FIRSTPIN||'').split(',').filter(Boolean);
 const RUNS=+(process.env.RUNS||4);
 const DRY=!!process.env.DRY;
 /* SHOOT-THEN-SELECT, AS TWO SEPARATE JOBS, BECAUSE ONE LONG JOB IS A FRAGILE JOB. Four sweeps is
@@ -74,6 +85,18 @@ try{
   const pinned=path.join(BASE);
   const want=fs.readdirSync(BASE).filter(f=>f.endsWith('.png'))
     .filter(f=>!IDS.length||IDS.some(o=>f.startsWith(o)));
+  /* THE FIRST PINS ARE ADDED TO THE WORK LIST, and a name that is already pinned is an ERROR rather
+     than a no-op: FIRSTPIN means "this has never been pinned", so if it has, the caller believes
+     something untrue about the set and should find that out here. */
+  for(const id of FIRST){
+    const f=id.endsWith('.png')?id:id+'.png';
+    if(fs.existsSync(path.join(BASE,f)))
+      throw new Error('repin: FIRSTPIN names '+f+', which ALREADY has a baseline — that is a re-pin, '+
+        'not a first pin. Drop it from FIRSTPIN and pass it as an id instead.');
+    if(!dirs.some(d=>fs.existsSync(path.join(d,f))))
+      throw new Error('repin: FIRSTPIN names '+f+', which none of the run directories shot');
+    want.push(f);
+  }
 
   const prov={}, rows=[]; let thin=0;
   for(const f of want){
@@ -102,6 +125,8 @@ try{
   }
   console.log('\nPIN PROVENANCE  '+Object.keys(prov).sort().map(k=>'run'+k+' '+prov[k]).join(', ')+
     '   (a run is disqualified per frame, never wholesale)');
+  if(FIRST.length)console.log('FIRST PINS ADDED TO THE SET  '+FIRST.join(', ')+
+    '   — a new vantage on Eric\'s call, not a side effect of a re-pin');
   /* THE RUN COUNT IS THE NUMBER OF RUNS THIS ACTUALLY USED, not the RUNS default. With
      DIRS=/a,/b,/c,/d,/e it printed "4 runs" from a five-run consensus — and that line is what gets
      pasted into BASELINE.md as the pin's provenance, so it was a tool misreporting its own
