@@ -1923,3 +1923,36 @@ which is the tour chassis's own UI, and the card is already deterministic — it
 AND WHILE THAT IS OPEN: 26_tour_brochure is ready to be pinned TODAY. All ten pairwise distances
 across five independent sweeps are exactly 0 px — it is a DOM screen with no 3D world in it. Both
 have been named as unpinned every run for five sessions; adding a vantage is Eric's call.
+
+### 90. THE BIRD IS PARKED — WHAT THE TAIL INVESTIGATION FOUND BEFORE IT WAS
+Filed 2026-09-06, session 32, when Eric parked the bird pending externally-sourced models. The P5e
+tail work is stashed (`git stash list` — "PARKED P5e bird work"), not deleted, and the tree is back
+at the certified tip with the model off by default. Three findings are worth more than the code and
+are recorded here so nobody pays for them twice.
+
+**1. THE CREST DELETION DID NOT TAKE THE VANE GEOMETRY. P5d IS EXONERATED.** P5E.md section 4 asks
+which of missing/hidden/culled the tail is, and says a culled vane is "a bug in P5d". It is not.
+The tail-feather geometry is present and IDENTICAL through the whole derivation chain — **594
+triangles** entirely on `TailEnd_LongFeather` bones in `rockatoo.glb`, `kea_base.glb` AND
+`kea_bill.glb`. The crest pass took the mesh from 16,989 to 4,927 triangles and left every one of
+those 594 alone. Measured by parsing the GLB directly, and confirmed at runtime: the strip removes
+exactly 594 faces.
+
+**2. THE ASSET'S TAIL IS GENUINELY THREE BARE RODS, so a replacement IS the right call.** Per
+feather bone, the geometry is 3 clusters of length 5.50 with thickness/width 0.91 (round rods) plus
+27 flat zero-thickness cards of width 1.49 that are too small to read. Photographed with the strip
+disabled, it is exactly what Eric described: three bare wires and no vane. So the parked work's
+INTENT was right even though its premise was wrong.
+
+**3. THE PARKED REPLACEMENT DOES NOT RENDER, AND THE NUMBER SAYS WHY.** Its five vanes measure
+0.09 x 0.15 x 0.17 m and sit at z 0.194..0.365 against a body whose rear edge is z 0.383 — **the
+tip lands 17 mm INSIDE the bird**, so the whole 0.188 m is spent crossing the body it starts in.
+That is why three "different" tail profiles photographed identically to each other and to no tail.
+A measured sweep of length/drop, if it is ever wanted: 25u/0.50 gives -17 mm, 40u/0.26 gives
++94 mm, 50u/0.16 gives +156 mm past the rear edge. The plate wants a closed near-horizontal tail;
++156 mm on this 0.525 m body is the band that reads.
+
+**AND A TRAP FOR WHOEVER RESUMES IT: THE TAIL IS REMOVED TWICE.** The index strip in `keaRegions`
+deletes the faces AND the fragment shader discards on `vKeaQl>0.5`. Turning off only the strip
+leaves a control that still photographs a tailless bird — a control that quietly agrees with the
+thing it is controlling for. The stash gates both on one knob (`plume.tailStrip`).
