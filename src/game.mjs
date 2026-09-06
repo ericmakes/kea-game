@@ -735,6 +735,14 @@ const GRASS={
                base:0x4C6B22, tint:[0xC58E31,0x8E6118,0xE6D6A2], tip:0x7A3F16},
     skifield: {h:[0.26,0.62], w:[0.006,0.014], lean:[0.05,0.19], bare:0.34, clumpM:1.75, taper:0.50,
                base:0x46661F, tint:[0xD09B2C,0x94661C,0xEADCAC], tip:0x8A4A18},
+    /* A RIVER FLAT IS THE GREENEST GROUND IN THE TOUR, and it is the one place a profile should
+       NOT be the tussock palette with the numbers nudged: this is grazed river-flat pasture, so it
+       is shorter than the carpark's, much less bare, and its body colours lean green-to-straw
+       rather than ochre-to-rust. `bare` is the lever that says "somebody mows this". Heights stay
+       inside the band the carpark's were LOCKED at against the subject floors (0.20-0.48) so the
+       bird cannot be buried — that measurement was paid for once. */
+    campground:{h:[0.18,0.42], w:[0.008,0.017], lean:[0.12,0.38], bare:0.10, clumpM:1.15, taper:0.58,
+               base:0x3E6A1C, tint:[0xA8B043,0x62701F,0xE6E2BC], tip:0x66521E},
   },
 };
 /* ITS OWN IGNORED LIST, not MATS's. matMerge pushes rejected paths into whatever array it is
@@ -2857,6 +2865,18 @@ function grassCuts(biome){
             [L.x,L.z,L.w/2+1.5,L.d/2+L.deck+1.5],                            // the lodge and deck
             [0,0,0,0]];
   }
+  /* FOUR IS THE BUDGET AND THE CAMPGROUND WAS LAID OUT AROUND IT (CAMPGROUND.md section 2). An
+     oval loop road cannot be cut with boxes — two long sides and two ends spends the lot before a
+     building is clear — so the map is a straight gravel track with the sites hung off it, which is
+     what the smaller DOC sites actually are. The sites themselves keep their grass on purpose:
+     a tent standing in mown pasture is the picture, a tent on a bald disc is not. */
+  if(biome==='campground'){
+    const T=CAMPTRACK, S=CAMPSHELTER, A=CAMPABLUTION;
+    return [[T.x,(T.z0+T.z1)/2,T.w/2+0.6,(T.z1-T.z0)/2+1.0],   // the gravel track
+            [S.x,S.z,S.w/2+0.6,S.d/2+0.8],                      // the shelter pad
+            [A.x,A.z,A.w/2+0.5,A.d/2+0.5],                      // the ablutions pad
+            [CAMPVAN.x,CAMPVAN.z,3.4,3.0]];                     // the campervan hardstand
+  }
   return [[0,34,120,5.6],            // road
           [2,17,21,11.5],            // carpark
           [-24,-9,4.2,3.4],          // hut slab
@@ -4085,6 +4105,441 @@ function castSkifield(){
    down the way in rather than up out of it. */
 defineBiome('skifield',{label:'THE CLUB SKI FIELD',build:buildSkifield,cast:castSkifield,missions:missionsSkifield,
   anchor:{x:-2,y:28,z:52, lx:-4,ly:1.5,lz:14}, snow:SKISNOW});
+
+/* ---------- THE DOC CAMPGROUND (CAMPGROUND.md, the third map) ----------
+   The brochure has declared this map since TODO 37 and rendered it 'soon' for exactly one reason:
+   BIOMES['campground'] did not exist. The pin, the star accounting, the travel beat, the save slot
+   and the unlock arithmetic were all built and all waiting on this call.
+   ADDITIVE, AND THAT IS TODO 47 RATHER THAN TASTE. The carpark keeps its tent, its clothes line,
+   its chilly bin and its picnic set: propAt keeps a deliberate rnd draw per prop so the country
+   does not move, so deleting one carpark prop reshuffles grass, snow, tussock and beech across all
+   28 baselines. Two maps have a tent. That is what campgrounds and carparks are like.
+
+   ---- WHY THE ROAD IS A STRAIGHT TRACK AND NOT THE LOOP THE BRIEF IMAGINED ----
+   grassCuts() gives a biome FOUR boxes and says so: "a fifth is a new uniform rather than a silent
+   truncation". An oval loop cannot be cut with boxes at all — it would want its two long sides and
+   both ends, which is the whole budget before a single building is clear of grass. So the map is
+   built the way the smaller DOC sites actually are: one gravel access track with the sites hung off
+   it. The four cuts are the track, the shelter pad, the ablutions pad and the campervan hardstand,
+   which is exactly the budget and leaves the sites themselves standing in grass, where they belong. */
+const CAMPNEST={x:-34,z:-26};
+const CAMPTRACK={x:0, z0:-18, z1:26, w:5.0};        // the gravel access track, entrance at +z
+const CAMPSHELTER={x:-11,z:-6,w:8.4,d:5.0,h:2.45};  // open-sided cook shelter, the climbable one
+const CAMPABLUTION={x:11,z:-8,w:4.2,d:3.0,h:2.35};  // the block, with a roof to stand on
+const CAMPVAN={x:9,z:8};                            // the occupied hardstand site
+const CAMPTENTSITE={x:-10,z:9};                     // the occupied grass site
+const CAMPBOARD={x:3.6,z:21};                       // information board + honesty box, at the gate
+const CAMPTAP={x:-3.4,z:2};                         // the standpipe everybody walks to
+const CAMPBIN={x:4.2,z:14};                         // the rat-proof bin corral
+/* SIX NUMBERED SITES, TWO OCCUPIED. A bare site is not filler: it is where the bird lands when it
+   is chased off an occupied one, and it is what makes the occupied two read as somebody's. */
+const CAMPSITES=[
+  {n:1,x:-10,z:9,  occupied:'tent'},
+  {n:2,x:9,  z:8,  occupied:'van'},
+  {n:3,x:-11,z:-1, occupied:null},
+  {n:4,x:10, z:0,  occupied:null},
+  {n:5,x:-9, z:17, occupied:null},
+  {n:6,x:9,  z:17, occupied:null},
+];
+/* NO SNOW ENVELOPE AND NO ROAD LANES, BOTH DECLARED RATHER THAN OMITTED — piece 39 found four
+   globals that were really carpark declarations, and the one it did NOT find put seven hatchbacks
+   across the ski field. A river flat in summer has no drifts and a campground track takes no
+   through traffic. The battery holds both to zero. */
+const CAMPSNOW=null;
+
+defineProp('camp_shelter',{
+  biome:'campground', at:{x:CAMPSHELTER.x,z:CAMPSHELTER.z},
+  collider:[{kind:'box',w:CAMPSHELTER.w,d:CAMPSHELTER.d,top:CAMPSHELTER.h+0.25,solid:true}],
+  anchors:{ridge:{x:0,y:CAMPSHELTER.h+0.42,z:0}, tableA:{x:-2.1,y:0.78,z:0}, tableB:{x:2.1,y:0.78,z:0}},
+  material:{family:'corrugate',nightTint:false},
+  build(g,p){
+    const S=CAMPSHELTER;
+    for(const sx of [-1,1])for(const sz of [-1,1])
+      cyl(0.09,0.10,S.h,PAL.woodD,sx*(S.w/2-0.35),S.h/2,sz*(S.d/2-0.3),g,7);
+    box(S.w,0.10,S.d,PAL.hutRoof,0,S.h+0.05,0,g);                    // the roof
+    for(let i=0;i<5;i++) box(S.w-0.4,0.05,0.07,0x4A545C,0,S.h+0.12,-S.d/2+0.5+i*((S.d-1.0)/4),g,{noshadow:true});
+    box(S.w+0.5,0.14,0.16,PAL.hutRoof,0,S.h+0.16,0,g,{noshadow:true}); // ridge batten
+    box(S.w+0.6,0.16,S.d+0.5,0x9AA0A6,0,0.05,0,g,{noshadow:true});     // the concrete pad
+    for(const tx of [-2.1,2.1]){                                       // two trestle tables
+      rbox(2.2,0.09,0.8,0.03,PAL.wood,tx,0.74,0,g);
+      for(const lx of [-0.85,0.85])for(const lz of [-0.28,0.28])
+        cyl(0.05,0.05,0.70,PAL.woodD,tx+lx,0.37,lz,g,6);
+      rbox(2.0,0.07,0.28,0.02,PAL.wood,tx,0.44,0.62,g);                // the bench everybody straddles
+    }
+    p.collide();
+  },
+});
+defineProp('camp_ablution',{
+  biome:'campground', at:{x:CAMPABLUTION.x,z:CAMPABLUTION.z},
+  collider:[{kind:'box',w:CAMPABLUTION.w,d:CAMPABLUTION.d,top:CAMPABLUTION.h+0.2,solid:true}],
+  anchors:{roof:{x:0,y:CAMPABLUTION.h+0.2,z:0}, door:{x:0,y:1.0,z:CAMPABLUTION.d/2+0.06}},
+  material:{family:'weatherboard',nightTint:false},
+  build(g,p){
+    const A=CAMPABLUTION;
+    box(A.w+0.3,0.22,A.d+0.3,0x9AA0A6,0,0.11,0,g,{noshadow:true});    // the pad
+    /* DOC GREEN, NOT THE CARPARK HUT'S RED. PAL.hut is the alpine hut's weatherboard and it
+       photographed as a bright red shed on a green flat — the one building on this map that a
+       visitor is meant not to notice. Department buildings are dark green or brown; this is the
+       green the DOC board already uses, a shade down so the board still reads against it. */
+    box(A.w,A.h,A.d,0x2F5140,0,A.h/2+0.2,0,g);
+    const rf=box(A.w+0.5,0.12,A.d+0.5,PAL.hutRoof,0,A.h+0.26,0,g); rf.rotation.x=0.05;
+    box(0.9,1.9,0.08,PAL.woodD,0,1.15,A.d/2+0.04,g);                  // the door
+    box(0.5,0.16,0.05,0x4A545C,0,A.h-0.1,A.d/2+0.04,g,{noshadow:true});// the vent
+    p.collide();
+  },
+});
+defineProp('camp_board',{
+  biome:'campground', at:{x:CAMPBOARD.x,z:CAMPBOARD.z},
+  collider:[{kind:'box',w:2.1,d:0.3,top:2.3,solid:true}],
+  anchors:{panel:{x:0,y:1.75,z:0.08}, box:{x:1.35,y:1.05,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    cyl(0.08,0.10,2.2,PAL.woodD,-0.85,1.10,0,g,7); cyl(0.08,0.10,2.2,PAL.woodD,0.85,1.10,0,g,7);
+    box(2.0,1.0,0.08,0x2A5A3E,0,1.75,0,g);                             // the DOC board
+    /* THE HONESTY BOX IS THE MAP'S SIGNATURE TARGET and it is its own post beside the board, not a
+       decal on it — a kea works a lid, and a lid needs a body to be hinged to. */
+    cyl(0.07,0.08,1.0,PAL.woodD,1.35,0.50,0,g,7);
+    rbox(0.34,0.30,0.26,0.04,0x6E4A2A,1.35,1.05,0,g);
+    rbox(0.36,0.05,0.28,0.02,PAL.metal,1.35,1.22,0,g,{noshadow:true}); // the lid
+    p.collide();
+  },
+});
+defineProp('camp_tap',{
+  biome:'campground', at:{x:CAMPTAP.x,z:CAMPTAP.z},
+  collider:[],
+  anchors:{spout:{x:0,y:0.86,z:0.12}, puddle:{x:0,y:0.02,z:0.55}},
+  material:{family:'concrete',nightTint:false},
+  build(g,p){
+    const pad=cyl(0.85,0.85,0.08,0xA9A7A2,0,0.04,0,g,18);
+    cyl(0.05,0.055,0.95,PAL.metal,0,0.47,0,g,8);
+    cyl(0.03,0.03,0.22,PAL.metal,0,0.86,0.10,g,6).rotation.x=1.57;     // the spout
+    rbox(0.16,0.04,0.05,0.015,0x8E3A2E,0,0.90,-0.03,g,{noshadow:true});// the handle
+    if(!HEADLESS){ const pd=new THREE.Mesh(new THREE.CircleGeometry(0.62,18),bmat(0xC6DCE8));
+      pd.rotation.x=-Math.PI/2; pd.position.set(0,0.085,0.55); g.add(pd); }
+  },
+});
+defineProp('camp_bin_corral',{
+  biome:'campground', at:{x:CAMPBIN.x,z:CAMPBIN.z},
+  collider:[{kind:'box',w:1.7,d:1.2,top:1.25,solid:true}],
+  anchors:{lid:{x:0,y:1.28,z:0}, latch:{x:0,y:0.95,z:0.62}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    box(1.8,0.12,1.3,0x8E8B84,0,0.06,0,g,{noshadow:true});             // the pad
+    for(const sx of [-1,1])for(const sz of [-1,1])
+      box(0.08,1.2,0.08,PAL.metal,sx*0.8,0.6,sz*0.55,g);
+    /* THE RAT-PROOF CAGE: a mesh box, which is a run of bars rather than a solid, because the
+       whole point of the thing is that you can see the bags inside it and not reach them. */
+    for(let i=0;i<9;i++) box(0.03,1.1,0.03,PAL.metal,-0.76+i*0.19,0.62,-0.6,g,{noshadow:true});
+    for(let i=0;i<9;i++) box(0.03,1.1,0.03,PAL.metal,-0.76+i*0.19,0.62,0.6,g,{noshadow:true});
+    p.lid=box(1.75,0.09,1.28,0x4E6E5E,0,1.24,0,g);
+    rbox(0.28,0.06,0.10,0.02,PAL.dark,0,0.95,0.62,g,{noshadow:true});  // the latch
+    p.collide();
+  },
+});
+/* THE SITE MARKER: six of them, one entry placed six times, the kea-crossing-diamond pattern. */
+defineProp('camp_site_post',{
+  biome:'campground', at:{x:0,z:0},
+  collider:[],
+  anchors:{plate:{x:0,y:0.92,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    cyl(0.06,0.07,1.0,PAL.woodD,0,0.50,0,g,6);
+    rbox(0.26,0.20,0.04,0.02,0xE8E2D2,0,0.92,0.03,g,{noshadow:true});
+  },
+});
+
+
+/* ---- THE TWO OCCUPIED SITES ----
+   PLACEHOLDER PRIMITIVES, AND THEY SAY SO IN THE ONLY PLACE THAT MATTERS. Every one of these is a
+   P6A registry entry with source:'primitive', its collider and anchors declared and its biome set —
+   so when Eric's models arrive the model pass finds them by listing the registry rather than by
+   reading this file. That is the seam doing the job it was built for; there is deliberately no
+   second list of "things to model later" anywhere in the tree. */
+defineProp('camp_tent',{
+  biome:'campground', at:{x:CAMPTENTSITE.x,z:CAMPTENTSITE.z},
+  collider:[{kind:'box',w:2.2,d:2.2,top:1.15,solid:true}],
+  anchors:{peak:{x:0,y:1.58,z:0}, guyA:{x:-1.34,y:0.4,z:0.50}, guyB:{x:1.34,y:0.4,z:-0.50},
+           door:{x:0,y:0.5,z:1.05}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    const t=new THREE.Mesh(new THREE.ConeGeometry(1.55,1.6,4),mat(0x4E7FA8));
+    t.position.y=0.80; t.rotation.y=Math.PI/4; t.castShadow=!HEADLESS; g.add(t); p.tentBody=t;
+    const fly=new THREE.Mesh(new THREE.ConeGeometry(0.6,0.95,4),mat(0x3E6E96));
+    fly.position.set(0,0.48,0.74); fly.rotation.y=Math.PI/4; g.add(fly);
+    sph(0.05,PAL.yellow,0,1.58,0,g,7); cyl(0.02,0.02,1.6,PAL.metal,0,0.80,0,g,5);
+    for(const [px,pz] of [[-1.35,0.52],[1.35,-0.52],[-0.52,-1.35],[0.52,1.35]])
+      cyl(0.02,0.03,0.14,PAL.woodD,px,0.06,pz,g,5).rotation.z=0.3;
+    p.collide();
+  },
+});
+defineProp('camp_van',{
+  biome:'campground', at:{x:CAMPVAN.x,z:CAMPVAN.z,ry:-0.22},
+  collider:[{kind:'box',w:2.4,d:5.2,top:2.3,solid:true}],
+  anchors:{roof:{x:0,y:2.3,z:0}, door:{x:1.25,y:1.0,z:0.4}, awning:{x:2.4,y:2.05,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    /* A PLACEHOLDER VAN. Deliberately plain — no wipers, no mirrors, no door seal, because those
+       are the carpark campervan's mission anchors and a prop NAME is a detector in this engine. */
+    const shell=rbox(2.2,1.9,5.0,0.26,PAL.white,0,1.25,0,g); hull(shell,0.02);
+    rbox(2.3,0.5,5.1,0.18,0,0,0.62,0,g,{noshadow:true,mats:mat(0x3A4046)});
+    pane(1.6,0.5,0.05,0.04,0x9FB8C4,0,1.62,2.49,g);
+    for(const wz of [-1.4,0.6]){ pane(0.05,0.52,0.8,0.03,0x9FB8C4,1.11,1.62,wz,g);
+                                 pane(0.05,0.52,0.8,0.03,0x9FB8C4,-1.11,1.62,wz,g); }
+    for(const sdx of [-1,1])for(const wz of [-1.6,1.6]){
+      const wh=cyl(0.34,0.34,0.16,0x23262B,sdx*1.12,0.34,wz,g,12); wh.rotation.z=1.57; }
+    /* the awning: the roll-out roof every one of these has, and the thing the chair sits under */
+    box(0.10,0.10,4.0,PAL.metal,2.35,2.00,0,g,{noshadow:true});
+    for(const az of [-1.8,1.8]) cyl(0.035,0.035,2.0,PAL.metal,2.35,1.0,az,g,6);
+    { const aw=box(2.5,0.05,4.0,0xC8B48A,1.22,2.02,0,g,{noshadow:true}); aw.rotation.z=-0.05; }
+    blob(g,2.0,0.5);
+    p.collide();
+  },
+});
+defineProp('camp_chilly',{
+  biome:'campground', at:{x:CAMPVAN.x+2.3,z:CAMPVAN.z-2.2},
+  collider:[{kind:'box',w:0.9,d:0.6,top:0.72,solid:true}],
+  anchors:{latch:{x:0,y:0.7,z:0}, lid:{x:0,y:0.67,z:0}},
+  material:{family:null,nightTint:false},
+  build(cb,p){
+    rbox(0.9,0.6,0.6,0.1,0x2E7D5E,0,0.3,0,cb); rbox(0.94,0.08,0.64,0.03,0x24634A,0,0.56,0,cb,{noshadow:true});
+    const lidG=new THREE.Group(); lidG.position.set(0,0.62,-0.32); cb.add(lidG);
+    p.lid=rbox(0.96,0.14,0.66,0.05,0xE8E2D2,0,0.05,0.32,lidG);
+    rbox(0.3,0.06,0.12,0.025,PAL.dark,0,0.14,0.5,lidG);
+    p.lidG=lidG; p.collide();
+  },
+});
+defineProp('camp_chair',{
+  biome:'campground', at:{x:CAMPVAN.x+2.6,z:CAMPVAN.z+0.9},
+  collider:[],
+  anchors:{seat:{x:0,y:0.46,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    for(const [lx,lz] of [[-0.28,-0.26],[0.28,-0.26],[-0.28,0.26],[0.28,0.26]])
+      cyl(0.022,0.022,0.46,PAL.metal,lx,0.23,lz,g,5);
+    rbox(0.62,0.05,0.56,0.02,0x8E3A2E,0,0.46,0,g);
+    const bk=rbox(0.62,0.52,0.05,0.02,0x8E3A2E,0,0.72,-0.26,g); bk.rotation.x=-0.18;
+  },
+});
+defineProp('camp_line',{
+  biome:'campground', at:{x:CAMPVAN.x+1.2,z:CAMPVAN.z+3.4},
+  collider:[],
+  anchors:{wash0:{x:-1.0,y:1.30,z:0}, wash1:{x:0,y:1.30,z:0}, wash2:{x:1.0,y:1.30,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    cyl(0.05,0.06,1.6,PAL.woodD,-1.6,0.80,0,g,6); cyl(0.05,0.06,1.6,PAL.woodD,1.6,0.80,0,g,6);
+    box(3.2,0.02,0.02,0xD8D2C4,0,1.52,0,g,{noshadow:true});
+  },
+});
+
+function buildCampground(){
+  /* THE MAP OWNS ITS NEST SITE (TODO 39). Out in the beech scrub behind the sites, well off the
+     track, because a nest beside the toilet block is not where a kea puts one. */
+  G.nestPos={x:CAMPNEST.x,z:CAMPNEST.z};
+  /* ---- TERRAIN: a river flat, greener and flatter than either map so far ----
+     THE SAME NAMED BLOCK AS THE OTHER TWO. GRASS.ground is a measurement seam and a seam that
+     reaches two of three terrain planes is a knob that lies about its scope — the P4d note on the
+     ski field says so at length and it applies a third time now. */
+  const GRD=GRASS.ground;
+  const gg=new THREE.PlaneGeometry(240,240,GRD.segs,GRD.segs);
+  const pos=gg.attributes.position;
+  for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
+    /* A FLAT, not a basin: the rise starts further out and climbs harder, because a river flat is
+       a floor with hills at the edge of it rather than a bowl. */
+    let h=0; if(d>66) h=(d-66)*0.085*(1+0.3*Math.sin(x*0.06)*Math.cos(y*0.05));
+    h+=Math.sin(x*0.15)*Math.cos(y*0.13)*0.11; pos.setZ(i,h); }
+  gg.computeVertexNormals();
+  { const cols=[], pp=gg.attributes.position;
+    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),      // the flat: the greenest of the three
+          cD=new THREE.Color(PAL.ground).convertSRGBToLinear(),
+          cS=new THREE.Color(PAL.gravel).convertSRGBToLinear(),       // river shingle
+          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const MS=GRD.maskScale;
+    for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
+      const n=Math.sin(mx*0.10+0.9)*Math.cos(mz*0.08)+Math.sin(mx*0.29)*0.45;
+      let c=n>0.4?cD.clone():cG.clone();
+      /* THE RIVER IS A BAND OF SHINGLE ALONG THE FAR EDGE, not water: this is a braided river flat
+         and what a campground looks out at is stones. The water itself is the RIVER map, later. */
+      const shingle=clamp((zw-40)/14,0,1); if(shingle>0)c.lerp(cS,shingle*0.9);
+      /* AND THE GRAVEL TRACK IS PAINTED IN, the way the carpark's braided rectangle is — the
+         shader cut below stops grass growing on it, and this is what makes it read as a surface
+         rather than a bald patch. */
+      if(Math.abs(x-CAMPTRACK.x)<CAMPTRACK.w/2+0.4&&zw>CAMPTRACK.z0-1&&zw<CAMPTRACK.z1+1&&n>-0.6)
+        c=cS.clone().lerp(cD,0.35);
+      const d=Math.hypot(x,zw); if(d>62)c.lerp(cR,Math.min(0.8,(d-62)/34));
+      cols.push(c.r,c.g,c.b); }
+    gg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+  uvMetres(gg);
+  const ground=new THREE.Mesh(gg,matGround('grass',0.93));
+  ground.rotation.x=-Math.PI/2; if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
+  G.campGround=ground;
+  buildGrass('campground');
+  buildTrees();
+
+  /* ---- THE GRAVEL TRACK, as a laid surface with a crown ---- */
+  { const len=CAMPTRACK.z1-CAMPTRACK.z0, cz=(CAMPTRACK.z0+CAMPTRACK.z1)/2;
+    /* THE TRACK IS DARKER THAN THE GRAVEL FAMILY'S OWN GREY, and it has to be. PAL.gravel is
+       calibrated for the carpark's braided rectangle under alpine light; laid as a 44 m ribbon
+       across a green flat it photographed as a poured concrete road, brighter than anything else in
+       the frame including the ablutions roof. A wet-metal campground track is a brown-grey. */
+    const slab=box(CAMPTRACK.w,0.12,len,0x7A736A,CAMPTRACK.x,0.06,cz,null,{noshadow:true});
+    slab.receiveShadow=!HEADLESS;
+    /* wheel ruts either side of a grassy crown, which is what an unsealed campground track is */
+    for(const rx of [-1.35,1.35]) box(1.5,0.13,len-1.2,0x6B6459,CAMPTRACK.x+rx,0.075,cz,null,{noshadow:true});
+  }
+
+  /* ---- THE SHARED STRUCTURES, every one a registry placement ---- */
+  const SH=placeProp('camp_shelter');
+  const AB=placeProp('camp_ablution');
+  const BD=placeProp('camp_board');
+  const TP=placeProp('camp_tap');
+  const BC=placeProp('camp_bin_corral');
+  G.campShelter=SH; G.campAblution=AB; G.campBoard=BD; G.campBin=BC;
+
+  /* ---- SIX NUMBERED SITES ---- */
+  for(const s of CAMPSITES){
+    placeProp('camp_site_post',{at:{x:s.x-2.6,z:s.z+2.2}});
+    /* a flattened pad and a fire ring per site: the ring is what says somebody has camped here */
+    /* A TRAMPLED PAD, NOT A YELLOW DISC. The first cut used PAL.ground — the carpark's strong
+       Lindis ochre, which against this map's green pasture photographed as a saturated custard
+       circle in all three first pins. A camp pad is grass worn down to dirt: a desaturated brown
+       barely darker than the ground it is worn into. */
+    { const pad=new THREE.Mesh(new THREE.CircleGeometry(2.4,20),mat(0x6E6440));
+      pad.rotation.x=-Math.PI/2; pad.position.set(s.x,0.02,s.z); pad.receiveShadow=!HEADLESS;
+      G.scene.add(pad); }
+    for(let i=0;i<9;i++){ const a=i/9*Math.PI*2;
+      const st=sph(0.13,i%2?0x7A7468:PAL.rockD,s.x+Math.cos(a)*0.72,0.08,s.z+Math.sin(a)*0.72,null,6);
+      st.scale.y=0.6; }
+    { const ash=new THREE.Mesh(new THREE.CircleGeometry(0.66,14),mat(0x3A362E));
+      ash.rotation.x=-Math.PI/2; ash.position.set(s.x,0.035,s.z); G.scene.add(ash); }
+  }
+
+  /* ---- SITE 1: THE TENT, and the two guy lines that hold it up ---- */
+  { const T=placeProp('camp_tent'), g=T.group; G.campTent={g,down:false,lines:2,body:T.tentBody};
+    [['guyA',-1.6,0.6],['guyB',1.6,-0.6]].forEach(([an,ox,oz],i)=>{
+      const rope=cyl(0.02,0.02,1.4,PAL.paper,ox*0.84,0.36,oz*0.84,g,5);
+      rope.rotation.z=ox>0?-1.1:1.1;
+      addTear({label:'CHEW THE GUY LINE',need:1.0,mesh:rope,getPos:()=>T.anchor(an),range:1.4,owner:'marg',
+        onDone(p){ G.campTent.lines--; prog('c_guyline');
+          TW.add(0.3,u=>{rope.scale.x=1+Math.sin(u*Math.PI*4)*0.4*(1-u);
+            rope.rotation.x=Math.sin(u*28)*0.5*(1-u);},()=>{rope.visible=false;});
+          if(G.campTent.lines<=0&&!G.campTent.down){ G.campTent.down=true; AU.whoosh();
+            const t=G.campTent.body;
+            TW.add(0.7,u=>{ t.scale.y=lerp(1,0.2,u); t.position.y=lerp(0.80,0.18,u);
+              t.rotation.z=Math.sin(u*Math.PI*3)*0.14*(1-u); t.scale.x=t.scale.z=1+Math.sin(u*Math.PI)*0.18; },
+              ()=>{burst(T.anchor('peak'),0x4E7FA8,10);});
+            award(35,'TENT DOWN',p); noise(p,9,'misdeed','marg'); }
+          else award(10,'GUY-LINE CHEWED',p); }});
+    });
+    propAt('tramping boot',T.at.x+1.5,0.1,T.at.z+1.5,PB.boot,{owner:'marg'});
+    propAt('tramping boot',T.at.x+1.9,0.1,T.at.z+1.2,PB.boot,{owner:'marg'});
+  }
+
+  /* ---- SITE 2: THE VAN, ITS AWNING, AND EVERYTHING UNDER IT ---- */
+  { const V=placeProp('camp_van'); G.campVan=V;
+    const CH=placeProp('camp_chilly'); G.campChilly=CH;
+    addFoodSrc('camp chilly bin',CH.at.x,CH.at.z,1.8);
+    /* THE COOP JOB. Same shape as the carpark's: the latch only advances while a second bird holds
+       the lid, so one kea cannot do it and the badge is honest. */
+    G.campChillyTear=addTear({label:'TUG THE LATCH',coop:'HOLD LID',need:1.6,mesh:CH.group,
+      getPos:()=>CH.anchor('latch'),range:1.5,owner:'barry',needsPartner:true,
+      onDone(p){ AU.pop();
+        TW.add(0.5,u=>{ CH.lidG.rotation.x=-2.0*Math.min(1,u*1.3)+Math.sin(u*Math.PI*2.5)*0.15*(1-u); });
+        spawnLoose('camp sausages',PB.sandwich,{x:p.x,y:0.9,z:p.z},{food:true,owner:'barry'});
+        award(40,'CHILLY BIN CRACKED',p); done('c_chilly'); }});
+    const CR=placeProp('camp_chair');
+    addTear({label:'TIP THE CAMP CHAIR',need:1.2,mesh:CR.group,getPos:()=>CR.anchor('seat'),
+      range:1.3,owner:'barry',keepMesh:true,
+      onDone(p){ AU.clang();
+        TW.add(0.5,u=>{ CR.group.rotation.z=1.4*Math.min(1,u*1.25)+Math.sin(u*16)*0.1*(1-u); });
+        award(20,'THE CHAIR: RESOLVED',p); done('c_chair'); noise(p,6,'misdeed','barry'); }});
+    const LN=placeProp('camp_line');
+    for(let i=0;i<3;i++){ const an='wash'+i;
+      const w=LN.anchor(an);
+      const gm=rbox(0.30,0.34,0.03,0.02,[0xE8E2D2,0x8E6118,0x4E7FA8][i],0,-0.18,0,null);
+      gm.position.set(w.x,w.y-0.18,w.z); G.scene.add(gm);
+      addTear({label:'ROB THE WASHING LINE',need:1.1,mesh:gm,getPos:()=>LN.anchor(an),range:1.25,
+        owner:'marg',air:true,keepMesh:true,
+        onDone(p){ gm.visible=false; AU.rip(); burst(p,0xE8E2D2,6);
+          spawnLoose('somebody sock',PB.sock,{x:p.x,y:0.9,z:p.z},{owner:'marg'});
+          award(12,'WASHING: LIBERATED',p); prog('c_line'); }});
+    }
+  }
+
+  buildNest(G.nestPos.x,G.nestPos.z);
+
+  /* ---- THE SHARED-STRUCTURE JOBS ---- */
+  addPeck({label:'WORK THE HONESTY BOX',needHits:3,mesh:BD.group,getPos:()=>BD.anchor('box'),
+    range:1.4,owner:null,
+    onDone(p){ AU.clang(); burst(p,PAL.sun,12);
+      for(let i=0;i<3;i++)spawnLoose('camp fee coin',PB.keys,
+        {x:p.x+rnd(-0.4,0.4),y:1.0,z:p.z+rnd(-0.4,0.4)},{shiny:true,vy:2.4});
+      award(50,'THE HONESTY BOX. HONESTLY.',p); done('c_honesty'); noise(p,11,'misdeed',null); }});
+  addPeck({label:'PECK THE BIN LATCH',needHits:3,mesh:BC.group,getPos:()=>BC.anchor('latch'),
+    range:1.4,owner:'nan',
+    onDone(p){ AU.clang(); G.campBinOpen=true;
+      TW.add(0.55,u=>{ BC.lid.rotation.z=1.4*Math.min(1,u*1.4)+Math.sin(u*20)*0.1*(1-u);
+        BC.lid.position.x=0.7*u; });
+      spawnLoose('rubbish',PB.rubbish,{x:BC.at.x+0.6,y:1.3,z:BC.at.z+0.2},{vy:2.8});
+      spawnLoose('rubbish',PB.rubbish,{x:BC.at.x-0.5,y:1.3,z:BC.at.z-0.3},{vy:2.4});
+      spawnLoose('shiny can',PB.can,{x:BC.at.x+0.2,y:1.35,z:BC.at.z+0.5},{shiny:true,vy:2.6});
+      award(35,'RAT-PROOF. NOT KEA-PROOF.',p); done('c_bin'); noise(p,9,'misdeed','nan'); }});
+
+  /* ---- THE TEACHING, one hint per job that is about a PLACE rather than a visible thing ---- */
+  addHint('c_honesty',CAMPBOARD.x+1.35,1.2,CAMPBOARD.z,5,'that box has other people money in it');
+  addHint('c_roof',CAMPSHELTER.x,CAMPSHELTER.h+0.5,CAMPSHELTER.z,6,'the shelter roof is the best seat on this map');
+  addHint('c_bin',CAMPBIN.x,1.3,CAMPBIN.z,5,'rat-proof is not kea-proof, and everybody knows it');
+  addHint('c_tap',CAMPTAP.x,0.9,CAMPTAP.z,5,'somebody has to walk to this tap for every cup of tea');
+
+  /* ---- THE COUNTRY: the carpark's own mountain construction at river-flat radii, and the beech
+     scrub the nest sits in. Deliberately NOT a new silhouette language, which is on the blocked art
+     list and belongs to a wave with eyes on it. */
+  for(let i=0;i<18;i++){ const far=i%2===0, a=i/18*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(140,172):rnd(108,134);
+    const h=far?rnd(30,54):rnd(20,40), w=far?rnd(46,72):rnd(30,52);
+    const geo=new THREE.ConeGeometry(w,h,22,7);
+    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
+      for(let v=0;v<pos2.count;v++){
+        const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
+        const rr=Math.hypot(x,z); if(rr<0.001)continue;
+        const ang=Math.atan2(z,x), t01=y/h+0.5;
+        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
+        const kR=1+nz*0.28*(1-t01*0.55);
+        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
+        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01);
+      }
+      geo.computeVertexNormals(); }
+    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
+        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
+      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
+      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.78)*8,0,1);
+        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+    const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
+    m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m);
+  }
+}
+
+function castCampground(){
+  /* A CAMPGROUND HAS CAMPERS, and unlike the ski field this map declares a real cast — the whole
+     point of the place is that the soft things belong to somebody. Three, which is what the
+     carpark carries, so the frame budget and the noise economy are the ones already measured.
+     NO RANGER, and that is deliberate: Rex and his cage are the carpark's, the jail verb is wired
+     to G.cage which this map does not build, and a second ranger would be a second cell. */
+  G.humans.push(new Human('marg','Marg',0x7A3D6E,CAMPTENTSITE.x+2.4,CAMPTENTSITE.z-1.2,
+    {hat:'beanie',patrol:[{x:CAMPTENTSITE.x+2.4,z:CAMPTENTSITE.z-1.2},{x:CAMPTAP.x+0.9,z:CAMPTAP.z},
+                          {x:CAMPSHELTER.x+2.0,z:CAMPSHELTER.z+2.6},{x:CAMPTENTSITE.x+1.0,z:CAMPTENTSITE.z+2.0}]}));
+  G.humans.push(new Human('barry','Barry',0x2F6E5E,CAMPVAN.x-2.2,CAMPVAN.z+1.4,{asleep:true,hat:'cap'}));
+  G.humans.push(new Human('nan','Nan',0x8E6118,CAMPSHELTER.x+2.6,CAMPSHELTER.z+1.4,
+    {hat:'beanie',patrol:[{x:CAMPSHELTER.x+2.6,z:CAMPSHELTER.z+1.4},{x:CAMPBIN.x-1.2,z:CAMPBIN.z-1.0},
+                          {x:CAMPBOARD.x-1.6,z:CAMPBOARD.z-1.4},{x:CAMPSHELTER.x-2.4,z:CAMPSHELTER.z+1.0}]}));
+}
+
+/* THE ANCHOR COMES IN OVER THE ENTRANCE AND LOOKS DOWN THE TRACK, which is the establishing shot of
+   this map the way the road is the carpark's and the tow line is the ski field's. Held to the world
+   it names by the same assertion the other two are: the look-at sits on the built prop centroid,
+   above the ground at its own feet, pointing down the way IN rather than up out of it. */
+defineBiome('campground',{label:'THE DOC CAMPGROUND',build:buildCampground,cast:castCampground,
+  missions:missionsCampground,
+  anchor:{x:0,y:24,z:56, lx:0,ly:1.2,lz:4}, snow:CAMPSNOW});
 
 /* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
    The level select. One table, and everything the brochure says comes out of it: the order of the
@@ -6846,6 +7301,50 @@ function missionsSkifield(mode){
     armText:{t:'ONE THING LEFT',s:'THE TOP STATION — ALL THE WAY UP'},
     check:()=>G.keas.some(k=>Math.hypot(k.x-SKITOW.x,k.z-SKITOW.top)<1.9&&k.y>2.6)});
 }
+function missionsCampground(mode){
+  const A={loop:'THE CAMP LOOP', shelter:'THE SHELTER'};
+  G.chapters=[A.loop,A.shelter]; G.chapIdx=0; G.needHydrate=true;
+  const anyKea=fn=>()=>G.keas.some(fn);
+  const settled=k=>Math.abs(k.vy||0)<0.7;                  // standing on it, not falling past it
+  /* A BARE SITE IS ONE NOBODY IS CAMPED ON, read off the same table the map was built from rather
+     than from four numbers copied down here — the sites move, the mission follows. */
+  const bareSites=CAMPSITES.filter(s=>!s.occupied);
+  const atBareSite=p=>bareSites.some(s=>Math.hypot(p.x-s.x,p.z-s.z)<2.6);
+  const nearTap=p=>Math.hypot(p.x-CAMPTAP.x,p.z-CAMPTAP.z)<1.1;
+  G.missions=[
+    /* THE CAMP LOOP — the two occupied sites, and the soft things on them */
+    {id:'c_guyline',area:A.loop,label:'Chew through both of the tent guy lines',need:2,n:0},
+    {id:'c_boot',   area:A.loop,label:'Rehome a tramping boot to somebody else site',
+      check:()=>G.props.some(p=>p.name==='tramping boot'&&!p.heldBy&&!p.banked&&atBareSite(p))},
+    {id:'c_line',   area:A.loop,label:'Take all three things off the washing line',need:3,n:0},
+    {id:'c_chair',  area:A.loop,label:'Tip the camp chair over, on principle'},
+    {id:'c_chilly', area:A.loop,label:'Get into the chilly bin under the awning'},
+    /* THE SHELTER — the shared structures everybody has to walk to */
+    {id:'c_honesty',area:A.shelter,label:'Work the honesty box open and scatter the takings'},
+    {id:'c_bin',    area:A.shelter,label:'Prove the rat-proof bin is not kea-proof'},
+    {id:'c_roof',   area:A.shelter,label:'Hold the cook shelter roof against all comers',
+      check:anyKea(k=>Math.abs(k.x-CAMPSHELTER.x)<CAMPSHELTER.w/2&&
+        Math.abs(k.z-CAMPSHELTER.z)<CAMPSHELTER.d/2&&k.y>CAMPSHELTER.h&&settled(k))},
+    {id:'c_tap',    area:A.shelter,label:'Leave something of somebody else in the tap puddle',
+      check:()=>G.props.some(p=>!p.heldBy&&!p.banked&&nearTap(p))},
+    {id:'c_stash',  area:A.shelter,label:'Furnish the nest with three pieces of other people kit',
+      check:()=>G.props.filter(p=>p.banked).length>=3},
+  ];
+  /* THE COOP BADGE IS A COOP BADGE BECAUSE ONE BIRD CANNOT DO IT: both beaks on the shelter roof at
+     once, which is the same honest test the ski field's duet uses. */
+  if(mode===2)G.missions.push({id:'c_duet',area:A.shelter,coop:true,
+    label:'Get BOTH beaks up on the cook shelter roof at once',
+    check:()=>G.keas.length>1&&G.keas.every(k=>Math.abs(k.x-CAMPSHELTER.x)<CAMPSHELTER.w/2&&
+      Math.abs(k.z-CAMPSHELTER.z)<CAMPSHELTER.d/2&&k.y>CAMPSHELTER.h)});
+  /* THE FINALE IS DECLARED WITH THE MISSION, which is piece 40's seam and the reason this map does
+     not inherit the carpark's sentence — four-in-pursuit-then-the-nest needs a cast of four and a
+     jail, and this map has three campers and no cage. Standing on the board that tells everyone the
+     rules is the campground's version of the same joke. */
+  G.missions.push({id:'c_gate',finale:true,locked:true,
+    label:'THE NOTICE — read the rules from the top of the board that lists them',
+    armText:{t:'ONE THING LEFT',s:'THE INFORMATION BOARD — FROM ABOVE'},
+    check:()=>G.keas.some(k=>Math.hypot(k.x-CAMPBOARD.x,k.z-CAMPBOARD.z)<1.6&&k.y>2.0)});
+}
 function markMission(id){
   const m=G.missions.find(m=>m.id===id); if(!m||m.done)return;
   if(m.need!==undefined)prog(id); else done(id);
@@ -7547,6 +8046,10 @@ if(typeof globalThis!=='undefined'){
     HINTS:{text:hintText,scan:hintScan,add:addHint},   // add: the seam the TODO 55 typo-safety proof drives
     WORLDREGS,WORLDHANDLES,WORLDLISTS,WORLDFLAGS,
     BIOME:{ALL:BIOMES,DEFAULT:BIOME_DEFAULT,define:defineBiome,of:biomeOf},
+    /* THE CAMPGROUND'S OWN TABLE, exported for the same reason SKI is: the battery pins the
+       CONSTANTS the map was built from rather than re-typing coordinates that would then drift. */
+    CAMP:{NEST:CAMPNEST,TRACK:CAMPTRACK,SHELTER:CAMPSHELTER,ABLUTION:CAMPABLUTION,
+          VAN:CAMPVAN,TENT:CAMPTENTSITE,BOARD:CAMPBOARD,TAP:CAMPTAP,BIN:CAMPBIN,SITES:CAMPSITES},
     /* REPLAT P6A: THE PROP SEAM. Exported as a block for the same reason SKY is — the batteries pin
        the registry itself rather than re-typing twenty-six rows of it, and src/models.mjs reads one
        source of truth for what wants a model, where it stands and what its material policy is.

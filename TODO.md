@@ -1956,3 +1956,40 @@ A measured sweep of length/drop, if it is ever wanted: 25u/0.50 gives -17 mm, 40
 deletes the faces AND the fragment shader discards on `vKeaQl>0.5`. Turning off only the strip
 leaves a control that still photographs a tailless bird — a control that quietly agrees with the
 thing it is controlling for. The stash gates both on one knob (`plume.tailStrip`).
+
+### 41. campground-biome  — DONE session 32
+The third map, and the first of the four that finish the tour. CAMPGROUND.md is the brief.
+ADDITIVE, and the P6A instrument PROVED it rather than the piece asserting it: the carpark and ski
+field mesh digests and collider digests are byte-identical to the values measured before the prop
+seam landed, so nothing graduated and nothing moved. Four existing vantages spot-shot at 0.99999 /
+0.9818 / 0.99983 / 0.99978 — 05's is that vantage's own churn, not this piece.
+WHAT IT IS: a gravel access track with six numbered sites hung off it, two of them occupied; a cook
+shelter, an ablutions block, a tap stand, a rat-proof bin corral, and an information board with the
+honesty box that is the map's signature target. Seventeen registry placements, three campers, ten
+jobs on two star pages plus a coop badge and a finale.
+THE ROAD IS A TRACK AND NOT THE LOOP THE BRIEF IMAGINED, because grassCuts gives a biome FOUR boxes
+and says a fifth is a new uniform. An oval spends the whole budget on itself. The four cuts are the
+track, the shelter pad, the ablutions pad and the campervan hardstand — and the sites keep their
+grass on purpose, because a tent standing in mown pasture is the picture and a tent on a bald disc
+is not.
+EVERY PROP IS A REGISTRY ENTRY, which is the placeholder note the brief promised: there is no list
+of "things to model later" anywhere in the tree, because `PROPS.ALL` filtered by biome IS the list,
+and the battery asserts it can be read that way.
+THREE FIRST PINS — 31_camp_shelter, 32_camp_sites, 33_camp_gate — shot and LEFT FLAGGED per the ski
+field's precedent. Nothing in the existing 28 was re-pinned.
+STILL TO DO UP THERE: no signature act (the ski field's 40b verbs are still unbuilt and this map was
+deliberately built out of verbs that already work), and no graduation of anything.
+
+### 41b. THE TOUR'S OWN ASSERTIONS WERE COUNTING, NOT MEASURING  — FIXED session 32
+Landing a third biome turned six assertions red and not one of them because anything leaked. Every
+one was a LITERAL restating a fact about the world that the world was always going to change:
+`length===2` for the biome registry, `const STUB=2` under a comment defining STUB as "the first pin
+with a price and no builder", `4*S.KINDS.length` for the star total, `T.TABLE[3]` for "a locked
+map", `planes.length===2` for the terrain planes, and five cleanup checks reading `length===2`.
+ALL SIX NOW DERIVE, and two got STRONGER for it: the biome count asks that the registered set is
+exactly a PREFIX of the tour table, which also catches maps built out of order and which the old
+literal could not; and the terrain-plane count is one per registered map. Proven by sabotage —
+registering the station without the village goes red on both.
+AND SABOTAGE FOUND A REAL GAP IN THE NEW WORK: the cross-map mission-id check compared one-player
+lists only, so a deliberate collision on `tarp` came back green, because `tarp` is a COOP mission
+that only exists in mode 2. Half the ids on every map were outside the check. Both modes now.

@@ -439,6 +439,29 @@ await shotR('29_lodge_deck',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
 await shotR('30_groomed_band',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=17.0;k.z=19.0;k.y=0.11;k.vy=0;k.grounded=true;k.ry=3.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
   ${CAM(19.5,3.2,26.0, 15.0,1.2,-6.0)}`,SKI);
+/* ---------- THE DOC CAMPGROUND (CAMPGROUND.md) ----------
+   THREE FIRST PINS, AND ALL THREE ARE LEFT FLAGGED, per the ski field's precedent and Eric's
+   standing order: nothing here has ever been photographed, so there is nothing to drift from and
+   every one of them is a judged frame. They are shot in the campground by naming it.
+   THE BIRD IS PINNED IN ALL THREE (law 7 and law 12) and G.time is frozen with it — a river flat is
+   the grassiest map in the tour, so an unpinned clock would put the whole field at a different wind
+   phase in every take. That is TODO 88, and it is the reason these are shot the way the ski field's
+   are rather than more loosely. */
+const CAMP={biome:'campground'};
+// 31: the cook shelter from the track — the map's one climbable structure, with the sites behind it.
+await shotR('31_camp_shelter',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=-11.0;k.z=-6.0;k.y=2.70;k.vy=0;k.grounded=true;k.ry=1.1;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-6.2,3.5,-0.6, -11.0,1.9,-6.0)}`,CAMP);
+// 32: the two occupied sites across the track — the tent on grass, the van under its awning.
+//     the bird stands on the chilly bin, which is where a kea would be and is a collider it can hold.
+await shotR('32_camp_sites',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=11.3;k.z=5.8;k.y=0.72;k.vy=0;k.grounded=true;k.ry=2.5;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(15.6,2.3,11.4, 10.6,0.95,6.2)}`,CAMP);
+// 33: the gate — the information board and the honesty box, which is this map's signature target,
+//     shot from inside the campground looking back down the track the way everybody arrives.
+await shotR('33_camp_gate',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=4.95;k.z=21.0;k.y=1.28;k.vy=0;k.grounded=true;k.ry=3.6;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(1.0,2.6,14.5, 4.2,1.5,21.0)}`,CAMP);
 if(SRV)await SRV.close();
 if(GAVEUP.length){ console.log('CAPTURE INCOMPLETE — gave up on: '+GAVEUP.join(', ')); process.exitCode=1; }
 else console.log('CAPTURE COMPLETE');
