@@ -672,6 +672,15 @@ const GRASS={
      and it is wide enough to read as a verge at thirty metres, which is the range the far tier now
      shows the car park's edge from. */
   cutSoft:1.1,
+  /* HOW MANY CUT-OUT BOXES A BIOME MAY HAVE, and it is a constant because it used to be four
+     hand-written uniforms and four hand-written multiplies. VILLAGE.md step 0: the campground came
+     out a straight gravel track instead of the loop road its brief imagined, because an oval
+     cannot be cut with boxes and two long sides plus two ends is the whole budget of four before a
+     single building is clear of grass. A village street layout needs seven before anything
+     optional — road, two footpaths, two forecourts, a bus-shelter pad, a bike-rack pad.
+     THE SHADER IS BUILT FROM THIS NUMBER rather than agreeing with it: the declaration and the
+     multiply loop are generated below, so raising it again is this one edit. */
+  cuts:8,
   /* THINNING. `fade` is how sharply a blade shrinks out as it crosses its own cull threshold —
      `fadeBand` is the WIDTH of that shrink window in density units, and the density ramp is
      stretched to 1+fadeBand on purpose so that "full density" really means every blade at full
@@ -2654,7 +2663,7 @@ uniform float uGust, uFlutter, uGustHz, uFlutterHz, uGustM;
 uniform float uClumpM, uClumpJit, uClumpPull, uClumpPullVar, uBare;
 uniform float uBlobScan, uBareScale, uBareSoft, uEdgeVar, uCutSoft;
 uniform vec2 uHmul; uniform float uHamp;
-uniform vec4 uCut0, uCut1, uCut2, uCut3;      // xz centre, xz half-extent; w<=0 disables
+uniform vec4 uCuts[GRASS_CUTS];               // xz centre, xz half-extent; w<=0 disables
 uniform vec2 uHrange, uWrange, uLrange;
 uniform vec3 uTintA, uTintB, uTintC, uTintBase, uTintTip;
 uniform float uSeed;
@@ -2747,11 +2756,13 @@ void keaGrass(inout vec3 t){
   float alive=uBare<=0.0?1.0
     :smoothstep(uBare-uBareSoft,uBare+uBareSoft,keaFbm(w*uBareScale));
 
-  /* the places grass does not grow: road, carpark, hut slab, pen — or piste, tow line, lodge.
-     MULTIPLIED, not branched: four soft factors, so two overlapping cut-outs thin each other
-     rather than one of them winning outright at a seam between them. */
-  alive*=keaCutK(uCut0,w,uCutSoft)*keaCutK(uCut1,w,uCutSoft)
-        *keaCutK(uCut2,w,uCutSoft)*keaCutK(uCut3,w,uCutSoft);
+  /* the places grass does not grow: road, carpark, hut slab, pen — or piste, tow line, lodge, or
+     a village street and its footpaths.
+     MULTIPLIED, not branched: soft factors, so two overlapping cut-outs thin each other rather
+     than one of them winning outright at a seam between them. A LOOP over a uniform array now
+     rather than N hand-written multiplies — same arithmetic, and the count is GRASS.cuts. A
+     disabled box (w<=0) contributes exactly 1.0, so padding costs nothing but the iteration. */
+  for(int ci=0;ci<GRASS_CUTS;ci++) alive*=keaCutK(uCuts[ci],w,uCutSoft);
 
   /* ---- THIS BLADE'S POSE, all of it hashed from the world position ---- */
   vec2 h1=keaGH2(w*0.911), h2=keaGH2(w*1.703+11.7);
@@ -2857,13 +2868,18 @@ vec3 keaGrassTrans(){
    to carry this as a per-biome closure; a camera-anchored field decides where a blade stands in
    the shader, so the same information has to travel as uniforms. Four is what both biomes need,
    and a fifth is a new uniform rather than a silent truncation — the gate asserts the list fits. */
+/* EVERY BIOME RETURNS THE SAME LENGTH, padded with disabled boxes, and the padding is EXPLICIT.
+   A short list used to be a silent truncation waiting to happen; now it is a pad, and the battery
+   holds every registered biome's list to GRASS.cuts rather than holding two named maps to four. */
+function grassPad(list){ const out=list.slice(0,GRASS.cuts);
+  while(out.length<GRASS.cuts)out.push([0,0,0,0]); return out; }
 function grassCuts(biome){
   if(biome==='skifield'){
     const P=SKIPISTE, T=SKITOW, L=SKILODGE;
-    return [[(P.x0+P.x1)/2,(P.z0+P.z1)/2,(P.x1-P.x0)/2+1.2,(P.z1-P.z0)/2],  // the groomed run
-            [T.x,0,2.2,60],                                                  // under the rope tow
-            [L.x,L.z,L.w/2+1.5,L.d/2+L.deck+1.5],                            // the lodge and deck
-            [0,0,0,0]];
+    return grassPad([
+      [(P.x0+P.x1)/2,(P.z0+P.z1)/2,(P.x1-P.x0)/2+1.2,(P.z1-P.z0)/2],  // the groomed run
+      [T.x,0,2.2,60],                                                  // under the rope tow
+      [L.x,L.z,L.w/2+1.5,L.d/2+L.deck+1.5]]);                          // the lodge and deck
   }
   /* FOUR IS THE BUDGET AND THE CAMPGROUND WAS LAID OUT AROUND IT (CAMPGROUND.md section 2). An
      oval loop road cannot be cut with boxes — two long sides and two ends spends the lot before a
@@ -2872,15 +2888,25 @@ function grassCuts(biome){
      a tent standing in mown pasture is the picture, a tent on a bald disc is not. */
   if(biome==='campground'){
     const T=CAMPTRACK, S=CAMPSHELTER, A=CAMPABLUTION;
-    return [[T.x,(T.z0+T.z1)/2,T.w/2+0.6,(T.z1-T.z0)/2+1.0],   // the gravel track
-            [S.x,S.z,S.w/2+0.6,S.d/2+0.8],                      // the shelter pad
-            [A.x,A.z,A.w/2+0.5,A.d/2+0.5],                      // the ablutions pad
-            [CAMPVAN.x,CAMPVAN.z,3.4,3.0]];                     // the campervan hardstand
+    return grassPad([
+      [T.x,(T.z0+T.z1)/2,T.w/2+0.6,(T.z1-T.z0)/2+1.0],   // the gravel track
+      [S.x,S.z,S.w/2+0.6,S.d/2+0.8],                      // the shelter pad
+      [A.x,A.z,A.w/2+0.5,A.d/2+0.5],                      // the ablutions pad
+      [CAMPVAN.x,CAMPVAN.z,3.4,3.0]]);                    // the campervan hardstand
   }
-  return [[0,34,120,5.6],            // road
-          [2,17,21,11.5],            // carpark
-          [-24,-9,4.2,3.4],          // hut slab
-          [28,-14,3.4,2.4]];         // pen core
+  return grassPad([
+    [0,34,120,5.6],            // road
+    [2,17,21,11.5],            // carpark
+    [-24,-9,4.2,3.4],          // hut slab
+    [28,-14,3.4,2.4]]);        // pen core
+}
+/* THE ONE PLACE THE CUT COUNT REACHES THE GLSL. Asserted rather than assumed: a source that still
+   carries the token after substitution would compile to a syntax error at a point three swallows
+   into a shader-compile warning, so it is caught here where the message can say what happened. */
+function grassSub(src){
+  const out=src.split('GRASS_CUTS').join(String(GRASS.cuts|0));
+  if(out.indexOf('GRASS_CUTS')>=0)throw new Error('grassSub: GRASS_CUTS survived substitution');
+  return out;
 }
 function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or the cover layer
   if(GRASS_OK!==true)return m;
@@ -2921,7 +2947,7 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
     uCutSoft:{value:GRASS.cutSoft},
     uEdgeVar:{value:GRASS.edgeVar},
     uHmul:{value:new THREE.Vector2(H.mul[0],H.mul[1])}, uHamp:{value:H.amp},
-    uCut0:{value:V4(C[0])}, uCut1:{value:V4(C[1])}, uCut2:{value:V4(C[2])}, uCut3:{value:V4(C[3])},
+    uCuts:{value:C.map(V4)},
     uHrange:{value:new THREE.Vector2(B.h[0],B.h[1])},
     uWrange:{value:new THREE.Vector2(B.w[0],B.w[1])},
     uLrange:{value:new THREE.Vector2(B.lean[0],B.lean[1])},
@@ -2933,8 +2959,12 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
   };
   m.onBeforeCompile=(sh)=>{
     Object.assign(sh.uniforms,U);
-    sh.vertexShader=GRASS_GLSL_V+sh.vertexShader;
-    sh.fragmentShader=GRASS_GLSL_F+sh.fragmentShader;
+    /* GRASS_CUTS IS SUBSTITUTED, NOT DECLARED AS A GLSL const, because an array size must be a
+       compile-time literal in GLSL ES and `const int` from a uniform is not one. So the number
+       lives in GRASS.cuts, reaches the source here, and appears in exactly two places in it — the
+       array declaration and the loop bound — which is what keeps them from disagreeing. */
+    sh.vertexShader=grassSub(GRASS_GLSL_V)+sh.vertexShader;
+    sh.fragmentShader=grassSub(GRASS_GLSL_F)+sh.fragmentShader;
     for(const [name,pairs] of GRASS_PATCH){
       const inc='#include <'+name+'>';
       let body=THREE.ShaderChunk[name];

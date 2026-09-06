@@ -5063,15 +5063,31 @@ C.section('REPLAT P4: instanced grass');
 
   // ---- THE CUT-OUTS FIT, AND THEY COVER WHAT THEY USED TO ----
   /* The reject mask used to be a CPU closure per biome. A camera-anchored field decides where a
-     blade stands in the shader, so the same information travels as four uniform boxes — and four
-     is a hard limit, so a fifth would be a silent truncation rather than a compile error. */
-  for(const b of ['carpark','skifield']){
+     blade stands in the shader, so the same information travels as uniform boxes.
+     EVERY REGISTERED BIOME, NOT A HARDCODED PAIR, and that pair was a real hole: it read
+     ['carpark','skifield'], so the campground's four boxes were never checked at all and the
+     village's would not have been either. The budget is GRASS.cuts now — raised from four to eight
+     for the village's street layout, see VILLAGE.md step 0 — so the count is read from the recipe
+     rather than re-typed, and the list is PADDED to it so a short one cannot truncate silently. */
+  for(const b of Object.keys(X.BIOME.ALL)){
     const cuts=X.grassCuts(b);
-    ok(cuts.length===4,b+' passes exactly the four cut-out boxes the shader has uniforms for ('+
-       cuts.length+')');
+    ok(cuts.length===GR.cuts,b+' passes exactly the '+GR.cuts+' cut-out boxes the shader has '+
+       'uniforms for ('+cuts.length+')');
     ok(cuts.every(c=>c.length===4),'and each is a centre and a half-extent');
     const live=cuts.filter(c=>c[3]>0);
-    ok(live.length>=3,b+' actually cuts things out ('+live.length+' live boxes)'); }
+    ok(live.length>=3,b+' actually cuts things out ('+live.length+' live boxes)');
+    ok(live.length<=GR.cuts,b+' does not ask for more boxes than the shader has ('+live.length+')'); }
+  /* AND THE NUMBER REACHES THE SHADER. GLSL ES needs a compile-time literal for an array size, so
+     the count is substituted into the source rather than declared as a const — which means a
+     source that still carried the token would fail deep inside a shader compile. */
+  { const src=require('../2026-08-26/keasrc').specimenSource();
+    const vs=src.match(/const GRASS_GLSL_V=`[\s\S]*?`;/);
+    ok(!!vs&&/uniform vec4 uCuts\[GRASS_CUTS\]/.test(vs[0]),
+       'the cut array is declared from the token, not from a typed-in size');
+    ok(!!vs&&/for\(int ci=0;ci<GRASS_CUTS;ci\+\+\)/.test(vs[0]),
+       'and the multiply is a loop over it, so the declaration and the bound cannot disagree');
+    ok(/GRASS_CUTS/.test(src)&&/grassSub\(GRASS_GLSL_V\)/.test(src),
+       'and the token is substituted on the way into the compile'); }
   /* the carpark cut-outs still cover the surfaces they always did — a blade growing through the
      road or the car park is the loudest possible way to get this wrong */
   { const cuts=X.grassCuts('carpark');
@@ -5549,7 +5565,12 @@ C.section('REPLAT P4e: the field stops being a disc');
        'the noise says, so no blade can appear inside a cut-out');
     ok(GR.cutSoft>0.3&&GR.cutSoft<3,'the verge is a stride wide, which is what the edge of a gravel '+
        'car park in tussock country looks like ('+GR.cutSoft+' m)');
-    ok(/alive\*=keaCutK\(uCut0/.test(vs),'and the four factors MULTIPLY, so overlapping cut-outs '+
+    /* MULTIPLIED, and the shape of the source changed without the claim changing: VILLAGE.md step 0
+       replaced four hand-written `alive*=keaCutK(uCutN,...)` lines with a loop over a uniform array,
+       so the pattern moved from uCut0 to uCuts[ci]. What is being asserted is unchanged — the
+       factors compound rather than one winning at a seam — and a loop that ACCUMULATED (`alive=`)
+       instead of compounding would still fail this. */
+    ok(/alive\*=keaCutK\(uCuts\[ci\]/.test(vs),'and the factors MULTIPLY, so overlapping cut-outs '+
        'thin each other rather than one winning at a seam'); }
 
   /* ---- (8) TODO 80: THE ROLLING HILLS HAVE FORM, AND THEY WEAR THE GROUND TINT ----

@@ -2039,3 +2039,25 @@ against its edges, and moss in the corners. G.wear already exists in the carpark
 this: a circle of the surface's own colour, darkened, laid on top and REGISTERED as a record.
 SO THE SHAPE OF THE FIX is a wear pass on the pad, reusing the carpark's own idiom, not a colour
 edit. Cheaper than it sounds and it is the same tool.
+
+### 94. THE GRASS CUT BUDGET IS EIGHT NOW, AND IT IS ONE CONSTANT  — DONE session 32
+VILLAGE.md step 0, shipped before any village geometry. `grassCuts(biome)` returned exactly FOUR
+boxes because the shader carried four hand-written uniforms and four hand-written multiplies, and
+the battery pinned `cuts.length===4`. That limit is why the campground came out a straight gravel
+track instead of the loop road its brief imagined: an oval cannot be cut with boxes, and two long
+sides plus two ends is the whole budget before a building is clear of grass. A village street
+layout needs seven before anything optional.
+NOW: `GRASS.cuts=8`, a `vec4 uCuts[GRASS_CUTS]` array, and one loop. The token is SUBSTITUTED into
+the GLSL rather than declared as a const, because an array size must be a compile-time literal in
+GLSL ES — and `grassSub` throws if the token survives, so a failed substitution says what happened
+instead of dying inside a shader compile. `grassPad` pads every biome's list to the budget, so a
+short list is an explicit pad rather than a truncation waiting to happen. Raising it again is one
+edit.
+AND IT CLOSED A HOLE THE CAMPGROUND OPENED: the cut assertion looped over a hardcoded
+['carpark','skifield'], so the campground's four boxes had never been checked once and the
+village's would not have been either. It loops every registered biome now.
+PROVED A NO-OP: nine batteries green, and all 31 vantages shot. Two flagged — 13_idle_preen and
+17_flight — and BOTH were cleared by measurement rather than argument: 17 came back 0.9997 on a
+reshoot, and 13 was shot three times on the step-0 build (0.9639/0.9638/0.9639), three times on the
+PRE-step-0 build (0.9994/0.9997/0.9631) and three more times on step 0 (0.9997/0.9992/0.9639). Both
+builds produce both states, identically. That is TODO 88 and not this piece.
