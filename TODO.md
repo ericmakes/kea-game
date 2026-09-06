@@ -2149,3 +2149,41 @@ pies the mission spawns.
 THE VERANDAH UNDERSIDE is flat grey corrugate across a large part of 35_village_glass. A real one
 has rafters, and staining where the roof leaks at the joints. Also cheap, also decoration.
 NEITHER IS URGENT and both are in the frame Eric judged and passed.
+
+### 44. river-biome  — DONE session 32
+The fifth map. RIVER.md is the brief. A DOC swing-bridge crossing on a braided glacier river: a
+24 m slat-deck bridge between two A-frame towers with sagging wire handrails, a raised boardwalk to
+the bridge mouth, a milky blue braid channel, a glacier lake with three drifting ice floes, a DOC
+shelter, a jetboat on the shingle, three daypacks and three tourists mid-selfie. Eight registry
+placements, eleven jobs on two star pages plus a coop badge and a finale.
+THE FLOES ARE THE ONLY NEW CLAIM AND THEY ARE DRIVEN, not eyeballed: a floe drifts, its COLLIDER
+moves with its mesh (a drifting mesh over a stationary collider is a bird standing on nothing), and
+the bird's RELATIVE drift over four seconds is 0.0000 m — which is what makes it a floor rather than
+scenery. Four sabotages: stop the drift, freeze the collider, remove the carry, shorten the bridge.
+All four bite.
+AND IT CAUGHT A FIFTH INSTANCE OF THE OLDEST BUG IN THIS FILE: `rivFloes` is a LIST a build fills,
+and the dispatcher did not take it back off the board — a carpark boot left three floes registered.
+Piece 39 found four globals pretending to be constants, TODO 62 found the handles; this is a list.
+It is in WORLDREGS now.
+THREE FIRST PINS — 37_river_bridge, 38_river_floes, 39_river_walk — LEFT FLAGGED. Baseline stays 34.
+FOUR LOOK DEFECTS FIXED BEFORE SHOOTING rather than flagged as judgement: the lake did not render at
+all (its disc was buried under un-cut terrain, because only the braid channel was cut and the lake
+sits outside that band); the water photographed as a salt flat (pale and desaturated at roughness
+0.34 blows out under the P2 HDRI — rock flour is milky but emphatically blue-green); the floes came
+back grey stone slabs (PAL.snow at 0.72 is not glacier ice); and the lake's edge was a hard polygon
+because the disc sat BELOW the bank near its rim, so the terrain clipped it — the terrain makes the
+shoreline now and it follows the ground's own noise.
+
+### 45. THE TOUR SECTION'S FIXTURE CANNOT BE PAID FOR BY ONE MAP ANY MORE  — FIXED session 32
+The brochure section grants stars to make the first UNBUILT pin affordable, so it can ask "a paid-for
+map with no builder is refused as unbuilt". With five maps built the first unbuilt pin is the LAST
+one — the station at thirty stars — and the carpark has eight pages, so twenty-four. One map can no
+longer pay for it.
+FIXED STRUCTURALLY RATHER THAN NUDGED, because this block had already been nudged twice as maps
+landed (four pages, then ceil(need/3)) and both nudges were the same fact arriving late: THE TOUR
+TOTAL IS THE SUM ACROSS MAPS. The fixture fills the carpark completely and earns the shortfall on
+the SECOND map — which exercises the per-biome save slots rather than avoiding them.
+AND THE LOCKED-MAP QUESTION HAD TO MOVE. A fixture that can afford the last pin can afford
+everything, so no locked pin was left and `T.TABLE[-1]` threw. It is asked BEFORE the top-up now,
+where the same pin answers both refusals in turn — locked while unaffordable, 'not built yet' once
+paid for — which is a better test than two pins each answering one.

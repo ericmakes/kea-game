@@ -759,6 +759,11 @@ const GRASS={
        measurement is not spent again here. */
     village:  {h:[0.14,0.32], w:[0.007,0.015], lean:[0.14,0.40], bare:0.07, clumpM:1.05, taper:0.60,
                base:0x37631A, tint:[0x8CA83A,0x53701C,0xCFD8A4], tip:0x5E5220},
+    /* A BRAIDED RIVERBED IS MOSTLY STONES, so this is the BAREST profile in the tour by a long way
+       — 0.46 against the ski field's 0.34 — and what grass there is is short, wiry and clings to
+       the banks. It is the one profile where `bare` is doing the describing. */
+    river:    {h:[0.16,0.38], w:[0.006,0.013], lean:[0.08,0.26], bare:0.46, clumpM:1.90, taper:0.52,
+               base:0x466A24, tint:[0x9AA84A,0x5E6E22,0xD8D2A8], tip:0x6E5A24},
   },
 };
 /* ITS OWN IGNORED LIST, not MATS's. matMerge pushes rejected paths into whatever array it is
@@ -2247,6 +2252,7 @@ const G={
   missions:[], finaleOn:false, won:false, gymOut:false, gym:null,
   stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0, biome:null, vs:null, foodSrc:[],
   propReg:[],                     // REPLAT P6A: the placed world props, one record per registry entry placed
+  rivFloes:[],                    // RIVER: the drifting floes, the one moving surface in the game
 
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
@@ -2901,6 +2907,18 @@ function grassCuts(biome){
       [A.x,A.z,A.w/2+0.5,A.d/2+0.5],                      // the ablutions pad
       [CAMPVAN.x,CAMPVAN.z,3.4,3.0]]);                    // the campervan hardstand
   }
+  if(biome==='river'){
+    const W=RIVWATER, B=RIVBRIDGE, K=RIVWALK, L=RIVLAKE;
+    /* SIX LIVE BOXES: the braid channel and its shingle banks, the lake, the boardwalk, the bridge
+       line, the shelter pad and the boat's hardstand. Nothing grows on stones or in water. */
+    return grassPad([
+      [(W.x0+W.x1)/2,(W.z0+W.z1)/2,(W.x1-W.x0)/2,(W.z1-W.z0)/2+9.0],   // channel and banks
+      [L.x,L.z,L.r+1.0,L.r+1.0],                                        // the lake
+      [K.x,(K.z0+K.z1)/2,K.w/2+0.8,(K.z1-K.z0)/2],                      // the boardwalk
+      [B.x,(B.z0+B.z1)/2,B.w/2+1.2,(B.z1-B.z0)/2],                      // under the bridge
+      [RIVSHELTER.x,RIVSHELTER.z,2.0,1.6],                              // the shelter pad
+      [RIVBOAT.x,RIVBOAT.z,1.6,2.8]]);                                  // the boat
+  }
   if(biome==='village'){
     const S=VILLST, P2=VILLPATH, U=VILLUNITS, SH=VILLSHOP;
     const L=(S.x1-S.x0)/2, cx=(S.x0+S.x1)/2;
@@ -3247,7 +3265,13 @@ function snowSpot(x,z,r,env){
 /* REPLAT P6A adds propReg, for the reason every name on this line is here: it is a LIST a build
    fills, so a second build must not leave the first map's prop records on the board describing
    meshes in a scene that was thrown away. It is the registry's own G.towWheel lesson. */
-const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow','propReg'];
+/* AND rivFloes, WHICH IS THE SAME LESSON A FIFTH TIME. It is a LIST a build fills, so a build of
+   another map must take it back off the board — piece 39 found four globals pretending to be
+   constants and TODO 62 found the handles; this is a list, and the river battery caught it by
+   booting the carpark and finding three floes still registered. updateRiver guards on G.biome so
+   nothing misbehaved, but a stale list is a stale list and the next reader will not guard. */
+const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow','propReg',
+                 'rivFloes'];
 /* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
    sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
    thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
@@ -5129,6 +5153,375 @@ defineBiome('village',{label:'THE VILLAGE',build:buildVillage,cast:castVillage,
   /* THE FIRST NEW MAP THAT DECLARES ROAD LANES. The two lanes of the main street, at the z the
      street is actually built on, and the spawn distance the carpark uses. */
   traffic:{up:VILLST.z-1.75, down:VILLST.z+1.75, x:115}});
+
+
+/* ---------- THE BRAIDED RIVER (RIVER.md, the fifth map) ----------
+   THE SWING BRIDGE IS THE TOUR'S FIRST SPAN. The verandah is a long ridge but it stands on the
+   ground; this one is 24 m of slat deck between two A-frame towers with water under it, and the
+   thing that makes it different is not its height but what is below: a bird knocked off the
+   village verandah lands on a footpath, and a bird knocked off this lands in a glacier river.
+   THE FLOES ARE THE ONLY GENUINELY NEW CLAIM ON THIS MAP: they drift, which makes them the first
+   surface in this game that MOVES under the bird. Everything else here is furniture built out of
+   verbs that already work. */
+const RIVNEST={x:-30,z:-24};
+const RIVWATER={z0:-6.0, z1:16.0, x0:-60, x1:60};      // the braid channel, across the map
+const RIVLAKE={x:-26, z:22, r:15.0};                   // the glacier lake, upstream
+const RIVBRIDGE={x:6.0, z0:-7.0, z1:17.0, deck:2.55, w:1.30};   // the crossing, over the water
+const RIVWALK={x:6.0, z0:-24.0, z1:-7.0, w:2.2, y:0.42};        // the boardwalk to the bridge mouth
+const RIVSHELTER={x:2.0, z:-22.0};
+const RIVBOAT={x:-13.0, z:-3.2};
+const RIVSNOW=null;
+/* THE FLOES: a table, because their drift is asserted and a table is what an assertion can read. */
+const RIVFLOES=[
+  {x:-30.0, z:19.0, r:2.3, drift:0.055, phase:0.0},
+  {x:-22.5, z:24.5, r:2.9, drift:0.041, phase:2.1},
+  {x:-29.0, z:27.5, r:1.9, drift:0.068, phase:4.0},
+];
+
+defineProp('riv_bridge',{
+  biome:'river', at:{x:RIVBRIDGE.x,z:(RIVBRIDGE.z0+RIVBRIDGE.z1)/2},
+  /* A ROOF COLLIDER FOR THE DECK, because that is the shape groundHeightAt reads for a walkable
+     surface at height, and it is what the verandah taught. Half-extents, verbatim. */
+  collider:[{kind:'roof',w:RIVBRIDGE.w/2+0.15,d:(RIVBRIDGE.z1-RIVBRIDGE.z0)/2,
+             ridge:RIVBRIDGE.deck,slope:0.0}],
+  anchors:{mid:{x:0,y:RIVBRIDGE.deck+0.02,z:0},
+           near:{x:0,y:RIVBRIDGE.deck+0.02,z:-(RIVBRIDGE.z1-RIVBRIDGE.z0)/2+1.2},
+           far:{x:0,y:RIVBRIDGE.deck+0.02,z:(RIVBRIDGE.z1-RIVBRIDGE.z0)/2-1.2},
+           towerFar:{x:0,y:4.9,z:(RIVBRIDGE.z1-RIVBRIDGE.z0)/2}},
+  material:{family:null,keepModelPBR:true,nightTint:false},
+  build(g,p){
+    const B=RIVBRIDGE, L=B.z1-B.z0;
+    /* the deck: slats, one every 300 mm, which is what makes it read as a swing bridge rather
+       than a plank — and they are the thing the mission works loose */
+    p.slats=[];
+    for(let z=-L/2+0.3; z<L/2; z+=0.30){
+      const sl=box(B.w,0.05,0.22,PAL.woodD,0,B.deck,z,g,{noshadow:true});
+      p.slats.push(sl); }
+    for(const sx of [-1,1]) box(0.07,0.07,L,PAL.metal,sx*(B.w/2+0.02),B.deck-0.05,0,g,{noshadow:true});
+    /* the two A-frame towers, and the wire handrails that sag between them */
+    for(const sz of [-1,1]){
+      for(const sx of [-1,1]){ const leg=cyl(0.10,0.13,5.0,PAL.metal,sx*1.05,2.5,sz*L/2,g,8);
+        leg.rotation.z=-sx*0.20; }
+      box(2.5,0.12,0.12,PAL.metal,0,4.85,sz*L/2,g,{noshadow:true});
+      box(0.9,0.10,0.10,PAL.metal,0,B.deck+1.05,sz*L/2,g,{noshadow:true}); }
+    /* THE HANDRAILS SAG, and the sag is what says a wire is a wire. Segmented so it curves. */
+    for(const sx of [-1,1])for(let i=0;i<12;i++){
+      const t0=i/12, t1=(i+1)/12, zm=(-L/2)+((t0+t1)/2)*L;
+      const sag=Math.sin(((t0+t1)/2)*Math.PI)*0.42;
+      const seg=cyl(0.022,0.022,L/12,PAL.dark,sx*(B.w/2+0.06),B.deck+1.02-sag,zm,g,5);
+      seg.rotation.x=Math.PI/2; }
+    for(const sx of [-1,1])for(let i=0;i<14;i++){
+      const t=(i+0.5)/14, zm=-L/2+t*L, sag=Math.sin(t*Math.PI)*0.42;
+      cyl(0.012,0.012,1.02-sag,PAL.dark,sx*(B.w/2+0.06),B.deck+(1.02-sag)/2,zm,g,4); }
+    p.collide();
+  },
+});
+defineProp('riv_boardwalk',{
+  biome:'river', at:{x:RIVWALK.x,z:(RIVWALK.z0+RIVWALK.z1)/2},
+  collider:[{kind:'box',w:RIVWALK.w+0.3,d:RIVWALK.z1-RIVWALK.z0,top:RIVWALK.y+0.09,solid:false}],
+  anchors:{mid:{x:0,y:RIVWALK.y+0.10,z:0}, mouth:{x:0,y:RIVWALK.y+0.10,z:(RIVWALK.z1-RIVWALK.z0)/2}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    const W=RIVWALK, L=W.z1-W.z0;
+    for(let z=-L/2; z<L/2; z+=0.42)
+      box(W.w,0.06,0.34,PAL.wood,0,W.y,z+0.17,g,{noshadow:true});
+    for(const sx of [-1,1]){ box(0.10,0.14,L,PAL.woodD,sx*(W.w/2-0.05),W.y-0.09,0,g,{noshadow:true});
+      for(let z=-L/2+1; z<L/2; z+=2.6) cyl(0.06,0.07,0.5,PAL.woodD,sx*(W.w/2-0.05),W.y-0.30,z,g,6); }
+    /* the handrail, because DOC puts one on anything raised */
+    for(const sx of [-1,1]){ box(0.06,0.06,L,PAL.woodD,sx*(W.w/2+0.02),W.y+0.85,0,g,{noshadow:true});
+      for(let z=-L/2+1.3; z<L/2; z+=2.6) cyl(0.045,0.05,0.85,PAL.woodD,sx*(W.w/2+0.02),W.y+0.42,z,g,5); }
+    p.collide();
+  },
+});
+defineProp('riv_shelter',{
+  biome:'river', at:{x:RIVSHELTER.x,z:RIVSHELTER.z},
+  collider:[{kind:'box',w:3.0,d:2.4,top:2.4,solid:true}],
+  anchors:{roof:{x:0,y:2.42,z:0}, board:{x:0,y:1.5,z:1.22}},
+  material:{family:'corrugate',nightTint:false},
+  build(g,p){
+    box(3.2,0.10,2.6,PAL.hutRoof,0,2.36,0,g);
+    for(const sx of [-1,1])for(const sz of [-1,1])
+      cyl(0.08,0.09,2.3,PAL.woodD,sx*1.40,1.15,sz*1.10,g,7);
+    box(3.0,1.6,0.08,0x2A5A3E,0,1.35,-1.18,g);                    // the back, and the notices on it
+    box(1.9,0.9,0.05,0xE8E2D2,0,1.50,1.20,g,{noshadow:true});     // the DOC board facing the walk
+    p.collide();
+  },
+});
+defineProp('riv_boat',{
+  biome:'river', at:{x:RIVBOAT.x,z:RIVBOAT.z,ry:0.5},
+  collider:[{kind:'box',w:1.9,d:5.0,top:1.05,solid:true}],
+  anchors:{bow:{x:0,y:0.95,z:-2.2}, cockpit:{x:0,y:0.98,z:0.6}, cleat:{x:0.6,y:0.92,z:-1.6}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    const hull0=rbox(1.8,0.80,4.8,0.30,0xC0392B,0,0.55,0,g); hull(hull0,0.02);
+    rbox(1.86,0.16,4.9,0.06,PAL.white,0,0.90,0,g,{noshadow:true});   // the gunwale
+    rbox(1.5,0.44,1.5,0.14,0x9FB8C4,0,1.10,0.6,g);                   // the screen
+    for(const sx of [-1,1]) rbox(0.55,0.14,1.0,0.04,PAL.dark,sx*0.42,0.98,0.55,g,{noshadow:true});
+    cyl(0.20,0.28,0.55,PAL.metal,0,0.75,-2.35,g,10);                 // the jet intake
+    box(0.14,0.10,0.14,PAL.metal,0.60,0.92,-1.60,g,{noshadow:true}); // the cleat
+    blob(g,1.6,0.45);
+    p.collide();
+  },
+});
+/* THE FLOE: one entry, placed three times, and the only prop in the game that MOVES. Its collider
+   is emitted at its declared position like any other — the drift moves the MESH and the record,
+   and updateRiver re-points the collider with it, which is the whole of the new claim. */
+defineProp('riv_floe',{
+  biome:'river', at:{x:0,z:0},
+  collider:[{kind:'box',w:3.0,d:3.0,top:0.34,solid:false}],
+  anchors:{top:{x:0,y:0.36,z:0}},
+  material:{family:'snow',nightTint:false},
+  build(g,p){
+    /* a slab with a broken edge, not a disc: floes are fractured plates */
+    const n=9, pts=[];
+    for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; const rr=0.78+((i*37)%11)/11*0.34;
+      pts.push([Math.cos(a)*rr,Math.sin(a)*rr]); }
+    const shp=new THREE.Shape(pts.map(q=>new THREE.Vector2(q[0],q[1])));
+    const geo=new THREE.ExtrudeGeometry(shp,{depth:0.30,bevelEnabled:true,bevelSize:0.05,
+      bevelThickness:0.05,bevelSegments:1,steps:1});
+    geo.rotateX(-Math.PI/2);
+    /* ICE, NOT STONE. PAL.snow at roughness 0.72 came back as a grey slab — a floe is glacier ice:
+       near-white, faintly blue, and glossy enough to catch the sky along its top face. */
+    const m=new THREE.Mesh(geo,mat(0xE4F1F6,{roughness:0.26,envMapIntensity:1.1}));
+    m.position.y=0.04; m.castShadow=!HEADLESS; g.add(m);
+    const sub=new THREE.Mesh(new THREE.CircleGeometry(1.15,14),mat(0x9FC4D4));
+    sub.rotation.x=-Math.PI/2; sub.position.y=0.005; g.add(sub);    // the pale shelf under water
+    p.collide();
+  },
+});
+
+function buildRiver(){
+  G.nestPos={x:RIVNEST.x,z:RIVNEST.z};
+  const GRD=GRASS.ground;
+  const gg=new THREE.PlaneGeometry(240,240,GRD.segs,GRD.segs);
+  const pos=gg.attributes.position;
+  for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
+    /* A RIVERBED IS THE FLATTEST GROUND IN THE TOUR and it is flat for a reason — it is graded by
+       water. The rise starts furthest out of any map and the local undulation is nearly nothing. */
+    let h=0; if(d>72) h=(d-72)*0.095*(1+0.26*Math.sin(x*0.05)*Math.cos(y*0.05));
+    h+=Math.sin(x*0.16)*Math.cos(y*0.14)*0.07;
+    /* the channel is CUT, not painted: the braid sits below the banks and that is what makes a
+       braided river read as one rather than as a blue stripe on a lawn */
+    const zw=-y;
+    if(zw>RIVWATER.z0-3&&zw<RIVWATER.z1+3){
+      const t=1-Math.min(1,Math.abs(zw-(RIVWATER.z0+RIVWATER.z1)/2)/((RIVWATER.z1-RIVWATER.z0)/2+3));
+      h-=t*t*0.55; }
+    /* AND THE LAKE BASIN IS CUT TOO, which the first cut forgot — the lake sits at z 22, OUTSIDE
+       the braid channel's band, so its surface at y -0.13 was simply buried under un-cut ground.
+       Shot at 38_river_floes the floes came back sitting on grass with no water anywhere. A lake
+       is a hole with water in it; this is the hole. */
+    { const dl=Math.hypot(x-RIVLAKE.x,zw-RIVLAKE.z);
+      if(dl<RIVLAKE.r+4){ const t=1-Math.min(1,dl/(RIVLAKE.r+4));
+        h-=t*t*0.85; } }
+    pos.setZ(i,h); }
+  gg.computeVertexNormals();
+  { const cols=[], pp=gg.attributes.position;
+    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),
+          cS=new THREE.Color(PAL.gravel).convertSRGBToLinear(),
+          cP=new THREE.Color(0x9A9A90).convertSRGBToLinear(),      // dry shingle: grey, and NOT near-white
+          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const MS=GRD.maskScale;
+    for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
+      const n=Math.sin(mx*0.12+0.4)*Math.cos(mz*0.10)+Math.sin(mx*0.31)*0.42;
+      let c=n>0.5?cS.clone():cG.clone();
+      /* THE SHINGLE BANKS ARE WIDE, because a braided river is mostly stones with a bit of water
+         wandering through them — the water is the narrow part, not the wide part */
+      const band=1-Math.min(1,Math.abs(zw-(RIVWATER.z0+RIVWATER.z1)/2)/((RIVWATER.z1-RIVWATER.z0)/2+9));
+      if(band>0)c.lerp(cP,Math.min(0.92,band*1.25));
+      const d=Math.hypot(x,zw); if(d>66)c.lerp(cR,Math.min(0.8,(d-66)/30));
+      cols.push(c.r,c.g,c.b); }
+    gg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+  uvMetres(gg);
+  const ground=new THREE.Mesh(gg,matGround('gravel',0.90));
+  ground.rotation.x=-Math.PI/2; if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
+  buildGrass('river'); buildTrees();
+
+  /* ---- THE WATER. A vertex-coloured plane, deliberately: a glacier river is rock flour, milky
+     and nearly opaque, so it is a SURFACE and not a lens. RIVER.md says why at length. ---- */
+  { const W=RIVWATER, w=W.x1-W.x0, l=W.z1-W.z0;
+    const wg=new THREE.PlaneGeometry(w,l,40,14);
+    const wp=wg.attributes.position, cols=[];
+    /* SATURATED AND DARKER THAN THE FIRST CUT, which photographed as a salt flat. Rock flour is
+       milky but it is emphatically BLUE-GREEN, and under the P2 HDRI a pale desaturated plane at
+       roughness 0.34 blows out to white — the whole lower half of 37_river_bridge went with it. */
+    const c0=new THREE.Color(0x6FA8B8).convertSRGBToLinear(),      // the milky pale, with hue in it
+          c1=new THREE.Color(0x3E7285).convertSRGBToLinear();      // the deeper braid
+    for(let i=0;i<wp.count;i++){ const x=wp.getX(i), y=wp.getY(i);
+      const t=1-Math.min(1,Math.abs(y)/(l/2));
+      const braid=0.5+0.5*Math.sin(x*0.18)*Math.cos(y*0.3);
+      const c=c0.clone().lerp(c1,Math.min(1,t*braid*1.2)); cols.push(c.r,c.g,c.b); }
+    wg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+    const wm=new THREE.Mesh(wg,mat(0xFFFFFF,{vertexColors:true,roughness:0.30,envMapIntensity:0.45}));
+    wm.rotation.x=-Math.PI/2; wm.position.set((W.x0+W.x1)/2,-0.16,(W.z0+W.z1)/2);
+    if(!HEADLESS)wm.receiveShadow=true; G.scene.add(wm); G.rivWater=wm;
+    /* the lake, the same water a shade paler because it is still */
+    /* THE TERRAIN MAKES THE SHORELINE, NOT THE DISC'S OWN EDGE. At y -0.30 the disc sat BELOW the
+       un-cut ground near its rim, so the terrain clipped it and the lake came back with a hard
+       straight polygon edge. Raised to just under the bank and made WIDER than the basin, so the
+       ground rises through it and the waterline is wherever the cut passes -0.05 — which follows
+       the terrain's own noise and is therefore not a circle.
+       AND THE ROUGHNESS IS UP, because at 0.14 the HDRI's sun put a blown-out hotspot in the
+       middle of the frame; still water is glossy but it is not a mirror ball. */
+    const lg=new THREE.CircleGeometry(RIVLAKE.r+2.5,48);
+    const lm=new THREE.Mesh(lg,mat(0x74B2C4,{roughness:0.24,envMapIntensity:0.55}));
+    lm.rotation.x=-Math.PI/2; lm.position.set(RIVLAKE.x,-0.05,RIVLAKE.z);
+    G.scene.add(lm); G.rivLake=lm; }
+
+  /* ---- THE BOARDWALK, THE BRIDGE, AND THE SHELTER AT THE CARPARK END ---- */
+  const WK=placeProp('riv_boardwalk');
+  const BR=placeProp('riv_bridge'); G.rivBridge=BR;
+  const SH=placeProp('riv_shelter');
+  const BT=placeProp('riv_boat');   G.rivBoat=BT;
+
+  /* THE DECK SLATS COME LOOSE, three of them, which is the bridge's own crime */
+  { let loosened=0;
+    for(const idx of [12,26,44]){ const sl=BR.slats[idx]; if(!sl)continue;
+      const wz=BR.at.z+sl.position.z;
+      addTear({label:'WORK A DECK SLAT LOOSE',need:1.4,mesh:sl,air:true,keepMesh:true,
+        getPos:()=>({x:BR.at.x,y:RIVBRIDGE.deck+0.30,z:wz}),range:1.4,owner:null,
+        onDone(p){ AU.rip(); loosened++;
+          TW.add(0.7,u=>{ sl.rotation.x=1.3*u; sl.position.y=RIVBRIDGE.deck-0.5*u; },
+            ()=>{ sl.visible=false; burst(p,PAL.woodD,7); });
+          spawnLoose('deck slat',PB.longSeal,{x:p.x,y:p.y-0.3,z:p.z},{});
+          award(22,'ONE SLAT FEWER',p); prog('r_slat'); noise(p,7,'misdeed',null); }});
+    } }
+
+  /* ---- THE FLOES: placed from the table, and the ONLY moving surface in the game ---- */
+  G.rivFloes=[];
+  for(const f of RIVFLOES){
+    const P=placeProp('riv_floe',{at:{x:f.x,z:f.z}});
+    G.rivFloes.push({p:P, home:{x:f.x,z:f.z}, drift:f.drift, phase:f.phase, col:P.colliders[0]});
+  }
+
+  buildNest(G.nestPos.x,G.nestPos.z);
+
+  /* ---- THE DAYPACKS AT THE BRIDGE MOUTH, and the lunch on the shingle ---- */
+  { const m=WK.anchor('mouth');
+    for(let i=0;i<3;i++){
+      const pk=new THREE.Group(); pk.position.set(m.x-1.6+i*0.75,0,m.z+0.9); G.scene.add(pk);
+      rbox(0.52,0.72,0.38,0.10,[0x8E3A2E,0x2F6E5E,0x4E7FA8][i],0,0.36,0,pk);
+      rbox(0.44,0.22,0.14,0.05,0x6E2A22,0,0.74,0.10,pk);
+      addTear({label:'UNZIP A DAYPACK',need:1.6,mesh:pk,range:1.2,air:true,keepMesh:true,
+        getPos:()=>({x:pk.position.x,y:0.60,z:pk.position.z}),owner:'selfie'+i,
+        onDone(p){ AU.pop();
+          spawnLoose(['sandfly repellent','somebody sandwich','spare sock'][i],
+            [PB.can,PB.sandwich,PB.sock][i],{x:p.x,y:0.9,z:p.z},
+            {shiny:i===0,food:i===1,vy:1.9});
+          award(18,'DAYPACK: AUDITED',p); prog('r_packs'); }});
+    } }
+  propAt("somebody lunch",RIVBOAT.x+2.6,0.12,RIVBOAT.z+1.4,PB.sandwich,{food:true,owner:'selfie0',mission:'r_lunch'});
+
+  /* ---- THE TEACHING ---- */
+  addHint('r_span',RIVBRIDGE.x,RIVBRIDGE.deck+0.8,(RIVBRIDGE.z0+RIVBRIDGE.z1)/2,8,
+    'that bridge is the only way across, and it moves');
+  addHint('r_floe',RIVFLOES[1].x,0.8,RIVFLOES[1].z,7,'the ice is going somewhere — you could go with it');
+  addHint('r_boat',RIVBOAT.x,1.2,RIVBOAT.z,6,'a jetboat nobody is watching');
+  addHint('r_tower',RIVBRIDGE.x,5.2,RIVBRIDGE.z1,7,'the far tower: you have to cross to get it');
+
+  /* ---- THE COUNTRY ---- */
+  for(let i=0;i<18;i++){ const far=i%2===0, a=i/18*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(128,158):rnd(96,122);
+    const h=far?rnd(38,64):rnd(26,48), w=far?rnd(44,68):rnd(28,50);
+    const geo=new THREE.ConeGeometry(w,h,22,7);
+    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
+      for(let v=0;v<pos2.count;v++){
+        const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
+        const rr=Math.hypot(x,z); if(rr<0.001)continue;
+        const ang=Math.atan2(z,x), t01=y/h+0.5;
+        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
+        const kR=1+nz*0.28*(1-t01*0.55);
+        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
+        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
+      geo.computeVertexNormals(); }
+    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
+        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
+      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
+      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.70)*8,0,1);
+        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+    const m2=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
+    m2.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m2.rotation.y=rnd(0,3); G.scene.add(m2); }
+}
+
+/* THE FLOES DRIFT, AND THE COLLIDER GOES WITH THEM. This is the map's only new mechanic and it is
+   four lines: move the group, move the collider record the placement emitted, and carry anything
+   standing on it. The CARRY is the part that matters — groundHeightAt already puts the bird on the
+   floe because the collider is there, but without this the floe slides out from under it. */
+function updateRiver(dt){
+  if(G.biome!=='river'||!G.rivFloes)return;
+  for(const f of G.rivFloes){
+    const t=G.time*f.drift+f.phase;
+    const nx=f.home.x+Math.sin(t)*3.4, nz=f.home.z+Math.cos(t*0.7)*2.2;
+    const dx=nx-f.p.group.position.x, dz=nz-f.p.group.position.z;
+    f.p.group.position.set(nx,0,nz);
+    f.p.at.x=nx; f.p.at.z=nz;
+    if(f.col){ f.col.x=nx; f.col.z=nz; }
+    /* ANYTHING STANDING ON IT COMES ALONG. Read off the collider the placement emitted rather than
+       off the mesh, so it is the same box groundHeightAt used to decide the bird is up there. */
+    for(const k of G.keas){ if(!k.grounded)continue;
+      if(Math.abs(k.x-f.p.group.position.x)<3.0/2&&Math.abs(k.z-f.p.group.position.z)<3.0/2&&
+         Math.abs(k.y-0.34)<0.45){ k.x+=dx; k.z+=dz; f.carried=(f.carried||0)+1; } }
+  }
+}
+
+function castRiver(){
+  /* THREE TOURISTS MID-SELFIE, and the joke is that their backs are to the bird. They patrol
+     between the bridge mouth and the lake edge, which is where everything they own is. */
+  const WKm={x:RIVWALK.x, z:RIVWALK.z1};
+  G.humans.push(new Human('selfie0','A Tourist',0xC9992F,WKm.x-1.2,WKm.z+1.8,
+    {hat:'beanie',patrol:[{x:WKm.x-1.2,z:WKm.z+1.8},{x:RIVBOAT.x+3.0,z:RIVBOAT.z+2.0},
+                          {x:WKm.x+1.0,z:WKm.z+0.6}]}));
+  G.humans.push(new Human('selfie1','Another Tourist',0x7A3D6E,WKm.x+1.4,WKm.z+0.4,
+    {hat:'cap',patrol:[{x:WKm.x+1.4,z:WKm.z+0.4},{x:RIVLAKE.x+6.0,z:RIVLAKE.z-9.0},
+                       {x:WKm.x-0.6,z:WKm.z+2.2}]}));
+  G.humans.push(new Human('selfie2','A Third Tourist',0x2F6E5E,RIVSHELTER.x+1.6,RIVSHELTER.z+1.6,
+    {asleep:false,hat:'beanie',patrol:[{x:RIVSHELTER.x+1.6,z:RIVSHELTER.z+1.6},
+                                       {x:WKm.x-1.8,z:WKm.z-2.0}]}));
+}
+
+function missionsRiver(mode){
+  const A={bridge:'THE SWING BRIDGE', lake:'THE GLACIER LAKE'};
+  G.chapters=[A.bridge,A.lake]; G.chapIdx=0; G.needHydrate=true;
+  const anyKea=fn=>()=>G.keas.some(fn);
+  const settled=k=>Math.abs(k.vy||0)<0.7;
+  const onDeck=k=>Math.abs(k.x-RIVBRIDGE.x)<RIVBRIDGE.w/2+0.4&&
+    k.z>RIVBRIDGE.z0&&k.z<RIVBRIDGE.z1&&k.y>RIVBRIDGE.deck-0.4&&settled(k);
+  const onFloe=k=>(G.rivFloes||[]).some(f=>Math.abs(k.x-f.p.group.position.x)<1.5&&
+    Math.abs(k.z-f.p.group.position.z)<1.5&&Math.abs(k.y-0.34)<0.45);
+  G.missions=[
+    {id:'r_span',  area:A.bridge,label:'Cross the swing bridge on foot, all the way',
+      check:anyKea(k=>onDeck(k)&&k.z>RIVBRIDGE.z1-3.0)},
+    {id:'r_slat',  area:A.bridge,label:'Work three deck slats loose',need:3,n:0},
+    {id:'r_packs', area:A.bridge,label:'Audit all three daypacks at the bridge mouth',need:3,n:0},
+    {id:'r_walk',  area:A.bridge,label:'Hold the boardwalk somebody built for you',
+      check:anyKea(k=>Math.abs(k.x-RIVWALK.x)<RIVWALK.w/2+0.3&&k.z>RIVWALK.z0&&k.z<RIVWALK.z1&&
+        k.y>RIVWALK.y-0.1&&settled(k))},
+    {id:'r_shelter',area:A.bridge,label:'Supervise from the shelter roof',
+      check:anyKea(k=>Math.abs(k.x-RIVSHELTER.x)<1.5&&Math.abs(k.z-RIVSHELTER.z)<1.2&&
+        k.y>2.2&&settled(k))},
+    {id:'r_floe',  area:A.lake,label:'Ride an ice floe',check:anyKea(onFloe)},
+    {id:'r_boat',  area:A.lake,label:'Board the jetboat nobody is watching',
+      check:anyKea(k=>Math.abs(k.x-RIVBOAT.x)<1.4&&Math.abs(k.z-RIVBOAT.z)<2.4&&k.y>0.9&&settled(k))},
+    {id:'r_lunch', area:A.lake,label:'Take somebody lunch off the shingle'},
+    {id:'r_stash', area:A.lake,label:'Furnish the nest with three pieces of other people kit',
+      check:()=>G.props.filter(p=>p.banked).length>=3},
+    {id:'r_drop',  area:A.lake,label:'Drop something shiny where nobody will ever get it back',
+      check:()=>G.props.some(p=>p.shiny&&!p.heldBy&&!p.banked&&
+        Math.hypot(p.x-RIVLAKE.x,p.z-RIVLAKE.z)<RIVLAKE.r)},
+  ];
+  if(mode===2)G.missions.push({id:'r_duet',area:A.bridge,coop:true,
+    label:'Get BOTH beaks onto the bridge deck at once',
+    check:()=>G.keas.length>1&&G.keas.every(k=>onDeck(k))});
+  /* THE FINALE IS THE FAR TOWER, and it is the only thing on this map you cannot reach without
+     crossing — which makes the sentence the map's own rather than the carpark's. */
+  G.missions.push({id:'r_tower',finale:true,locked:true,
+    label:'THE FAR TOWER — the one thing you have to cross for',
+    armText:{t:'ONE THING LEFT',s:'THE FAR TOWER — ACROSS AND UP'},
+    check:()=>G.keas.some(k=>Math.hypot(k.x-RIVBRIDGE.x,k.z-RIVBRIDGE.z1)<2.0&&k.y>4.2)});
+}
+
+defineBiome('river',{label:'THE BRAIDED RIVER',build:buildRiver,cast:castRiver,
+  missions:missionsRiver,
+  anchor:{x:26,y:22,z:-26, lx:6,ly:2.0,lz:6}, snow:RIVSNOW});
 
 /* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
    The level select. One table, and everything the brochure says comes out of it: the order of the
@@ -8435,6 +8828,7 @@ function update(dt){
   }
   if(G.needHydrate){ G.needHydrate=false; applySave(); }
   G.time+=dt; G.frames=(G.frames||0)+1;
+  updateRiver(dt);    // the floes drift, and they carry whatever is standing on them
   travelUpdate(dt);   // TODO 38: outside the running gate, because a beat can play with no run on
   if(G.running&&!G.paused&&!G.won){
     for(const k of G.keas){ G.actor=k; k.update(dt); }   // TODO 16: award() reads whose frame this is
@@ -8642,6 +9036,8 @@ if(typeof globalThis!=='undefined'){
     VILL:{NEST:VILLNEST,ST:VILLST,PATH:VILLPATH,VER:VILLVER,SHOP:VILLSHOP,UNITS:VILLUNITS,
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
+    RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,
+         SHELTER:RIVSHELTER,BOAT:RIVBOAT,FLOES:RIVFLOES},
     /* REPLAT P6A: THE PROP SEAM. Exported as a block for the same reason SKY is — the batteries pin
        the registry itself rather than re-typing twenty-six rows of it, and src/models.mjs reads one
        source of truth for what wants a model, where it stands and what its material policy is.

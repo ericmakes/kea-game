@@ -482,6 +482,26 @@ await shotR('35_village_glass',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=tru
 await shotR('36_village_bakery',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=-8.0;k.z=-4.4;k.y=0.30;k.vy=0;k.grounded=true;k.ry=3.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
   ${CAM(-4.2,2.5,0.4, -8.4,1.5,-6.4)}`,VILL);
+/* ---------- THE BRAIDED RIVER (RIVER.md) ----------
+   THREE FIRST PINS, LEFT FLAGGED. The bird is pinned and the clock frozen in all three, as on
+   every map since TODO 88 was diagnosed — and here the clock pin does a second job: the floes
+   drift off G.time, so an unpinned clock would put them somewhere different in every take. */
+const RIV={biome:'river'};
+// 37: the crossing — the swing bridge from the near bank, towers, sag, and the water under it.
+await shotR('37_river_bridge',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=6.0;k.z=1.0;k.y=2.57;k.vy=0;k.grounded=true;k.ry=0.0;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(13.5,4.4,-6.0, 6.0,2.6,4.0)}`,RIV);
+// 38: the floes — the one surface in this game that moves, with the bird standing on one. The
+//     clock pin puts them at a known point of their drift, which is the only reason this is
+//     photographable at all.
+await shotR('38_river_floes',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('const f=KEAGAME.G.rivFloes&&KEAGAME.G.rivFloes[1]; if(f){k.x=f.p.group.position.x;k.z=f.p.group.position.z;k.y=0.34;} k.vy=0;k.grounded=true;k.ry=2.4;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-17.0,3.2,17.0, -25.0,0.6,24.0)}`,RIV);
+// 39: the boardwalk end — the DOC shelter, the daypacks at the bridge mouth, the jetboat on the
+//     shingle, and the braid channel running away.
+await shotR('39_river_walk',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=6.0;k.z=-12.0;k.y=0.52;k.vy=0;k.grounded=true;k.ry=0.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(11.0,3.0,-19.0, 4.0,1.0,-8.0)}`,RIV);
 if(SRV)await SRV.close();
 if(GAVEUP.length){ console.log('CAPTURE INCOMPLETE — gave up on: '+GAVEUP.join(', ')); process.exitCode=1; }
 else console.log('CAPTURE COMPLETE');

@@ -2046,14 +2046,51 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
        unbuilt-map questions about a map it had not paid for — reporting "the third pin is paid for
        too (18)" against twelve stars in hand. The fixture follows the price now. */
     const NEED2=T.TABLE[1].need, NEEDSTUB=T.TABLE[STUB].need;
-    const PAGES=Math.max(4,Math.ceil(NEEDSTUB/S.KINDS.length));
-    ok(PAGES<=G.chapters.length,'the carpark has enough pages to pay for the first unbuilt pin ('+
-       PAGES+' needed of '+G.chapters.length+')');
-    for(let i=0;i<PAGES;i++)grant(G.chapters[i],S.KINDS);
+    /* ONE MAP CAN NO LONGER PAY FOR THE LAST PIN, and that is arithmetic rather than a bug. The
+       carpark has eight pages, so twenty-four stars; the station costs thirty. This block has been
+       nudged twice already as maps landed — four pages, then ceil(need/3) — and both times the
+       nudge was really the same structural fact arriving late: THE TOUR TOTAL IS THE SUM ACROSS
+       MAPS, and once five maps are built the first unbuilt pin costs more than any single map
+       holds. So the fixture earns across maps, which is also how a real player reaches thirty.
+       The carpark is filled first and completely, and the shortfall is made up on the SECOND map —
+       whose slot is a different slot, which is the collision the per-biome save exists for and is
+       therefore worth exercising here rather than avoiding. */
+    const CARPAGES=G.chapters.length, CARSTARS=CARPAGES*S.KINDS.length;
+    for(const a of G.chapters)grant(a,S.KINDS);
+    /* THE LOCKED-MAP QUESTION IS ASKED HERE, BEFORE THE TOP-UP, and that is the only place it can
+       still be asked. With five maps built the first unbuilt pin is the LAST pin, so a fixture
+       that can afford it can afford everything and there is no locked pin left to refuse — the
+       first cut found T.TABLE[-1] and threw. Asked at this point the same pin answers BOTH
+       refusals in turn, which is a better test than two pins each answering one: locked while it
+       is unaffordable, 'not built yet' once it is paid for. */
+    let lockedAsked=false;
+    { const m0=T.model(), LOCKED=T.TABLE.findIndex(t=>t.need>m0.stars);
+      if(LOCKED>=0){
+        const r0=T.pick(T.TABLE[LOCKED].id);
+        ok(r0.ok===false&&r0.why==='locked'&&r0.need===T.TABLE[LOCKED].need,
+           'picking a map this run cannot afford is refused as LOCKED, with the price in the '+
+           'answer ('+JSON.stringify(r0)+')');
+        ok(!_m.has(T.KEY),'and the refusal recorded no pick');
+        lockedAsked=true; } }
+    let extraStars=0, extraOn=null;
+    if(NEEDSTUB>CARSTARS){
+      const short=NEEDSTUB-CARSTARS, need2=Math.ceil(short/S.KINDS.length);
+      extraOn=T.TABLE[1].id;
+      X.SAVE.write();                              // bank the carpark before leaving it
+      X.boot({biome:extraOn}); X.startGame(1); tick(6);
+      ok(need2<=G.chapters.length,'the second map has enough pages to make up the shortfall ('+
+         need2+' of '+G.chapters.length+')');
+      for(let i=0;i<need2;i++)grant(G.chapters[i],S.KINDS);
+      extraStars=need2*S.KINDS.length;
+      X.SAVE.write();
+      X.boot({biome:'carpark'}); X.startGame(1); tick(6); park();
+    }
+    const PAGES=CARPAGES;                          // what the CARPARK holds, for the pin-0 checks
     { const m=T.model();
-      ok(m.stars===PAGES*S.KINDS.length,PAGES+' pages granted whole count as '+
-         (PAGES*S.KINDS.length)+' stars ('+m.stars+')');
-      ok(m.pins[0].stars===m.stars,'all of them belong to the map they were earned on');
+      ok(m.stars===CARSTARS+extraStars,'the career total is the sum across maps ('+m.stars+
+         ' = '+CARSTARS+(extraStars?' + '+extraStars+' on '+extraOn:'')+')');
+      ok(m.pins[0].stars===CARSTARS,'and the carpark holds only what was earned on it ('+
+         m.pins[0].stars+')');
       ok(NEED2<=m.stars,'which covers what the second pin costs ('+NEED2+')');
       ok(m.pins[1].unlocked===true,'so the second pin is paid for');
       ok(m.pins[1].state==='open',
@@ -2070,20 +2107,20 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
 
     /* A PICK IS REFUSED FOR TWO DIFFERENT REASONS AND SAYS WHICH, because the brochure button and
        whatever piece 38 builds both need to tell the player something true. */
-    /* THE FIRST PIN THIS RUN CANNOT AFFORD, derived for the same reason STUB is: index 3 was a
-       locked map until the campground moved the stub onto it, and then this asked a locked-map
-       question about a map that answers 'not built yet'. */
+    /* THE LOCKED REFUSAL WAS TAKEN ABOVE, before the fixture could afford everything. If a locked
+       pin still exists at this point — which it does while fewer maps are built — ask it here too,
+       so the check does not quietly stop running as the tour fills up. */
     { const LOCKED=T.TABLE.findIndex(t=>t.need>T.model().stars);
-      ok(LOCKED>=0,'there is still a pin this run cannot afford, for the locked-map question');
-      const r1=T.pick(T.TABLE[LOCKED].id);
-      ok(r1.ok===false&&r1.why==='locked'&&r1.need===T.TABLE[LOCKED].need,
-         'picking a locked map is refused as locked, with the price in the answer ('+JSON.stringify(r1)+')');
+      ok(lockedAsked||LOCKED>=0,'the locked-map refusal was asked somewhere in this section');
+      if(LOCKED>=0){ const r1=T.pick(T.TABLE[LOCKED].id);
+        ok(r1.ok===false&&r1.why==='locked'&&r1.need===T.TABLE[LOCKED].need,
+           'and a still-locked pin is refused as locked here too ('+JSON.stringify(r1)+')'); }
       const r2=T.pick(T.TABLE[STUB].id);
       ok(r2.ok===false&&r2.why==='not built yet',
          'picking a paid-for map that has no builder is refused as unbuilt ('+JSON.stringify(r2)+')');
       const r3=T.pick('nowhere');
       ok(r3.ok===false&&/no such map/.test(r3.why||''),'and a map that is not on the brochure at all is refused');
-      ok(!_m.has(T.KEY),'none of the three refusals recorded a pick ('+(_m.get(T.KEY)||'nothing')+')'); }
+      ok(!_m.has(T.KEY),'and none of the refusals recorded a pick ('+(_m.get(T.KEY)||'nothing')+')'); }
 
     X.SAVE.write();
     { const blob=JSON.parse(_m.get('keaSaveV1_n'));
@@ -2110,18 +2147,18 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
     { const m=T.model();
       ok(m.here===T.TABLE[STUB].id&&m.pins[STUB].state==='current','and the brochure follows you ('+m.here+')');
       ok(m.pins[STUB].stars===0,'the new map starts with no stars of its own ('+m.pins[STUB].stars+')');
-      ok(m.pins[0].stars===PAGES*S.KINDS.length,
-         'while the carpark still has all '+(PAGES*S.KINDS.length)+
+      ok(m.pins[0].stars===CARSTARS,
+         'while the carpark still has all '+CARSTARS+
          ', read off the blob rather than the world ('+m.pins[0].stars+')');
-      ok(m.stars===PAGES*S.KINDS.length,'so the career total is unchanged by travelling ('+m.stars+')');
+      ok(m.stars===CARSTARS+extraStars,'so the career total is unchanged by travelling ('+m.stars+')');
       ok(Object.keys(G.stars).length===0,
          'and the live ledger is empty, because the slot that hydrated was this map own ('+
          Object.keys(G.stars).length+' pages)'); }
     grant(G.chapters[0],['style']); X.SAVE.write();
     { const m=T.model();
-      ok(m.pins[STUB].stars===1&&m.pins[0].stars===PAGES*S.KINDS.length,
+      ok(m.pins[STUB].stars===1&&m.pins[0].stars===CARSTARS,
          'a star earned here lands here ('+m.pins[STUB].stars+' vs carpark '+m.pins[0].stars+')');
-      ok(m.stars===PAGES*S.KINDS.length+1,'and the total is the sum of the maps ('+m.stars+')'); }
+      ok(m.stars===CARSTARS+extraStars+1,'and the total is the sum of the maps ('+m.stars+')'); }
     /* READ THROUGH AN ACCESSOR, and this block is the reason the rule exists. Written the obvious
        way - blob.biomes.carpark.stars - it THREW under the sabotage that made every write start the
        blob fresh, and a battery that dies takes every finding after it down with it: that sabotage
@@ -2130,8 +2167,11 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
     { const blob=JSON.parse(_m.get('keaSaveV1_n'));
       const stars=id=>((blob.biomes||{})[id]||{}).stars||{};
       const a=stars('carpark'), b=stars(T.TABLE[STUB].id);
-      ok(Object.keys(blob.biomes||{}).length===2,
-         'both maps are in the blob ('+Object.keys(blob.biomes||{}).join(',')+')');
+      /* HOW MANY SLOTS ARE IN THE BLOB depends on whether the fixture had to earn on a second map
+         to afford the stub, which it does once five maps are built. Named rather than counted. */
+      const wantSlots=2+(extraOn?1:0);
+      ok(Object.keys(blob.biomes||{}).length===wantSlots,
+         wantSlots+' slots are in the blob ('+Object.keys(blob.biomes||{}).join(',')+')');
       ok(Object.keys(a).length===PAGES&&Object.keys(b).length===1,
          'each holding its own record ('+Object.keys(a).length+' pages of carpark vs '+Object.keys(b).length+')');
       ok(!!Object.keys(a)[0]&&Object.keys(a)[0]===Object.keys(b)[0],
@@ -2141,11 +2181,11 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
     X.boot({biome:'carpark'}); X.startGame(1); tick(8); park();
     ok(G.biome==='carpark','and back again');
     { const m=T.model();
-      ok(m.pins[0].stars===PAGES*S.KINDS.length,'the carpark stars are still there after the round trip ('+m.pins[0].stars+')');
+      ok(m.pins[0].stars===CARSTARS,'the carpark stars are still there after the round trip ('+m.pins[0].stars+')');
       ok(S.rec(G.chapters[0]).style===true&&S.rec(G.chapters[1]).clean===true,
          'in the live ledger, off the blob, page by page');
       ok(m.pins[STUB].stars===1,'and the other map kept its one ('+m.pins[STUB].stars+')');
-      ok(m.stars===PAGES*S.KINDS.length+1,'total unchanged ('+m.stars+')'); }
+      ok(m.stars===CARSTARS+extraStars+1,'total unchanged ('+m.stars+')'); }
 
     /* AND A PLAIN BOOT FOLLOWS THE PICK, which is the whole mechanism the brochure GO button uses
        today - it records and reloads, and piece 38 replaces the reload with a flyover. This caught
@@ -6824,6 +6864,118 @@ C.section('THE VILLAGE - the fourth map, the first with lanes, and glass that is
     const pin=T.model().pins.find(p=>p.id==='village');
     ok(!!pin&&pin.built===true,'the village pin knows its map is built now');
     ok(pin.state!=='soon','so the brochure stops saying NOT BUILT YET ('+pin.state+')'); }
+
+  X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
+/* ============================================================================================
+   THE BRAIDED RIVER — the fifth map, and the first surface in this game that MOVES
+   ============================================================================================
+   RIVER.md. Additivity is the P6A section's job, as it was for the campground and the village.
+   What is NEW here and nowhere else is the floe: a collider that drifts, and carries whatever is
+   standing on it. That is the only new claim on the map and it is the one this section drives. */
+C.section('THE BRAIDED RIVER - the fifth map, the swing bridge, and a floor that drifts');
+{
+  const B=X.BIOME, T=X.TOUR, P=X.PROPS, R=X.RIV;
+  const riv=()=>B.ALL.river||{};
+  const boot=()=>{ X.setSeed(20260828); X.boot({biome:'river'}); X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe(); };
+
+  ok(typeof riv().build==='function'&&typeof riv().cast==='function'&&
+     typeof riv().missions==='function'&&!!riv().anchor,'the river carries builder, cast, list and anchor');
+  ok(riv().label==='THE BRAIDED RIVER','and the brochure pin label');
+  boot();
+  ok(G.biome==='river','booting into the river lands there');
+  ok(G.scene.children.length>40,'and it is a populated world ('+G.scene.children.length+')');
+  ok((G.snow||[]).length===0&&riv().snow===null,'no drifts, declared empty');
+  ok(!riv().traffic,'and NO road lanes, because a riverbed has no road — declared, not omitted');
+  X.startGame(1); G.trafT.a=2; G.trafT.b=7; tick(2400);
+  ok(G.cars.filter(c=>c.traffic).length===0,'so nothing drives across the shingle ('+
+     G.cars.filter(c=>c.traffic).length+')');
+  ok(G.humans.length===3,'three tourists, whose backs are the joke ('+
+     G.humans.map(h=>h.key).join(', ')+')');
+
+  /* THE SWING BRIDGE IS A SPAN, and the thing to assert about a span is that it holds along its
+     WHOLE length — the verandah taught that a long collider can work in the middle only. */
+  boot(); X.startGame(1); tick(6); park();
+  { const BR=P.placed('riv_bridge');
+    ok(!!BR,'the bridge is a placement');
+    const rc=(BR.colliders||[]).find(c=>c.kind==='roof');
+    ok(!!rc&&rc.d*2>=22,'its deck is a roof collider spanning the crossing ('+(rc?rc.d*2:0)+' m)');
+    for(const an of ['near','mid','far']){ const q=P.anchor(BR,an);
+      ok(X.groundHeightAt(q.x,q.z,3.2)>R.BRIDGE.deck-0.2,
+         'the deck holds at its '+an+' point ('+X.groundHeightAt(q.x,q.z,3.2).toFixed(2)+')'); }
+    ok(Array.isArray(BR.slats)&&BR.slats.length>60,'and it is slats rather than a plank ('+
+       (BR.slats||[]).length+')');
+    /* cross it, and the crossing mission pays */
+    const k=kq(), f=P.anchor(BR,'far');
+    for(let i=0;i<5;i++){ k.x=f.x; k.z=f.z; k.y=R.BRIDGE.deck+0.02; k.vy=0; k.grounded=true;
+      k.stun=0; X.update(1/60); }
+    tick(4);
+    ok(G.missions.find(m=>m.id==='r_span').done===true,'and crossing it all the way pays'); }
+
+  /* ---- THE FLOES: THE ONLY NEW CLAIM ON THIS MAP, DRIVEN ---- */
+  boot(); X.startGame(1); tick(10);
+  { ok(Array.isArray(G.rivFloes)&&G.rivFloes.length===R.FLOES.length,
+       'the floes are placed from the table ('+(G.rivFloes||[]).length+')');
+    const f=G.rivFloes[1];
+    /* 1. THEY MOVE. */
+    const p0={x:f.p.group.position.x,z:f.p.group.position.z};
+    tick(240);
+    const moved=Math.hypot(f.p.group.position.x-p0.x,f.p.group.position.z-p0.z);
+    ok(moved>0.05,'a floe actually drifts ('+moved.toFixed(3)+' m in four seconds)');
+    /* 2. THE COLLIDER GOES WITH THE MESH, which is the half that makes it a FLOOR and not a
+          decoration — a drifting mesh over a stationary collider is a bird standing on nothing. */
+    ok(Math.abs(f.col.x-f.p.group.position.x)<1e-9&&Math.abs(f.col.z-f.p.group.position.z)<1e-9,
+       'and its collider is exactly where its mesh is ('+f.col.x.toFixed(3)+','+f.col.z.toFixed(3)+
+       ' against '+f.p.group.position.x.toFixed(3)+','+f.p.group.position.z.toFixed(3)+')');
+    /* 3. IT CARRIES. Measured as RELATIVE drift: the bird must move WITH the floe, so the distance
+          between them is what has to stay still, not either of them. */
+    const k=kq();
+    for(let i=0;i<6;i++){ k.x=f.p.group.position.x; k.z=f.p.group.position.z;
+      k.y=X.groundHeightAt(k.x,k.z,1); k.vy=0; k.grounded=true; k.stun=0; X.update(1/60); }
+    ok(Math.abs(k.y-0.34)<0.06,'the bird stands ON a floe, at its declared top ('+k.y.toFixed(3)+')');
+    const rel0={x:k.x-f.p.group.position.x, z:k.z-f.p.group.position.z};
+    const fp0={x:f.p.group.position.x,z:f.p.group.position.z};
+    tick(240);
+    const fd=Math.hypot(f.p.group.position.x-fp0.x,f.p.group.position.z-fp0.z);
+    const rel=Math.hypot((k.x-f.p.group.position.x)-rel0.x,(k.z-f.p.group.position.z)-rel0.z);
+    ok(fd>0.05,'the floe carried on drifting under it ('+fd.toFixed(3)+' m)');
+    ok(rel<0.02,'AND THE BIRD WENT WITH IT — relative drift '+rel.toFixed(4)+' m over four '+
+       'seconds, which is what makes this a floor and not scenery');
+    ok(G.missions.find(m=>m.id==='r_floe').done===true,'and riding one pays');
+    /* 4. AND IT IS THE ONLY MAP THAT HAS THEM, so the hook cannot reach anywhere else. */
+    X.boot({biome:'carpark'}); X.startGame(1); tick(60);
+    ok(!G.rivFloes||G.rivFloes.length===0,'and a build of another map leaves no floes behind ('+
+       ((G.rivFloes||[]).length)+')'); }
+
+  /* THE LIST, over FIVE maps and both modes. */
+  { const listOf=(biome,mode)=>{ X.boot({biome}); X.startGame(mode); return G.missions.map(m=>m.id); };
+    const other=new Set();
+    for(const b of ['carpark','skifield','campground','village'])
+      for(const md of [1,2]) for(const id of listOf(b,md))other.add(id);
+    const mine=new Set([...listOf('river',1),...listOf('river',2)]);
+    const clash=[...mine].filter(i=>other.has(i));
+    ok(clash.length===0,'not one river mission id appears on another map, in either mode ('+
+       (clash.join(', ')||'none of '+mine.size+' does, against '+other.size+' elsewhere')+')');
+    boot(); X.startGame(1);
+    ok(G.missions.length>=8&&G.missions.length<=12,'eight to twelve jobs and a finale ('+
+       G.missions.length+')');
+    ok(G.chapters.length===2,'on two star pages ('+G.chapters.join(' | ')+')');
+    ok(G.missions.some(m=>m.finale),'with a finale declared with the mission'); }
+
+  // EVERY PROP A REGISTRY ENTRY
+  boot();
+  { const reg=(G.propReg||[]).filter(p=>p.entry.biome==='river');
+    ok(reg.length>=7,'the river builds its furniture through the registry ('+reg.length+')');
+    ok(reg.every(p=>p.source==='primitive'),'all primitive');
+    const entries=Object.values(P.ALL).filter(e=>e.biome==='river');
+    ok(entries.length>=5,'and PROPS.ALL by biome is the model-pass list ('+entries.length+')'); }
+
+  // THE PIN FLIPS
+  { X.boot({biome:'carpark'}); X.startGame(1); tick(4);
+    const pin=T.model().pins.find(p=>p.id==='river');
+    ok(!!pin&&pin.built===true&&pin.state!=='soon','the river pin stops saying NOT BUILT YET ('+
+       pin.state+')'); }
 
   X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }
