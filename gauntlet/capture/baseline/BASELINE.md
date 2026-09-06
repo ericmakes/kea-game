@@ -574,3 +574,37 @@ or replace in the model pass), TODO 92 (the river-flat grass may read as mown la
 against the nz_ plates, and NOT by raising blade height, which is the move that buries the bird),
 TODO 93 (the shelter's concrete pad is bright in frame — fix with wear and edge staining, never a
 hand tint, because `concrete` is a shared family and the ski field's footing wears it too).
+
+## NEW VANTAGES 2026-09-06 (session 32 — the village joins the set, 31 -> 34)
+
+Eric judged 34_village_street, 35_village_glass and 36_village_bakery and called them in, through
+`FIRSTPIN` as the campground's three were.
+
+**AND THEY ARE THE MOST STABLE FRAMES IN THE SET, WHICH IS ITSELF A CONFIRMATION OF TODO 88.**
+34 and 35 read **0 px on all ten pairs** across five independent sweeps, and 36's two states are
+**240 px apart**. Every other new map's first pins came back with wide two-cluster splits —
+4,100 / 9,900 / 10,700 px at the campground — and the difference is what is IN the frame: these
+three are dominated by road, footpath, shop wall and verandah, with very little grass. TODO 88's
+defect is a grass wind-phase shifted by one frame's dt, so a frame with no grass in it barely
+feels it. That is the clock-pin diagnosis holding up from the other end.
+
+36 was still a bare 3-of-5, so N went to 11 on it per Eric's standing instruction — at eleven the
+split is 6/5 and the medoid held the cluster it chose at five. The distance being trivial does not
+excuse skipping the check; a bare majority is a bare majority.
+
+PIN PROVENANCE: run1 2, run2 1.
+
+### VERIFIED ON A FRESH SWEEP
+
+    34_village_street   ssim 1.0000
+    35_village_glass    ssim 0.9997
+    36_village_bakery   ssim 1.0000
+
+### FIVE THINGS ERIC DEFERRED ON THE VILLAGE, ALL FILED
+
+TODO 95 (the shop walls declare `weatherboard` but are painted with a flat palette colour, so they
+wear no scanned family at all — flagged mid-build as a defect rather than a taste call), TODO 96
+(the three shopkeepers are placeholder humans — the whole human tier is unmodelled, but these are
+the first cast whose JOB is visible in frame), TODO 97 (the two parked cars are `mkCar` calls, not
+registry placements, so the model pass will not find them by listing PROPS.ALL), TODO 98 (shop
+interiors have empty shelves; the verandah underside is flat grey corrugate).

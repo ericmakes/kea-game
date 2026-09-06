@@ -2102,3 +2102,50 @@ flat matte black rectangles, and neither fix was a colour:
       band of daylight straight through the shop until it was shot).
 LESSON WORTH KEEPING: two of the three defects here were geometry wearing a material's clothes. A
 material call that photographs wrong is not necessarily a material problem.
+
+### 95. THE VILLAGE SHOP WALLS DO NOT WEAR A SCANNED FAMILY — AND THE ENTRY SAYS THEY DO
+Filed 2026-09-06, session 32, flagged mid-build and deferred by Eric. **This one is a defect rather
+than a taste call.** `defineProp('vill_shop')` declares `material:{family:'weatherboard'}`, but the
+carcass is painted with `mat(u.wall)` — a flat palette colour with no family — so the declaration
+is INTENT that nothing honours. Three flat single colours (red, cream, blue) are why the street
+reads a little like a toy town next to the campground's scanned surfaces.
+WHY THE DECLARATION IS NOT A LIE, EXACTLY: `material.family` is documented as the family a MODEL
+should be dressed in, and P6A's own note says it is deliberately NOT a claim about what the
+primitive body wears — the primitive's real families are MEASURED into `propsState().families`.
+Read that way the entry is honest and the shop simply resolves no family at all. Read carelessly it
+looks like a promise.
+THE FIX: put the shop walls on a real family. `weatherboard` and `brick` both exist and are
+already installed by P3; MATFAM keys off COLOUR, so this means giving each unit a wall colour that
+is registered to a family rather than an arbitrary hex — which is the same colour-as-a-key hazard
+MATFAM's own note describes and the reason the lodge chimney was found wearing driveway gravel.
+IT IS A RE-PIN: all three village vantages are shop-wall dominated.
+
+### 96. THE VILLAGE SHOPKEEPERS ARE PLACEHOLDER HUMANS
+Filed 2026-09-06, session 32, by Eric with the village judgement. `castVillage` pushes three
+`Human`s — baker, barista, tourist — built from the same primitive body every human in the game
+has had since before the re-platform. They are not a village-specific problem; they are the whole
+HUMAN tier, which has never had a model pass and is on the blocked list with the bird.
+WHAT IS VILLAGE-SPECIFIC and worth noting for whoever does that pass: these three are the first
+cast whose JOB is visible in the frame — a baker behind a lit shopfront, a barista among the cafe
+tables — so they are the first humans where a costume would read. The carpark's four are mostly
+seen at distance.
+
+### 97. THE VILLAGE CARS ARE mkCar PLACEHOLDERS, ANGLE-PARKED
+Filed 2026-09-06, session 32, by Eric with the village judgement. Two `mkCar` bodies at the kerb,
+which is the same rounded-box car the carpark has had all along. They are NOT registry placements —
+`mkCar` is called directly, the way the traffic spawner does — so unlike every other prop on this
+map the model pass will not find them by listing `PROPS.ALL`.
+THAT IS THE ACTUAL ITEM: either give the village's two parked cars registry entries the way the
+carpark's four bays got them in P6A (`carEntry`), or accept that parked cars on new maps are
+invisible to the registry and say so in P6A's own notes. The first is about six lines and is
+obviously right; it was skipped only because the village piece was already long.
+
+### 98. VILLAGE DECORATION DEFERRED: SHOP INTERIORS AND THE VERANDAH UNDERSIDE
+Filed 2026-09-06, session 32, flagged mid-build and deferred by Eric as decoration.
+THE INTERIORS are a lit back wall and two shelf boards per unit. They read as a shop and they are
+what makes the glass work at all (TODO 43), but there is nothing ON the shelves — a bakery with
+empty shelves is a closed bakery. Cheap: a row of boxes per shelf, and the bakery's could be the
+pies the mission spawns.
+THE VERANDAH UNDERSIDE is flat grey corrugate across a large part of 35_village_glass. A real one
+has rafters, and staining where the roof leaks at the joints. Also cheap, also decoration.
+NEITHER IS URGENT and both are in the frame Eric judged and passed.
