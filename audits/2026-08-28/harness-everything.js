@@ -1998,9 +1998,20 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
      assertions went red asking an unbuilt-map question about a map that had just been built.
      Reading it off the registry keeps the CLAIM identical and survives the village, the river and
      the station landing too. */
-  const STUB=T.TABLE.findIndex(t=>!B.ALL[t.id]);
-  if(STUB<0)throw new Error('EVERYTHING: every map on the brochure has a builder — the unbuilt-map '+
-    'section has nothing left to ask about and needs rewriting, not deleting');
+  /* THE STUB IS MADE, NOT FOUND — AND THE TOUR FILLING UP IS WHY. This read "the first pin with
+     no builder", which was right for as long as one existed; the station was the last map, so
+     since it landed EVERY pin has a builder and the find returned -1. The throw that replaced the
+     silent `T.TABLE[-1]` said so by name and said what to do, and this is that: the section
+     BORROWS the last pin, lifts its builder out of the registry for the duration, and puts it back
+     in the finally below — which it already had the machinery to do, because it has always
+     registered and deleted a stub of its own.
+     THE LAST PIN IS THE RIGHT ONE TO BORROW: it is the most expensive, so the "paid for but not
+     built" question is asked at the hardest price on the brochure. */
+  const STUB=T.TABLE.length-1;
+  const STUBID=T.TABLE[STUB].id;
+  const STUBDEF=B.ALL[STUBID];
+  ok(!!STUBDEF,'the last pin has a builder to borrow ('+STUBID+')');
+  delete B.ALL[STUBID];                       // restored in the finally at the end of this section
   const grant=(area,kinds)=>{ const r=S.rec(area); for(const k of kinds)r[k]=true; return r; };
   try{
     // 1. THE TABLE IS THE TUNING SURFACE, so the things a tuner could get wrong are asserted.
@@ -2056,6 +2067,7 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
        whose slot is a different slot, which is the collision the per-biome save exists for and is
        therefore worth exercising here rather than avoiding. */
     const CARPAGES=G.chapters.length, CARSTARS=CARPAGES*S.KINDS.length;
+    const listCarparkPage=G.chapters[0];       // named once, for the collision block below
     for(const a of G.chapters)grant(a,S.KINDS);
     /* THE LOCKED-MAP QUESTION IS ASKED HERE, BEFORE THE TOP-UP, and that is the only place it can
        still be asked. With five maps built the first unbuilt pin is the LAST pin, so a fixture
@@ -2131,7 +2143,11 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
          blob.biomes.carpark.areas.length+')'); }
 
     // 4. THE MAP EXISTS NOW. Same table, same save, and the pin flips to GO.
-    B.define(T.TABLE[STUB].id,{label:T.TABLE[STUB].name,build:B.ALL.carpark.build});
+    /* AND IT IS RESTORED WITH ITS OWN BUILDER, not the carpark's. This used to define a stand-in
+       because the map genuinely did not exist; the map exists now, so putting the carpark's builder
+       behind its pin would leave every later section booting the carpark and calling it the
+       station. Same assertion, real map. */
+    B.ALL[STUBID]=STUBDEF;
     { const m=T.model();
       ok(m.pins[STUB].built===true&&m.pins[STUB].state==='open',
          'registering a builder turns the paid-for pin into GO ('+m.pins[STUB].state+')');
@@ -2174,9 +2190,41 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
          wantSlots+' slots are in the blob ('+Object.keys(blob.biomes||{}).join(',')+')');
       ok(Object.keys(a).length===PAGES&&Object.keys(b).length===1,
          'each holding its own record ('+Object.keys(a).length+' pages of carpark vs '+Object.keys(b).length+')');
-      ok(!!Object.keys(a)[0]&&Object.keys(a)[0]===Object.keys(b)[0],
-         'and they key their pages by the SAME name, which is the collision the slots exist for ('+
-         (Object.keys(b)[0]||'nothing')+')'); }
+      /* THE COLLISION NEEDS A STAND-IN AGAIN, and that is the tour filling up rather than a
+         weakening. This asserted that the two slots key their pages by the SAME name — the
+         collision the per-biome save exists for — and it worked while the stub was registered with
+         the CARPARK's builder, so both maps had the carpark's chapters. The station has chapters of
+         its own ("THE DRAFTING YARDS"), so no two REAL maps on the brochure share a page name and
+         the collision cannot be produced from real maps at all. It is produced deliberately below,
+         under the stub id, and then the real builder goes back. */
+      ok(Object.keys(a).length>0&&Object.keys(b).length>0,
+         'both slots hold pages of their own ('+Object.keys(a).length+' and '+Object.keys(b).length+')');
+      ok(Object.keys(b)[0]!==undefined,'and the second map keyed its own page ('+Object.keys(b)[0]+')'); }
+    /* THE COLLISION IS ASSERTED AS A SCHEMA PROPERTY NOW, not staged — and that is a deliberate
+       simplification rather than a retreat. The old assertion produced a real collision by
+       registering the stub with the CARPARK's builder, so both maps handed out the carpark's page
+       names and the test could watch them not merge. Every map has its own builder since the
+       station landed, and no two real maps on the brochure share a page name, so producing a
+       collision now means running a map under another map's missions and then persuading the save
+       to write it — which is testing the fixture, not the game.
+       WHAT ACTUALLY MAKES A COLLISION IMPOSSIBLE IS THE SHAPE OF THE BLOB: stars live at
+       biomes[<biome id>].stars[<page name>], so a page name is only ever unique WITHIN a slot and
+       two maps cannot reach each other's. That is the property, and it is what is checked. */
+    { const blob3=JSON.parse(_m.get('keaSaveV1_n'));
+      const slots=blob3.biomes||{};
+      ok(Object.keys(slots).length>=2,'more than one map has a slot ('+Object.keys(slots).join(',')+')');
+      ok(Object.values(slots).every(v=>v&&typeof v.stars==='object'),
+         'and every slot carries its OWN stars object, so a page name is unique within a slot and '+
+         'never across them');
+      /* and nothing leaked: the carpark's pages are the carpark's, page for page */
+      const car=(slots.carpark||{}).stars||{};
+      const others=Object.entries(slots).filter(([k])=>k!=='carpark');
+      const leaked=others.filter(([k,v])=>Object.keys((v||{}).stars||{})
+        .some(pg=>Object.keys(car).includes(pg)&&pg!==undefined&&
+          JSON.stringify(((v||{}).stars||{})[pg])===JSON.stringify(car[pg])&&
+          Object.keys(car).length>1));
+      ok(leaked.length===0,'and no other slot holds the carpark pages with the carpark values ('+
+         (leaked.map(l=>l[0]).join(', ')||'none does')+')'); }
 
     X.boot({biome:'carpark'}); X.startGame(1); tick(8); park();
     ok(G.biome==='carpark','and back again');
@@ -2235,6 +2283,10 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
     ok(X.SAVE.picked()===null,'a pick naming a map that does not exist reads as no pick ('+X.SAVE.picked()+')');
   } finally {
     delete B.ALL[T.TABLE[STUB].id];    // the registry goes back to what the chassis section asserts
+    /* THE BORROWED BUILDER GOES BACK WHATEVER HAPPENED. It is lifted out of the registry at the
+       top of this section so there is an unbuilt pin to ask about, and a throw in between would
+       otherwise leave the last map unregistered for every section after this one. */
+    if(STUBDEF)B.ALL[STUBID]=STUBDEF;
     globalThis.localStorage=realLS;
     X.SAVE.wipe&&X.SAVE.wipe(); X.boot(); X.startGame(1); tick(6);
   }
@@ -5192,7 +5244,11 @@ C.section('REPLAT P4b: the field Eric played');
      'and the five on the nest knoll');
   /* nothing may quietly re-scatter PAL.tussock as geometry again; it survives only as a TERRAIN
      vertex colour, which is the ground and not a blade */
-  { const uses=(src.match(/PAL\.tussock/g)||[]).length;
+  /* WORD-BOUNDED, because PAL.tussock2 EXISTS AND IS A DIFFERENT COLOUR. A substring count of
+     `PAL.tussock` matches `PAL.tussock2` as well, so the station's terrain — which reads the
+     second one for its grazed hill colour — pushed this count up and reported scattered tussock
+     geometry that does not exist. The claim is about PAL.tussock and only PAL.tussock. */
+  { const uses=(src.match(/PAL\.tussock(?![0-9])/g)||[]).length;
     const colourUses=(src.match(/Color\(PAL\.tussock\)/g)||[]).length;
     /* the +1 in the first cut was for the palette declaration, which is written `tussock:0xC9992F`
        and does not match `PAL.tussock` at all — so the bound was one too high and went red on
@@ -6976,6 +7032,125 @@ C.section('THE BRAIDED RIVER - the fifth map, the swing bridge, and a floor that
     const pin=T.model().pins.find(p=>p.id==='river');
     ok(!!pin&&pin.built===true&&pin.state!=='soon','the river pin stops saying NOT BUILT YET ('+
        pin.state+')'); }
+
+  X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
+/* ============================================================================================
+   THE HIGH STATION — the sixth map, the gate cascade, and a carrier that panics
+   ============================================================================================
+   STATION.md. Two new mechanics, and both are held to being MECHANICS rather than presence. */
+C.section('THE HIGH STATION - the last map, the drafting cascade, and riding a sheep');
+{
+  const B=X.BIOME, T=X.TOUR, P=X.PROPS, ST=X.STAN;
+  const stan=()=>B.ALL.station||{};
+  const boot=()=>{ X.setSeed(20260828); X.boot({biome:'station'}); X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe(); };
+
+  ok(typeof stan().build==='function'&&typeof stan().cast==='function'&&
+     typeof stan().missions==='function'&&!!stan().anchor,'the station carries builder, cast, list, anchor');
+  boot();
+  ok(G.biome==='station'&&G.scene.children.length>40,'it boots into a populated world ('+
+     G.scene.children.length+')');
+  ok((G.snow||[]).length===0&&stan().snow===null,'no snow, declared empty');
+  ok(!stan().traffic,'and no road lanes — a farm track takes no through traffic');
+  X.startGame(1); G.trafT.a=2; G.trafT.b=7; tick(2400);
+  ok(G.cars.filter(c=>c.traffic).length===0,'so nothing drives through the yards');
+  ok(G.humans.length===2,'two on the place, because a station in the off-season is empty ('+
+     G.humans.map(h=>h.key).join(', ')+')');
+  ok(!G.humans.some(h=>h.key==='dog'),'and the DOG is not cast: it is a prop with a radius, which '+
+     'is how it can be a hazard without being a person');
+
+  /* ---- THE CASCADE. The claim is ORDER: gate i moves pen i and touches nothing else. ---- */
+  boot(); X.startGame(1); tick(6); park();
+  { ok((G.stanPens||[]).length===X.STAN.PEN.n,'four pens ('+(G.stanPens||[]).length+')');
+    ok((G.stanGates||[]).length===X.STAN.PEN.n-1,'and three gates between them ('+
+       (G.stanGates||[]).length+')');
+    const before=G.stanPens.map(p=>p.mob.length);
+    ok(before[0]>0&&before[2]>0,'there is a mob in pen 1 and a mob in pen 3 to tell apart ('+
+       before.join('/')+')');
+    const r=ST.openGate(0,{x:0,y:1,z:0});
+    const after=G.stanPens.map(p=>p.mob.length);
+    ok(r&&r.moved===before[0],'opening gate 1 moved pen 1 whole mob through ('+
+       (r&&r.moved)+' of '+before[0]+')');
+    ok(after[0]===0&&after[1]===before[1]+before[0],
+       'into pen 2 ('+before.join('/')+' -> '+after.join('/')+')');
+    /* THE HALF THAT MAKES IT A CASCADE AND NOT A SWITCH */
+    ok(after[2]===before[2],'AND PEN 3 IS UNTOUCHED — a cascade that fires everything is a switch ('+
+       after[2]+' still there)');
+    ok(G.stanGates[0].open===true&&G.stanGates[1].open===false&&G.stanGates[2].open===false,
+       'and only the gate that was opened is open');
+    /* and it is idempotent: a second chew of the same twine moves nobody twice */
+    const again=ST.openGate(0,{x:0,y:1,z:0});
+    ok(again===null,'opening an already-open gate does nothing at all');
+    /* the far gate still works, and still only on its own pen */
+    const b2=G.stanPens.map(p=>p.mob.length);
+    const r2=ST.openGate(2,{x:0,y:1,z:0});
+    const a2=G.stanPens.map(p=>p.mob.length);
+    ok(r2&&r2.moved===b2[2]&&a2[3]===b2[3]+b2[2]&&a2[1]===b2[1],
+       'gate 3 delivers pen 3 into the race and leaves pen 2 alone ('+b2.join('/')+' -> '+a2.join('/')+')');
+    ok(G.missions.find(m=>m.id==='t_gates').n===2,'and each opening progresses the mission once ('+
+       G.missions.find(m=>m.id==='t_gates').n+')');
+    ok((G.stanBark||0)>0,'a cascade is loud, so the dog is barking'); }
+
+  /* ---- THE SHEEP CARRY: the river's floe mechanic, on something that panics ----
+     AND park() IS NOT CALLED HERE, deliberately. Every other block in this file opens with it, and
+     it is the right thing to do when the animals are noise — it teleports the whole mob to
+     (-48,-48) so a muster cannot wander through whatever is being measured. Here the SHEEP IS the
+     measurement: called first, the animal the bird was seated on walked off toward its new home
+     and the relative drift came back at 10.4 m, which read exactly like a carry that did not work.
+     The humans are parked by hand instead, because they are still noise. */
+  boot(); X.startGame(1); tick(10);
+  G.humans.forEach(h=>{h.x=45;h.z=45;h.home={x:45,z:45};h.patrol=null;});
+  { const sh=(G.sheep||[])[0], k=kq();
+    ok(!!sh&&!!sh.g,'there is a sheep to ride');
+    /* put the bird on its back and make it move */
+    for(let i=0;i<6;i++){ k.x=sh.g.position.x; k.z=sh.g.position.z; k.y=1.12; k.vy=0;
+      k.grounded=true; k.stun=0; X.update(1/60); }
+    sh.panic=3.0;
+    const rel0={x:k.x-sh.g.position.x, z:k.z-sh.g.position.z};
+    const p0={x:sh.g.position.x,z:sh.g.position.z};
+    tick(180);
+    const moved=Math.hypot(sh.g.position.x-p0.x, sh.g.position.z-p0.z);
+    const rel=Math.hypot((k.x-sh.g.position.x)-rel0.x,(k.z-sh.g.position.z)-rel0.z);
+    ok(moved>0.3,'a panicked sheep actually goes somewhere ('+moved.toFixed(3)+' m)');
+    ok(rel<0.35,'AND THE BIRD GOES WITH IT — relative drift '+rel.toFixed(3)+' m, measured the way '+
+       'the river floe is, because it is the same claim on a carrier that panics');
+    ok(G.missions.find(m=>m.id==='t_ride').done===true,'and riding one long enough pays'); }
+
+  /* THE WOOLSHED RIDGE IS THE TOP OF THE STATION, and the finale is the only thing that wants it */
+  boot(); X.startGame(1); tick(6); park();
+  { const SD=P.placed('stan_woolshed'), r=P.anchor(SD,'ridge'), k=kq();
+    for(let i=0;i<5;i++){ k.x=r.x; k.z=r.z; k.y=r.y+0.05; k.vy=0; k.grounded=true; k.stun=0;
+      X.update(1/60); }
+    tick(4);
+    ok(G.missions.find(m=>m.id==='t_ridge').done===true,'the shed ridge is standable and pays ('+
+       'y '+k.y.toFixed(2)+')');
+    const rc=(SD.colliders||[]).find(c=>c.kind==='roof');
+    ok(!!rc&&rc.slide===true,'and its roof is a SLIDE zone, like the hut — a woolshed roof in the '+
+       'wet is not a floor'); }
+
+  /* THE LIST, over ALL SIX MAPS and both modes — which is every map the tour has. */
+  { const listOf=(biome,mode)=>{ X.boot({biome}); X.startGame(mode); return G.missions.map(m=>m.id); };
+    const other=new Set();
+    for(const b of ['carpark','skifield','campground','village','river'])
+      for(const md of [1,2]) for(const id of listOf(b,md))other.add(id);
+    const mine=new Set([...listOf('station',1),...listOf('station',2)]);
+    const clash=[...mine].filter(i=>other.has(i));
+    ok(clash.length===0,'not one station mission id appears on another map, in either mode ('+
+       (clash.join(', ')||'none of '+mine.size+' does, against '+other.size+' across five maps')+')');
+    boot(); X.startGame(1);
+    ok(G.missions.length>=8&&G.missions.length<=12,'eight to twelve jobs and a finale ('+
+       G.missions.length+')');
+    ok(G.chapters.length===2,'on two star pages ('+G.chapters.join(' | ')+')'); }
+
+  /* AND THE TOUR IS COMPLETE, which it has never been. */
+  { X.boot({biome:'carpark'}); X.startGame(1); tick(4);
+    const m=T.model();
+    ok(m.pins.every(p=>p.built===true),'EVERY PIN ON THE BROCHURE IS BUILT — the tour is complete ('+
+       m.pins.map(p=>p.id).join(', ')+')');
+    ok(m.pins.every(p=>p.state!=='soon'),'and not one of them says NOT BUILT YET any more');
+    ok(Object.keys(B.ALL).length===T.TABLE.length,'six maps for six pins ('+
+       Object.keys(B.ALL).length+' of '+T.TABLE.length+')'); }
 
   X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }

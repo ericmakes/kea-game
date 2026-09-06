@@ -764,6 +764,10 @@ const GRASS={
        the banks. It is the one profile where `bare` is doing the describing. */
     river:    {h:[0.16,0.38], w:[0.006,0.013], lean:[0.08,0.26], bare:0.46, clumpM:1.90, taper:0.52,
                base:0x466A24, tint:[0x9AA84A,0x5E6E22,0xD8D2A8], tip:0x6E5A24},
+    /* HIGH-COUNTRY RUN, GRAZED HARD. Between the carpark's tussock and the campground's pasture:
+       short because ten thousand sheep keep it short, and bare in patches for the same reason. */
+    station:  {h:[0.15,0.36], w:[0.008,0.018], lean:[0.11,0.33], bare:0.24, clumpM:1.40, taper:0.56,
+               base:0x44661E, tint:[0xB09442,0x6E5E1E,0xDCD4A6], tip:0x7A5220},
   },
 };
 /* ITS OWN IGNORED LIST, not MATS's. matMerge pushes rejected paths into whatever array it is
@@ -2253,6 +2257,7 @@ const G={
   stars:{}, pageChaos:{}, snow:[], squawk:null, actor:null, ledger:[], ledgerLoose:0, biome:null, vs:null, foodSrc:[],
   propReg:[],                     // REPLAT P6A: the placed world props, one record per registry entry placed
   rivFloes:[],                    // RIVER: the drifting floes, the one moving surface in the game
+  stanPens:[], stanGates:[],      // STATION: the drafting pens and the gates that cascade between them
 
   noiseEvents:[], stats:{wipers:0,shinies:0,screeches:0,shooed:0,jams:0,snow:0,food:0},
   nestPos:{x:-4,z:-33}, nestStash:0,
@@ -2907,6 +2912,18 @@ function grassCuts(biome){
       [A.x,A.z,A.w/2+0.5,A.d/2+0.5],                      // the ablutions pad
       [CAMPVAN.x,CAMPVAN.z,3.4,3.0]]);                    // the campervan hardstand
   }
+  if(biome==='station'){
+    const S=STANSHED, R=STANRACE, P2=STANPEN;
+    /* FIVE LIVE BOXES: the yard scrape (ten thousand sheep leave nothing growing), the shed pad,
+       the loading race, the ute's standing and the kennel. The yards are one box across all four
+       pens, because they are one bare surface and not four. */
+    return grassPad([
+      [P2.x0+(P2.n-1)*P2.w/2,P2.z,(P2.n*P2.w)/2+1.0,P2.d/2+1.5],   // the whole yard scrape
+      [S.x,S.z,S.w/2+1.2,S.d/2+1.2],                                // the shed
+      [R.x,R.z,R.w/2+0.6,R.d/2+0.6],                                // the race
+      [STANUTE.x,STANUTE.z,2.0,2.8],                                // the ute
+      [STANKENNEL.x,STANKENNEL.z,1.4,1.4]]);                        // the kennel
+  }
   if(biome==='river'){
     const W=RIVWATER, B=RIVBRIDGE, K=RIVWALK, L=RIVLAKE;
     /* SIX LIVE BOXES: the braid channel and its shingle banks, the lake, the boardwalk, the bridge
@@ -3271,7 +3288,7 @@ function snowSpot(x,z,r,env){
    booting the carpark and finding three floes still registered. updateRiver guards on G.biome so
    nothing misbehaved, but a stale list is a stale list and the next reader will not guard. */
 const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow','propReg',
-                 'rivFloes'];
+                 'rivFloes','stanPens','stanGates'];
 /* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
    sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
    thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
@@ -5522,6 +5539,407 @@ function missionsRiver(mode){
 defineBiome('river',{label:'THE BRAIDED RIVER',build:buildRiver,cast:castRiver,
   missions:missionsRiver,
   anchor:{x:26,y:22,z:-26, lx:6,ly:2.0,lz:6}, snow:RIVSNOW});
+
+
+/* ---------- THE HIGH STATION (STATION.md, the sixth and last map) ----------
+   TWO NEW MECHANICS, and both are held to being mechanics rather than presence:
+     THE GATE CASCADE — opening one gate lets the sheep in that pen through into the next, which is
+       the first thing in the tour where one act changes the state of ANOTHER object. The cascade is
+       ordered: gate 1 moves pen 1's mob and must leave pen 3's alone, because a cascade that fires
+       everything is not a cascade, it is a switch.
+     THE SHEEP CARRY — a kea on a sheep's back goes where the sheep goes. It is the river's floe
+       again on something that panics, and it is measured the same way: relative drift near zero
+       while the carrier actually moves. */
+const STANNEST={x:-32,z:26};
+const STANSHED={x:-12, z:-4, w:16.0, d:9.0, h:4.4, pile:0.55};   // the woolshed, on piles
+const STANRACE={x:-12, z:2.2, w:15.0, d:1.8, y:1.15};            // the raised loading race
+/* FOUR PENS IN A ROW, THREE GATES BETWEEN THEM, and a race at the end. The pens are a table
+   because the cascade is asserted and a table is what an assertion can read. */
+const STANPEN={x0:4.0, w:7.0, z:-6.0, d:8.0, n:4};
+const STANYARD=(i)=>({x:STANPEN.x0+i*STANPEN.w, z:STANPEN.z, w:STANPEN.w, d:STANPEN.d});
+const STANUTE={x:-24.0, z:6.0};
+const STANKENNEL={x:-4.0, z:8.0};
+const STANTROUGH={x:2.0, z:5.0};
+const STANSNOW=null;
+
+defineProp('stan_woolshed',{
+  biome:'station', at:{x:STANSHED.x,z:STANSHED.z},
+  collider:[{kind:'roof',x:0,z:0,w:(STANSHED.w+0.8)/2,d:STANSHED.d*0.56,
+             ridge:STANSHED.h+STANSHED.pile+1.05,slope:0.42,slide:true},
+            {kind:'box',w:STANSHED.w,d:STANSHED.d,top:STANSHED.h+STANSHED.pile,solid:true}],
+  anchors:{ridge:{x:0,y:STANSHED.h+STANSHED.pile+1.08,z:0},
+           step:{x:0,y:STANSHED.pile+0.10,z:STANSHED.d/2+0.7},
+           bay:{x:4.4,y:STANSHED.pile+0.9,z:STANSHED.d/2-0.4},
+           press:{x:5.6,y:STANSHED.pile+1.3,z:-1.0}},
+  material:{family:'corrugate',nightTint:false},
+  build(g,p){
+    const S=STANSHED;
+    /* ON PILES, which is what a woolshed is: the floor is up so a truck can back to it */
+    for(let ix=0;ix<5;ix++)for(let iz=0;iz<3;iz++)
+      box(0.34,S.pile,0.34,0xA9A7A2,-S.w/2+1.0+ix*((S.w-2.0)/4),S.pile/2,
+          -S.d/2+1.0+iz*((S.d-2.0)/2),g,{noshadow:true});
+    box(S.w,0.22,S.d,PAL.woodD,0,S.pile,0,g);                            // the floor
+    /* three walls and an OPEN BAY on the yard side, which is where the wool comes out.
+       OXIDE RED, NOT THE ALPINE HUT'S. PAL.hut is a saturated red cut for a small hut in snow, and
+       on a 16 x 4.4 m wall under this light it photographed as fluorescent — the whole of
+       41_station_shed went to it. A woolshed IS red, but it is red LEAD OXIDE: dark, dusty, and
+       the colour of something painted once in 1958. Same reason the campground's ablutions block
+       stopped wearing this colour. */
+    const WOOL=0x8E3A2A;
+    box(S.w,S.h,0.22,WOOL,0,S.pile+S.h/2,-S.d/2+0.11,g);
+    for(const sx of [-1,1]) box(0.22,S.h,S.d,WOOL,sx*(S.w/2-0.11),S.pile+S.h/2,0,g);
+    box(S.w*0.52,S.h,0.22,WOOL,-S.w*0.24,S.pile+S.h/2,S.d/2-0.11,g);  // the closed half
+    /* the gable roof, ridge along x, and the slide the collider promises */
+    for(const s of [-1,1]){ const rf=box(S.w+0.8,0.16,S.d*0.62,PAL.hutRoof,0,S.pile+S.h+0.75,
+        s*S.d*0.26,g); rf.rotation.x=s*0.42; }
+    box(S.w+0.9,0.20,0.24,PAL.hutRoof,0,S.pile+S.h+1.05,0,g,{noshadow:true});
+    /* the wool press in the open bay, and a stand board */
+    rbox(1.1,1.9,1.1,0.08,PAL.metal,5.6,S.pile+0.95,-1.0,g);
+    box(0.9,0.10,0.9,PAL.dark,5.6,S.pile+1.95,-1.0,g,{noshadow:true});
+    box(4.6,0.10,1.2,PAL.wood,-3.0,S.pile+0.06,S.d/2-1.2,g,{noshadow:true});
+    /* the step everybody's smoko sits on */
+    box(2.2,0.14,0.9,PAL.woodD,0,S.pile-0.06,S.d/2+0.55,g);
+    p.collide();
+  },
+});
+defineProp('stan_race',{
+  biome:'station', at:{x:STANRACE.x,z:STANRACE.z},
+  collider:[{kind:'box',w:STANRACE.w,d:STANRACE.d,top:STANRACE.y+0.10,solid:false}],
+  anchors:{deck:{x:0,y:STANRACE.y+0.12,z:0}, top:{x:STANRACE.w/2-1.0,y:STANRACE.y+0.12,z:0}},
+  material:{family:null,keepModelPBR:true,nightTint:false},
+  build(g,p){
+    const R=STANRACE;
+    for(let x=-R.w/2; x<R.w/2; x+=0.5) box(0.44,0.07,R.d,PAL.wood,x+0.22,R.y,0,g,{noshadow:true});
+    for(const sz of [-1,1]){ box(R.w,0.07,0.07,PAL.woodD,0,R.y+0.80,sz*(R.d/2-0.05),g,{noshadow:true});
+      box(R.w,0.07,0.07,PAL.woodD,0,R.y+0.44,sz*(R.d/2-0.05),g,{noshadow:true});
+      for(let x=-R.w/2+0.6;x<R.w/2;x+=2.2)
+        cyl(0.055,0.06,R.y+0.85,PAL.woodD,x,(R.y+0.85)/2,sz*(R.d/2-0.05),g,6); }
+    p.collide();
+  },
+});
+/* ONE PEN ENTRY, PLACED FOUR TIMES. Its gate is a separate placement because a gate SWINGS and a
+   pen does not — the paddock taught that on the campground's fence. */
+defineProp('stan_pen',{
+  biome:'station', at:{x:0,z:STANPEN.z},
+  collider:[],
+  anchors:{centre:{x:0,y:0.6,z:0}, rail:{x:0,y:1.05,z:-STANPEN.d/2}},
+  material:{family:null,keepModelPBR:true,nightTint:false},
+  build(g,p){
+    const W=STANPEN.w, D=STANPEN.d;
+    for(const sz of [-1,1])for(let i=0;i<3;i++)
+      box(W,0.07,0.07,PAL.wood,0,0.36+i*0.30,sz*D/2,g,{noshadow:true});
+    for(const sz of [-1,1])for(let x=-W/2;x<=W/2;x+=1.75)
+      cyl(0.06,0.07,1.05,PAL.woodD,x,0.52,sz*D/2,g,6);
+    /* only the FAR side rail: the near side is where the gate goes */
+    for(let i=0;i<3;i++) box(0.07,0.07,D,PAL.wood,-W/2,0.36+i*0.30,0,g,{noshadow:true});
+  },
+});
+defineProp('stan_gate',{
+  biome:'station', at:{x:0,z:STANPEN.z},
+  collider:[],
+  anchors:{latch:{x:0,y:0.72,z:-STANPEN.d/2+0.4}},
+  material:{family:null,keepModelPBR:true,nightTint:false},
+  build(g,p){
+    for(let i=0;i<3;i++) box(0.07,0.07,STANPEN.d-0.6,PAL.wood,0,0.36+i*0.30,0,g,{noshadow:true});
+    { const br=box(0.06,1.02,0.06,PAL.wood,0,0.60,0,g,{noshadow:true}); br.rotation.x=1.18; }
+    cyl(0.075,0.085,1.2,PAL.woodD,0,0.60,-STANPEN.d/2+0.3,g,7);
+    cyl(0.075,0.085,1.2,PAL.woodD,0,0.60,STANPEN.d/2-0.3,g,7);
+  },
+});
+defineProp('stan_ute',{
+  biome:'station', at:{x:STANUTE.x,z:STANUTE.z,ry:0.35},
+  collider:[{kind:'box',w:2.2,d:4.8,top:1.35,solid:true}],
+  anchors:{tray:{x:0,y:1.05,z:1.2}, bonnet:{x:0,y:1.05,z:-2.0}, roof:{x:0,y:1.9,z:-0.7}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    /* MUD TO THE SILLS, which is the only thing that says farm ute rather than ute */
+    const shell=rbox(2.0,0.55,4.4,0.16,0x7A8A6E,0,0.56,0,g); hull(shell,0.03);
+    rbox(2.04,0.30,4.44,0.06,0,0,0.34,0,g,{noshadow:true,mats:mat(0x6E5A3A)});   // the mud
+    rbox(1.76,0.68,1.7,0.22,0x7A8A6E,0,1.10,-0.85,g);
+    pane(1.66,0.46,1.6,0.16,PAL.glass,0,1.16,-0.85,g);
+    rbox(1.9,0.34,2.0,0.06,PAL.dark,0,0.68,1.15,g);                              // the tray
+    for(const sz of [0.2,2.05]) rbox(1.92,0.30,0.06,0.02,PAL.metal,0,0.92,sz,g,{noshadow:true});
+    for(const [wx,wz] of [[-1,1.5],[1,1.5],[-1,-1.5],[1,-1.5]]){
+      const w=cyl(0.38,0.38,0.26,PAL.rubber,wx,0.38,wz,g,12); w.rotation.z=1.57;
+      cyl(0.16,0.16,0.28,PAL.metal,wx,0.38,wz,g,10).rotation.z=1.57; }
+    blob(g,1.9,0.5);
+    p.collide();
+  },
+});
+defineProp('stan_kennel',{
+  biome:'station', at:{x:STANKENNEL.x,z:STANKENNEL.z},
+  collider:[{kind:'box',w:1.1,d:1.3,top:0.95,solid:true}],
+  anchors:{mouth:{x:0,y:0.42,z:0.7}, bowl:{x:1.0,y:0.10,z:0.5}, chain:{x:0.6,y:0.35,z:0.2}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    box(1.0,0.75,1.2,PAL.woodD,0,0.38,0,g);
+    for(const s of [-1,1]){ const rf=box(1.15,0.08,0.75,PAL.hutRoof,0,0.82,s*0.30,g);
+      rf.rotation.x=s*0.55; }
+    box(0.42,0.50,0.06,PAL.dark,0,0.30,0.61,g,{noshadow:true});          // the mouth
+    /* THE DOG. A prop with a radius, not a cast member: it barks and a bark brings the farmer. */
+    const d=new THREE.Group(); d.position.set(0.75,0,0.45); g.add(d);
+    const body=sph(0.26,0x3A2E22,0,0.30,0,d,9); body.scale.set(1,0.85,1.5);
+    sph(0.17,0x3A2E22,0,0.42,0.34,d,8);
+    sph(0.09,0xE8E2D2,0,0.34,0.46,d,7);                                  // the blaze
+    for(const ex of [-1,1]){ const ear=sph(0.07,0x2A1E16,ex*0.10,0.52,0.30,d,6); ear.scale.set(0.6,1.3,0.5); }
+    for(const [lx,lz] of [[-0.13,0.18],[0.13,0.18],[-0.13,-0.20],[0.13,-0.20]])
+      cyl(0.045,0.05,0.30,0x2A1E16,lx,0.15,lz,d,6);
+    { const tail=cyl(0.035,0.02,0.34,0x3A2E22,0,0.36,-0.38,d,5); tail.rotation.x=-0.7; }
+    p.dog=d;
+    cyl(0.06,0.06,0.10,PAL.metal,1.0,0.05,0.5,g,10);                     // the bowl
+    p.collide();
+  },
+});
+
+function buildStation(){
+  G.nestPos={x:STANNEST.x,z:STANNEST.z};
+  const GRD=GRASS.ground;
+  const gg=new THREE.PlaneGeometry(240,240,GRD.segs,GRD.segs);
+  const pos=gg.attributes.position;
+  for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
+    /* HIGH COUNTRY: the ground ROLLS rather than sitting flat, because a station is hill country
+       with a flat bit scraped out for the yards. The scrape is below. */
+    let h=0; if(d>56) h=(d-56)*0.11*(1+0.32*Math.sin(x*0.055)*Math.cos(y*0.05));
+    h+=Math.sin(x*0.10)*Math.cos(y*0.085)*0.42+Math.sin(x*0.19+1.1)*0.14;
+    /* THE YARD SCRAPE: the pens and the shed stand on a flat pad, because you cannot draft sheep
+       on a slope and nobody ever built a woolshed on one. */
+    const zw=-y;
+    const inYard=x>STANSHED.x-11&&x<STANPEN.x0+STANPEN.n*STANPEN.w+2&&zw>-12&&zw<10;
+    if(inYard){ const ex=Math.min(1,Math.min(x-(STANSHED.x-11),(STANPEN.x0+STANPEN.n*STANPEN.w+2)-x)/4);
+      const ez=Math.min(1,Math.min(zw+12,10-zw)/4);
+      h=h*(1-Math.max(0,Math.min(1,ex*ez))); }
+    pos.setZ(i,h); }
+  gg.computeVertexNormals();
+  { const cols=[], pp=gg.attributes.position;
+    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),
+          cT=new THREE.Color(PAL.tussock2).convertSRGBToLinear(),
+          cD=new THREE.Color(0x7A6A44).convertSRGBToLinear(),      // the bare, dunged yard dirt
+          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const MS=GRD.maskScale;
+    for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
+      const n=Math.sin(mx*0.10+2.2)*Math.cos(mz*0.09)+Math.sin(mx*0.28)*0.44;
+      let c=n>0.3?cT.clone():cG.clone();
+      /* THE YARDS ARE BARE EARTH, and that is not decoration: ten thousand sheep through a pen
+         leaves nothing growing, which is why the cut list below has a box round them. */
+      const inY=x>STANPEN.x0-STANPEN.w/2-1&&x<STANPEN.x0+STANPEN.n*STANPEN.w&&
+                zw>STANPEN.z-STANPEN.d/2-1.5&&zw<STANPEN.z+STANPEN.d/2+1.5;
+      if(inY)c.lerp(cD,0.85);
+      const d=Math.hypot(x,zw); if(d>60)c.lerp(cR,Math.min(0.8,(d-60)/32));
+      cols.push(c.r,c.g,c.b); }
+    gg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+  uvMetres(gg);
+  const ground=new THREE.Mesh(gg,matGround('grass',0.94));
+  ground.rotation.x=-Math.PI/2; if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
+  buildGrass('station'); buildTrees();
+
+  const SHED=placeProp('stan_woolshed'); G.stanShed=SHED;
+  const RACE=placeProp('stan_race');
+  const UTE=placeProp('stan_ute');   G.stanUte=UTE;
+  const KEN=placeProp('stan_kennel'); G.stanKennel=KEN;
+
+  /* ---- THE DRAFTING YARDS: FOUR PENS, THREE GATES, AND THE CASCADE ---- */
+  G.stanPens=[]; G.stanGates=[];
+  for(let i=0;i<STANPEN.n;i++){
+    const y=STANYARD(i);
+    placeProp('stan_pen',{at:{x:y.x,z:y.z}});
+    /* THE MOB IN THIS PEN. Registered as a record with its meshes on it, the way G.sheep is, so
+       the cascade is inspectable rather than only visible. */
+    const mob=[];
+    const count=i===0?3:(i===1?2:(i===2?2:0));
+    for(let s=0;s<count;s++){
+      const sg=new THREE.Group();
+      sg.position.set(y.x+rnd(-2.2,2.2),0,y.z+rnd(-2.6,2.6)); G.scene.add(sg);
+      const body=sph(0.52,PAL.white,0,0.60,0,sg,10); body.scale.set(1,0.85,1.3); hull(body,0.04);
+      sph(0.32,0xEDEBE2,0.18,0.82,0.28,sg,8); sph(0.28,0xEDEBE2,-0.22,0.78,-0.28,sg,8);
+      const face=sph(0.22,0x4A4642,0,0.74,0.62,sg,9); face.scale.z=1.15;
+      for(const ex of [-1,1]){ const ear=sph(0.085,0x4A4642,ex*0.20,0.86,0.55,sg,6);
+        ear.scale.set(1.4,0.5,0.8); }
+      for(const [lx,lz] of [[-0.24,0.28],[0.24,0.28],[-0.24,-0.33],[0.24,-0.33]])
+        cyl(0.052,0.058,0.48,0x4A4642,lx,0.24,lz,sg,6);
+      blob(sg,0.75,0.48);
+      /* A SHEEP YOU CAN RIDE NEEDS A COLLIDER, and the carpark's three do not have one — nothing
+         has ever stood on a sheep before. Not solid: you walk ONTO its back, you are not pushed
+         away from it. `top` is the back, which is where a kea rides. updateStation moves this with
+         the animal, exactly as the river moves a floe's. */
+      addBoxCollider(sg.position.x,sg.position.z,0.72,1.04,1.12,false);
+      const rec={g:sg,x:sg.position.x,z:sg.position.z,home:{x:y.x,z:y.z},pen:i,
+                 panic:0,calmT:0,ry:rnd(0,6),vx:0,vz:0,ridden:0,
+                 col:G.colliders[G.colliders.length-1]};
+      mob.push(rec); G.sheep.push(rec);
+    }
+    G.stanPens.push({i,x:y.x,z:y.z,w:y.w,d:y.d,mob});
+    /* THE GATE ON THIS PEN'S NEAR SIDE, except the last, which opens into the race */
+    if(i<STANPEN.n-1){
+      const gx=y.x+y.w/2;
+      const GP=placeProp('stan_gate',{at:{x:gx,z:y.z}});
+      const rec={i,p:GP,x:gx,z:y.z,open:false};
+      G.stanGates.push(rec);
+      const twine=new THREE.Group(); twine.position.set(gx,0.72,y.z-y.d/2+0.4); G.scene.add(twine);
+      for(let t=0;t<3;t++){ const w=cyl(0.026,0.026,0.40,0xD8CBA0,0,t*0.05-0.05,0,twine,6);
+        w.rotation.x=1.57; }
+      addTear({label:'CHEW THE GATE TWINE',need:1.3,range:1.35,air:true,keepMesh:true,
+        getPos:()=>GP.anchor('latch'),owner:'farmer',
+        onDone(p){ if(rec.open)return;
+          AU.rip(); burst(p,0xD8CBA0,7); twine.visible=false;
+          stationOpenGate(rec.i,p);
+        }});
+    }
+  }
+  /* THE RACE AT THE END: where the cascade delivers */
+  { const rx=STANPEN.x0+STANPEN.n*STANPEN.w-STANPEN.w/2+2.6;
+    for(const sz of [-1,1])for(let i=0;i<3;i++)
+      box(5.0,0.07,0.07,PAL.wood,rx+2.0,0.36+i*0.30,STANPEN.z+sz*0.9,null,{noshadow:true});
+    for(const sz of [-1,1])for(let x=0;x<=5;x+=1.6)
+      cyl(0.06,0.07,1.05,PAL.woodD,rx-0.5+x,0.52,STANPEN.z+sz*0.9,null,6);
+    G.stanRaceAt={x:rx+2.0,z:STANPEN.z}; }
+
+  /* the trough, the bales, and the windbreak */
+  { box(2.6,0.42,0.8,0xA9A7A2,STANTROUGH.x,0.21,STANTROUGH.z,null);
+    addBoxCollider(STANTROUGH.x,STANTROUGH.z,2.6,0.8,0.44,true);
+    if(!HEADLESS){ const w=new THREE.Mesh(new THREE.PlaneGeometry(2.3,0.6),bmat(0x6E8E9A));
+      w.rotation.x=-Math.PI/2; w.position.set(STANTROUGH.x,0.40,STANTROUGH.z); G.scene.add(w); } }
+  for(let i=0;i<4;i++) rbox(1.0,1.3,1.0,0.06,0xD8CFB4,STANSHED.x+5.0+i*1.15,0.65,
+    STANSHED.z+STANSHED.d/2+2.4,null);
+  for(let i=0;i<9;i++) mkTree(STANNEST.x+2.5+i*3.0,STANNEST.z+rnd(-2,2),rnd(0.9,1.3));
+
+  buildNest(G.nestPos.x,G.nestPos.z);
+
+  /* ---- SMOKO ON THE STEP ---- */
+  { const st=SHED.anchor('step');
+    propAt('thermos',st.x-0.5,st.y+0.14,st.z,PB.can,{shiny:true,owner:'farmer',mission:'t_smoko'});
+    propAt('tin of scones',st.x+0.1,st.y+0.14,st.z+0.05,PB.pie,{food:true,owner:'farmer'});
+    propAt('the newspaper',st.x+0.66,st.y+0.10,st.z,PB.longSticker,{owner:'shearer'}); }
+  /* the dog's bowl is a prop of its own, because taking it is a job */
+  { const b=KEN.anchor('bowl');
+    propAt("the dog's bowl",b.x,b.y+0.06,b.z,PB.can,{owner:'farmer',mission:'t_bowl'}); }
+
+  addHint('t_cascade',STANPEN.x0+STANPEN.w,1.2,STANPEN.z,9,'open one gate and see what the next one does');
+  addHint('t_ride',STANPEN.x0,1.0,STANPEN.z,7,'a sheep is a vehicle if you are light enough');
+  addHint('t_smoko',SHED.anchor('step').x,1.2,SHED.anchor('step').z,5,'somebody smoko, unattended');
+  addHint('t_ridge',STANSHED.x,STANSHED.h+1.6,STANSHED.z,8,'the shed ridge is the top of the station');
+
+  for(let i=0;i<16;i++){ const far=i%2===0, a=i/16*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(120,152):rnd(92,116);
+    const h=far?rnd(36,62):rnd(26,46), w=far?rnd(42,66):rnd(28,48);
+    const geo=new THREE.ConeGeometry(w,h,22,7);
+    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
+      for(let v=0;v<pos2.count;v++){ const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
+        const rr=Math.hypot(x,z); if(rr<0.001)continue;
+        const ang=Math.atan2(z,x), t01=y/h+0.5;
+        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
+        const kR=1+nz*0.28*(1-t01*0.55);
+        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
+        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
+      geo.computeVertexNormals(); }
+    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
+        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
+      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
+      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.74)*8,0,1);
+        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+    const m2=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
+    m2.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m2.rotation.y=rnd(0,3); G.scene.add(m2); }
+}
+
+/* ---- THE CASCADE. One act changing the state of another object, which is what makes it a
+   cascade rather than a switch — and the ORDER is the whole claim: opening gate i moves pen i's
+   mob into pen i+1 and touches nothing else. A cascade that fires everything is a switch. ---- */
+function stationOpenGate(i,at){
+  const gate=(G.stanGates||[]).find(g=>g.i===i); if(!gate||gate.open)return null;
+  gate.open=true;
+  TW.add(1.5,u=>{ gate.p.group.rotation.y=-u*1.15; });
+  const from=(G.stanPens||[])[i], to=(G.stanPens||[])[i+1];
+  let moved=0;
+  if(from&&to){
+    for(const sh of from.mob.slice()){
+      sh.pen=i+1; sh.home={x:to.x,z:to.z};
+      sh.panic=Math.max(sh.panic,2.4);
+      to.mob.push(sh); moved++;
+    }
+    from.mob.length=0;
+  }
+  G.stanCascade=(G.stanCascade||0)+1;
+  award(28+moved*6,moved?'THE GATE IS A SUGGESTION ('+moved+' THROUGH)':'GATE: OPEN',at||{x:gate.x,y:0.8,z:gate.z});
+  prog('t_gates');
+  if(at)noise(at,8,'misdeed','farmer');
+  /* THE DOG NOTICES, which is the map's hazard: a cascade is loud. */
+  G.stanBark=1.6;
+  return {moved,gate:i};
+}
+function updateStation(dt){
+  if(G.biome!=='station')return;
+  if(G.stanBark>0){ G.stanBark-=dt;
+    if(G.stanKennel&&G.stanKennel.dog)
+      G.stanKennel.dog.position.y=Math.abs(Math.sin(G.time*22))*0.07; }
+  /* THE SHEEP CARRY: the floe mechanic on something that panics.
+     THE DELTA IS MEASURED SINCE LAST FRAME, NOT WITHIN THIS ONE, and that is the whole fix. The
+     first cut read the sheep's position, then read it again a line later and applied the
+     difference — which is always zero. Worse, it could never have worked here anyway:
+     updateSheep(dt) runs AFTER this function, so at this point in the frame the animals have not
+     moved yet. Storing the previous position and differencing against it measures the movement
+     that actually happened, whichever order the two updates run in — which is the robust way
+     round rather than depending on where this call sits. */
+  for(const sh of (G.sheep||[])){
+    if(!sh.g)continue;
+    const cx=sh.g.position.x, cz=sh.g.position.z;
+    const dx=cx-(sh._px===undefined?cx:sh._px), dz=cz-(sh._pz===undefined?cz:sh._pz);
+    /* the collider goes with the animal, or the bird is standing on where it used to be */
+    if(sh.col){ sh.col.x=cx; sh.col.z=cz; }
+    if(dx||dz)for(const k of G.keas){ if(!k.grounded)continue;
+      if(Math.abs(k.x-cx)<0.62&&Math.abs(k.z-cz)<0.78&&Math.abs(k.y-1.12)<0.40){
+        k.x+=dx; k.z+=dz;
+        sh.ridden=(sh.ridden||0)+1;
+        if(sh.ridden>30)done('t_ride'); } }
+    sh._px=cx; sh._pz=cz;
+  }
+}
+function castStation(){
+  /* TWO, BECAUSE A STATION IN THE OFF-SEASON IS EMPTY — the farmer and one shearer. The DOG is
+     not cast: it is a prop with a radius, which is why it can be a hazard without being a person. */
+  G.humans.push(new Human('farmer','The Farmer',0x6E5A3A,STANUTE.x+2.0,STANUTE.z-1.4,
+    {hat:'cap',patrol:[{x:STANUTE.x+2.0,z:STANUTE.z-1.4},{x:STANPEN.x0-1.0,z:STANPEN.z-4.0},
+                       {x:STANSHED.x+6.0,z:STANSHED.z+5.0}]}));
+  G.humans.push(new Human('shearer','The Shearer',0xC9992F,STANSHED.x-2.0,STANSHED.z+5.4,
+    {hat:'beanie',patrol:[{x:STANSHED.x-2.0,z:STANSHED.z+5.4},{x:STANSHED.x+5.0,z:STANSHED.z+4.2}]}));
+}
+function missionsStation(mode){
+  const A={yards:'THE DRAFTING YARDS', shed:'THE WOOLSHED'};
+  G.chapters=[A.yards,A.shed]; G.chapIdx=0; G.needHydrate=true;
+  const anyKea=fn=>()=>G.keas.some(fn);
+  const settled=k=>Math.abs(k.vy||0)<0.7;
+  G.missions=[
+    {id:'t_gates', area:A.yards,label:'Open all three drafting gates',need:3,n:0},
+    {id:'t_ride',  area:A.yards,label:'Ride a sheep, properly, for a while'},
+    {id:'t_wrong', area:A.yards,label:'Get a sheep into a pen it does not belong in',
+      check:()=>(G.stanPens||[]).some(p=>p.mob.some(s=>s.pen!==0&&p.i===s.pen&&p.i>0))},
+    {id:'t_rail',  area:A.yards,label:'Hold the rail over the drafting race',
+      check:anyKea(k=>!!G.stanRaceAt&&Math.abs(k.x-G.stanRaceAt.x)<3.0&&
+        Math.abs(k.z-G.stanRaceAt.z)<1.4&&k.y>0.9&&settled(k))},
+    {id:'t_dog',   area:A.yards,label:'Set the dog off and be somewhere else about it',
+      check:()=>(G.stanBark||0)>0&&G.keas.some(k=>Math.hypot(k.x-STANKENNEL.x,k.z-STANKENNEL.z)>9)},
+    {id:'t_smoko', area:A.shed,label:'Steal somebody smoko off the woolshed step'},
+    {id:'t_ridge', area:A.shed,label:'Take the woolshed ridge',
+      check:anyKea(k=>Math.abs(k.x-STANSHED.x)<STANSHED.w/2&&Math.abs(k.z-STANSHED.z)<STANSHED.d/2&&
+        k.y>STANSHED.h+STANSHED.pile&&settled(k))},
+    {id:'t_race',  area:A.shed,label:'Walk the loading race end to end',
+      check:anyKea(k=>Math.abs(k.x-STANRACE.x)<STANRACE.w/2&&Math.abs(k.z-STANRACE.z)<STANRACE.d/2+0.3&&
+        k.y>STANRACE.y-0.1&&settled(k))},
+    {id:'t_bowl',  area:A.shed,label:"Take the dog's bowl, which is the bravest job on the station"},
+    {id:'t_tray',  area:A.shed,label:'Ride the ute tray like you own the place',
+      check:anyKea(k=>Math.abs(k.x-STANUTE.x)<1.6&&Math.abs(k.z-STANUTE.z)<2.6&&k.y>0.95&&settled(k))},
+  ];
+  if(mode===2)G.missions.push({id:'t_duet',area:A.yards,coop:true,
+    label:'Both beaks on the same sheep at once',
+    check:()=>G.keas.length>1&&(G.sheep||[]).some(sh=>sh.g&&
+      G.keas.every(k=>Math.abs(k.x-sh.g.position.x)<0.9&&Math.abs(k.z-sh.g.position.z)<1.1))});
+  G.missions.push({id:'t_top',finale:true,locked:true,
+    label:'THE TOP OF THE STATION — the shed ridge, from the loading race',
+    armText:{t:'ONE THING LEFT',s:'THE WOOLSHED RIDGE — UP THE RACE'},
+    check:()=>G.keas.some(k=>Math.abs(k.x-STANSHED.x)<2.5&&Math.abs(k.z-STANSHED.z)<1.6&&
+      k.y>STANSHED.h+STANSHED.pile+0.6)});
+}
+defineBiome('station',{label:'THE HIGH STATION',build:buildStation,cast:castStation,
+  missions:missionsStation,
+  anchor:{x:34,y:24,z:-26, lx:8,ly:1.6,lz:-4}, snow:STANSNOW});
 
 /* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
    The level select. One table, and everything the brochure says comes out of it: the order of the
@@ -8829,6 +9247,7 @@ function update(dt){
   if(G.needHydrate){ G.needHydrate=false; applySave(); }
   G.time+=dt; G.frames=(G.frames||0)+1;
   updateRiver(dt);    // the floes drift, and they carry whatever is standing on them
+  updateStation(dt);  // the dog barks, and a sheep carries whatever is standing on it
   travelUpdate(dt);   // TODO 38: outside the running gate, because a beat can play with no run on
   if(G.running&&!G.paused&&!G.won){
     for(const k of G.keas){ G.actor=k; k.update(dt); }   // TODO 16: award() reads whose frame this is
@@ -9038,6 +9457,8 @@ if(typeof globalThis!=='undefined'){
     SHOPGLASS, PAL,
     RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,
          SHELTER:RIVSHELTER,BOAT:RIVBOAT,FLOES:RIVFLOES},
+    STAN:{NEST:STANNEST,SHED:STANSHED,RACE:STANRACE,PEN:STANPEN,YARD:STANYARD,
+          UTE:STANUTE,KENNEL:STANKENNEL,TROUGH:STANTROUGH,openGate:stationOpenGate},
     /* REPLAT P6A: THE PROP SEAM. Exported as a block for the same reason SKY is — the batteries pin
        the registry itself rather than re-typing twenty-six rows of it, and src/models.mjs reads one
        source of truth for what wants a model, where it stands and what its material policy is.

@@ -502,6 +502,24 @@ await shotR('38_river_floes',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
 await shotR('39_river_walk',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=6.0;k.z=-12.0;k.y=0.52;k.vy=0;k.grounded=true;k.ry=0.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
   ${CAM(11.0,3.0,-19.0, 4.0,1.0,-8.0)}`,RIV);
+/* ---------- THE HIGH STATION (STATION.md) — THE LAST MAP ----------
+   THREE FIRST PINS, LEFT FLAGGED. Bird pinned, clock frozen, as on every map since TODO 88. */
+const STAN={biome:'station'};
+// 40: the yards — four pens, three gates, the mob, and the woolshed behind them. The map's
+//     signature is a state machine, so this frame is shot BEFORE any gate is opened.
+await shotR('40_station_yards',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=8.0;k.z=-10.4;k.y=1.09;k.vy=0;k.grounded=true;k.ry=3.0;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;'+
+        'KEAGAME.G.sheep.forEach((s,i)=>{s.panic=0;s.calmT=9;});')}
+  ${CAM(13.6,3.5,-15.4, 8.4,1.15,-9.0)}`,STAN);
+// 41: the woolshed and its loading race, from the yard side — the open bay, the press, the piles,
+//     and the smoko on the step. The bird is on the race, which is the way up to the ridge.
+await shotR('41_station_shed',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=-6.0;k.z=2.2;k.y=1.27;k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-0.4,2.6,7.2, -7.4,1.5,2.0)}`,STAN);
+// 42: the ute, the kennel and the dog — the hazard, at close range, with the yards behind.
+await shotR('42_station_ute',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=-24.0;k.z=7.2;k.y=1.07;k.vy=0;k.grounded=true;k.ry=2.6;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-18.5,2.6,11.5, -25.0,1.1,6.0)}`,STAN);
 if(SRV)await SRV.close();
 if(GAVEUP.length){ console.log('CAPTURE INCOMPLETE — gave up on: '+GAVEUP.join(', ')); process.exitCode=1; }
 else console.log('CAPTURE COMPLETE');

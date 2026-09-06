@@ -2187,3 +2187,37 @@ AND THE LOCKED-MAP QUESTION HAD TO MOVE. A fixture that can afford the last pin 
 everything, so no locked pin was left and `T.TABLE[-1]` threw. It is asked BEFORE the top-up now,
 where the same pin answers both refusals in turn — locked while unaffordable, 'not built yet' once
 paid for — which is a better test than two pins each answering one.
+
+### 46. station-biome  — DONE session 32. THE TOUR IS COMPLETE.
+The sixth and last map. STATION.md is the brief. A high-country station: a woolshed on piles with an
+open bay, a wool press and a raised loading race; four drafting pens with three gates between them;
+a mud-to-the-sills farm ute; a kennel with a dog on it; a mob of seven sheep; and somebody's smoko
+on the shed step. Twelve registry placements, two on the place, eleven jobs on two star pages plus a
+coop badge and a finale.
+**EVERY PIN ON THE BROCHURE IS NOW BUILT** — six maps for six pins, which the tour has never been.
+TWO NEW MECHANICS, BOTH DRIVEN AS MECHANICS:
+  THE GATE CASCADE — opening gate i moves pen i's whole mob into pen i+1 and TOUCHES NOTHING ELSE,
+    which is what makes it a cascade rather than a switch. Asserted in that shape (pen 3 untouched),
+    plus idempotence (a second chew moves nobody twice) and that only the opened gate is open.
+  THE SHEEP CARRY — the river's floe mechanic on a carrier that panics, held to the same
+    measurement: the animal actually moves and the bird's RELATIVE drift stays near zero. It needed
+    a collider on the sheep, because nothing had ever stood on one before.
+THREE FIRST PINS — 40_station_yards, 41_station_shed, 42_station_ute — LEFT FLAGGED. Baseline 34.
+TWO LOOK DEFECTS FIXED BEFORE SHOOTING: the woolshed wore PAL.hut, the alpine hut's saturated red,
+which on a 16 x 4.4 m wall photographed as fluorescent (a woolshed is red LEAD OXIDE — dark, dusty,
+painted once in 1958); and two of the three frames had the bird as a speck, so the cameras came in.
+
+### 47b. THERE IS NO `wood` MATERIAL FAMILY, AND THREE MAPS IN A ROW HAVE WANTED ONE
+Filed 2026-09-07, session 32. Not a typo — a gap, and the third occurrence is the evidence.
+`defineProp`'s family guard threw on `family:'wood'` while building the CAMPGROUND, then the RIVER,
+then the STATION. Each time the fix was to declare `null`, which is honest but loses information:
+the boardwalk, the bridge deck, the drafting pens, the loading race, the shelter, the verandah posts
+and every fence in the game are TIMBER, and the P3 family list has grass, gravel, asphalt, snow,
+weatherboard, corrugate, brick and concrete — no bare wood at all.
+WHY IT MATTERS BEYOND TIDINESS: `material.family` is what the model pass reads to know what a
+primitive was standing in for, and "null" tells it nothing. Timber is also the single most common
+surface across the six maps now, so it is the largest un-scanned family in the game.
+THE PIECE: source a CC0 rough-sawn timber set (Poly Haven has several), register it as `timber`,
+and give PAL.wood / PAL.woodD to it via MATFAM — which is a colour-as-a-key change and therefore
+wants the same care the lodge chimney needed when it was found wearing driveway gravel.
+IT IS A RE-PIN: timber is in almost every frame in the set.
