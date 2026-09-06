@@ -752,6 +752,13 @@ const GRASS={
        bird cannot be buried — that measurement was paid for once. */
     campground:{h:[0.18,0.42], w:[0.008,0.017], lean:[0.12,0.38], bare:0.10, clumpM:1.15, taper:0.58,
                base:0x3E6A1C, tint:[0xA8B043,0x62701F,0xE6E2BC], tip:0x66521E},
+    /* THE VILLAGE VERGE IS MOWN AND IT IS THE ONE PLACE THAT IS HONEST. A campground is grazed and
+       TODO 92 asks whether its 0.10 read as lawn; a village berm between a footpath and a fence
+       genuinely IS lawn, so it is short, dense and green, and the ochres come almost out. Heights
+       stay inside the band the carpark's were locked at against the subject floors — that
+       measurement is not spent again here. */
+    village:  {h:[0.14,0.32], w:[0.007,0.015], lean:[0.14,0.40], bare:0.07, clumpM:1.05, taper:0.60,
+               base:0x37631A, tint:[0x8CA83A,0x53701C,0xCFD8A4], tip:0x5E5220},
   },
 };
 /* ITS OWN IGNORED LIST, not MATS's. matMerge pushes rejected paths into whatever array it is
@@ -2894,6 +2901,21 @@ function grassCuts(biome){
       [A.x,A.z,A.w/2+0.5,A.d/2+0.5],                      // the ablutions pad
       [CAMPVAN.x,CAMPVAN.z,3.4,3.0]]);                    // the campervan hardstand
   }
+  if(biome==='village'){
+    const S=VILLST, P2=VILLPATH, U=VILLUNITS, SH=VILLSHOP;
+    const L=(S.x1-S.x0)/2, cx=(S.x0+S.x1)/2;
+    /* SEVEN LIVE BOXES, WHICH IS WHY THE BUDGET WENT TO EIGHT (VILLAGE.md step 0). Four could not
+       have carried this map: the sealed street, a footpath each side, the two shop forecourts under
+       the verandah, the bus-shelter pad and the bike-rack pad. The eighth stays a pad. */
+    return grassPad([
+      [cx,S.z,L,S.w/2+0.4],                                  // the sealed street
+      [cx,P2.north,L,P2.w/2+0.3],                            // the north footpath
+      [cx,P2.south,L,P2.w/2+0.3],                            // the south footpath
+      [U[0].x,SH.z+SH.d/2+1.4,SH.w/2+1.0,2.0],               // the bakery forecourt
+      [U[1].x,SH.z+SH.d/2+1.4,SH.w/2+1.0,2.0],               // the cafe forecourt
+      [VILLSHELTER.x,VILLSHELTER.z,2.2,1.4],                 // the bus-shelter pad
+      [VILLBIKE.x,VILLBIKE.z,1.4,0.9]]);                     // the bike-rack pad
+  }
   return grassPad([
     [0,34,120,5.6],            // road
     [2,17,21,11.5],            // carpark
@@ -4570,6 +4592,543 @@ function castCampground(){
 defineBiome('campground',{label:'THE DOC CAMPGROUND',build:buildCampground,cast:castCampground,
   missions:missionsCampground,
   anchor:{x:0,y:24,z:56, lx:0,ly:1.2,lz:4}, snow:CAMPSNOW});
+
+
+/* ---------- SHOPFRONT GLASS — a material call, not a pane() reuse (VILLAGE.md) ----------
+   Eric's instruction was to make this a proper material decision and judge it against the windows
+   in ref_bow_00 and ref_bow_06. Both plates say the same thing and it is the OPPOSITE of what
+   "reflective window" suggests:
+     ref_bow_00  the house windows are DARK — well below the cream trim and the red brick around
+                 them — and the mullions read AS A GRID AGAINST A NEAR-BLACK INTERIOR. There is a
+                 sheen, but it is subtle and it does not carry the read; the value does.
+     ref_bow_06  the garage mouth is a dark space WITH THINGS IN IT, and the small window in the
+                 door is pale only where it catches sky. So the interior is visible, not implied.
+   THREE CONSEQUENCES, AND EACH IS A DEPARTURE FROM pane():
+   1. pane() IS THE WRONG TOOL AND ITS RAMP IS UPSIDE DOWN. It exists for vehicle glazing and its
+      vertex ramp runs GLASSBOT near-white at the sill to GLASSTOP sky at the head — correct for a
+      RAKED windscreen, which catches the road ahead in its lower half. A vertical shopfront does
+      the reverse: sky at the head, dark footpath at the sill. Reusing it would have put the bright
+      end on the ground.
+   2. THE REFLECTION IS REAL, NOT PAINTED. P2 put a genuine HDRI environment on the scene, so a
+      low-roughness clearcoated sheet reflects the actual sky and mountains rather than a
+      three-stop vertex gradient. That is the whole reason this is worth a material rather than a
+      colour: the reflection moves with the camera, which is what makes a window read as glass.
+   3. THE INTERIOR IS BUILT. A tinted plane cannot be "interior visible" however it is shaded, so
+      every shopfront gets a dark recess box behind its glass with something in it. That is what
+      the plates actually show and it is cheap — one box and two shelves per unit.
+   VALUES: the body colour is dark and COOL, sampled to sit under the weatherboard and brick it
+   stands beside rather than picked for prettiness; opacity is high enough that the recess reads
+   through it and low enough that the sheet is still a sheet. */
+const SHOPGLASS={
+  body   :0x16232A,   // dark, cool, well below any wall value in the frame
+  rough  :0.10,       // a flat sheet, not a perfect mirror — a perfect mirror reads as chrome
+  env    :1.9,        // the reflection is the dominant highlight, off the P2 HDRI
+  coat   :1.0,        // plate glass has a specular sheet ON TOP of its body colour
+  coatRough:0.035,
+  opacity:0.68,       // the recess behind shows through, which is the half a tint cannot fake
+  interior:0x140F0C,  // the box the recess is made of: near-black, warmer than the glass
+  /* THE INTERIOR IS LIT, AND THE FIRST CUT WAS NOT — that is the whole difference between a
+     shopfront and a painted-out window. Shot at 35_village_glass the panes came back as flat matte
+     black rectangles: a dark sheet at 0.68 over a dark brown recess is just dark, and under a
+     verandah there is no sky in the reflection direction to rescue it. The verandah shading is
+     AUTHENTIC and it is not the bug — it means the REFLECTION cannot carry the read here, so the
+     interior has to, which is exactly what ref_bow_06 shows: that garage is legible because light
+     falls into it.
+     `lit` is drawn with bmat — MeshBasicMaterial, unlit — so it reads at the same value whatever
+     the sun is doing, which is the same idiom the hut's warm window and the pie warmer already
+     use. It is a shop with its lights on at midday, which is what a shop is. */
+  lit    :0xE8C88A,   // the warm back wall the recess is lit by
+  shelf  :0xA98A5E,   // and the shelves lift with it, or they vanish against the box
+};
+/* ONE MATERIAL, MEMOISED, because every shopfront shares it and a per-window clone would be a
+   per-window PMREM lookup for no gain. MeshPhysicalMaterial rather than Standard: clearcoat is the
+   term that puts a sheet of specular over a dark body, and it is the cheap half of Physical —
+   transmission is the expensive half and this does not use it, because a shop window is not a
+   lens and the recess behind it is built rather than refracted. */
+let SHOPGLASSMAT=null;
+function shopGlassMat(){
+  if(SHOPGLASSMAT)return SHOPGLASSMAT;
+  const g=SHOPGLASS;
+  SHOPGLASSMAT=new THREE.MeshPhysicalMaterial({
+    color:new THREE.Color(g.body).convertSRGBToLinear(),
+    roughness:g.rough, metalness:0.0,
+    clearcoat:g.coat, clearcoatRoughness:g.coatRough,
+    envMapIntensity:g.env,
+    transparent:true, opacity:g.opacity,
+    side:THREE.FrontSide, depthWrite:false,
+  });
+  SHOPGLASSMAT.name='shopGlass';
+  return SHOPGLASSMAT;
+}
+/* A SHOPFRONT: the recess, what is in it, the sheet, and the mullions — in that order, which is
+   also back to front in depth so the transparent sheet is drawn over a solid interior.
+   THE GLASS DOES NOT WRITE DEPTH (depthWrite:false) and the recess does, so the interior is never
+   sorted out from behind its own window — the failure that makes a transparent sheet look like a
+   hole. Returns the glass mesh, because that is what a peck mission wants to shake. */
+function shopWindow(w,h,x,y,z,parent,deep){
+  const d=deep===undefined?1.6:deep;
+  const G2=SHOPGLASS;
+  /* the recess: a five-sided box, open toward the street, so the interior is a SPACE — and its
+     BACK WALL IS LIT, which is what makes the space legible through a dark sheet */
+  const back=new THREE.Mesh(new THREE.PlaneGeometry(w*0.96,h*0.92),bmat(G2.lit));
+  back.position.set(x,y,z-d+0.03); parent.add(back);
+  box(w,h,0.06,G2.interior,x,y,z-d,parent,{noshadow:true});
+  box(w,0.06,d,G2.interior,x,y+h/2,z-d/2,parent,{noshadow:true});     // ceiling
+  box(w,0.06,d,G2.interior,x,y-h/2,z-d/2,parent,{noshadow:true});     // floor
+  for(const sx of [-1,1]) box(0.06,h,d,G2.interior,x+sx*w/2,y,z-d/2,parent,{noshadow:true});
+  /* something in it, because "interior visible" is a claim a shelf can settle */
+  for(let i=0;i<2;i++) box(w*0.82,0.05,d*0.5,G2.shelf,x,y-h*0.18+i*h*0.30,z-d*0.55,parent,{noshadow:true});
+  const gl=new THREE.Mesh(new THREE.PlaneGeometry(w,h),shopGlassMat());
+  gl.position.set(x,y,z); gl.renderOrder=2; parent.add(gl);
+  /* the mullions read as a grid against the dark, which is the ref_bow_00 read */
+  for(const mx of [-w/4,0,w/4]) box(0.05,h,0.05,PAL.paper,x+mx,y,z+0.02,parent,{noshadow:true});
+  box(w+0.10,0.09,0.09,PAL.paper,x,y+h/2,z+0.02,parent,{noshadow:true});
+  box(w+0.10,0.09,0.09,PAL.paper,x,y-h/2,z+0.02,parent,{noshadow:true});
+  return gl;
+}
+
+/* ---------- THE VILLAGE (VILLAGE.md, the fourth map) ----------
+   An alpine village main street. The brochure has declared it since TODO 37 and rendered it 'soon'
+   for one reason: BIOMES['village'] did not exist.
+   THE STREET IS THE ORGANISING LINE, the way the track was the campground's and the tow line the
+   ski field's — one sealed road along z=0, a kerbed footpath each side, and a continuous verandah
+   over the shop footpath. THE VERANDAH IS THE SIGNATURE STRUCTURE: a 25 m climbable ridge at
+   first-floor height running the whole shop row, which nothing in the tour has yet.
+   IT IS THE FIRST NEW MAP THAT WANTS ROAD LANES. The carpark declares them, the ski field and the
+   campground declare none, and a main street with no through traffic is a street with no point. */
+const VILLNEST={x:-30,z:-30};
+const VILLST={z:0, w:7.0, x0:-44, x1:44};              // the sealed road
+const VILLPATH={north:-5.4, south:5.4, w:2.6};         // kerbed footpaths either side
+const VILLVER={z:-6.4, x0:-13.0, x1:13.0, h:3.05};     // the verandah over the shop footpath
+const VILLSHOP={z:-10.2, w:7.6, d:6.0, h:4.2};         // the shop row, three units deep of it
+/* THE UNITS ABUT, AND THE SPACING IS THE WIDTH FOR A REASON. They were 7.6 wide at 8.0 centres,
+   which leaves a 0.4 m gap between every pair — and shot at 36_village_bakery that gap read as a
+   bright hole through the shop row to the field behind, because a terrace of shops with daylight
+   between them is not a terrace. Spaced at exactly VILLSHOP.w so the party walls meet. */
+const VILLUNITS=[
+  {id:'bakery',   x:-7.6, name:'BAKERY',   wall:0xB8563A},
+  {id:'cafe',     x: 0.0, name:'CAFE',     wall:0xC9B48A},
+  {id:'souvenir', x: 7.6, name:'MERINO',   wall:0x4E6E8E},
+];
+const VILLSHELTER={x:7.0, z:6.8};                      // the bus shelter, across the street
+const VILLBIKE={x:-14.2, z:-5.0};
+const VILLLAMP={x:13.6, z:-4.6};
+const VILLPOLE={x:-17.5, z:5.6};
+const VILLBINS=[{x:-4.2,z:-4.9},{x:11.0,z:-4.9}];
+const VILLPLANTERS=[{x:-11.6,z:-4.7},{x:-2.0,z:-4.7},{x:5.6,z:-4.7}];
+/* NO SNOW IN A VILLAGE SUMMER, declared rather than omitted — piece 39 found four globals that
+   were really carpark declarations and the one it did not find put seven hatchbacks on the snow. */
+const VILLSNOW=null;
+
+/* THE SHOP ROW, one entry per unit, placed three times off VILLUNITS. Its glass is the material
+   call recorded above SHOPGLASS, not a pane() reuse. */
+defineProp('vill_shop',{
+  biome:'village', at:{x:0,z:VILLSHOP.z},
+  collider:[{kind:'box',w:VILLSHOP.w,d:VILLSHOP.d,top:VILLSHOP.h,solid:true}],
+  anchors:{door:{x:0,y:1.05,z:VILLSHOP.d/2+0.1}, window:{x:0,y:1.75,z:VILLSHOP.d/2+0.12},
+           parapet:{x:0,y:VILLSHOP.h+0.25,z:0}},
+  material:{family:'weatherboard',nightTint:false},
+  build(g,p){
+    const S=VILLSHOP, fz=S.d/2;
+    /* THE FRONT WALL IS AN OPENING, NOT A DECAL ON A SOLID, and the first cut was the latter: the
+       carcass was one box from z -3 to +3 with the glass hung at +3.06 and a lit recess placed at
+       +1.56 — INSIDE the solid. Shot at 35_village_glass the panes came back flat black, because
+       the carcass's own front face stood between the lens and the interior it was meant to show.
+       So the shell is built as walls, and the front is built as the masonry AROUND the openings:
+       four piers, a sill under each window, and a spandrel over the lot. The window is then a hole
+       with a lit box behind it, which is what a shopfront is. */
+    const W=2.4, H=2.2, y0=0.65, y1=y0+H;                 // the opening, and where it sits
+    const XW=[-2.2,2.2];                                   // the two window centres
+    p.shellParts=[];
+    const wall=(w,h,d,x,y,z)=>{ const m=box(w,h,d,PAL.paper,x,y,z,g); p.shellParts.push(m); return m; };
+    wall(S.w,S.h,0.20,0,S.h/2,-fz+0.10);                              // the back
+    for(const sx of [-1,1]) wall(0.20,S.h,S.d,sx*(S.w/2-0.10),S.h/2,0);   // the sides
+    box(S.w,0.18,S.d,PAL.hutRoof,0,S.h-0.09,0,g);                     // the roof slab
+    /* the front: piers either side of each opening, sills under them, spandrel over */
+    for(const px of [-3.80,-1.00,1.00,3.80]) wall(0.42,y1,0.22,px,y1/2,fz-0.11);
+    for(const wx of XW) wall(W,y0,0.22,wx,y0/2,fz-0.11);              // the sills
+    wall(S.w,S.h-y1,0.22,0,y1+(S.h-y1)/2,fz-0.11);                    // the spandrel
+    /* AND A TRANSOM OVER THE DOOR. The door is 2.1 tall and the spandrel starts at 2.85, so the
+       front wall had a 0.75 m open band straight over the doorway — daylight through the shop,
+       visible as a sliver beside the door head at 36_village_bakery. A shopfront has a transom
+       there; this is it. */
+    wall(2.0,y1-2.10,0.22,0,2.10+(y1-2.10)/2,fz-0.11);
+    const par=box(S.w+0.4,0.5,S.d+0.3,PAL.paper,0,S.h+0.25,0,g);      // the parapet every shop has
+    p.shellParts.push(par);
+    /* THE SHOPFRONT GLASS, in the opening the masonry left. Its recess is now a real space. */
+    p.glass=[];
+    for(const wx of XW) p.glass.push(shopWindow(W,H,wx,y0+H/2,fz-0.02,g,1.5));
+    box(1.1,2.1,0.10,PAL.woodD,0,1.05,fz-0.06,g);                     // the door
+    sph(0.05,PAL.metal,0.42,1.05,fz+0.02,g,7);
+    p.collide();
+  },
+});
+defineProp('vill_verandah',{
+  biome:'village', at:{x:(VILLVER.x0+VILLVER.x1)/2,z:VILLVER.z},
+  /* THE RIDGE IS A ROOF COLLIDER, not a box: it is what the bird stands on and it is 26 m long, so
+     groundHeightAt has to answer for every metre of it. Half-extents, verbatim, like the hut's. */
+  collider:[{kind:'roof',w:(VILLVER.x1-VILLVER.x0)/2,d:1.5,ridge:VILLVER.h+0.22,slope:0.10}],
+  anchors:{ridge:{x:0,y:VILLVER.h+0.24,z:0}, west:{x:-11.5,y:VILLVER.h+0.24,z:0},
+           east:{x:11.5,y:VILLVER.h+0.24,z:0}},
+  material:{family:'corrugate',nightTint:false},
+  build(g,p){
+    const V=VILLVER, L=V.x1-V.x0;
+    const rf=box(L,0.12,3.0,PAL.hutRoof,0,V.h+0.16,0,g); rf.rotation.x=0.05;
+    for(let i=0;i<14;i++) box(L-0.4,0.05,0.08,0x4A545C,0,V.h+0.23,-1.4+i*0.215,g,{noshadow:true});
+    box(L+0.3,0.20,0.14,PAL.hutRoof,0,V.h+0.26,1.45,g,{noshadow:true});   // the street-side fascia
+    for(let i=0;i<=6;i++){ const px=-L/2+i*(L/6);
+      cyl(0.08,0.09,V.h,PAL.paper,px,V.h/2,1.3,g,7); }                    // the posts on the kerb
+    p.collide();
+  },
+});
+defineProp('vill_shelter',{
+  biome:'village', at:{x:VILLSHELTER.x,z:VILLSHELTER.z,ry:Math.PI},
+  collider:[{kind:'box',w:3.2,d:1.6,top:2.35,solid:true}],
+  anchors:{roof:{x:0,y:2.38,z:0}, bench:{x:0,y:0.46,z:-0.5}, timetable:{x:1.1,y:1.5,z:-0.7}},
+  material:{family:'corrugate',nightTint:false},
+  build(g,p){
+    box(3.4,0.10,1.8,PAL.hutRoof,0,2.32,0,g);
+    for(const sx of [-1,1]) cyl(0.06,0.07,2.3,PAL.metal,sx*1.55,1.15,-0.75,g,7);
+    for(const sx of [-1,1]) cyl(0.06,0.07,2.3,PAL.metal,sx*1.55,1.15,0.75,g,7);
+    box(3.3,1.5,0.08,0x9FB8C4,0,1.25,-0.82,g,{noshadow:true});          // the back panel
+    rbox(2.8,0.08,0.42,0.03,PAL.wood,0,0.44,-0.50,g);                    // the bench
+    box(0.55,0.7,0.04,0xE8E2D2,1.10,1.50,-0.76,g,{noshadow:true});       // the timetable
+    p.collide();
+  },
+});
+defineProp('vill_bin',{
+  biome:'village', at:{x:0,z:0},
+  collider:[{kind:'box',w:0.7,d:0.7,top:1.0,solid:true}],
+  anchors:{rim:{x:0,y:1.02,z:0}, body:{x:0,y:0.55,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    cyl(0.32,0.28,0.95,0x3E5B4E,0,0.48,0,g,12);
+    for(const ry of [0.28,0.62,0.88]){ const rib=new THREE.Mesh(new THREE.TorusGeometry(0.315,0.018,6,14),mat(0x334E42));
+      rib.position.y=ry; rib.rotation.x=1.57; g.add(rib); }
+    cyl(0.34,0.34,0.07,PAL.dark,0,1.00,0,g,12);
+    p.collide();
+  },
+});
+defineProp('vill_planter',{
+  biome:'village', at:{x:0,z:0},
+  collider:[{kind:'box',w:1.1,d:0.7,top:0.62,solid:true}],
+  anchors:{soil:{x:0,y:0.60,z:0}},
+  material:{family:'concrete',nightTint:false},
+  build(g,p){
+    box(1.15,0.55,0.75,0xA9A7A2,0,0.28,0,g);
+    box(0.95,0.06,0.58,0x4A3A22,0,0.57,0,g,{noshadow:true});             // the soil
+    for(let i=0;i<5;i++){ const a=i/5*Math.PI*2;
+      const b=sph(0.13,i%2?0x4E7F3E:0x5E9448,Math.cos(a)*0.28,0.66,Math.sin(a)*0.16,g,7);
+      b.scale.y=0.7; }
+    p.collide();
+  },
+});
+defineProp('vill_bikerack',{
+  biome:'village', at:{x:VILLBIKE.x,z:VILLBIKE.z},
+  collider:[],
+  anchors:{bellA:{x:-0.55,y:0.98,z:0.06}, bellB:{x:0.55,y:0.98,z:0.06}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    for(let i=0;i<3;i++){ const hoop=new THREE.Mesh(new THREE.TorusGeometry(0.34,0.028,6,14,Math.PI),mat(PAL.metal));
+      hoop.position.set(-0.7+i*0.7,0.34,0); g.add(hoop); }
+    /* two bikes, leaned: a frame triangle, two wheels and a bar, which is all a bike needs to be
+       one at this distance — and the BELL is the anchor, because that is what a kea takes */
+    for(const bx of [-0.55,0.55]){
+      for(const wz of [-0.42,0.42]){ const w=new THREE.Mesh(new THREE.TorusGeometry(0.30,0.025,6,16),mat(PAL.dark));
+        w.position.set(bx,0.30,wz); g.add(w); }
+      cyl(0.022,0.022,0.86,bx<0?0xC0392B:0x2F6E5E,bx,0.55,0,g,6).rotation.x=1.57;
+      cyl(0.020,0.020,0.42,PAL.metal,bx,0.78,-0.30,g,6);
+      box(0.30,0.035,0.05,PAL.dark,bx,0.98,-0.30,g,{noshadow:true});     // the bars
+      sph(0.045,PAL.sun,bx,0.98,0.06,g,7);                               // the bell
+    }
+  },
+});
+defineProp('vill_lamp',{
+  biome:'village', at:{x:VILLLAMP.x,z:VILLLAMP.z},
+  collider:[{kind:'box',w:0.4,d:0.4,top:0.3,solid:true}],
+  anchors:{head:{x:0,y:4.05,z:0}, base:{x:0,y:0.3,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    cyl(0.16,0.20,0.30,0xA9A7A2,0,0.15,0,g,10);
+    cyl(0.07,0.09,3.8,PAL.metal,0,1.95,0,g,10);
+    const arm=cyl(0.05,0.05,0.7,PAL.metal,0.28,3.92,0,g,7); arm.rotation.z=1.2;
+    rbox(0.46,0.14,0.30,0.05,PAL.dark,0.56,4.02,0,g);
+    p.lampGlow=new THREE.Mesh(new THREE.PlaneGeometry(0.40,0.24),bmat(0xFFE2A8));
+    p.lampGlow.position.set(0.56,3.93,0); p.lampGlow.rotation.x=-Math.PI/2; g.add(p.lampGlow);
+    p.collide();
+  },
+});
+defineProp('vill_sandwich_board',{
+  biome:'village', at:{x:-8.0,z:-4.6},
+  collider:[],
+  anchors:{face:{x:0,y:0.55,z:0}},
+  material:{family:null,nightTint:false},
+  build(g,p){
+    for(const s of [-1,1]){ const f=rbox(0.70,0.95,0.04,0.02,0x2A2418,0,0.50,s*0.16,g);
+      f.rotation.x=s*0.16; }
+    box(0.70,0.04,0.30,PAL.woodD,0,0.03,0,g,{noshadow:true});
+  },
+});
+
+function buildVillage(){
+  G.nestPos={x:VILLNEST.x,z:VILLNEST.z};
+  /* ---- TERRAIN: a valley floor, flatter than any of the three, because a village is built on
+     the one bit of ground that is flat. The SAME named block as the other three (GRASS.ground). */
+  const GRD=GRASS.ground;
+  const gg=new THREE.PlaneGeometry(240,240,GRD.segs,GRD.segs);
+  const pos=gg.attributes.position;
+  for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
+    let h=0; if(d>58) h=(d-58)*0.10*(1+0.28*Math.sin(x*0.05)*Math.cos(y*0.06));
+    h+=Math.sin(x*0.14)*Math.cos(y*0.12)*0.09; pos.setZ(i,h); }
+  gg.computeVertexNormals();
+  { const cols=[], pp=gg.attributes.position;
+    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),
+          cD=new THREE.Color(PAL.ground).convertSRGBToLinear(),
+          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const MS=GRD.maskScale;
+    for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
+      const n=Math.sin(mx*0.11+1.2)*Math.cos(mz*0.09)+Math.sin(mx*0.30)*0.4;
+      let c=n>0.45?cD.clone():cG.clone();
+      const d=Math.hypot(x,zw); if(d>54)c.lerp(cR,Math.min(0.8,(d-54)/32));
+      cols.push(c.r,c.g,c.b); }
+    gg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+  uvMetres(gg);
+  const ground=new THREE.Mesh(gg,matGround('grass',0.94));
+  ground.rotation.x=-Math.PI/2; if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
+  buildGrass('village'); buildTrees();
+
+  /* ---- THE STREET, THE KERBS AND THE FOOTPATHS ---- */
+  { const S=VILLST, L=S.x1-S.x0, cx=(S.x0+S.x1)/2;
+    const slab=box(L,0.16,S.w,PAL.tarmac,cx,0.08,S.z,null,{noshadow:true});
+    slab.receiveShadow=!HEADLESS;
+    /* the centre line, dashed, which is what says ROAD rather than APRON */
+    for(let x=S.x0+2;x<S.x1;x+=5) box(2.2,0.16,0.16,PAL.roadLine,x,0.17,S.z,null,{noshadow:true});
+    for(const pz of [VILLPATH.north,VILLPATH.south]){
+      const kerb=box(L,0.28,0.22,0xA9A7A2,cx,0.14,pz+(pz<0?VILLPATH.w/2:-VILLPATH.w/2),null,{noshadow:true});
+      kerb.receiveShadow=!HEADLESS;
+      const path=box(L,0.24,VILLPATH.w,0xB4AFA6,cx,0.12,pz,null,{noshadow:true});
+      path.receiveShadow=!HEADLESS;
+    } }
+
+  /* ---- THE SHOP ROW, THE VERANDAH OVER IT, AND WHAT SITS UNDER IT ---- */
+  const SHOPS={};
+  for(const u of VILLUNITS){
+    const P=placeProp('vill_shop',{at:{x:u.x,z:VILLSHOP.z}});
+    /* EVERY MASONRY PART TAKES THE UNIT'S COLOUR. The shell used to be one box and one assignment;
+       it is nine parts now because the front had to become an opening, and painting only the first
+       of them would have left a shop with a coloured back and a cream front. */
+    for(const m of (P.shellParts||[]))m.material=mat(u.wall);
+    SHOPS[u.id]=P;
+  }
+  const VER=placeProp('vill_verandah'); G.villVerandah=VER;
+  G.villShops=SHOPS;
+
+  /* THE BAKERY: the pie warmer in the window, and the sandwich board on the footpath */
+  { const B=SHOPS.bakery, w=B.anchor('window');
+    const warm=rbox(1.30,0.60,0.50,0.05,PAL.metal,0,0,0,null);
+    warm.position.set(B.at.x,1.20,VILLSHOP.z+VILLSHOP.d/2-0.85); G.scene.add(warm);
+    const glow=new THREE.Mesh(new THREE.PlaneGeometry(1.14,0.44),bmat(0xFFC66B));
+    glow.position.set(B.at.x,1.20,VILLSHOP.z+VILLSHOP.d/2-0.58); G.scene.add(glow);
+    G.villWarmer={x:B.at.x,z:VILLSHOP.z+VILLSHOP.d/2-0.85,open:false,mesh:warm};
+    addPeck({label:'WORK THE PIE WARMER',needHits:3,mesh:warm,
+      getPos:()=>({x:B.at.x,y:1.35,z:VILLSHOP.z+VILLSHOP.d/2+0.15}),range:1.5,owner:'baker',
+      onDone(p){ G.villWarmer.open=true; AU.clang();
+        TW.add(0.5,u=>{ warm.rotation.x=-0.9*Math.min(1,u*1.3); });
+        for(let i=0;i<3;i++)spawnLoose('mince pie',PB.pie,
+          {x:p.x+rnd(-0.5,0.5),y:1.3,z:p.z+0.4},{food:true,owner:'baker',vy:2.2});
+        award(45,'THE PIE WARMER. WARM NO LONGER.',p); done('v_warmer');
+        noise(p,10,'misdeed','baker'); }});
+    const SB=placeProp('vill_sandwich_board');
+    addTear({label:'FLATTEN THE SANDWICH BOARD',need:1.3,mesh:SB.group,
+      getPos:()=>SB.anchor('face'),range:1.3,owner:'baker',keepMesh:true,
+      onDone(p){ AU.clang();
+        TW.add(0.6,u=>{ SB.group.rotation.x=1.45*Math.min(1,u*1.2)+Math.sin(u*15)*0.1*(1-u); });
+        award(20,'TODAY SPECIAL: NOTHING',p); done('v_board'); noise(p,6,'misdeed','baker'); }});
+  }
+
+  /* THE CAFE: tables with umbrellas under the verandah, and a tray of sugar sachets */
+  { const C=SHOPS.cafe;
+    for(const tx of [-1.9,1.9]){
+      const t=cyl(0.52,0.50,0.06,PAL.paper,C.at.x+tx,0.74,VILLVER.z+0.6,null,14);
+      cyl(0.05,0.05,0.72,PAL.metal,C.at.x+tx,0.37,VILLVER.z+0.6,null,7);
+      for(let i=0;i<2;i++){ const ch=rbox(0.42,0.05,0.42,0.02,PAL.woodD,
+        C.at.x+tx+(i?0.78:-0.78),0.46,VILLVER.z+0.6,null);
+        for(const [lx,lz] of [[-0.15,-0.15],[0.15,-0.15],[-0.15,0.15],[0.15,0.15]])
+          cyl(0.02,0.02,0.46,PAL.metal,C.at.x+tx+(i?0.78:-0.78)+lx,0.23,VILLVER.z+0.6+lz,null,5); }
+    }
+    /* THE UMBRELLA is the one that tips, so it is the one with a tear on it */
+    const um=new THREE.Group(); um.position.set(C.at.x-1.9,0,VILLVER.z+0.6); G.scene.add(um);
+    cyl(0.035,0.035,2.3,PAL.metal,0,1.15,0,um,7);
+    const canopy=new THREE.Mesh(new THREE.ConeGeometry(1.35,0.55,8),mat(PAL.bad));
+    canopy.position.y=2.15; um.add(canopy);
+    G.villUmbrella=um;
+    addTear({label:'TIP THE CAFE UMBRELLA',need:1.7,mesh:um,
+      getPos:()=>({x:C.at.x-1.9,y:1.5,z:VILLVER.z+0.6}),range:1.7,owner:'barista',keepMesh:true,
+      onDone(p){ AU.whoosh();
+        TW.add(0.8,u=>{ um.rotation.z=1.35*Math.min(1,u*1.15)+Math.sin(u*13)*0.08*(1-u); },
+          ()=>{ burst({x:C.at.x-1.9,y:0.6,z:VILLVER.z+1.6},PAL.bad,10); });
+        award(30,'AL FRESCO, CANCELLED',p); done('v_umbrella'); noise(p,8,'misdeed','barista'); }});
+    /* the sachet tray: three peels off one strip, which is the addStrip verb doing what it does */
+    /* THE STRIP NEEDS A REAL GROUP AND ITS PATH IS LOCAL TO IT. addStrip's frontier is resolved by
+       stripWorld, which does group.localToWorld — so `group:null` is not "no parent", it is a
+       throw on the first frame the tear is measured. The carpark's two strips both pass a real
+       group and their paths are in its space; this one does the same. */
+    { const trayG=new THREE.Group(); trayG.position.set(C.at.x+1.9,0,VILLVER.z+0.6); G.scene.add(trayG);
+      rbox(0.34,0.04,0.24,0.01,0xE8E2D2,0,0.78,0,trayG);
+      const pth=[]; for(let i=0;i<=3;i++)pth.push({x:-0.30+i*0.20,y:0.81,z:0});
+      addStrip({group:trayG,path:pth,thick:{x:0.18,y:0.02,z:0.16},color:0xE8E2D2,
+        label:'SCATTER THE SUGAR SACHETS',need:0.5,range:1.2,owner:'barista',mission:'v_sachets',
+        propName:'sugar sachet',propBuilder:PB.longSticker,propExtra:{},points:25,
+        doneText:'EVERY SACHET. EVERYWHERE.',noiseAmt:5}); }
+  }
+
+  /* THE SOUVENIR SHOP: the postcard rack outside the door, three peels of it */
+  { const S=SHOPS.souvenir;
+    const rk=new THREE.Group(); rk.position.set(S.at.x+2.3,0,VILLVER.z+0.4); G.scene.add(rk);
+    cyl(0.05,0.06,1.5,PAL.metal,0,0.75,0,rk,7);
+    for(let i=0;i<3;i++){ const a=i/3*Math.PI*2;
+      /* rbox is (w,h,d,r,c,x,y,z,parent,opts) — ten positional args, and a stray eleventh put the
+         RADIUS where the parent goes, so `0.01.add` was the throw. Named nothing; counted wrong. */
+      const card=rbox(0.30,0.42,0.03,0.01,[0x4E7FA8,0xC9992F,0x4E7F3E][i],
+        Math.cos(a)*0.24,1.05,Math.sin(a)*0.24,rk);
+      addTear({label:'ROB THE POSTCARD RACK',need:0.9,mesh:card,air:true,keepMesh:true,
+        getPos:()=>({x:S.at.x+2.3+Math.cos(a)*0.24,y:1.05,z:VILLVER.z+0.4+Math.sin(a)*0.24}),
+        range:1.2,owner:'tourist',
+        onDone(p){ card.visible=false; AU.rip(); burst(p,0xE8E2D2,6);
+          spawnLoose('postcard',PB.longSticker,{x:p.x,y:0.9,z:p.z},{shiny:true});
+          award(12,'POSTCARD: SENT',p); prog('v_rack'); }});
+    }
+    /* THE GLASS PECK: a shopfront window is a peck target that is not a lid, which the tour does
+       not otherwise have — you cannot open it, you can only annoy somebody through it. */
+    const gl=(S.glass&&S.glass[0])||S.group;
+    addPeck({label:'PECK THE SHOP WINDOW',needHits:4,mesh:gl,repeat:false,
+      getPos:()=>S.anchor('window'),range:1.5,owner:'tourist',
+      onDone(p){ AU.clang(); G.shake=Math.max(G.shake||0,0.22);
+        for(const g2 of (S.glass||[])) TW.add(0.5,u=>{ g2.position.x=(S.at.x===0?0:0)+Math.sin(u*40)*0.02*(1-u); });
+        award(35,'SOMEBODY IS COMING OUT',p); done('v_glass'); noise(p,12,'misdeed','tourist'); }});
+  }
+
+  /* ---- KERBSIDE FURNITURE ---- */
+  for(const b of VILLBINS){ const P=placeProp('vill_bin',{at:{x:b.x,z:b.z}});
+    addTear({label:'TIP THE STREET BIN',need:1.5,mesh:P.group,getPos:()=>P.anchor('body'),
+      range:1.4,owner:null,keepMesh:true,
+      onDone(p){ AU.clang();
+        TW.add(0.6,u=>{ P.group.rotation.z=1.5*Math.min(1,u*1.25)+Math.sin(u*17)*0.1*(1-u); });
+        spawnLoose('rubbish',PB.rubbish,{x:p.x+0.7,y:0.6,z:p.z},{vy:2.2});
+        spawnLoose('shiny can',PB.can,{x:p.x+0.4,y:0.7,z:p.z+0.3},{shiny:true,vy:2.5});
+        award(18,'STREET BIN: REDISTRIBUTED',p); prog('v_bin'); noise(p,7,'misdeed',null); }});
+  }
+  for(const q of VILLPLANTERS) placeProp('vill_planter',{at:{x:q.x,z:q.z}});
+  const BK=placeProp('vill_bikerack');
+  for(const an of ['bellA','bellB']){
+    addPeck({label:'TAKE A BIKE BELL',needHits:2,mesh:BK.group,getPos:()=>BK.anchor(an),
+      range:1.2,owner:null,
+      onDone(p){ AU.pop(); spawnLoose('bike bell',PB.keys,{x:p.x,y:0.8,z:p.z},{shiny:true,vy:1.8});
+        award(15,'DING',p); done('v_bell'); }});
+  }
+  const LP=placeProp('vill_lamp'); G.villLamp=LP;
+  placeProp('vill_shelter');
+  /* the power pole, which is furniture rather than a prop: nothing attaches to it */
+  { cyl(0.14,0.18,7.0,PAL.woodD,VILLPOLE.x,3.5,VILLPOLE.z,null,8);
+    box(1.8,0.10,0.10,PAL.woodD,VILLPOLE.x,6.6,VILLPOLE.z,null,{noshadow:true});
+    rbox(0.34,0.46,0.34,0.05,0x8C8F93,VILLPOLE.x,5.4,VILLPOLE.z+0.24,null); }
+
+  buildNest(G.nestPos.x,G.nestPos.z);
+
+  /* ---- ANGLE-PARKED CARS. Placeholders through the registry, like everything else. ---- */
+  G.cars.push(mkCar(-19.5,-3.6,0.42, PAL.white,'hatch'));
+  G.cars.push(mkCar(2.6,-3.6,0.42, PAL.blue,'hatch'));
+
+  /* ---- THE TEACHING ---- */
+  addHint('v_verandah',0,VILLVER.h+0.6,VILLVER.z,7,'that verandah runs the whole row, and it is flat');
+  addHint('v_warmer',VILLUNITS[0].x,1.4,VILLSHOP.z+VILLSHOP.d/2,5,'something is warm in that window');
+  addHint('v_glass',VILLUNITS[2].x,1.8,VILLSHOP.z+VILLSHOP.d/2,5,'you cannot open a window, but you can be heard through one');
+  addHint('v_lamp',VILLLAMP.x,4.2,VILLLAMP.z,6,'the lamp post sees the whole street');
+
+  /* ---- THE COUNTRY: the carpark's own construction at valley radii. ---- */
+  for(let i=0;i<18;i++){ const far=i%2===0, a=i/18*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(132,164):rnd(100,126);
+    const h=far?rnd(34,58):rnd(24,44), w=far?rnd(44,68):rnd(28,50);
+    const geo=new THREE.ConeGeometry(w,h,22,7);
+    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
+      for(let v=0;v<pos2.count;v++){
+        const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
+        const rr=Math.hypot(x,z); if(rr<0.001)continue;
+        const ang=Math.atan2(z,x), t01=y/h+0.5;
+        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
+        const kR=1+nz*0.28*(1-t01*0.55);
+        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
+        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
+      geo.computeVertexNormals(); }
+    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
+        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
+      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
+      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.76)*8,0,1);
+        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+    const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
+    m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m);
+  }
+}
+
+function castVillage(){
+  /* SHOPKEEPERS AND A TOURIST. A village with nobody in it has no glass worth pecking, and three
+     is what the carpark and the campground carry so the frame budget and the noise economy are the
+     ones already measured. NO RANGER, for the campground's reason: the jail verb is wired to
+     G.cage, which this map does not build. */
+  G.humans.push(new Human('baker','The Baker',0xE8E2D2,VILLUNITS[0].x+1.2,VILLSHOP.z+VILLSHOP.d/2+1.4,
+    {hat:'beanie',patrol:[{x:VILLUNITS[0].x+1.2,z:VILLSHOP.z+VILLSHOP.d/2+1.4},
+                          {x:VILLUNITS[0].x-1.6,z:VILLVER.z+0.8},{x:VILLUNITS[1].x-1.0,z:VILLVER.z+0.8}]}));
+  G.humans.push(new Human('barista','The Barista',0x7A3D2E,VILLUNITS[1].x+1.6,VILLVER.z+1.0,
+    {hat:'cap',patrol:[{x:VILLUNITS[1].x+1.6,z:VILLVER.z+1.0},{x:VILLUNITS[1].x-2.2,z:VILLVER.z+0.9},
+                       {x:VILLUNITS[1].x,z:VILLSHOP.z+VILLSHOP.d/2+1.2}]}));
+  G.humans.push(new Human('tourist','A Tourist',0x4E7FA8,VILLUNITS[2].x+2.0,VILLVER.z+1.6,
+    {hat:'beanie',patrol:[{x:VILLUNITS[2].x+2.0,z:VILLVER.z+1.6},{x:VILLSHELTER.x,z:VILLSHELTER.z-1.2},
+                          {x:VILLUNITS[2].x-1.4,z:VILLVER.z+1.0}]}));
+}
+
+function missionsVillage(mode){
+  const A={street:'THE MAIN STREET', bakery:'THE BAKERY'};
+  G.chapters=[A.street,A.bakery]; G.chapIdx=0; G.needHydrate=true;
+  const anyKea=fn=>()=>G.keas.some(fn);
+  const settled=k=>Math.abs(k.vy||0)<0.7;
+  const onVerandah=k=>k.x>=VILLVER.x0&&k.x<=VILLVER.x1&&Math.abs(k.z-VILLVER.z)<1.6&&
+                       k.y>VILLVER.h-0.4&&settled(k);
+  G.missions=[
+    {id:'v_verandah',area:A.street,label:'Take the verandah, end to end',
+      check:anyKea(k=>onVerandah(k))},
+    {id:'v_bin',   area:A.street,label:'Redistribute both street bins',need:2,n:0},
+    {id:'v_rack',  area:A.street,label:'Rob all three postcards off the rack',need:3,n:0},
+    {id:'v_bell',  area:A.street,label:'Take a bike bell off somebody bike'},
+    {id:'v_planter',area:A.street,label:'Excavate a footpath planter',
+      check:()=>G.props.some(p=>!p.heldBy&&!p.banked&&
+        VILLPLANTERS.some(q=>Math.hypot(p.x-q.x,p.z-q.z)<1.0&&p.y>0.5))},
+    {id:'v_warmer',area:A.bakery,label:'Work the pie warmer open'},
+    {id:'v_sachets',area:A.bakery,label:'Scatter the tray of sugar sachets'},
+    {id:'v_board', area:A.bakery,label:'Flatten the bakery sandwich board'},
+    {id:'v_umbrella',area:A.bakery,label:'Tip the cafe umbrella'},
+    {id:'v_glass', area:A.bakery,label:'Peck the shop window until somebody comes out'},
+  ];
+  if(mode===2)G.missions.push({id:'v_duet',area:A.street,coop:true,
+    label:'Get BOTH beaks up on the verandah at once',
+    check:()=>G.keas.length>1&&G.keas.every(k=>onVerandah(k))});
+  /* THE FINALE IS DECLARED WITH THE MISSION (piece 40's seam). The village has shopkeepers, not
+     the carpark's four-in-pursuit-then-the-nest, so it declares its own sentence: the lamp post is
+     the highest thing on the street and it sees all of it. */
+  G.missions.push({id:'v_lamp',finale:true,locked:true,
+    label:'THE LAMP POST — take the highest thing on the street',
+    armText:{t:'ONE THING LEFT',s:'THE LAMP POST — ALL OF IT FROM UP THERE'},
+    check:()=>G.keas.some(k=>Math.hypot(k.x-VILLLAMP.x,k.z-VILLLAMP.z)<1.5&&k.y>3.4)});
+}
+
+/* THE ANCHOR COMES IN OVER THE STREET AND LOOKS DOWN IT, which is the establishing shot of this
+   map. Held to the world it names by the same assertion the other three are. */
+defineBiome('village',{label:'THE VILLAGE',build:buildVillage,cast:castVillage,
+  missions:missionsVillage,
+  anchor:{x:-34,y:22,z:26, lx:0,ly:1.4,lz:-4},
+  snow:VILLSNOW,
+  /* THE FIRST NEW MAP THAT DECLARES ROAD LANES. The two lanes of the main street, at the z the
+     street is actually built on, and the spawn distance the carpark uses. */
+  traffic:{up:VILLST.z-1.75, down:VILLST.z+1.75, x:115}});
 
 /* ---------- THE TOUR: A DOC BROCHURE WITH PINS IN IT (TODO 37, 2026-09-02) ----------
    The level select. One table, and everything the brochure says comes out of it: the order of the
@@ -8080,6 +8639,9 @@ if(typeof globalThis!=='undefined'){
        CONSTANTS the map was built from rather than re-typing coordinates that would then drift. */
     CAMP:{NEST:CAMPNEST,TRACK:CAMPTRACK,SHELTER:CAMPSHELTER,ABLUTION:CAMPABLUTION,
           VAN:CAMPVAN,TENT:CAMPTENTSITE,BOARD:CAMPBOARD,TAP:CAMPTAP,BIN:CAMPBIN,SITES:CAMPSITES},
+    VILL:{NEST:VILLNEST,ST:VILLST,PATH:VILLPATH,VER:VILLVER,SHOP:VILLSHOP,UNITS:VILLUNITS,
+          SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
+    SHOPGLASS, PAL,
     /* REPLAT P6A: THE PROP SEAM. Exported as a block for the same reason SKY is — the batteries pin
        the registry itself rather than re-typing twenty-six rows of it, and src/models.mjs reads one
        source of truth for what wants a model, where it stands and what its material policy is.

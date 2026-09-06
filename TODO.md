@@ -2061,3 +2061,44 @@ PROVED A NO-OP: nine batteries green, and all 31 vantages shot. Two flagged — 
 reshoot, and 13 was shot three times on the step-0 build (0.9639/0.9638/0.9639), three times on the
 PRE-step-0 build (0.9994/0.9997/0.9631) and three more times on step 0 (0.9997/0.9992/0.9639). Both
 builds produce both states, identically. That is TODO 88 and not this piece.
+
+### 42. village-biome  — DONE session 32
+The fourth map. VILLAGE.md is the brief; its step 0 (the grass cut budget, TODO 94) shipped first
+and separately. An alpine village main street: one sealed road with a dashed centre line, a kerbed
+footpath each side, three abutting shop units under a continuous verandah, and a great deal of
+glass. Fourteen registry placements, three shopkeepers, ten jobs on two star pages plus a coop
+badge and a finale.
+THE VERANDAH IS THE SIGNATURE STRUCTURE and it is a 26 m ROOF collider, not a box — a climbable
+ridge running the whole shop row, which nothing else in the tour has. The battery drives it at both
+ends as well as the middle, because a 26 m collider that only works in the middle is a 2 m collider.
+THE FIRST NEW MAP THAT DECLARES ROAD LANES. The carpark declares them; the ski field and campground
+declare none. Asserted in both directions: 6 cars in 40 s on the village street, all of them inside
+the sealed width in exactly two lanes, and still zero on the campground and the ski field.
+ADDITIVE. The P6A digests answer it — three maps' mesh and collider digests unchanged.
+THREE FIRST PINS — 34_village_street, 35_village_glass, 36_village_bakery — shot and LEFT FLAGGED.
+Baseline stays at 31.
+
+### 43. THE SHOPFRONT GLASS IS A MATERIAL, AND THE GEOMETRY WAS THE HALF THAT MATTERED
+Eric's call: make the glass a proper material decision, not a pane() reuse, judged against the
+windows in ref_bow_00 and ref_bow_06.
+WHAT THE PLATES ACTUALLY SAY, and it is the opposite of what "reflective window" suggests: the
+windows are DARK — well below the trim and brick around them — the mullions read as a grid AGAINST
+a near-black interior, and the sheen is subtle and does not carry the read. ref_bow_06's garage is
+legible because light falls INTO it.
+THE MATERIAL: `SHOPGLASS` + `shopGlassMat()` — MeshPhysicalMaterial, dark cool body, roughness 0.10,
+clearcoat 1.0 over it, envMapIntensity 1.9 off the P2 HDRI, opacity 0.68, depthWrite false. NOT
+pane(), whose vertex ramp runs bright at the SILL because it is cut for a raked windscreen, and
+would have put the bright end on the ground. Memoised, so six panes are one PMREM lookup.
+BUT THE MATERIAL WAS NEVER THE HARD PART. Shot at 35_village_glass the first two cuts came back as
+flat matte black rectangles, and neither fix was a colour:
+  (1) THE INTERIOR HAD TO BE LIT. A dark sheet over a dark recess is just dark, and under a verandah
+      there is no sky in the reflection direction to rescue it. The verandah shading is authentic —
+      it means the reflection CANNOT carry the read here, so the interior must. The back wall is
+      bmat (unlit) so it holds its value whatever the sun does, which is the hut window's own idiom.
+  (2) THE SHOP WAS A SOLID BOX. The recess was placed INSIDE it, so the carcass's own front face
+      stood between the lens and the interior it was meant to show. A shopfront has to be an
+      OPENING: the shell is walls now and the front is the masonry around the holes — four piers,
+      a sill under each window, a spandrel over, and a transom over the door (which was a 0.75 m
+      band of daylight straight through the shop until it was shot).
+LESSON WORTH KEEPING: two of the three defects here were geometry wearing a material's clothes. A
+material call that photographs wrong is not necessarily a material problem.

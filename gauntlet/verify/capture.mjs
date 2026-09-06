@@ -462,6 +462,26 @@ await shotR('32_camp_sites',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
 await shotR('33_camp_gate',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=4.95;k.z=21.0;k.y=1.28;k.vy=0;k.grounded=true;k.ry=3.6;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
   ${CAM(1.0,2.6,14.5, 4.2,1.5,21.0)}`,CAMP);
+/* ---------- THE VILLAGE (VILLAGE.md) ----------
+   THREE FIRST PINS, LEFT FLAGGED, per the ski field's and the campground's precedent. The bird is
+   pinned in all three and G.time frozen with it: TODO 88's clock pin means an unfrozen clock puts
+   any grass-bearing frame at a different wind phase in every take. */
+const VILL={biome:'village'};
+// 34: the street, down the shop row, with the verandah running away and the glass under it. The
+//     bird is ON the verandah, which is the map's signature structure and its climbable ridge.
+await shotR('34_village_street',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=-6.0;k.z=-6.4;k.y=3.29;k.vy=0;k.grounded=true;k.ry=1.35;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(6.4,3.9,2.6, -5.0,2.9,-6.2)}`,VILL);
+// 35: THE GLASS, close on the souvenir shopfront — the frame this piece's material call is judged
+//     in. Dark sheet, mullions against a lit recess, sky in the top half. Bird on the footpath.
+await shotR('35_village_glass',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=9.6;k.z=-6.0;k.y=0.26;k.vy=0;k.grounded=true;k.ry=3.05;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(11.6,1.55,-3.4, 8.0,1.75,-7.0)}`,VILL);
+// 36: the bakery end — the pie warmer in the window, the sandwich board, the cafe tables and the
+//     lamp post that the finale is about, with the street and its traffic behind.
+await shotR('36_village_bakery',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=-8.0;k.z=-4.4;k.y=0.30;k.vy=0;k.grounded=true;k.ry=3.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(-4.2,2.5,0.4, -8.4,1.5,-6.4)}`,VILL);
 if(SRV)await SRV.close();
 if(GAVEUP.length){ console.log('CAPTURE INCOMPLETE — gave up on: '+GAVEUP.join(', ')); process.exitCode=1; }
 else console.log('CAPTURE COMPLETE');

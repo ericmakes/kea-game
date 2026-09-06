@@ -6633,4 +6633,199 @@ C.section('THE DOC CAMPGROUND - the third map, additive, with its own cast and i
   X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }
 
+/* ============================================================================================
+   THE VILLAGE — the fourth map, its road lanes, and the shopfront glass as a material call
+   ============================================================================================
+   VILLAGE.md, following pieces 39/40 and 41. Additivity is not asserted here for the campground's
+   reason: the P6A section above already holds three maps' mesh and collider digests to the values
+   measured before the prop seam landed, and a fourth map that moved any of them goes red there
+   rather than in an assertion written to agree with this one. */
+C.section('THE VILLAGE - the fourth map, the first with lanes, and glass that is a material');
+{
+  const B=X.BIOME, T=X.TOUR, P=X.PROPS, V=X.VILL;
+  const vil=()=>B.ALL.village||{};
+  const boot=()=>{ X.setSeed(20260828); X.boot({biome:'village'}); X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe(); };
+
+  // 1. THE REGISTRATION
+  ok(typeof vil().build==='function','the village carries its builder');
+  ok(typeof vil().cast==='function','and its cast');
+  ok(typeof vil().missions==='function','and its own list');
+  ok(!!vil().anchor,'and an anchor to establish it from');
+  ok(vil().label==='THE VILLAGE','and the label the brochure pin already carries');
+
+  // 2. IT BOOTS AND IT IS A MAP
+  boot();
+  ok(G.biome==='village','booting into the village lands there ('+G.biome+')');
+  ok(G.scene.children.length>60,'and it is a populated world ('+G.scene.children.length+')');
+  ok(G.colliders.length>=15,'with a physical world under it ('+G.colliders.length+')');
+  ok(G.inter.length>=14,'and things to do to it ('+G.inter.length+')');
+  ok((G.snow||[]).length===0&&vil().snow===null,'no drifts on a village in summer, declared empty');
+  /* THE CAST IS CHECKED AFTER startGame, NOT AFTER boot, and that is not a detail: `humans` is NOT
+     in WORLDREGS, so a boot does not empty it — startGame does (`G.humans.length=0`) and then
+     casts. Read after a bare boot this saw the CARPARK's four, left over from the section before,
+     and reported them as the village's. */
+  X.startGame(1); tick(6);
+  ok(G.humans.length===3,'three shopkeepers, because a village with nobody in it has no glass '+
+     'worth pecking ('+G.humans.map(h=>h.key).join(', ')+')');
+  ok(!G.humans.some(h=>h.key==='rex'),'and not the ranger, whose cage this map does not build');
+
+  /* 3. THE FIRST NEW MAP THAT DECLARES ROAD LANES, which is the fifth of piece 39's five
+        declarations and the only one no new map had wanted until now. The ski field learned what an
+        UNDECLARED road costs — seven hatchbacks across its snow — so this asserts the other
+        direction: the cars are on the street, at the z the street is actually built on. */
+  ok(!!vil().traffic,'the village declares its lanes, because a main street with no through '+
+     'traffic is a street with no point');
+  { const tr=vil().traffic;
+    ok(Math.abs(tr.up-(V.ST.z-1.75))<1e-9&&Math.abs(tr.down-(V.ST.z+1.75))<1e-9,
+       'and they are derived from the street it built, not typed twice ('+tr.up+' / '+tr.down+')');
+    ok(Math.abs(tr.up-V.ST.z)<V.ST.w/2&&Math.abs(tr.down-V.ST.z)<V.ST.w/2,
+       'both lanes sit inside the sealed width ('+V.ST.w+' m)'); }
+  /* THE TRAFFIC TIMER HAS TO BE UN-PARKED, and this is the second thing a shared battery does to
+     you: park() sets G.trafT to 999 to keep traffic out of the sections that are measuring
+     something else, boot() does not reset it (it is a G default set once at module scope), so a
+     traffic test running after any parked section measures a suppressed road and reports zero.
+     Set to the values the module declares rather than to a guess. */
+  X.startGame(1); G.trafT.a=2; G.trafT.b=7; tick(2400);    // forty seconds of un-parked road
+  { const traf=G.cars.filter(c=>c.traffic);
+    ok(traf.length>0,'traffic actually spawns here ('+traf.length+' cars in 40 s)');
+    const off=traf.filter(c=>Math.abs(c.z-V.ST.z)>V.ST.w/2);
+    ok(off.length===0,'and every one of them is ON the street ('+
+       (off.map(c=>c.z.toFixed(2)).join(', ')||'all '+traf.length+' are')+')');
+    const zs=[...new Set(traf.map(c=>+c.z.toFixed(2)))].sort((a,b)=>a-b);
+    ok(zs.length<=2,'in two lanes and not scattered ('+zs.join(', ')+')'); }
+  /* AND NOWHERE ELSE. The two maps that declare no lanes must still have none after the same
+     forty seconds — the assertion piece 39 wished it had. */
+  for(const b of ['campground','skifield']){
+    X.setSeed(20260828); X.boot({biome:b}); X.startGame(1); G.trafT.a=2; G.trafT.b=7; tick(2400);
+    ok(G.cars.filter(c=>c.traffic).length===0,
+       b+' still spawns no traffic, because it declares no lanes ('+
+       G.cars.filter(c=>c.traffic).length+')'); }
+
+  /* 4. THE SHOPFRONT GLASS IS A MATERIAL CALL, judged against ref_bow_00 and ref_bow_06 — and the
+        assertions are about the READINGS those plates give rather than about the numbers being
+        present. Both plates show a window that is DARK, with a visible interior and a subtle
+        vertical sheen; the mistake a "reflective window" invites is a bright mirror. */
+  boot();
+  { const src=require('../2026-08-26/keasrc').specimenSource();
+    const g=X.SHOPGLASS;
+    ok(!!g,'the shopfront glass is a named recipe, not numbers inline');
+    const lum=h=>{const c=new H.THREE.Color(h);return 0.2126*c.r+0.7152*c.g+0.0722*c.b;};
+    /* ref_bow_00: the windows sit WELL BELOW the cream trim and the brick around them. The trim in
+       this game is PAL.paper and the shop walls are the three unit colours; the glass must be
+       darker than every one of them or it is not the plate's window. */
+    const walls=[X.PAL.paper].concat(V.UNITS.map(u=>u.wall));
+    const darker=walls.filter(w=>lum(g.body)<lum(w));
+    ok(darker.length===walls.length,'the glass body is darker than the trim and every shop wall it '+
+       'stands in, which is the ref_bow_00 reading ('+lum(g.body).toFixed(3)+' against '+
+       walls.map(w=>lum(w).toFixed(2)).join(', ')+')');
+    ok(g.rough>0.03&&g.rough<0.25,'it is a flat sheet but not a perfect mirror — a mirror reads as '+
+       'chrome rather than glass (roughness '+g.rough+')');
+    ok(g.env>1.0,'the reflection is the dominant highlight and it comes off the P2 HDRI, not a '+
+       'painted ramp (envMapIntensity '+g.env+')');
+    ok(g.coat>0.5&&g.coatRough<0.12,'with a clearcoat sheet over the dark body, which is what '+
+       'plate glass is');
+    ok(g.opacity>0.4&&g.opacity<0.9,'and it is see-through enough for the recess behind to read ('+
+       g.opacity+')');
+    ok(lum(g.interior)<lum(g.body),'the interior behind it is darker still, as ref_bow_06 garage is');
+    /* IT IS NOT pane(). The reuse would have been wrong twice: pane is for vehicle glazing and its
+       vertex ramp runs bright at the SILL, which is correct for a raked windscreen and upside down
+       for a vertical shopfront. */
+    ok(/function shopWindow\(/.test(src),'there is a shopfront builder of its own');
+    /* COMMENTS STRIPPED BEFORE ANY OF THIS IS MATCHED, and that was not caution — it was a
+       SABOTAGE THAT CAME BACK GREEN. Flipping the material's `depthWrite:false` to `true` passed,
+       because the 700-character window also contained the sentence "THE GLASS DOES NOT WRITE DEPTH
+       (depthWrite:false)" in the comment above it, and the regex was satisfied by the PROSE
+       DESCRIBING the behaviour rather than by the behaviour. Every source-text assertion in this
+       block had the same hazard — the pane() check sits next to a comment that says "pane()" — so
+       all of them read code only. The terrain assertion up the file already did this; this block
+       had to learn it. */
+    { const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+      const at=n=>code.indexOf(n);
+      const fn=code.slice(at('function shopWindow('),at('function shopWindow(')+1200);
+      const matFn=code.slice(at('function shopGlassMat'),at('function shopGlassMat')+600);
+      ok(!/\bpane\(/.test(fn),'and it does NOT reuse pane(), whose ramp is cut for a raked '+
+         'windscreen and would put the bright end on the ground');
+      ok(/MeshPhysicalMaterial/.test(matFn),'the material is Physical, for the clearcoat');
+      ok(/depthWrite:false/.test(matFn),
+         'and the sheet does not write depth, so the interior is never sorted out from behind its '+
+         'own window — the failure that makes a transparent pane look like a hole');
+      ok(/clearcoat:g\.coat/.test(matFn)&&/envMapIntensity:g\.env/.test(matFn),
+         'and the recipe reaches the material rather than being decoration beside it'); } }
+
+  /* 5. AND THE INTERIOR IS BUILT, which is the half a tint cannot fake. Measured off the scene:
+        every shopfront has geometry BEHIND its glass plane. */
+  { const shops=(G.propReg||[]).filter(p=>p.id==='vill_shop');
+    ok(shops.length===3,'three shop units ('+shops.length+')');
+    ok(shops.every(p=>Array.isArray(p.glass)&&p.glass.length===2),
+       'each with two shopfront windows, which is the "great deal of glass" the pin promises');
+    let recessed=0;
+    for(const p of shops){ p.group.updateWorldMatrix(true,false);
+      const gz=p.glass[0].position.z;
+      /* anything in this group standing BEHIND the glass plane is the interior */
+      const behind=p.group.children.filter(o=>o.isMesh&&o.position.z<gz-0.2).length;
+      if(behind>=4)recessed++; }
+    ok(recessed===3,'and every one has a real recess behind it with something in it, rather than a '+
+       'tinted plane ('+recessed+' of 3)');
+    const glassMats=new Set();
+    for(const p of shops)for(const g2 of p.glass)glassMats.add(g2.material);
+    ok(glassMats.size===1,'all six panes share one memoised material, not six PMREM lookups ('+
+       glassMats.size+')'); }
+
+  /* 6. THE VERANDAH IS THE SIGNATURE STRUCTURE, and it is a roof collider 26 m long.
+        BOOTED AND STARTED FIRST: section 5 read the scene off a boot with no run on it, so
+        G.missions was still empty and the mission check below read `.done` off undefined. */
+  boot(); X.startGame(1); tick(6); park();
+  { const VER=P.placed('vill_verandah');
+    ok(!!VER,'the verandah is a placement');
+    const rc=(VER.colliders||[]).find(c=>c.kind==='roof');
+    ok(!!rc,'and its collider is a ROOF, because it is what the bird stands on');
+    ok(rc&&rc.w*2>=24,'running the whole shop row rather than one unit ('+(rc?rc.w*2:0)+' m)');
+    const r=P.anchor(VER,'ridge');
+    for(let i=0;i<4;i++){ kq().x=r.x; kq().z=r.z; kq().y=r.y+0.05; kq().vy=0; kq().grounded=true; X.update(1/60); }
+    tick(4);
+    ok(G.missions.find(m=>m.id==='v_verandah').done===true,
+       'and standing on it pays, end to end (y '+kq().y.toFixed(2)+')');
+    /* the ends too, because a 26 m collider that only works in the middle is a 2 m collider */
+    for(const an of ['west','east']){ const q=P.anchor(VER,an);
+      ok(X.groundHeightAt(q.x,q.z,3)>V.VER.h-0.6,
+         'the ridge holds at its '+an+' end as well as its middle ('+
+         X.groundHeightAt(q.x,q.z,3).toFixed(2)+')'); } }
+
+  // 7. THE LIST IS ITS OWN, over FOUR maps now and both modes.
+  { const listOf=(biome,mode)=>{ X.boot({biome}); X.startGame(mode); return G.missions.map(m=>m.id); };
+    const other=new Set([...listOf('carpark',1),...listOf('carpark',2),
+                         ...listOf('skifield',1),...listOf('skifield',2),
+                         ...listOf('campground',1),...listOf('campground',2)]);
+    const mine=new Set([...listOf('village',1),...listOf('village',2)]);
+    const clash=[...mine].filter(i=>other.has(i));
+    ok(clash.length===0,'not one village mission id appears on another map, in either mode ('+
+       (clash.join(', ')||'none of '+mine.size+' does, against '+other.size+' elsewhere')+')');
+    boot(); X.startGame(1);
+    ok(G.missions.length>=8&&G.missions.length<=12,'eight to twelve jobs and a finale ('+
+       G.missions.length+')');
+    ok(G.chapters.length===2,'on two star pages ('+G.chapters.join(' | ')+')');
+    ok(G.missions.some(m=>m.finale),'with a finale declared with the mission');
+    ok(G.missions.every(m=>m.finale||G.chapters.includes(m.area)),
+       'and every job on a page this map declares'); }
+
+  // 8. EVERY PROP IS A REGISTRY ENTRY, which is how the model pass finds them.
+  boot();
+  { const reg=(G.propReg||[]).filter(p=>p.entry.biome==='village');
+    ok(reg.length>=12,'the village builds its furniture through the registry ('+reg.length+')');
+    ok(reg.every(p=>p.source==='primitive'),'all primitive, because no model has arrived');
+    const entries=Object.values(P.ALL).filter(e=>e.biome==='village');
+    ok(entries.length>=8,'and PROPS.ALL filtered by biome IS the model-pass work list ('+
+       entries.length+' entries)');
+    ok(entries.every(e=>typeof e.build==='function'&&Array.isArray(e.collider)&&!!e.anchors),
+       'each with the builder, collider and anchors a swap needs'); }
+
+  // 9. THE BROCHURE PIN FLIPS.
+  { X.boot({biome:'carpark'}); X.startGame(1); tick(4);
+    const pin=T.model().pins.find(p=>p.id==='village');
+    ok(!!pin&&pin.built===true,'the village pin knows its map is built now');
+    ok(pin.state!=='soon','so the brochure stops saying NOT BUILT YET ('+pin.state+')'); }
+
+  X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
 process.exitCode=C.report()?1:0;
