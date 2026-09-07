@@ -2559,6 +2559,20 @@ function cyl(rt,rb,h,c,x,y,z,parent,seg){
   if(!HEADLESS){m.castShadow=true;m.receiveShadow=true;}
   (parent||G.scene).add(m); return m;
 }
+/* A CYLINDER BETWEEN TWO POINTS. Every cable, hanger and mesh wire on the swing bridge is one of
+   these, and doing it by hand at each call site is how a catenary ends up as a row of straight
+   lines that happen to start and end in the right places. The idiom is the tail's: a Y-axis
+   cylinder rotated by the quaternion that takes +Y to the direction of travel. */
+function strand(ax,ay,az,bx,by,bz,r,c,parent,seg){
+  const dx=bx-ax, dy=by-ay, dz=bz-az, L=Math.hypot(dx,dy,dz);
+  if(L<1e-6)return null;
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,L,seg||5),mat(c));
+  m.position.set((ax+bx)/2,(ay+by)/2,(az+bz)/2);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),
+    new THREE.Vector3(dx/L,dy/L,dz/L));
+  if(!HEADLESS){m.castShadow=false;m.receiveShadow=false;}
+  (parent||G.scene).add(m); return m;
+}
 function sph(r,c,x,y,z,parent,seg){
   const m=new THREE.Mesh(new THREE.SphereGeometry(r,seg||12,seg||10),mat(c));
   matUV(m);
@@ -5306,7 +5320,37 @@ defineBiome('village',{label:'THE VILLAGE',build:buildVillage,cast:castVillage,
 const RIVNEST={x:-30,z:-24};
 const RIVWATER={z0:-6.0, z1:16.0, x0:-60, x1:60};      // the braid channel, across the map
 const RIVLAKE={x:-26, z:22, r:15.0};                   // the glacier lake, upstream
-const RIVBRIDGE={x:6.0, z0:-7.0, z1:17.0, deck:2.55, w:1.30};   // the crossing, over the water
+/* ONE PERSON WIDE, WHICH IS WHAT A SWING BRIDGE IS. 1.30 m is a garden path; every DOC swing
+   bridge in the country is signed ONE PERSON AT A TIME and the deck is about a metre. Eric's
+   convention test, item 4: "a one-person deck width (<=1.2 m) not car-width". */
+const RIVBRIDGE={x:6.0, z0:-7.0, z1:17.0, deck:2.55, w:1.10};   // the crossing, over the water
+/* THE TOWER AND THE RIGGING, as a table, because all four of Eric's assertions read off it —
+   tower height ratio, sag > 0, mesh present, deck width.
+
+   THE HOOKER VALLEY ARCHETYPE, which is what "convention test" means here. Two tall A-frame towers
+   standing WELL above the deck; two main cables draped tower-top to tower-top in a real catenary;
+   the deck hung from those cables on vertical hangers; wire mesh up the sides to a handrail cable.
+   What shipped was goalposts: four vertical legs with a crossbar, a handrail that sagged 0.42 m
+   over 24 m (1.75%, which reads as a straight line), no main cable and no hangers at all — the
+   deck was simply a collider in the air — and bare rails instead of mesh.
+
+   THE NUMBERS ARE CONVENTIONAL RATIOS, NOT TASTE. Tower height above the deck runs about a tenth
+   to a seventh of the span on the real ones; ours is 3.40 m on a 24 m span, or 0.142. Main-cable
+   sag runs 8-12% of span; ours is 2.60 m, or 10.8%. Both are asserted as RATIOS so the bridge can
+   be moved or resized without the assertion becoming a lie. */
+const RIVTOWER={
+  h:5.95,          // apex height above the ground: deck 2.55 + 3.40
+  base:1.55,       // half-width at the feet — the legs SPLAY, which is what makes it an A
+  cab:0.62,        // half-width at the cross-head, and where the main cables sit
+  tie:0.60,        // the A's cross-tie, as a fraction of height
+  midY:0.70,       // main cable at mid-span, above the deck
+  railH:1.18,      // handrail cable above the deck
+  railSag:0.14,
+  hangers:15,      // deck hangers per side
+  seg:16,          // catenary segments per cable
+  meshStep:0.75,   // a mesh wire every 750 mm
+  meshRows:2,      // and horizontal strands following the rail
+};
 const RIVWALK={x:6.0, z0:-24.0, z1:-7.0, w:2.2, y:0.42};        // the boardwalk to the bridge mouth
 const RIVSHELTER={x:2.0, z:-22.0};
 const RIVBOAT={x:-13.0, z:-3.2};
@@ -5351,7 +5395,10 @@ const RIVFLOES=[
    as a ladder the bird is allowed to climb); the count is ceil(climb/rise) and the ACTUAL rise is
    then climb/count, so the top tread lands exactly flush with the deck instead of near it. Move the
    deck height and the stair re-cuts itself. */
-const RIVSTEP={tread:1.00, rise:0.34};
+/* THE STAIR IS 1.5 m WIDE, NOT 2.2. It was built at the far track's width, and once the deck came
+   down to a one-person 1.10 m the approach was twice the bridge it approaches — which reads as two
+   structures that met by accident. A DOC approach is the bridge's width plus a bit of landing. */
+const RIVSTEP={tread:1.00, rise:0.34, w:1.50};
 const RIVSTEPTOP=RIVWALK.y+0.09;                                  // the boardwalk's collider top
 const RIVSTEPN=Math.ceil((RIVBRIDGE.deck-RIVSTEPTOP)/RIVSTEP.rise);
 /* the far side: landing, stair down to the ground, then track. The last drop is onto ground at 0,
@@ -5382,10 +5429,20 @@ defineProp('riv_bridge',{
   anchors:{mid:{x:0,y:RIVBRIDGE.deck+0.02,z:0},
            near:{x:0,y:RIVBRIDGE.deck+0.02,z:-(RIVBRIDGE.z1-RIVBRIDGE.z0)/2+1.2},
            far:{x:0,y:RIVBRIDGE.deck+0.02,z:(RIVBRIDGE.z1-RIVBRIDGE.z0)/2-1.2},
-           towerFar:{x:0,y:4.9,z:(RIVBRIDGE.z1-RIVBRIDGE.z0)/2}},
+           towerFar:{x:0,y:RIVTOWER.h,z:(RIVBRIDGE.z1-RIVBRIDGE.z0)/2}},
   material:{family:null,keepModelPBR:true,nightTint:false},
   build(g,p){
-    const B=RIVBRIDGE, L=B.z1-B.z0;
+    const B=RIVBRIDGE, L=B.z1-B.z0, T=RIVTOWER;
+    /* THE CATENARY, as a function, so the cable, the hangers and the mesh all read the SAME curve.
+       Three separate copies of "roughly a sag" is how the old handrail ended up sagging while
+       nothing else did. Parabolic rather than a true cosh, which is the standard approximation for
+       a shallow span and is indistinguishable at this scale.
+         t in [0,1] along the span; y(0)=y(1)=hi; y(0.5)=hi-sag. */
+    const cat=(t,hi,sag)=>hi-sag*(1-(2*t-1)*(2*t-1));
+    const CH=T.h-0.10, CSAG=CH-(B.deck+T.midY);          // main cable: apex down to mid-span
+    const RH=B.deck+T.railH;                             // handrail cable
+    p.rig={cableSag:CSAG, cableHi:CH, towerH:T.h, span:L, deckW:B.w, mesh:[], hangers:[], cable:[]};
+
     /* the deck: slats, one every 300 mm, which is what makes it read as a swing bridge rather
        than a plank — and they are the thing the mission works loose */
     p.slats=[];
@@ -5393,21 +5450,59 @@ defineProp('riv_bridge',{
       const sl=box(B.w,0.05,0.22,PAL.woodD,0,B.deck,z,g,{noshadow:true});
       p.slats.push(sl); }
     for(const sx of [-1,1]) box(0.07,0.07,L,PAL.metal,sx*(B.w/2+0.02),B.deck-0.05,0,g,{noshadow:true});
-    /* the two A-frame towers, and the wire handrails that sag between them */
+
+    /* ---- THE TOWERS. A-frames, and they are A-frames in the TRANSVERSE plane: the legs splay out
+       to T.base at the feet and converge to T.cab at a cross-head, which is the saddle the main
+       cables ride over. Two legs an end, not four, because that is what the archetype has. ---- */
     for(const sz of [-1,1]){
-      for(const sx of [-1,1]){ const leg=cyl(0.10,0.13,5.0,PAL.metal,sx*1.05,2.5,sz*L/2,g,8);
-        leg.rotation.z=-sx*0.20; }
-      box(2.5,0.12,0.12,PAL.metal,0,4.85,sz*L/2,g,{noshadow:true});
-      box(0.9,0.10,0.10,PAL.metal,0,B.deck+1.05,sz*L/2,g,{noshadow:true}); }
-    /* THE HANDRAILS SAG, and the sag is what says a wire is a wire. Segmented so it curves. */
-    for(const sx of [-1,1])for(let i=0;i<12;i++){
-      const t0=i/12, t1=(i+1)/12, zm=(-L/2)+((t0+t1)/2)*L;
-      const sag=Math.sin(((t0+t1)/2)*Math.PI)*0.42;
-      const seg=cyl(0.022,0.022,L/12,PAL.dark,sx*(B.w/2+0.06),B.deck+1.02-sag,zm,g,5);
-      seg.rotation.x=Math.PI/2; }
-    for(const sx of [-1,1])for(let i=0;i<14;i++){
-      const t=(i+0.5)/14, zm=-L/2+t*L, sag=Math.sin(t*Math.PI)*0.42;
-      cyl(0.012,0.012,1.02-sag,PAL.dark,sx*(B.w/2+0.06),B.deck+(1.02-sag)/2,zm,g,4); }
+      for(const sx of [-1,1])
+        strand(sx*T.base,0.05,sz*L/2, sx*T.cab,T.h,sz*L/2, 0.075,PAL.metal,g,8);
+      /* the cross-head the cables sit on */
+      box(T.cab*2+0.30,0.11,0.13,PAL.metal,0,T.h,sz*L/2,g,{noshadow:true});
+      /* the A's cross-tie, at the height the legs have narrowed to */
+      { const y=T.h*T.tie, hw=T.base+(T.cab-T.base)*T.tie;
+        box(hw*2,0.09,0.09,PAL.metal,0,y,sz*L/2,g,{noshadow:true}); } }
+
+    /* ---- THE MAIN CABLES, one a side, a real catenary from cross-head to cross-head. The DECK
+       HANGS FROM THEM, which is the structural claim the old bridge did not make at all. ---- */
+    for(const sx of [-1,1]){
+      let px=sx*T.cab, py=CH, pz=-L/2;
+      for(let i=1;i<=T.seg;i++){ const t=i/T.seg;
+        const nx=sx*T.cab, ny=cat(t,CH,CSAG), nz=-L/2+t*L;
+        const seg=strand(px,py,pz,nx,ny,nz,0.028,PAL.dark,g,5);
+        if(seg)p.rig.cable.push(seg);
+        px=nx; py=ny; pz=nz; }
+      /* THE HANGERS. Vertical, cable down to deck, which is the thing that says "this deck is
+         carried" rather than "this deck is floating at a convenient height". */
+      for(let i=0;i<T.hangers;i++){ const t=(i+0.5)/T.hangers, z=-L/2+t*L;
+        const h=strand(sx*T.cab,cat(t,CH,CSAG),z, sx*(B.w/2+0.02),B.deck+0.04,z, 0.011,PAL.dark,g,4);
+        if(h)p.rig.hangers.push(h); } }
+
+    /* ---- WIRE MESH SIDES, not bare rails. A handrail cable with its own shallow sag, and the
+       mesh filling the whole side between it and the deck: verticals every T.meshStep and
+       horizontal strands following the rail's curve. At play distance this reads as the grey haze
+       a real mesh panel reads as; up close it is the right structure. ---- */
+    for(const sx of [-1,1]){
+      const X=sx*(B.w/2+0.05);
+      let px=X, py=RH, pz=-L/2;
+      for(let i=1;i<=12;i++){ const t=i/12;
+        const ny=cat(t,RH,T.railSag), nz=-L/2+t*L;
+        strand(px,py,pz,X,ny,nz,0.017,PAL.metal,g,5);
+        px=X; py=ny; pz=nz; }
+      /* the verticals */
+      for(let z=-L/2+T.meshStep/2; z<L/2; z+=T.meshStep){
+        const t=(z+L/2)/L, top=cat(t,RH,T.railSag);
+        const w=strand(X,B.deck+0.03,z, X,top,z, 0.007,PAL.metal,g,4);
+        if(w)p.rig.mesh.push(w); }
+      /* and the horizontal strands, which is what makes it a mesh and not a picket fence */
+      for(let r=1;r<=T.meshRows;r++){
+        const f=r/(T.meshRows+1);
+        let qx=X, qy=B.deck+0.03+(RH-(B.deck+0.03))*f, qz=-L/2;
+        for(let i=1;i<=12;i++){ const t=i/12;
+          const ny=B.deck+0.03+(cat(t,RH,T.railSag)-(B.deck+0.03))*f, nz=-L/2+t*L;
+          const w=strand(qx,qy,qz,X,ny,nz,0.006,PAL.metal,g,4);
+          if(w)p.rig.mesh.push(w);
+          qx=X; qy=ny; qz=nz; } } }
     p.collide();
   },
 });
@@ -5433,7 +5528,7 @@ defineProp('riv_boardwalk',{
    riser would have pushOut shoving the bird back down the track it is trying to climb. */
 defineProp('riv_approach',{
   biome:'river', at:{x:RIVBRIDGE.x, z:RIVBRIDGE.z0-RIVSTEPN*RIVSTEP.tread/2},
-  collider:RIVSTAIR.map(t=>({kind:'box',z:t.z,w:RIVFAR.w,d:RIVSTEP.tread,top:t.top,solid:false})),
+  collider:RIVSTAIR.map(t=>({kind:'box',z:t.z,w:RIVSTEP.w,d:RIVSTEP.tread,top:t.top,solid:false})),
   anchors:{foot:{x:0,y:RIVSTEPTOP+0.10,z:RIVSTAIR[0].z-RIVSTEP.tread/2},
            head:{x:0,y:RIVBRIDGE.deck+0.02,z:RIVSTAIR[RIVSTEPN-1].z}},
   /* TODO 47b, the FOURTH map to ask for it: this is milled timber and MATFAM has no wood family,
@@ -5442,16 +5537,16 @@ defineProp('riv_approach',{
   material:{family:null,nightTint:false},
   build(g,p){
     for(let i=0;i<RIVSTAIR.length;i++){ const t=RIVSTAIR[i];
-      box(RIVFAR.w,0.08,RIVSTEP.tread,PAL.wood,0,t.top-0.04,t.z,g,{noshadow:true});     // the tread
-      box(RIVFAR.w-0.10,RIVSTEP.rise,0.07,PAL.woodD,0,t.top-RIVSTEP.rise/2,
+      box(RIVSTEP.w,0.08,RIVSTEP.tread,PAL.wood,0,t.top-0.04,t.z,g,{noshadow:true});     // the tread
+      box(RIVSTEP.w-0.10,RIVSTEP.rise,0.07,PAL.woodD,0,t.top-RIVSTEP.rise/2,
           t.z-RIVSTEP.tread/2,g,{noshadow:true});                                        // the riser
       /* a stringer under each tread's outer edge, so the flight has structure from the side */
-      for(const sx of [-1,1]) box(0.09,0.30,RIVSTEP.tread,PAL.woodD,sx*(RIVFAR.w/2-0.06),
+      for(const sx of [-1,1]) box(0.09,0.30,RIVSTEP.tread,PAL.woodD,sx*(RIVSTEP.w/2-0.06),
           t.top-0.22,t.z,g,{noshadow:true}); }
     /* THE HANDRAIL CLIMBS WITH THE FLIGHT, which is what says stair rather than crate stack. */
     for(const sx of [-1,1])for(let i=0;i<RIVSTAIR.length;i++){ const t=RIVSTAIR[i];
-      cyl(0.05,0.055,0.90,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.45,t.z,g,5);
-      box(0.06,0.06,RIVSTEP.tread*1.02,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.90,t.z,g,{noshadow:true}); }
+      cyl(0.05,0.055,0.90,PAL.woodD,sx*(RIVSTEP.w/2+0.02),t.top+0.45,t.z,g,5);
+      box(0.06,0.06,RIVSTEP.tread*1.02,PAL.woodD,sx*(RIVSTEP.w/2+0.02),t.top+0.90,t.z,g,{noshadow:true}); }
     p.collide();
   },
 });
@@ -5460,23 +5555,23 @@ defineProp('riv_approach',{
    because there was nothing at all behind it. */
 defineProp('riv_landing',{
   biome:'river', at:{x:RIVBRIDGE.x, z:RIVFAR.z0},
-  collider:RIVFARSTAIR.map(t=>({kind:'box',z:t.z,w:RIVFAR.w,d:t.d,top:t.top,solid:false})),
+  collider:RIVFARSTAIR.map(t=>({kind:'box',z:t.z,w:RIVSTEP.w,d:t.d,top:t.top,solid:false})),
   anchors:{landing:{x:0,y:RIVBRIDGE.deck+0.02,z:RIVFAR.land/2},
            foot:{x:0,y:0.10,z:RIVFAR.z1-RIVFAR.z0+0.5}},
   material:{family:null,nightTint:false},                       // TODO 47b, as riv_approach above
   build(g,p){
     for(let i=0;i<RIVFARSTAIR.length;i++){ const t=RIVFARSTAIR[i], nx=RIVFARSTAIR[i+1];
-      box(RIVFAR.w,0.08,t.d,PAL.wood,0,t.top-0.04,t.z,g,{noshadow:true});
+      box(RIVSTEP.w,0.08,t.d,PAL.wood,0,t.top-0.04,t.z,g,{noshadow:true});
       const drop=nx?t.top-nx.top:t.top;
-      box(RIVFAR.w-0.10,drop,0.07,PAL.woodD,0,t.top-drop/2,t.z+t.d/2,g,{noshadow:true});
-      for(const sx of [-1,1]) box(0.09,0.30,t.d,PAL.woodD,sx*(RIVFAR.w/2-0.06),t.top-0.22,t.z,g,{noshadow:true}); }
+      box(RIVSTEP.w-0.10,drop,0.07,PAL.woodD,0,t.top-drop/2,t.z+t.d/2,g,{noshadow:true});
+      for(const sx of [-1,1]) box(0.09,0.30,t.d,PAL.woodD,sx*(RIVSTEP.w/2-0.06),t.top-0.22,t.z,g,{noshadow:true}); }
     /* THE ABUTMENT: four posts carrying the landing down to the ground, so the far end of the
        bridge lands on something the eye can see it landing on. */
     for(const sx of [-1,1])for(const sz of [0.18,RIVFAR.land-0.18])
-      cyl(0.11,0.13,RIVBRIDGE.deck,PAL.woodD,sx*(RIVFAR.w/2-0.14),RIVBRIDGE.deck/2,sz,g,7);
+      cyl(0.11,0.13,RIVBRIDGE.deck,PAL.woodD,sx*(RIVSTEP.w/2-0.14),RIVBRIDGE.deck/2,sz,g,7);
     for(const sx of [-1,1])for(let i=0;i<RIVFARSTAIR.length;i++){ const t=RIVFARSTAIR[i];
-      cyl(0.05,0.055,0.90,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.45,t.z,g,5);
-      box(0.06,0.06,t.d*1.02,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.90,t.z,g,{noshadow:true}); }
+      cyl(0.05,0.055,0.90,PAL.woodD,sx*(RIVSTEP.w/2+0.02),t.top+0.45,t.z,g,5);
+      box(0.06,0.06,t.d*1.02,PAL.woodD,sx*(RIVSTEP.w/2+0.02),t.top+0.90,t.z,g,{noshadow:true}); }
     p.collide();
   },
 });

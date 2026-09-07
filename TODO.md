@@ -1962,3 +1962,21 @@ the gate is a logic gate that must run without a browser. That is the honest sta
 wiring photographic budgets into the gate would make the gate need a GPU. The other half of the
 answer is that only two vantages have budgets at all; every frame with a sky, a snowfield or a
 lit interior could carry one.
+
+### 108. THE SWING BRIDGE PASSES THE CONVENTION TEST — DONE session 33, and what it still isn't
+Eric's HIGH item 4, rebuilt against the Hooker Valley archetype: tall A-frame towers, main cables in
+a real catenary, the deck HUNG from them on hangers, wire-mesh sides, one-person deck width.
+WHAT IS STILL OWED:
+  - **THE BRIDGE DOES NOT MOVE.** TODO 105A is the opportunity Eric filed and the rebuild is what
+    makes it worth building: there is now a cable to hang the sway from and a route across it to
+    interfere with. A swing bridge that does not sway is the largest remaining convention failure,
+    and it is a MECHANIC rather than a look fix, which is why it is not in this piece.
+  - **THE CABLES ARE NOT ANCHORED.** They stop at the cross-heads. A real one carries on past the
+    tower and into a ground anchor, which is a visible and cheap piece of geometry.
+  - **THE MESH IS WIRES, NOT MESH.** 112 strands at 750 mm spacing reads correctly at play distance
+    and reads as a wire balustrade up close. Real netting is ~50 mm. The honest fix is an alpha
+    card, which means a texture, which means the headless batteries stop being able to count it —
+    a trade worth making deliberately and not by accident.
+  - **287 MESHES IN ONE PROP**, up from 141, and the river scene went 548 -> 694. Nothing measured
+    a frame cost; perf.mjs is not in the gate. If any prop is going to be the one that wants
+    instancing or a merged geometry, it is this one.

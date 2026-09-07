@@ -6962,6 +6962,77 @@ C.section('THE BRAIDED RIVER - the fifth map, the swing bridge, and a floor that
          'the deck holds at its '+an+' point ('+X.groundHeightAt(q.x,q.z,3.2).toFixed(2)+')'); }
     ok(Array.isArray(BR.slats)&&BR.slats.length>60,'and it is slats rather than a plank ('+
        (BR.slats||[]).length+')');
+
+    /* ---- THE CONVENTION TEST (Eric's item 4). "Fails the convention test against real NZ swing
+       bridges (Hooker Valley archetype): needs tall A-frame towers not goalposts, cables with real
+       catenary sag not straight lines, wire-mesh sides not bare rails, and a one-person deck width
+       (<=1.2 m) not car-width. Also check the far span - it photographs as unsupported. Assert:
+       tower height ratio, sag > 0, mesh present, deck width."
+
+       ALL FOUR ARE ASSERTED AS RATIOS WHERE A RATIO IS WHAT THE CONVENTION IS, so the bridge can
+       be moved or resized without turning the assertion into a lie about a number nobody chose.
+       What shipped was goalposts: four vertical legs and a crossbar, a handrail sagging 0.42 m over
+       24 m — 1.75%, which photographs as a straight line — no main cable and NO HANGERS AT ALL, so
+       the deck was a collider hanging in the air, and bare rails where the mesh should be. */
+    { const R=BR.rig, T=X.RIVTOWER===undefined?null:null;   // read off the built prop, not a table
+      ok(!!R,'the bridge records its rigging, so the convention test can measure it');
+
+      // 1. DECK WIDTH — Eric's number, and the only one he gave outright
+      ok(R.deckW<=1.20,'ONE PERSON WIDE: deck '+R.deckW.toFixed(2)+
+         ' m, at or under the 1.20 m Eric set. Every DOC swing bridge in the country is signed one '+
+         'person at a time; 1.30 was a garden path');
+
+      // 2. TOWER HEIGHT RATIO — the archetype's towers stand well above the deck
+      { const above=R.towerH-X.RIV.BRIDGE.deck, ratio=above/R.span;
+        ok(above>2.5,'TALL TOWERS, NOT GOALPOSTS: the apex stands '+above.toFixed(2)+
+           ' m above the deck');
+        ok(ratio>0.09&&ratio<0.20,'and that is '+(ratio*100).toFixed(1)+
+           '% of the '+R.span+' m span, inside the 10-15% the real ones run at'); }
+
+      // 3. SAG > 0, and enough of it to READ as a cable rather than a wire pulled tight
+      { const sagRatio=R.cableSag/R.span;
+        ok(R.cableSag>0,'REAL CATENARY SAG: the main cable drops '+R.cableSag.toFixed(2)+
+           ' m from the cross-head to mid-span');
+        ok(sagRatio>0.06,'and that is '+(sagRatio*100).toFixed(1)+'% of the span — the old '+
+           'handrail sagged 1.75%, which is why it photographed as a straight line');
+        /* AND THE SAG IS IN THE GEOMETRY, not just in a number the prop reports. Measured off the
+           cable segments themselves: the lowest must sit near mid-span and well below the ends. */
+        const ys=R.cable.map(m=>m.position.y), zs=R.cable.map(m=>m.position.z);
+        const lo=Math.min(...ys), hi=Math.max(...ys);
+        const atLo=zs[ys.indexOf(lo)];
+        ok(hi-lo>R.cableSag*0.8,'and the drawn cable actually falls that far ('+
+           (hi-lo).toFixed(2)+' m between its highest and lowest segment)');
+        ok(Math.abs(atLo)<R.span*0.15,'with its lowest point near MID-SPAN (z '+atLo.toFixed(1)+
+           ' of +/-'+(R.span/2)+'), which is where a hanging cable puts it'); }
+
+      // 4. MESH PRESENT — and it has to be a mesh, not a picket fence
+      { ok(R.mesh.length>40,'WIRE MESH SIDES, NOT BARE RAILS: '+R.mesh.length+' wires');
+        const xs=new Set(R.mesh.map(m=>m.position.x.toFixed(3)));
+        ok(xs.size===2,'on both sides of the deck ('+xs.size+' distinct x)');
+        /* a picket fence is verticals only; a mesh has strands running the other way too, and the
+           test is that the wires do not all share one orientation. */
+        const vert=R.mesh.filter(m=>Math.abs(m.quaternion.x)<1e-6&&Math.abs(m.quaternion.z)<1e-6);
+        ok(vert.length>0&&vert.length<R.mesh.length,'and it runs BOTH ways — '+vert.length+
+           ' vertical of '+R.mesh.length+', so it is a mesh and not a picket fence'); }
+
+      // 5. THE DECK IS CARRIED. The far span "photographs as unsupported" because nothing carried
+      //    any of it: no hangers existed. Every hanger must reach from the cable to the deck.
+      /* GUARDED, because Math.max of an empty list is -Infinity and a finding that reports
+         "furthest at z -Infinity" is a finding nobody can act on. The claim is the same; the
+         message stays readable when the thing being measured is not there at all. */
+      if(ok(R.hangers.length>=20,'THE DECK HANGS FROM THE CABLES: '+R.hangers.length+
+            ' hangers, and the old bridge had none — its deck was a collider in the air')){
+        const zs=R.hangers.map(m=>m.position.z);
+        ok(Math.max(...zs)>R.span*0.35,'and they carry the FAR span too, not just the near one '+
+           '(furthest at z '+Math.max(...zs).toFixed(1)+' of '+(R.span/2)+') — Eric: "check the '+
+           'far span, it photographs as unsupported"');
+        ok(Math.min(...zs)<-R.span*0.35,'and the near span as well (nearest at z '+
+           Math.min(...zs).toFixed(1)+')'); }
+
+      // 6. AND THE APPROACH BELONGS TO THE SAME STRUCTURE. Once the deck came down to one person,
+      //    a 2.2 m stair read as two structures that met by accident.
+      ok(X.RIV.STEP.w<=R.deckW+0.6,'the approach stair is '+X.RIV.STEP.w+
+         ' m against a '+R.deckW+' m deck — a landing wider than the bridge, not twice it'); }
     /* cross it, and the crossing mission pays */
     const k=kq(), f=P.anchor(BR,'far');
     for(let i=0;i<5;i++){ k.x=f.x; k.z=f.z; k.y=R.BRIDGE.deck+0.02; k.vy=0; k.grounded=true;
