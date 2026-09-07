@@ -2509,3 +2509,21 @@ WHAT IS STILL OWED:
     about how much.
   - **`MTN.seg` WENT (22,7) -> (30,12)**, which is +412 triangles a mountain and about +3% on a
     map's total. Nothing measured a frame cost; perf.mjs is not in the gate.
+
+### 111. THERE IS NO SCANNED ROCK FAMILY, AND THE BOULDERS JUST GAVE UP THEIR DETAIL MAP FOR IT
+Filed 2026-09-07, session 33, by the rock piece, and caught by the TODO-citation check the same
+session — the code referenced this entry before it existed.
+`MATFAM` has nine families now (grass, gravel, asphalt, snow, weatherboard, corrugate, brick,
+concrete, timber) and not one of them is ROCK. `PAL.rock`, `PAL.rockD` and `0x7A7468` are registered
+in MAPKIND to the procedural `speckle` canvas instead, which is a 128 px multiply texture.
+THE ROCK PIECE TRADED THAT AWAY. `mkBoulder` puts all its colour in the vertex attribute so it can
+carry lichen on the upward faces and shade in the crevices, which means one white material and no
+MAPKIND lookup — a fair trade at 26-54 m, where a 128 px multiply map is invisible and a silhouette
+is not, but a trade all the same. Up close (the 26 `G.stones` dodecahedra are underfoot) it is a
+loss.
+THE PIECE: source a CC0 greywacke or granite set from Poly Haven, register it as `rock`, and give
+it the three hexes. It is the same shape of job TODO 47b was for timber, including the care: read
+every call site first. `PAL.rock` is also the nest KNOLL — a mossy mound that must not become
+gravel — and `0x6E5334` next door is tree bark, which wants a family of its own eventually too.
+NOT URGENT. Rock appears in far fewer frames than timber did, and the vertex-colour work is doing
+most of the job the map would have done. Filed so the trade is recorded rather than forgotten.

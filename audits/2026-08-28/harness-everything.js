@@ -6553,6 +6553,140 @@ C.section('mountains: one ring, one snowline');
   X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }
 
+/* ---- ROCKS: ANGULAR, SETTLED, BEDDED AND DERIVED ----
+   Every boulder in the game was a six-segment sphere squashed to scale.y 0.6 — a low-poly ball
+   flattened into a dome. Greywacke fractures into blocky slabs with flat faces and sharp arrises,
+   settles wider than tall, and sits BEDDED in the ground rather than resting on it.
+   THE BOULDERS HAVE NO PINNED VANTAGE, which is why gauntlet/verify/rockshot.mjs exists: the ski
+   field's ring is at r 26-50 and every pinned camera looks somewhere else. This section is what a
+   battery can say about them without a photograph. */
+C.section('rocks: angular, settled, bedded');
+{
+  const THREE=H.THREE||require('three');
+  const lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+  const R=X.ROCK;
+  ok(typeof X.mkBoulder==='function','boulders come from one builder');
+  X.setSeed(20260828); X.boot({biome:'skifield'});
+  const rocks=G.rocks||[];
+  if(ok(rocks.length>8,'the ski field beds a ring of them ('+rocks.length+')')){
+
+    /* 1. ANGULAR, NOT A BALL. An icosahedron's every face is flat and every edge a real arris; a
+          6-segment sphere is a faceted ball whose facets all face outward from one centre. */
+    ok(rocks.every(m=>m.geometry.type==='IcosahedronGeometry'),
+       'every one is an ICOSAHEDRON, not a squashed sphere — '+
+       [...new Set(rocks.map(m=>m.geometry.type))].join(', '));
+
+    /* AND NO BOULDER-SIZED GREY SPHERE IS LEFT ANYWHERE. The check that catches a site nobody
+       converted, across every map — scoped to rock colours and to boulder size, so pebbles and
+       the nest's mossy knoll are not swept up in it. */
+    { const lin=h=>new THREE.Color(h).convertSRGBToLinear().getHexString();
+      const RK=new Set([lin(X.PAL.rock),lin(X.PAL.rockD)]);
+      const left=[];
+      for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
+        G.scene.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='SphereGeometry')return;
+          const q=o.geometry.parameters;
+          if(q.radius<0.45||q.radius>3.0)return;            // pebbles out, the nest knoll out
+          if(!RK.has(o.material.color.getHexString()))return;
+          left.push(b+' r='+q.radius.toFixed(2)); }); }
+      ok(left.length===0,'and no boulder-sized grey sphere survives in any map ('+left.length+
+         (left.length?': '+left.slice(0,4).join(', '):'')+')');
+      X.setSeed(20260828); X.boot({biome:'skifield'}); }
+
+    /* 2. THEY SETTLE. A boulder wider than it is tall; taller than wide is a standing stone, and
+          the first cut produced thirteen of those (1.68 wide by 2.56 high) because the slab squash
+          took width away and left the height alone. */
+    const rocks2=G.rocks||[];
+    let tall=0, ratios=[];
+    for(const m of rocks2){ m.geometry.computeBoundingBox(); const bb=m.geometry.boundingBox;
+      const rr=(bb.max.y-bb.min.y)/Math.max(bb.max.x-bb.min.x,bb.max.z-bb.min.z);
+      ratios.push(rr); if(rr>1)tall++; }
+    ok(tall===0,'every boulder is wider than it is tall ('+tall+' standing stones; ratios '+
+       Math.min(...ratios).toFixed(2)+'-'+Math.max(...ratios).toFixed(2)+')');
+
+    /* 3. BEDDED, NOT PLACED. The ski field's ring is given a ground height of 0.15, and each rock
+          must reach below it — a boulder resting exactly on the plane reads as dropped. */
+    { let unbedded=0, depths=[];
+      for(const m of rocks2){ const bb=m.geometry.boundingBox;
+        const low=m.position.y+bb.min.y, h=bb.max.y-bb.min.y;
+        if(low>=0.15)unbedded++; depths.push((0.15-low)/h); }
+      ok(unbedded===0,'every boulder is bedded INTO the ground, not resting on it ('+unbedded+
+         ' sitting on top; buried '+(Math.min(...depths)*100).toFixed(0)+'-'+
+         (Math.max(...depths)*100).toFixed(0)+'% of their height)'); }
+
+    /* 4. LICHEN UP, SHADE DOWN, and measured off the vertex colours against the vertex NORMALS so
+          it follows the faces the sculpt actually made. */
+    { const m=rocks2[0], nrm=m.geometry.attributes.normal, col=m.geometry.attributes.color;
+      ok(!!col,'the boulders carry vertex colours');
+      const c=new THREE.Color(); let up=[], dn=[];
+      for(let v=0;v<col.count;v++){ c.fromBufferAttribute(col,v);
+        const uy=nrm.getY(v);
+        if(uy>0.55)up.push(lum(c)); else if(uy<-0.55)dn.push(lum(c)); }
+      const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+      ok(up.length>3&&dn.length>3,'with faces pointing both ways to compare ('+up.length+
+         ' up, '+dn.length+' down)');
+      ok(avg(up)>avg(dn)*1.4,'and the upward faces are lighter than the crevices — '+
+         avg(up).toFixed(4)+' against '+avg(dn).toFixed(4)+' ('+
+         (avg(up)/avg(dn)).toFixed(2)+'x): lichen grows up, shade collects down');
+      /* THE LICHEN IS PATCHY, NOT A WASH. Keyed on uy alone it painted every top vertex the same
+         42% green and the boulder came back mossed all over. Patchiness is measurable: the top
+         faces must not all share one value. */
+      /* MEASURED AS A SPREAD, NOT A COUNT OF DISTINCT VERTEX VALUES. The count version demanded
+         more than half the up-facing vertices differ and got 13 of 45, which looks like a failure
+         and is not: the geometry is NON-INDEXED, so computeVertexNormals gives FACE normals and
+         all three vertices of a face share one value. Thirteen distinct values across fifteen
+         up-facing faces is exactly what patchy looks like — the honest measurement is that the
+         top does not sit at one value. */
+      /* PATCHINESS HAS TO BE MEASURED AT A CONSTANT FACE ANGLE, and getting that wrong let a
+         sabotage through. Across all up-facing vertices the values vary anyway, because the lichen
+         amount is scaled by uy^2 and uy runs 0.55 to 1.0 — so replacing the patch noise with a
+         flat 1.0 still produced a 1.4x spread and passed. Restricted to the faces that are very
+         nearly level, uy^2 is almost constant and ANY remaining variation is the patch term. With
+         the noise removed these collapse to one value. */
+      { const flat=[]; const c2=new THREE.Color();
+        for(let v=0;v<col.count;v++){ if(nrm.getY(v)<0.88)continue;
+          c2.fromBufferAttribute(col,v); flat.push(lum(c2)); }
+        ok(flat.length>5,'there are near-level faces to compare at constant angle ('+
+           flat.length+')');
+        const flo=Math.min(...flat), fhi=Math.max(...flat);
+        ok(fhi/flo>1.06,'and the lichen is PATCHY rather than a uniform wash: across faces that '+
+           'are all within 28 degrees of level, where the angle term is near-constant, the value '+
+           'still runs '+flo.toFixed(4)+' to '+fhi.toFixed(4)+' ('+(fhi/flo).toFixed(3)+
+           'x) — lichen grows in plates with bare rock between them'); } }
+
+    /* 5. ONE MATERIAL, AND IT DIMS AT NIGHT. Same lesson the mountains taught an hour earlier. */
+    ok(rocks2.every(m=>m.material===rocks2[0].material),'all of them share one material');
+    ok((G.nightMats||[]).some(e=>e.m===rocks2[0].material),
+       'which is on the night register, so they do not stay noon-bright after dark');
+
+    /* 6. DERIVED, NOT DRAWN — the load-bearing structural claim. mkBoulder must make NO rnd()
+          calls, because its call sites already make theirs in an order every later seeded draw in
+          the map depends on (TODO 47), and the ski field's loop makes two OR three depending on
+          whether its piste test skipped the rock. Proved by determinism: the same position and
+          radius must produce a byte-identical boulder no matter what the seeded stream has been
+          doing in between. If a single rnd() were in there, these two would differ. */
+    { X.setSeed(11111); const a1=X.mkBoulder(3,0,7,1.0,X.PAL.rock);
+      X.setSeed(99999); for(let i=0;i<50;i++)X.noise&&0;   // churn nothing seeded, then rebuild
+      const a2=X.mkBoulder(3,0,7,1.0,X.PAL.rock);
+      const p1=a1.geometry.attributes.position, p2=a2.geometry.attributes.position;
+      let same=p1.count===p2.count;
+      if(same)for(let v=0;v<p1.count*3;v++)
+        if(Math.abs(p1.array[v]-p2.array[v])>1e-12){ same=false; break; }
+      ok(same,'the same position and radius give a byte-identical boulder, so mkBoulder draws no '+
+         'randoms and cannot shift the seeded stream its call sites depend on');
+      const b1=X.mkBoulder(4,0,7,1.0,X.PAL.rock);
+      const q1=b1.geometry.attributes.position;
+      let diff=false;
+      for(let v=0;v<q1.count*3;v++)
+        if(Math.abs(p1.array[v]-q1.array[v])>1e-9){ diff=true; break; }
+      ok(diff,'and a boulder one metre away is a DIFFERENT boulder — the variation is hashed out '+
+         'of the position rather than drawn'); }
+
+    /* 7. AND IT IS CLEARED BETWEEN MAPS, like the water and the mountains before it. */
+    ok(X.WORLDREGS.indexOf('rocks')>=0,'`rocks` is in WORLDREGS');
+  }
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
 C.section('TODO 79: the hut roof');
 {
   const THREE=H.THREE||require('three');
@@ -6758,14 +6892,22 @@ C.section('REPLAT P6A: the model-swap seam');
      material joins the night register, which works because its own colour is white and all its
      value lives in the vertex attribute — lerping white toward 0.30 white scales rock and snow
      together, the same curve foliage and bark already use. One material, shared across all six
-     maps by the mat() cache, hence one new entry and not six. */
+     maps by the mat() cache, hence one new entry and not six.
+
+     AND ONE MORE, SAME SESSION: nightMats 7 -> 8 and the ski field's tris 49606 -> 49866 for the
+     ROCK piece. Every boulder was a 6-segment sphere squashed to a dome and is an icosahedron now,
+     which is +20 triangles each across 13 rocks; the boulders share one material, which joins the
+     night register for exactly the reason the mountains did. The CARPARK's own boulder ring is
+     inside an `if(!HEADLESS)` block, so node never builds it and the carpark's numbers below do
+     not move for this piece at all — which is worth knowing before anyone wonders why only one
+     map changed. */
   const PRESEAM={
     carpark :{mesh:'45f8362c7377ca36', col:'1b025c57715cb017', meshes:1005, tris:230528,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
-              foodSrc:2, gravel:26, stones:26, wear:6, nightMats:7},
-    skifield:{mesh:'8fb85fd8f327b91f', col:'fc06ef03250ea1ed', meshes:364, tris:49606,
+              foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
+    skifield:{mesh:'8f573a2a1ada9dd0', col:'fc06ef03250ea1ed', meshes:364, tris:49866,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
-              foodSrc:0, gravel:0, stones:0, wear:0, nightMats:7},
+              foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };
   const worldRead=(biome)=>{
     X.setSeed(20260828);

@@ -1612,6 +1612,103 @@ function matGround(fam,rough){
   { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF,fam==='grass'); }
   matFam(fam).mats.push(m); matDress(m); return m;
 }
+/* ---------- ROCKS — ANGULAR, BEDDED, AND LICHENED ----------
+
+   Every boulder in the game was `sph(rnd(0.5,1.8), PAL.rock, ...)` with six width segments and
+   scale.y squashed to 0.6: a low-poly ball flattened into a DOME. Greywacke — which is what the
+   Southern Alps and their outwash are made of — does not do that. It fractures into blocky slabs
+   with flat faces and sharp arrises, it sits BEDDED in the ground rather than resting on it, and
+   its upward faces carry lichen while its crevices hold shade. Domes read as bread rolls.
+
+   ICOSAHEDRON, NOT SPHERE, and that is most of the fix for free: 80 flat faces and every edge a
+   real arris, where a 6-segment sphere is a faceted ball whose facets all face outward from one
+   centre. The displacement then pushes each vertex along its OWN direction, which deepens the
+   facets instead of smoothing them, and a slab squash along a derived axis stops it being
+   equilateral.
+
+   NOTHING HERE DRAWS A RANDOM, and that is deliberate for the same reason the mountain ring makes
+   exactly seven (TODO 47): the call sites already make their own draws in an order every later
+   seeded draw depends on, and the ski field's loop makes TWO or THREE depending on whether its
+   piste test skipped the rock. So every per-rock variation below is hashed out of the position it
+   was given — the standard sin/fract hash — and a boulder moved one metre is a different boulder
+   without a single call to rnd().
+
+   ONE MATERIAL, WHITE, WITH THE COLOUR IN THE VERTICES. That is what buys the lichen and the
+   crevice shade, and it costs the procedural `speckle` detail map that PAL.rock and PAL.rockD get
+   through MAPKIND — which is a fair trade at 26-54 m, where a 128 px multiply texture is invisible
+   and a silhouette is not. There is no scanned rock FAMILY to move to; see TODO 111. */
+const ROCK={
+  detail:1,          // IcosahedronGeometry subdivision: 1 gives 80 faces, still all flat
+  jag:0.34,          // vertices pushed along their own direction, as a fraction of radius
+  slab:0.46,         // squash along a derived axis, so no boulder is equilateral
+  squat:0.58,        // boulders SETTLE: wider than tall, or it is a standing stone
+  bury:0.30,         // this much of the rock sits below the ground it is bedded in
+  lichen:0x93A07A, lichenAmt:0.30,   // upward faces, and PATCHY — see the colour pass
+  crevice:0.52,      // and the downward ones hold shade
+  rough:0.94,
+};
+function rockMat(){ return mat(0xFFFFFF,{vertexColors:true,roughness:ROCK.rough}); }
+/* mkBoulder(x,y,z,r,colour,parent) — y is the height of the GROUND, not of the centre; the rock
+   beds itself. Returns the mesh. */
+function mkBoulder(x,y,z,r,c,parent){
+  const R=ROCK;
+  /* THE HASH. Two independent 0..1 values out of the position, so the shape, the squash axis and
+     the rotation all differ per rock without touching the seeded stream. */
+  const h1=(v=>v-Math.floor(v))(Math.sin(x*12.9898+z*78.233)*43758.5453);
+  const h2=(v=>v-Math.floor(v))(Math.sin(x*39.3468+z*11.135)*24634.6345);
+  const geo=new THREE.IcosahedronGeometry(r,R.detail);
+  const pos=geo.attributes.position;
+  const ax=Math.cos(h1*6.283), az=Math.sin(h1*6.283);      // the slab's normal, in plan
+  for(let v=0;v<pos.count;v++){
+    let px=pos.getX(v), py=pos.getY(v), pz=pos.getZ(v);
+    const L=Math.hypot(px,py,pz)||1;
+    const nx=px/L, ny=py/L, nz=pz/L;
+    /* deepen the facets: three octaves keyed on the vertex DIRECTION, so neighbouring vertices
+       move by different amounts and the flat faces tilt against each other */
+    const n=0.55*Math.sin(nx*4.1+h1*6.3)+0.30*Math.sin(ny*6.7+h2*6.3)
+           +0.15*Math.sin(nz*9.3+h1*3.1+h2*2.7);
+    const k=1+n*R.jag;
+    px*=k; py*=k; pz*=k;
+    /* the slab squash, along an axis in plan rather than always y — a bedded slab can lie on edge */
+    const d=px*ax+pz*az;
+    px-=ax*d*R.slab; pz-=az*d*R.slab;
+    py*=R.squat;
+    pos.setXYZ(v,px,py,pz);
+  }
+  geo.computeVertexNormals();
+  /* LICHEN UP, SHADE DOWN. Read off the vertex normal after displacement, so it follows the faces
+     the sculpt actually made rather than a guess about where up is. */
+  { const nrm=geo.attributes.normal, cols=[];
+    /* LICHEN IS PATCHY, NOT A WASH. Keyed on uy alone it painted the entire top face 42% green and
+       the boulder came back looking mossed all over, which greywacke is not: lichen grows in
+       plates and crusts with bare rock between them. So the amount is modulated by a third noise
+       of the vertex direction as well as by how upward the face is — same trick the ridge shading
+       on the mountains uses, and free for the same reason. */
+    const base=new THREE.Color(c).convertSRGBToLinear();
+    const li=new THREE.Color(R.lichen).convertSRGBToLinear();
+    const cv=base.clone().multiplyScalar(R.crevice);
+    const q=new THREE.Color();
+    for(let v=0;v<nrm.count;v++){
+      const uy=nrm.getY(v);
+      q.copy(uy<0?cv:base).lerp(base,uy<0?Math.max(0,1+uy):0);
+      if(uy>0){
+        const lx=nrm.getX(v), lz=nrm.getZ(v);
+        const patch=Math.max(0,0.5+0.5*Math.sin(lx*7.3+h1*6.3)*Math.cos(lz*5.9+h2*6.3)
+                                  +0.25*Math.sin(uy*11.1+h1*3.7));
+        q.lerp(li,R.lichenAmt*uy*uy*Math.min(1,patch)); }
+      cols.push(q.r,q.g,q.b); }
+    geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+  const m=new THREE.Mesh(geo,nightTint(rockMat()));
+  /* BEDDED, NOT PLACED. A boulder resting exactly on the ground plane reads as dropped; sinking a
+     third of it is what makes it look like it has been there since the last glacier. */
+  m.position.set(x, y + r*R.squat*(1-2*R.bury), z);
+  m.rotation.set(h2*0.6-0.3, h1*6.283, h1*0.6-0.3);
+  if(!HEADLESS){ m.castShadow=true; m.receiveShadow=true; }
+  (parent||G.scene).add(m);
+  (G.rocks=G.rocks||[]).push(m);
+  return m;
+}
+
 /* ---------- MOUNTAINS — ONE RING FOR EVERY MAP THAT HAS A HORIZON ----------
 
    Eric's river audit, item 9: "Mountains as grey slabs with hard bases, one in 38 with no snow at
@@ -3629,7 +3726,7 @@ const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','
                  /* EVERY BODY OF WATER, so the ripple loop does not carry a drowned lake from a
                     previous map. rivFloes was added to this list for exactly the same reason after
                     a carpark boot was found with three floes still registered. */
-                 'water','rivBars','mountains'];
+                 'water','rivBars','mountains','rocks'];
 /* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
    sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
    thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
@@ -4161,8 +4258,11 @@ function buildCarpark(){
       so.rotation.x=-Math.PI/2; so.position.set(q.x,0.042,q.z); G.scene.add(so);
       // registered the way G.wear and G.stones are, so what actually landed is inspectable
       G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x,z},slid:q.slid,stuck:!!q.stuck,disc:sp,halo:so}); }
+    /* the boulders out on the country. NOTE FOR ANYONE WRITING AN ASSERTION ABOUT THESE: they are
+       inside this `if(!HEADLESS)` block, so node never builds them and no battery can see them —
+       the ski field's ring is the one that is testable. */
     for(let i=0;i<14;i++){ const a=rnd(0,6.3),r=rnd(42,54);
-      const rk=sph(rnd(0.5,1.6),i%2?PAL.rock:PAL.rockD,Math.cos(a)*r,0.2,Math.sin(a)*r,null,6); rk.scale.y=0.6; }
+      mkBoulder(Math.cos(a)*r,0,Math.sin(a)*r,rnd(0.5,1.6),i%2?PAL.rock:PAL.rockD); }
   }
 }
 /* THE ANCHOR IS PART OF DECLARING A BIOME (TODO 38). It is the establishing shot: where the camera
@@ -4468,7 +4568,7 @@ function buildSkifield(){
   // rock through the snow, everywhere the groomer does not sweep
   for(let i=0;i<14;i++){ const a=rnd(0,6.3), r=rnd(26,50), rx=Math.cos(a)*r, rz=Math.sin(a)*r;
     if(rx>SKIPISTE.x0-2&&rx<SKIPISTE.x1+2&&rz>SKIPISTE.z0&&rz<SKIPISTE.z1)continue;
-    const rk=sph(rnd(0.6,1.8),i%2?PAL.rock:PAL.rockD,rx,0.15,rz,null,6); rk.scale.y=0.55; }
+    mkBoulder(rx,0.15,rz,rnd(0.6,1.8),i%2?PAL.rock:PAL.rockD); }
   // beech below the snowline only, which is the bottom arc of the map and nowhere near the peaks
   for(let i=0;i<9;i++){ const a=0.42+i/9*2.3, r=rnd(74,92);
     const b=new THREE.Mesh(new THREE.ConeGeometry(rnd(12,20),rnd(5,8),6),nightTint(mat(PAL.beech)));
@@ -9936,7 +10036,7 @@ if(typeof globalThis!=='undefined'){
     VILL:{NEST:VILLNEST,ST:VILLST,PATH:VILLPATH,VER:VILLVER,SHOP:VILLSHOP,UNITS:VILLUNITS,
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
-    WATER,waterMat,waterTint,updateWater, MTN,mountainRing,
+    WATER,waterMat,waterTint,updateWater, MTN,mountainRing, ROCK,mkBoulder,rockMat,
     RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,BARS:RIVBARS,
       STEP:RIVSTEP,STEPN:RIVSTEPN,STEPTOP:RIVSTEPTOP,FAR:RIVFAR,FARN:RIVFARN,
       STAIR:RIVSTAIR,FARSTAIR:RIVFARSTAIR,
