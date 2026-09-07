@@ -54,7 +54,13 @@ function load(){
 }
 function collector(name){
   const F=[];
-  return { ok:(c,m)=>{if(!c)F.push(m);},
+  /* ok RETURNS ITS CONDITION, so an assertion can GUARD the ones that depend on it:
+         if(!ok(!!pl, 'the prop is placed')) continue;
+     Every existing call site ignores the value, so nothing changes for them. It exists because
+     sabotaging a placement out of the world made a dependent block throw on a null, and a throw
+     takes the whole findings list with it — the ✗ already recorded for the same defect never
+     reached the verdict, and the sections after it never ran. A named finding beats a stack trace. */
+  return { ok:(c,m)=>{if(!c)F.push(m); return !!c;},
     F,
     section:s=>console.log('  · '+s),
     report(){ if(F.length){ console.log(name+': '+F.length+' FINDINGS'); F.forEach(f=>console.log('    ✗ '+f)); }

@@ -6969,6 +6969,74 @@ C.section('THE BRAIDED RIVER - the fifth map, the swing bridge, and a floor that
     tick(4);
     ok(G.missions.find(m=>m.id==='r_span').done===true,'and crossing it all the way pays'); }
 
+  /* ---- WALKABILITY: THE BRIDGE HAS TO BE REACHABLE, WHICH IS NOT THE SAME AS PRESENT ----
+
+     THE DEFECT THIS BLOCK EXISTS TO CATCH. Every assertion above passed on a bridge a bird could
+     not get onto. The deck was a roof collider (asserted), it spanned the crossing (asserted), it
+     held at near, mid and far (asserted three times), it was slats not a plank (asserted), and
+     crossing it paid (asserted, by teleporting the bird onto the far anchor). The deck sat 2.04 m
+     above the boardwalk that led to it with nothing in between, and past the far end there was no
+     landing, no abutment and no track — the deck simply stopped 2.55 m above bare grass. Eric found
+     it by looking at 39_river_walk. The gap between "the collider is there" and "the bird can walk
+     to it" is the whole class, and it now has an instrument: gauntlet/verify/walkable.js. */
+  boot(); X.startGame(1); tick(6); park();
+  { const WK=require('../../gauntlet/verify/walkable');
+    const RT=WK.routes(X);
+    for(const name of Object.keys(RT)){
+      const r=WK.walkable((x,z,y)=>X.groundHeightAt(x,z,y),RT[name]);
+      ok(r.ok,'walkable — '+name+' ('+r.samples+' samples, maxUp '+r.maxUp.toFixed(3)+
+         ' / maxDown '+r.maxDown.toFixed(3)+' m of '+r.reach+' reach, '+r.outOfReach+
+         ' out of reach'+
+         (r.worst?', worst short by '+r.worst.demand.toFixed(2)+' m at z '+r.worst.z:'')+
+         (r.maxDown>r.reach?', cliff at z '+r.cliffAt.z:'')+')'); }
+
+    /* AND THE GEOMETRY THAT MAKES IT WALKABLE, asserted as DERIVATIONS so moving the deck moves
+       the assertion with it rather than turning it red. */
+    const rise=(R.BRIDGE.deck-R.STEPTOP)/R.STEPN;
+    ok(rise<=WK.REACH,'the near stair rises '+rise.toFixed(3)+
+       ' m a tread, inside the game\'s own '+WK.REACH+' m reach');
+    ok(Math.abs(R.STAIR[R.STEPN-1].top-R.BRIDGE.deck)<1e-9,
+       'and its top tread is FLUSH with the deck, not near it ('+
+       R.STAIR[R.STEPN-1].top.toFixed(4)+' against '+R.BRIDGE.deck+')');
+    ok(Math.abs(R.STAIR[0].top-R.STEPTOP-rise)<1e-9,
+       'and its bottom tread is one rise above the boardwalk it stands on');
+    const last=R.FARSTAIR[R.FARSTAIR.length-1];
+    ok(last.top<=WK.REACH,'the far stair\'s last tread is '+last.top.toFixed(3)+
+       ' m above the ground, so the step off it is inside the reach too');
+
+    /* EVERY TREAD COLLIDER AT A DISTINCT z. This is the assertion that would have caught the fix's
+       OWN first cut: the entry mapped `top` and forgot `z`, so all six treads emitted at the prop
+       origin — six tops stacked in one metre. The timber was drawn in the right places, so the
+       picture would have looked perfect and the bird would have climbed a 0.68 m ladder. A tread
+       table is only a stair if the colliders are spread along it. */
+    for(const id of ['riv_approach','riv_landing']){
+      const pl=P.placed(id);
+      /* PRESENCE FIRST, AND THE REST BEHIND IT. Sabotaging the placement out of buildRiver made
+         this block throw on a null, and a throw takes the collector's whole findings list with it —
+         the walkability ✗ that had already been recorded never reached the verdict. The gate fails
+         either way (a battery that throws prints no ALL PASS), but a stack trace names nothing and
+         stops the sections after it. */
+      if(!ok(!!pl,id+' is a placement in the built world'))continue;
+      const cs=(pl.colliders||[]).filter(c=>c.kind==='box');
+      const zs=new Set(cs.map(c=>c.z.toFixed(4)));
+      ok(cs.length>1&&zs.size===cs.length,id+': all '+cs.length+
+         ' tread colliders sit at distinct z ('+zs.size+' distinct)');
+      const tops=cs.map(c=>c.top).sort((x,y)=>x-y);
+      for(let i=1;i<tops.length;i++)
+        if(tops[i]-tops[i-1]>WK.REACH) ok(false,id+': a '+(tops[i]-tops[i-1]).toFixed(3)+
+          ' m gap between consecutive treads');
+      ok(tops[tops.length-1]-tops[0]>0.9,id+': and the flight actually climbs ('+
+         (tops[tops.length-1]-tops[0]).toFixed(2)+' m over '+cs.length+' treads)'); }
+
+    /* THE FAR TRACK IS SOMEWHERE TO ARRIVE, and the grass has to be cut off it — a timber stair
+       standing in knee-high grass reads as abandoned rather than as a route. */
+    ok(R.FAR.zt>R.FAR.z1+1,'there is a far track past the foot of the far stair ('+
+       (R.FAR.zt-R.FAR.z1).toFixed(1)+' m of it)');
+    { const cuts=X.grassCuts('river').filter(c=>c[2]>0&&c[3]>0);
+      const covers=cuts.some(c=>Math.abs(c[0]-R.BRIDGE.x)<1.0&&
+        c[1]-c[3]<=R.FAR.z0+0.5&&c[1]+c[3]>=R.FAR.zt-0.5);
+      ok(covers,'and a grass cut runs the whole far approach and track'); } }
+
   /* ---- THE FLOES: THE ONLY NEW CLAIM ON THIS MAP, DRIVEN ---- */
   boot(); X.startGame(1); tick(10);
   { ok(Array.isArray(G.rivFloes)&&G.rivFloes.length===R.FLOES.length,
@@ -7128,6 +7196,75 @@ C.section('THE HIGH STATION - the last map, the drafting cascade, and riding a s
     const rc=(SD.colliders||[]).find(c=>c.kind==='roof');
     ok(!!rc&&rc.slide===true,'and its roof is a SLIDE zone, like the hut — a woolshed roof in the '+
        'wet is not a floor'); }
+
+  /* ---- ERIC'S FOURTH VERDICT: THE WOOLSHED IS CORRUGATED IRON, NOT PAINT ----
+
+     Same class as the anchor block, and worse in one way: the anchor block never claimed to be
+     concrete, while this prop's registry entry has DECLARED material:{family:'corrugate'} since the
+     day it was written. It declared it and its walls still came out dead smooth, because the
+     declaration is a POLICY and MATFAM is the MECHANISM — a colour with no row in that table gets
+     no family whatever the entry says. The walls were a `const WOOL=0x8E3A2A` inside the builder,
+     invisible to the table, so four meshes and sixty-four square metres of 41_station_shed went out
+     as flat oxide paint. The roof was fine all along (PAL.hutRoof has a row); only the walls were
+     orphaned, which is why this asserts BOTH — a fix that leaves the other half unmeasured is how
+     the same defect comes back on the other surface. */
+  boot(); X.startGame(1); tick(4); park();
+  { const SD=P.placed('stan_woolshed');
+    const byFam={};
+    SD.group.traverse(o=>{ if(!o.isMesh)return;
+      const f=(o.material.userData&&o.material.userData.matFamily)||null;
+      (byFam[f||'(none)']=byFam[f||'(none)']||[]).push(o); });
+    const corr=byFam['corrugate']||[];
+    ok(corr.length>=7,'the woolshed carries its envelope on the CORRUGATE family — walls AND roof ('+
+       corr.length+' meshes: '+Object.keys(byFam).map(k=>k+' '+byFam[k].length).join(', ')+')');
+    /* THE WALLS SPECIFICALLY, found by GEOMETRY rather than by name: a wall is a tall thin box, and
+       there are four of them (back, two ends, and the closed half of the yard side). */
+    const S=X.STAN.SHED;
+    const walls=corr.filter(o=>{ const g=o.geometry.parameters; if(!g)return false;
+      return Math.abs(g.height-S.h)<1e-6&&Math.min(g.width,g.depth)<0.5; });
+    ok(walls.length===4,'and all four of its walls are in it, at full '+S.h+' m height ('+
+       walls.length+')');
+    const wallArea=walls.reduce((a,o)=>{ const g=o.geometry.parameters;
+      return a+g.height*Math.max(g.width,g.depth); },0);
+    ok(wallArea>50,'which is '+wallArea.toFixed(0)+' square metres that used to be flat paint');
+    /* AND THE ROOF, which was never broken and must not become so. */
+    const roof=corr.filter(o=>{ const g=o.geometry.parameters;
+      return g&&g.width>S.w&&Math.abs(o.rotation.x)>0.1; });
+    ok(roof.length===2,'and both pitched roof panels are still corrugate too ('+roof.length+')');
+    /* THE HEX HAS A NAME AND A ROW, which is the actual repair — the same repair the anchor block
+       got, for the same reason, and the reason is written in the MATFAM comment. */
+    ok(X.MATFAM[X.PAL.woolshed]==='corrugate','the woolshed red has a hex of its own with a row in '+
+       'MATFAM, so a colour cannot belong to one object and speak for another\'s material');
+    ok(X.PAL.woolshed===0x8E3A2A,'and it is the same oxide red it was — the MATERIAL changed, not '+
+       'the world (0x'+X.PAL.woolshed.toString(16).toUpperCase()+')');
+    ok(X.MATFAM[X.PAL.hut]==='weatherboard'&&X.MATFAM[X.PAL.hutRoof]==='corrugate',
+       'and the hut\'s two families are untouched by the new row');
+    /* NOTHING FAMILY-LESS IS LEFT ON THE ENVELOPE. Scoped to the big painted boxes, because the
+       shed's timber floor, stand board and smoko step legitimately carry no family until TODO 47b
+       gives milled timber one — at which point this becomes a whole-world sweep. */
+    /* AREA IS THE TWO LARGEST DIMENSIONS, not width x height. Measured the naive way this test
+       saw the back wall (16 x 4.4) and missed both END walls (0.22 wide, 9.0 deep, 4.4 high),
+       so a sabotage that orphaned all four walls was reported as orphaning two. A panel does not
+       care which axis it is thin on. */
+    /* MILLED TIMBER IS THE ONE ALLOWED EXCEPTION, and it is named rather than tolerated. The
+       shed's floor is a 16 x 9 m panel and it carries no family because MATFAM has no wood row —
+       TODO 47b, now asked for by four maps in a row. When 47b lands this exception goes red on the
+       next run, which is the point: it is a reminder with a date on it, not a permanent hole. */
+    /* MATCHED BY COLOUR, because a family-less material records no authored hex — mat() only
+       stores matBase for materials a family CLAIMED, which is precisely the set this is looking
+       outside of. So the comparison is against the same sRGB->linear conversion mat() did. */
+    const lin=h=>new H.THREE.Color(h).convertSRGBToLinear().getHexString();
+    const TIMBER=new Set([lin(X.PAL.wood),lin(X.PAL.woodD)]);
+    const orphan=(byFam['(none)']||[]).filter(o=>{ const g=o.geometry.parameters; if(!g)return false;
+      const d=[g.width,g.height,g.depth].sort((x,y)=>y-x);
+      return d[0]*d[1]>8&&d[2]<0.4; });
+    const painted=orphan.filter(o=>!TIMBER.has(o.material.color.getHexString()));
+    ok(painted.length===0,'and no large PAINTED panel on the shed is left without a family ('+
+       painted.length+' of '+orphan.length+' family-less panels, the rest milled timber awaiting '+
+       'TODO 47b)');
+    ok(orphan.length>0&&orphan.every(o=>TIMBER.has(o.material.color.getHexString())),
+       'every family-less panel it does have is timber, so the exception is exactly TODO 47b and '+
+       'not a second defect hiding behind it ('+orphan.length+')'); }
 
   /* THE LIST, over ALL SIX MAPS and both modes — which is every map the tour has. */
   { const listOf=(biome,mode)=>{ X.boot({biome}); X.startGame(mode); return G.missions.map(m=>m.id); };

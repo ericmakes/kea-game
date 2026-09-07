@@ -499,9 +499,13 @@ await shotR('38_river_floes',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${CAM(-17.0,3.2,17.0, -25.0,0.6,24.0)}`,RIV);
 // 39: the boardwalk end — the DOC shelter, the daypacks at the bridge mouth, the jetboat on the
 //     shingle, and the braid channel running away.
+//     RE-STAGED with the approach fix. This is the frame that showed Eric the bridge did not
+//     connect, so it is the frame that has to show that it does: the bird now stands at the FOOT of
+//     the near stair rather than at z -12, which the stair itself now occupies, and the aim carries
+//     the whole climb from boardwalk to deck instead of stopping at the boardwalk's last plank.
 await shotR('39_river_walk',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
-  ${PIN('k.x=6.0;k.z=-12.0;k.y=0.52;k.vy=0;k.grounded=true;k.ry=0.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
-  ${CAM(11.0,3.0,-19.0, 4.0,1.0,-8.0)}`,RIV);
+  ${PIN('k.x=6.0;k.z=-14.6;k.y=0.52;k.vy=0;k.grounded=true;k.ry=0.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(11.2,3.4,-20.5, 4.6,1.6,-8.5)}`,RIV);
 /* ---------- THE HIGH STATION (STATION.md) — THE LAST MAP ----------
    THREE FIRST PINS, LEFT FLAGGED. Bird pinned, clock frozen, as on every map since TODO 88. */
 const STAN={biome:'station'};

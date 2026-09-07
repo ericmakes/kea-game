@@ -1004,6 +1004,10 @@ const PAL={ // v6 (2026-08-26): colours lifted from the real country — Lindis 
   skyTop:0x1E63B0, skyMid:0x5E97C8, skyLow:0xC9DCE6, sun:0xFFF6E6, cloud:0xFBFCFD,
   bad:0xC03A30, keaBody:0x6C6B33, keaBelly:0x8A8748, keaWing:0x4E5426, keaSheen:0x3E5B4E, keaOrange:0xE84E12, keaBeak:0x413C35, keaEye:0x2A2118, keaCere:0xB09A4E,
   wood:0x7E6644, woodD:0x5E4B32, hut:0xB33A24, hutRoof:0x5C666E, glass:0x8FC3D4,
+  /* OXIDE RED, the woolshed's own. Its own hex for the reason the anchor block's exists: a colour
+     that belongs to one object cannot be borrowed to speak for another object's material. It was a
+     `const WOOL` inside the builder, which is exactly how it ended up wearing no family at all. */
+  woolshed:0x8E3A2A,
   skin:0xE0AC7E, skin2:0xC08A5C, hiviz:0xFF6A1A, ranger:0x24513B, red:0xC03A30,
   blue:0x3E6484, green:0x3F7A44, white:0xF2F1EC, dark:0x2E3238, yellow:0xE9B93A,
   cone:0xFF5A14, rubber:0x232629, metal:0xAEB3B9, paper:0xE9E1CB, cash:0x76A263,
@@ -1143,6 +1147,13 @@ _mk(PAL.ranger,'weave'); _mk(PAL.hiviz,'weave'); _mk(0xE8946A,'weave'); _mk(0xD3
                    used to be PAL.gravel, which made P3 render a poured footing in driveway gravel.
                    A hex of its own is what stops one family's colour speaking for another object's
                    material - which is this table's whole failure mode, twice over now.
+     PAL.woolshed  the high station's walls, and the THIRD time this table's failure mode has
+                   cost a look: the woolshed DECLARED family:'corrugate' on its registry entry and
+                   its walls still came out dead smooth, because the entry's declaration is a
+                   policy and THIS TABLE is the mechanism — a colour with no row here gets no
+                   family no matter what the entry says. Four wall meshes, sixty-four square metres
+                   of the frame at 41_station_shed, flat oxide paint. The roof was already
+                   corrugate (PAL.hutRoof); only the walls were orphaned.
      PAL.snow + PAL.snowShade   every snow surface in both biomes.
    THE TERRAIN IS NOT IN THIS TABLE. Both ground planes build their own material (vertex colours),
    so the grass family is attached to them directly in buildCarpark/buildSkifield. */
@@ -1152,6 +1163,7 @@ _mf(PAL.hut,'weatherboard');
 _mf(PAL.tarmac,'asphalt');   _mf(PAL.road,'asphalt');
 _mf(PAL.gravel,'gravel');    _mf(0x9AA0A6,'gravel');    _mf(0x8E8B84,'gravel');
 _mf(PAL.hutRoof,'corrugate');_mf(0x4A545C,'corrugate');
+_mf(PAL.woolshed,'corrugate');
 _mf(0x8C8F93,'brick');
 _mf(0xA9A7A2,'concrete');
 _mf(PAL.snow,'snow');        _mf(PAL.snowShade,'snow');
@@ -2926,14 +2938,17 @@ function grassCuts(biome){
   }
   if(biome==='river'){
     const W=RIVWATER, B=RIVBRIDGE, K=RIVWALK, L=RIVLAKE;
-    /* SIX LIVE BOXES: the braid channel and its shingle banks, the lake, the boardwalk, the bridge
-       line, the shelter pad and the boat's hardstand. Nothing grows on stones or in water. */
+    /* SEVEN LIVE BOXES: the braid channel and its shingle banks, the lake, the boardwalk, the
+       bridge line, the far approach and its track, the shelter pad and the boat's hardstand.
+       Nothing grows on stones, in water, or on a track people walk down. The seventh arrived with
+       the approach fix — a timber stair standing in knee-high grass reads as abandoned. */
     return grassPad([
       [(W.x0+W.x1)/2,(W.z0+W.z1)/2,(W.x1-W.x0)/2,(W.z1-W.z0)/2+9.0],   // channel and banks
       [L.x,L.z,L.r+1.0,L.r+1.0],                                        // the lake
       [K.x,(K.z0+K.z1)/2,K.w/2+0.8,(K.z1-K.z0)/2],                      // the boardwalk
       [B.x,(B.z0+B.z1)/2,B.w/2+1.2,(B.z1-B.z0)/2],                      // under the bridge
       [RIVSHELTER.x,RIVSHELTER.z,2.0,1.6],                              // the shelter pad
+      [B.x,(RIVFAR.z0+RIVFAR.zt)/2,RIVFAR.w/2+0.8,(RIVFAR.zt-RIVFAR.z0)/2],  // far stair and track
       [RIVBOAT.x,RIVBOAT.z,1.6,2.8]]);                                  // the boat
   }
   if(biome==='village'){
@@ -5195,6 +5210,52 @@ const RIVFLOES=[
   {x:-29.0, z:27.5, r:1.9, drift:0.068, phase:4.0},
 ];
 
+/* ---- THE APPROACHES, which are the reason this map's crossing is a crossing ----
+
+   THE DEFECT THIS EXISTS TO FIX. The bridge shipped with a deck at 2.55 m and a boardwalk leading
+   to it at 0.51 m, and nothing in between. Every assertion about the bridge was true — the deck was
+   a roof collider, it held at near, mid and far, the crossing mission fired, it photographed at
+   37_river_bridge — and a bird walking up the boardwalk could not get on it. groundHeightAt only
+   lifts the bird onto a surface it is already within 0.55 m of:
+       if(curY>=c.top-0.55 && c.top>h) h=c.top;
+   so the deck demanded 2.00 m of altitude from a bird that had 0.81 m. The far end was worse: past
+   z 17 there was no landing, no abutment and no track — the deck simply stopped 2.55 m above bare
+   grass. Eric found it by looking at 39_river_walk. See gauntlet/verify/walkable.mjs for the
+   instrument that now finds this class of defect before a picture does.
+
+   THE FIX IS STEPS, NOT A LOWER DECK. A swing-bridge deck is high because it has to clear the
+   river in flood; the thing that connects it to the ground is an approach, and on a DOC track that
+   approach is a timber staircase up the abutment. So: a stair at the near end climbing the last six
+   metres of boardwalk, and at the far end a landing, a stair down the far bank, and a track that
+   carries on — because "walk to the far path" needs a far path to walk to.
+
+   THE STEP COUNT IS DERIVED FROM THE CLIMB, never typed. RIVSTEP.rise is the rise this WANTS
+   (0.34 m, comfortably inside the game's own 0.55 m reach so the stair reads as steps rather than
+   as a ladder the bird is allowed to climb); the count is ceil(climb/rise) and the ACTUAL rise is
+   then climb/count, so the top tread lands exactly flush with the deck instead of near it. Move the
+   deck height and the stair re-cuts itself. */
+const RIVSTEP={tread:1.00, rise:0.34};
+const RIVSTEPTOP=RIVWALK.y+0.09;                                  // the boardwalk's collider top
+const RIVSTEPN=Math.ceil((RIVBRIDGE.deck-RIVSTEPTOP)/RIVSTEP.rise);
+/* the far side: landing, stair down to the ground, then track. The last drop is onto ground at 0,
+   so the stair carries N-1 treads and the ground is the Nth. */
+const RIVFARN=Math.ceil(RIVBRIDGE.deck/RIVSTEP.rise);
+const RIVFAR={z0:RIVBRIDGE.z1, land:1.40, w:2.2, track:9.0};
+RIVFAR.z1=RIVFAR.z0+RIVFAR.land+(RIVFARN-1)*RIVSTEP.tread;        // where the stair meets the ground
+RIVFAR.zt=RIVFAR.z1+RIVFAR.track;                                 // where the far track runs out
+
+/* THE TREAD TABLES, generated once, so the collider in the registry ENTRY and the timber in the
+   builder are the same numbers and cannot drift apart. Local z, relative to each prop's own at. */
+const RIVSTAIR=(()=>{ const a=[], rise=(RIVBRIDGE.deck-RIVSTEPTOP)/RIVSTEPN;
+  for(let i=0;i<RIVSTEPN;i++)
+    a.push({z:-RIVSTEPN*RIVSTEP.tread/2+RIVSTEP.tread*(i+0.5), top:RIVSTEPTOP+rise*(i+1)});
+  return a; })();
+const RIVFARSTAIR=(()=>{ const a=[{z:RIVFAR.land/2, d:RIVFAR.land, top:RIVBRIDGE.deck}];
+  const rise=RIVBRIDGE.deck/RIVFARN;
+  for(let i=1;i<RIVFARN;i++)
+    a.push({z:RIVFAR.land+RIVSTEP.tread*(i-0.5), d:RIVSTEP.tread, top:RIVBRIDGE.deck-rise*i});
+  return a; })();
+
 defineProp('riv_bridge',{
   biome:'river', at:{x:RIVBRIDGE.x,z:(RIVBRIDGE.z0+RIVBRIDGE.z1)/2},
   /* A ROOF COLLIDER FOR THE DECK, because that is the shape groundHeightAt reads for a walkable
@@ -5247,6 +5308,58 @@ defineProp('riv_boardwalk',{
     /* the handrail, because DOC puts one on anything raised */
     for(const sx of [-1,1]){ box(0.06,0.06,L,PAL.woodD,sx*(W.w/2+0.02),W.y+0.85,0,g,{noshadow:true});
       for(let z=-L/2+1.3; z<L/2; z+=2.6) cyl(0.045,0.05,0.85,PAL.woodD,sx*(W.w/2+0.02),W.y+0.42,z,g,5); }
+    p.collide();
+  },
+});
+/* THE NEAR STAIR — six timber treads up the last six metres of boardwalk to the bridge mouth.
+   solid:false like the boardwalk it stands on: a step is something you walk ONTO, and a solid
+   riser would have pushOut shoving the bird back down the track it is trying to climb. */
+defineProp('riv_approach',{
+  biome:'river', at:{x:RIVBRIDGE.x, z:RIVBRIDGE.z0-RIVSTEPN*RIVSTEP.tread/2},
+  collider:RIVSTAIR.map(t=>({kind:'box',z:t.z,w:RIVFAR.w,d:RIVSTEP.tread,top:t.top,solid:false})),
+  anchors:{foot:{x:0,y:RIVSTEPTOP+0.10,z:RIVSTAIR[0].z-RIVSTEP.tread/2},
+           head:{x:0,y:RIVBRIDGE.deck+0.02,z:RIVSTAIR[RIVSTEPN-1].z}},
+  /* TODO 47b, the FOURTH map to ask for it: this is milled timber and MATFAM has no wood family,
+     so it goes out with the palette colour it was authored in and picks the family up when 47b
+     lands. Recorded here rather than fudged into weatherboard, which is cladding, not a tread. */
+  material:{family:null,nightTint:false},
+  build(g,p){
+    for(let i=0;i<RIVSTAIR.length;i++){ const t=RIVSTAIR[i];
+      box(RIVFAR.w,0.08,RIVSTEP.tread,PAL.wood,0,t.top-0.04,t.z,g,{noshadow:true});     // the tread
+      box(RIVFAR.w-0.10,RIVSTEP.rise,0.07,PAL.woodD,0,t.top-RIVSTEP.rise/2,
+          t.z-RIVSTEP.tread/2,g,{noshadow:true});                                        // the riser
+      /* a stringer under each tread's outer edge, so the flight has structure from the side */
+      for(const sx of [-1,1]) box(0.09,0.30,RIVSTEP.tread,PAL.woodD,sx*(RIVFAR.w/2-0.06),
+          t.top-0.22,t.z,g,{noshadow:true}); }
+    /* THE HANDRAIL CLIMBS WITH THE FLIGHT, which is what says stair rather than crate stack. */
+    for(const sx of [-1,1])for(let i=0;i<RIVSTAIR.length;i++){ const t=RIVSTAIR[i];
+      cyl(0.05,0.055,0.90,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.45,t.z,g,5);
+      box(0.06,0.06,RIVSTEP.tread*1.02,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.90,t.z,g,{noshadow:true}); }
+    p.collide();
+  },
+});
+/* THE FAR LANDING AND STAIR — a deck-height landing off the far end of the bridge, then a flight
+   down the far bank. The landing is also the abutment: the far span photographed as unsupported
+   because there was nothing at all behind it. */
+defineProp('riv_landing',{
+  biome:'river', at:{x:RIVBRIDGE.x, z:RIVFAR.z0},
+  collider:RIVFARSTAIR.map(t=>({kind:'box',z:t.z,w:RIVFAR.w,d:t.d,top:t.top,solid:false})),
+  anchors:{landing:{x:0,y:RIVBRIDGE.deck+0.02,z:RIVFAR.land/2},
+           foot:{x:0,y:0.10,z:RIVFAR.z1-RIVFAR.z0+0.5}},
+  material:{family:null,nightTint:false},                       // TODO 47b, as riv_approach above
+  build(g,p){
+    for(let i=0;i<RIVFARSTAIR.length;i++){ const t=RIVFARSTAIR[i], nx=RIVFARSTAIR[i+1];
+      box(RIVFAR.w,0.08,t.d,PAL.wood,0,t.top-0.04,t.z,g,{noshadow:true});
+      const drop=nx?t.top-nx.top:t.top;
+      box(RIVFAR.w-0.10,drop,0.07,PAL.woodD,0,t.top-drop/2,t.z+t.d/2,g,{noshadow:true});
+      for(const sx of [-1,1]) box(0.09,0.30,t.d,PAL.woodD,sx*(RIVFAR.w/2-0.06),t.top-0.22,t.z,g,{noshadow:true}); }
+    /* THE ABUTMENT: four posts carrying the landing down to the ground, so the far end of the
+       bridge lands on something the eye can see it landing on. */
+    for(const sx of [-1,1])for(const sz of [0.18,RIVFAR.land-0.18])
+      cyl(0.11,0.13,RIVBRIDGE.deck,PAL.woodD,sx*(RIVFAR.w/2-0.14),RIVBRIDGE.deck/2,sz,g,7);
+    for(const sx of [-1,1])for(let i=0;i<RIVFARSTAIR.length;i++){ const t=RIVFARSTAIR[i];
+      cyl(0.05,0.055,0.90,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.45,t.z,g,5);
+      box(0.06,0.06,t.d*1.02,PAL.woodD,sx*(RIVFAR.w/2+0.02),t.top+0.90,t.z,g,{noshadow:true}); }
     p.collide();
   },
 });
@@ -5386,9 +5499,22 @@ function buildRiver(){
 
   /* ---- THE BOARDWALK, THE BRIDGE, AND THE SHELTER AT THE CARPARK END ---- */
   const WK=placeProp('riv_boardwalk');
+  /* IN ROUTE ORDER, and the order is load-bearing: pushOut walks G.colliders mutating the bird's
+     position as it goes (TODO 47), so the sequence the approach is pushed in is part of the world's
+     behaviour and not a formatting choice. Boardwalk, stair, deck, landing — the way you walk it. */
+  const AP=placeProp('riv_approach');
   const BR=placeProp('riv_bridge'); G.rivBridge=BR;
+  const LD=placeProp('riv_landing');
   const SH=placeProp('riv_shelter');
   const BT=placeProp('riv_boat');   G.rivBoat=BT;
+  /* ---- THE FAR TRACK. A crossing needs somewhere to arrive: past the far stair the track carries
+     on toward the head of the valley, so "walk the path, cross the bridge, keep going" is a thing
+     the map actually offers rather than a 2.55 m drop onto grass. Same laid-surface recipe and the
+     same brown-grey as the campground track, which was calibrated against exactly this problem. */
+  { const len=RIVFAR.zt-RIVFAR.z1, cz=(RIVFAR.z1+RIVFAR.zt)/2;
+    const slab=box(RIVFAR.w,0.12,len,0x7A736A,RIVBRIDGE.x,0.06,cz,null,{noshadow:true});
+    slab.receiveShadow=!HEADLESS;
+    for(const rx of [-0.62,0.62]) box(0.7,0.13,len-0.8,0x6B6459,RIVBRIDGE.x+rx,0.075,cz,null,{noshadow:true}); }
 
   /* THE DECK SLATS COME LOOSE, three of them, which is the bridge's own crime */
   { let loosened=0;
@@ -5585,7 +5711,7 @@ defineProp('stan_woolshed',{
        41_station_shed went to it. A woolshed IS red, but it is red LEAD OXIDE: dark, dusty, and
        the colour of something painted once in 1958. Same reason the campground's ablutions block
        stopped wearing this colour. */
-    const WOOL=0x8E3A2A;
+    const WOOL=PAL.woolshed;             // named, and registered to corrugate in MATFAM
     box(S.w,S.h,0.22,WOOL,0,S.pile+S.h/2,-S.d/2+0.11,g);
     for(const sx of [-1,1]) box(0.22,S.h,S.d,WOOL,sx*(S.w/2-0.11),S.pile+S.h/2,0,g);
     box(S.w*0.52,S.h,0.22,WOOL,-S.w*0.24,S.pile+S.h/2,S.d/2-0.11,g);  // the closed half
@@ -9456,6 +9582,8 @@ if(typeof globalThis!=='undefined'){
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
     RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,
+      STEP:RIVSTEP,STEPN:RIVSTEPN,STEPTOP:RIVSTEPTOP,FAR:RIVFAR,FARN:RIVFARN,
+      STAIR:RIVSTAIR,FARSTAIR:RIVFARSTAIR,
          SHELTER:RIVSHELTER,BOAT:RIVBOAT,FLOES:RIVFLOES},
     STAN:{NEST:STANNEST,SHED:STANSHED,RACE:STANRACE,PEN:STANPEN,YARD:STANYARD,
           UTE:STANUTE,KENNEL:STANKENNEL,TROUGH:STANTROUGH,openGate:stationOpenGate},
