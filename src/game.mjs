@@ -1581,6 +1581,108 @@ function matGround(fam,rough){
   { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF,fam==='grass'); }
   matFam(fam).mats.push(m); matDress(m); return m;
 }
+/* ---------- WATER — ONE MATERIAL FOR EVERY BODY OF WATER IN THE GAME ----------
+
+   Eric's river audit: "WATER is an unsigned system, and three of six new frames contain it." It
+   was: the braid and the glacier lake were two hand-tuned planes written inside buildRiver, with
+   their own colours, their own roughness and no shared idea of what water is. So this is the
+   system, and the brief's last line is the binding one — ONE material serves the river, the
+   glacier lake, and any tarn or melt in any map that wants one later.
+
+   EVERY NUMBER BELOW IS MEASURED, off the two plates Eric named, with gauntlet/verify/lum.mjs:
+       nz_river_01, the milky braid   mean RGB 131,157,164   #839DA4   sat 0.20   hue 191
+       nz_water_01, the calm lake     mean RGB  61, 80, 91   #3D505B   sat 0.33   hue 203
+   The first surprise is how DESATURATED the real thing is. "Milky turquoise" sounds like a
+   saturated colour and it is not — rock flour is a grey-green-blue at about a fifth saturation, and
+   the old braid (0x6FA8B8, sat 0.40) and lake (0x74B2C4, sat 0.42) were both twice the plate. The
+   second is how much darker: the plate's braid sits at luma 0.60, and the shipped lake photographed
+   at 0.89.
+
+   ROUGHNESS IS THE WHOLE BLOWOUT, AND IT WAS MEASURED, NOT REASONED (Eric's eyeball item 10 — "is
+   it the water material or the sun angle?"). gauntlet/verify/sunangle.mjs moves one variable at a
+   time at vantage 38 and reads the clipped fraction of the hot spot:
+       as it ships,      roughness 0.24              15.53% of the hot spot CLIPPED PURE WHITE
+       roughness -> 0.75, nothing else changed        0.00%   and max luma 255 -> 231
+       envMapIntensity 0.55 -> 0.10, nothing else    15.53%   IDENTICAL — the HDRI is not in it
+       camera moved 16 m, material untouched          0.62%   so the spot is view-dependent
+       night, the only thing that moves the sun        0.00%   max luma 170
+   So it IS the sun's specular — the spot moves with the camera and dies with the sun — the
+   environment contributes NOTHING, and roughness is the only lever that matters. The answer to
+   Eric's question is "both, and the fix is roughness".
+   0.72 IS NOT A COMPROMISE, IT IS WHAT GLACIAL WATER IS. Rock-flour water is opaque with suspended
+   sediment; it scatters rather than reflects, and it is genuinely near-matte. The lake's old
+   comment records roughness already being raised once, 0.14 -> 0.24, for this exact hotspot — which
+   is why this number comes with a measurement and an assertion instead of another nudge.
+
+   SHALLOWS ARE VERTEX COLOUR, NOT TRANSPARENCY. A braided river is nearly opaque, so the pale
+   margin where it thins over stones is the water's own colour lightening toward the shingle
+   underneath it — not a see-through surface. That keeps it a SURFACE and not a lens, which is the
+   position RIVER.md already took, and it costs nothing. */
+const WATER={
+  deep:   0x4E7A88,      // the body of it: the plate's hue, at the plate's saturation
+  shallow:0x93AFB2,      // the pale margin, thinning over shingle
+  still:  0x517E8C,      // a still surface reads a shade deeper than a moving one
+  rough:  0.72,          // near-matte. see the measurement above; anything glossier blows out
+  env:    0.25,
+  shallowM:7.0,          // metres of margin over which the shallows read
+  relief: 0.045,         // static surface relief: a water plane must not be a plane
+  ripple: {amp:0.026, k1:0.42, k2:0.27, sp:0.55},
+  /* THE LUMINANCE BUDGET, asserted from the frame by lum.mjs and from the material by the battery.
+     Eric asked for "a luminance clamp on that vantage"; this is the number that clamp holds to. */
+  clipPct:0.5,
+};
+/* the one material, cached by mat() like every other, so both bodies share the same object */
+function waterMat(){ return mat(0xFFFFFF,{vertexColors:true,roughness:WATER.rough,
+                                          envMapIntensity:WATER.env}); }
+/* WATER COLOUR AT A POINT, as a function of how far from the edge it is and how fast it moves.
+   `edge` is metres to the nearest shore, `flow` is 0 for still water and 1 for a braid. */
+function waterTint(edge,flow){
+  const d=new THREE.Color(flow>0.5?WATER.deep:WATER.still).convertSRGBToLinear();
+  const sh=new THREE.Color(WATER.shallow).convertSRGBToLinear();
+  const t=1-Math.min(1,Math.max(0,edge)/WATER.shallowM);
+  return sh.clone().lerp(d,1-t*t);          // squared, so the shallows hug the shore
+}
+/* waterBody(geo, {x,y,z,flow,edgeOf}) — dress a geometry as water, colour it, relieve it, register
+   it for the ripple, and hand back the mesh. edgeOf(x,z) gives metres to the nearest shore in the
+   geometry's own local frame; without it the whole body is treated as deep.
+   THE BASE POSITIONS ARE KEPT so the ripple is applied FROM them every frame rather than
+   accumulated onto the last frame's — the mistake that turns a 26 mm ripple into a slow explosion. */
+function waterBody(geo,o){
+  const pos=geo.attributes.position, cols=[], flow=o.flow===undefined?1:o.flow;
+  const base=new Float32Array(pos.count);
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), y=pos.getY(i);            // still in the geometry's XY, before the rotate
+    const edge=o.edgeOf?o.edgeOf(x,y):WATER.shallowM;
+    const c=waterTint(edge,flow);
+    /* STATIC RELIEF. A perfectly flat plane returns one normal everywhere, which is what lets a
+       directional light put a single hard highlight on it; a surface with a few centimetres of
+       standing swell shades unevenly and cannot. It is also free, unlike the animated ripple. */
+    const r=Math.sin(x*0.31+y*0.19)*Math.cos(y*0.23-x*0.11)*WATER.relief;
+    base[i]=pos.getZ(i)+r; pos.setZ(i,base[i]);
+    cols.push(c.r,c.g,c.b); }
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  geo.computeVertexNormals();
+  const m=new THREE.Mesh(geo,waterMat());
+  m.rotation.x=-Math.PI/2; m.position.set(o.x||0,o.y||0,o.z||0);
+  if(!HEADLESS)m.receiveShadow=true;
+  G.scene.add(m);
+  (G.water=G.water||[]).push({m,base,flow});
+  return m;
+}
+/* THE RIPPLE, for every registered body, from the base positions. Deterministic under the capture
+   clock pin because it reads G.time, which is exactly what the grass wind does. */
+function updateWater(){
+  if(!G.water||!G.water.length)return;
+  const R=WATER.ripple, t=G.time*R.sp;
+  for(const w of G.water){
+    const pos=w.m.geometry.attributes.position;
+    for(let i=0;i<pos.count;i++){
+      const x=pos.getX(i), y=pos.getY(i);
+      pos.setZ(i, w.base[i]+Math.sin(x*R.k1+t)*Math.cos(y*R.k2-t*0.7)*R.amp*w.flow);
+    }
+    pos.needsUpdate=true;
+  }
+}
 function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshStandardMaterial(Object.assign({color:col,roughness:0.82,metalness:0.0,envMapIntensity:0.3},extra||{}));
     /* REPLAT P3: a scanned family claims the colour BEFORE the procedural branch gets a look at
        it, and the two are exclusive by registration rather than by this ordering — see MATFAM.
@@ -2944,7 +3046,9 @@ function grassCuts(biome){
        the approach fix — a timber stair standing in knee-high grass reads as abandoned. */
     return grassPad([
       [(W.x0+W.x1)/2,(W.z0+W.z1)/2,(W.x1-W.x0)/2,(W.z1-W.z0)/2+9.0],   // channel and banks
-      [L.x,L.z,L.r+1.0,L.r+1.0],                                        // the lake
+      [L.x,L.z,L.r+3.6,L.r+3.6],                                        // the lake, and its whole
+      // disc: the surface is drawn at r+2.5 so a cut at r+1.0 left grass growing THROUGH the outer
+      // ring of water. Eric's "no grass to the water's edge", which was already half true.
       [K.x,(K.z0+K.z1)/2,K.w/2+0.8,(K.z1-K.z0)/2],                      // the boardwalk
       [B.x,(B.z0+B.z1)/2,B.w/2+1.2,(B.z1-B.z0)/2],                      // under the bridge
       [RIVSHELTER.x,RIVSHELTER.z,2.0,1.6],                              // the shelter pad
@@ -3303,7 +3407,11 @@ function snowSpot(x,z,r,env){
    booting the carpark and finding three floes still registered. updateRiver guards on G.biome so
    nothing misbehaved, but a stale list is a stale list and the next reader will not guard. */
 const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','hints','snow','propReg',
-                 'rivFloes','stanPens','stanGates'];
+                 'rivFloes','stanPens','stanGates',
+                 /* EVERY BODY OF WATER, so the ripple loop does not carry a drowned lake from a
+                    previous map. rivFloes was added to this list for exactly the same reason after
+                    a carpark boot was found with three floes still registered. */
+                 'water','rivBars'];
 /* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
    sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
    thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
@@ -5203,6 +5311,15 @@ const RIVWALK={x:6.0, z0:-24.0, z1:-7.0, w:2.2, y:0.42};        // the boardwalk
 const RIVSHELTER={x:2.0, z:-22.0};
 const RIVBOAT={x:-13.0, z:-3.2};
 const RIVSNOW=null;
+/* THE GRAVEL BARS: a table, for the same reason the floes are one — and because anything drawn
+   from rnd() inside a builder joins the seeded draw order and moves every later draw if it is
+   ever removed (TODO 47). `sq` squashes the disc along z so a bar lies ALONG the flow. */
+const RIVBARS=[
+  {x:-18.0, z: 2.0, r:4.2, sq:0.34, ry: 0.18},
+  {x: -3.5, z: 7.5, r:3.1, sq:0.30, ry:-0.22},
+  {x: 14.0, z: 1.2, r:5.0, sq:0.28, ry: 0.09},
+  {x: 30.0, z: 8.8, r:3.6, sq:0.32, ry:-0.14},
+];
 /* THE FLOES: a table, because their drift is asserted and a table is what an assertion can read. */
 const RIVFLOES=[
   {x:-30.0, z:19.0, r:2.3, drift:0.055, phase:0.0},
@@ -5466,36 +5583,41 @@ function buildRiver(){
   ground.rotation.x=-Math.PI/2; if(!HEADLESS)ground.receiveShadow=true; G.scene.add(ground);
   buildGrass('river'); buildTrees();
 
-  /* ---- THE WATER. A vertex-coloured plane, deliberately: a glacier river is rock flour, milky
-     and nearly opaque, so it is a SURFACE and not a lens. RIVER.md says why at length. ---- */
+  /* ---- THE WATER, both bodies, off the ONE material. See WATER for every measured number and
+     for the sunangle.mjs experiment that settled the blowout. ---- */
   { const W=RIVWATER, w=W.x1-W.x0, l=W.z1-W.z0;
+    /* THE BRAID. Its shore is the channel's own two banks, so distance-to-edge is distance from
+       the centreline out — which is what makes the pale margin follow the bank rather than being
+       painted on at a guess. */
     const wg=new THREE.PlaneGeometry(w,l,40,14);
-    const wp=wg.attributes.position, cols=[];
-    /* SATURATED AND DARKER THAN THE FIRST CUT, which photographed as a salt flat. Rock flour is
-       milky but it is emphatically BLUE-GREEN, and under the P2 HDRI a pale desaturated plane at
-       roughness 0.34 blows out to white — the whole lower half of 37_river_bridge went with it. */
-    const c0=new THREE.Color(0x6FA8B8).convertSRGBToLinear(),      // the milky pale, with hue in it
-          c1=new THREE.Color(0x3E7285).convertSRGBToLinear();      // the deeper braid
-    for(let i=0;i<wp.count;i++){ const x=wp.getX(i), y=wp.getY(i);
-      const t=1-Math.min(1,Math.abs(y)/(l/2));
-      const braid=0.5+0.5*Math.sin(x*0.18)*Math.cos(y*0.3);
-      const c=c0.clone().lerp(c1,Math.min(1,t*braid*1.2)); cols.push(c.r,c.g,c.b); }
-    wg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
-    const wm=new THREE.Mesh(wg,mat(0xFFFFFF,{vertexColors:true,roughness:0.30,envMapIntensity:0.45}));
-    wm.rotation.x=-Math.PI/2; wm.position.set((W.x0+W.x1)/2,-0.16,(W.z0+W.z1)/2);
-    if(!HEADLESS)wm.receiveShadow=true; G.scene.add(wm); G.rivWater=wm;
-    /* the lake, the same water a shade paler because it is still */
-    /* THE TERRAIN MAKES THE SHORELINE, NOT THE DISC'S OWN EDGE. At y -0.30 the disc sat BELOW the
-       un-cut ground near its rim, so the terrain clipped it and the lake came back with a hard
-       straight polygon edge. Raised to just under the bank and made WIDER than the basin, so the
-       ground rises through it and the waterline is wherever the cut passes -0.05 — which follows
-       the terrain's own noise and is therefore not a circle.
-       AND THE ROUGHNESS IS UP, because at 0.14 the HDRI's sun put a blown-out hotspot in the
-       middle of the frame; still water is glossy but it is not a mirror ball. */
-    const lg=new THREE.CircleGeometry(RIVLAKE.r+2.5,48);
-    const lm=new THREE.Mesh(lg,mat(0x74B2C4,{roughness:0.24,envMapIntensity:0.55}));
-    lm.rotation.x=-Math.PI/2; lm.position.set(RIVLAKE.x,-0.05,RIVLAKE.z);
-    G.scene.add(lm); G.rivLake=lm; }
+    G.rivWater=waterBody(wg,{x:(W.x0+W.x1)/2, y:-0.16, z:(W.z0+W.z1)/2, flow:1,
+      edgeOf:(x,y)=>l/2-Math.abs(y)});
+    /* GRAVEL BARS IN THE CHANNEL, which is the other half of "a braided river is mostly stones".
+       They sit just above the water and just below the bank, so the braid divides around them and
+       the water reads as threads rather than as one sheet. Placed from a table, not from rnd(),
+       because a re-seed must not move them (TODO 47's law about the draw order applies to every
+       seeded call in a builder). */
+    for(const b of RIVBARS){
+      const bg=new THREE.CircleGeometry(b.r,14);
+      const bm=new THREE.Mesh(bg,mat(0x9A9A90,{roughness:0.94}));
+      bm.rotation.x=-Math.PI/2; bm.rotation.z=b.ry;
+      bm.scale.set(1,b.sq,1);                                    // stretched along the flow
+      /* JUST PROUD OF THE SURFACE, not awash in it. The water sits at -0.16 and carries 45 mm of
+         static relief plus 26 mm of ripple, so a bar at -0.115 was inside the swell and read as a
+         faint stain. At -0.055 it stands a clear 100 mm out, which is what a bar in a braid does. */
+      bm.position.set(b.x,-0.055,b.z);
+      if(!HEADLESS)bm.receiveShadow=true; G.scene.add(bm);
+      (G.rivBars=G.rivBars||[]).push(bm);          // registered so an assertion can MEASURE them
+      /* a few stones ON the bar, so its edge is not a clean arc */
+      for(let i=0;i<4;i++){ const a2=b.ry+i*1.6, rr=b.r*0.52;
+        sph(0.16+0.07*i,PAL.rock,b.x+Math.cos(a2)*rr,-0.02,b.z+Math.sin(a2)*rr*b.sq,null,6); } }
+    /* THE LAKE, STILL WATER, and a RING rather than a disc because a CircleGeometry is a fan with
+       no interior vertices at all — nothing to relieve and nothing to ripple. Same shoreline
+       trick as before: the disc is WIDER than the basin so the terrain rises through it and the
+       waterline follows the ground's own noise instead of being a polygon edge. */
+    const lg=new THREE.RingGeometry(0.001,RIVLAKE.r+2.5,48,8);
+    G.rivLake=waterBody(lg,{x:RIVLAKE.x, y:-0.05, z:RIVLAKE.z, flow:0,
+      edgeOf:(x,y)=>(RIVLAKE.r+2.5)-Math.hypot(x,y)}); }
 
   /* ---- THE BOARDWALK, THE BRIDGE, AND THE SHELTER AT THE CARPARK END ---- */
   const WK=placeProp('riv_boardwalk');
@@ -5590,6 +5712,7 @@ function buildRiver(){
    standing on it. The CARRY is the part that matters — groundHeightAt already puts the bird on the
    floe because the collider is there, but without this the floe slides out from under it. */
 function updateRiver(dt){
+  updateWater();
   if(G.biome!=='river'||!G.rivFloes)return;
   for(const f of G.rivFloes){
     const t=G.time*f.drift+f.phase;
@@ -9581,7 +9704,8 @@ if(typeof globalThis!=='undefined'){
     VILL:{NEST:VILLNEST,ST:VILLST,PATH:VILLPATH,VER:VILLVER,SHOP:VILLSHOP,UNITS:VILLUNITS,
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
-    RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,
+    WATER,waterMat,waterTint,updateWater,
+    RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,BARS:RIVBARS,
       STEP:RIVSTEP,STEPN:RIVSTEPN,STEPTOP:RIVSTEPTOP,FAR:RIVFAR,FARN:RIVFARN,
       STAIR:RIVSTAIR,FARSTAIR:RIVFARSTAIR,
          SHELTER:RIVSHELTER,BOAT:RIVBOAT,FLOES:RIVFLOES},

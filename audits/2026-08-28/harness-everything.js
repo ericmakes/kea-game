@@ -7037,6 +7037,131 @@ C.section('THE BRAIDED RIVER - the fifth map, the swing bridge, and a floor that
         c[1]-c[3]<=R.FAR.z0+0.5&&c[1]+c[3]>=R.FAR.zt-0.5);
       ok(covers,'and a grass cut runs the whole far approach and track'); } }
 
+  /* ---- WATER AS A SYSTEM, NOT TWO HAND-TUNED PLANES ----
+
+     Eric: "WATER is an unsigned system, and three of six new frames contain it." It was — the braid
+     and the lake were written inside buildRiver with their own colours and their own roughness. The
+     brief's binding line is the last one: ONE material serves the river, the glacier lake, and any
+     tarn or melt in any later map. So that is the first thing asserted, and it is asserted as
+     OBJECT IDENTITY rather than as equal numbers, because two materials that happen to agree today
+     are not one material. */
+  boot(); X.startGame(1); tick(6); park();
+  { const W=X.WATER, bodies=G.water||[];
+    ok(bodies.length===2,'the river registers both bodies of water, braid and lake ('+
+       bodies.length+')');
+    ok(bodies.length>1&&bodies.every(b=>b.m.material===bodies[0].m.material),
+       'and they are ONE MATERIAL OBJECT, not two that agree — the brief\'s binding line');
+    ok(bodies.length&&bodies[0].m.material===X.waterMat(),
+       'and it is the material waterMat() hands out, so a tarn in another map gets the same water');
+
+    /* ROUGHNESS IS THE BLOWOUT, MEASURED (sunangle.mjs, Eric's eyeball item 10). Held to the floor
+       the measurement established rather than to the value someone liked. */
+    ok(W.rough>=0.60,'the water is NEAR-MATTE at roughness '+W.rough+
+       ' — at 0.24 vantage 38 clipped 15.53% of its hot spot to pure white and at 0.75 it clipped '+
+       '0.00%, so 0.60 is the measured floor, not a preference');
+    ok(X.waterMat().roughness===W.rough,'and the built material carries it ('+
+       X.waterMat().roughness+')');
+    ok(X.waterMat().vertexColors===true,'the shallows are VERTEX COLOUR, so the water stays a '+
+       'surface and not a lens — a braided river is nearly opaque');
+    ok(W.env<=0.35,'and the environment contribution stays modest ('+W.env+
+       ') — measured irrelevant to the blowout, so it is not the lever and not the excuse');
+
+    /* THE COLOURS AGAINST THE PLATES, which were measured with lum.mjs and are in the WATER
+       comment: nz_river_01 sat 0.20 hue 191, nz_water_01 sat 0.33 hue 203. The surprise was how
+       DESATURATED real rock-flour water is; both shipped colours were about twice the plate. */
+    const hsv=h=>{ const c=new H.THREE.Color(h), mx=Math.max(c.r,c.g,c.b), mn=Math.min(c.r,c.g,c.b);
+      let hu=0; if(mx>mn){ const d=mx-mn;
+        if(mx===c.r)hu=60*(((c.g-c.b)/d)%6); else if(mx===c.g)hu=60*((c.b-c.r)/d+2);
+        else hu=60*((c.r-c.g)/d+4); } if(hu<0)hu+=360;
+      return {h:hu, s:mx>0?(mx-mn)/mx:0, v:mx}; };
+    for(const [name,hex] of [['deep',W.deep],['still',W.still],['shallow',W.shallow]]){
+      const q=hsv(hex);
+      ok(q.h>175&&q.h<215,'WATER.'+name+' is in the plates\' hue band at '+Math.round(q.h)+
+         ' (nz_river_01 191, nz_water_01 203)');
+      /* THE BOUND IS ON THE ALBEDO AND IT IS NOT THE PLATE'S NUMBER, because those are not the
+         same quantity and the first cut of this assertion conflated them. The plates measure a
+         PHOTOGRAPH — sat 0.20 and 0.33 — and a photograph of this water is the RENDER, which adds
+         the sky's blue and the sun's warm and then tone-maps the highlights toward white.
+         Measured on the built world: albedo saturation 0.42 photographs at 0.22 at vantage 38, so
+         the render costs about half. The plate comparison therefore belongs on the rendered frame,
+         where lum.mjs's BUDGETS now carry it; what belongs here is a ceiling on the albedo, set
+         where the render still lands inside the plates' band. 0.50 albedo is about 0.26 rendered. */
+      ok(q.s<=0.50,'and no more saturated than the render can afford ('+q.s.toFixed(2)+
+         ' albedo, which photographs at about '+(q.s*0.52).toFixed(2)+
+         ' against the plates\' 0.20 and 0.33)'); }
+    ok(hsv(W.shallow).v>hsv(W.deep).v,'the shallows are PALER than the body ('+
+       hsv(W.shallow).v.toFixed(3)+' against '+hsv(W.deep).v.toFixed(3)+
+       ') — water thinning over shingle lightens, it does not darken');
+    /* AND THE TINT FUNCTION ACTUALLY USES THE DISTANCE, which a constant would not. */
+    { const atEdge=X.waterTint(0,1), atDeep=X.waterTint(W.shallowM*2,1);
+      const lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+      ok(lum(atEdge)>lum(atDeep)*1.15,'and waterTint reads the distance to shore — the margin is '+
+         (lum(atEdge)/lum(atDeep)).toFixed(2)+'x the body, not a constant'); }
+
+    /* THE LAKE MUST HAVE INTERIOR VERTICES. It was a CircleGeometry, which is a TRIANGLE FAN: every
+       vertex is either the centre or on the rim, so there is nothing between them to relieve or to
+       ripple. A ripple written against that geometry would have been real code doing nothing, and
+       it would have photographed as a perfectly flat mirror — which is what put the hot spot there
+       in the first place. */
+    const lake=bodies.find(b=>b.flow===0);
+    ok(!!lake,'the lake is registered as STILL water (flow 0), the braid as moving');
+    ok(lake&&lake.m.geometry.attributes.position.count>200,
+       'and it has interior vertices to ripple ('+
+       (lake?lake.m.geometry.attributes.position.count:0)+
+       ' — a CircleGeometry fan would have had none)');
+
+    /* THE RIPPLE MOVES AND DOES NOT ACCUMULATE. Applying a displacement to the CURRENT positions
+       instead of to the stored base is the classic version of this bug, and it does not look
+       wrong for the first few seconds — it looks wrong after a minute, by which time the lake has
+       left the valley. Ten seconds of frames, then measure against the base. */
+    { const b0=bodies[0], pos=b0.m.geometry.attributes.position;
+      const z0=[]; for(let i=0;i<pos.count;i++)z0.push(pos.getZ(i));
+      tick(600);
+      let moved=0, worst=0;
+      for(let i=0;i<pos.count;i++){
+        if(Math.abs(pos.getZ(i)-z0[i])>1e-9)moved++;
+        worst=Math.max(worst,Math.abs(pos.getZ(i)-b0.base[i])); }
+      ok(moved>pos.count*0.5,'the surface actually ripples — '+moved+' of '+pos.count+
+         ' vertices moved over ten seconds');
+      ok(worst<=W.ripple.amp+1e-6,'and after six hundred frames it is still within its own '+
+         W.ripple.amp+' m amplitude of the base ('+worst.toFixed(6)+
+         ') — applied FROM the base, never accumulated onto the last frame'); }
+
+    /* GRAVEL BARS STAND PROUD OF THE WATER. Below it they are a stain; the point of a bar is that
+       the braid divides around it. */
+    ok(X.RIV.BARS.length>=3,'the braid has gravel bars, from a table ('+X.RIV.BARS.length+')');
+    /* MEASURED OFF THE BUILT WORLD, not restated. The first cut of this assertion wrote the two
+       heights as literals — `const wy=-0.16, by=-0.055` — and sinking every bar back to its old
+       height passed it, because a literal that agrees with the world is not a measurement OF the
+       world. Both numbers now come off the meshes, which is why the bars are registered on G. */
+    { const bars=G.rivBars||[], wy=G.rivWater.position.y, swell=W.relief+W.ripple.amp;
+      ok(bars.length===X.RIV.BARS.length,'every bar in the table is a mesh in the world ('+
+         bars.length+' of '+X.RIV.BARS.length+')');
+      const low=bars.filter(b=>b.position.y-wy<=swell);
+      ok(low.length===0,'and all of them clear the water\'s relief AND its ripple — lowest is '+
+         (bars.length?((Math.min(...bars.map(b=>b.position.y))-wy)*1000).toFixed(0):'n/a')+
+         ' mm above the surface against '+(swell*1000).toFixed(0)+' mm of swell ('+low.length+
+         ' inside it) — a bar inside the swell reads as a stain, not as a bar'); }
+
+    /* NO GRASS TO THE WATER'S EDGE, and the check is against the DISC, not the basin. The lake's
+       surface is drawn at r+2.5 and the cut was r+1.0, so grass grew through the outer ring of
+       water — Eric's item, which was already half true. */
+    { const L=X.RIV.LAKE, cuts=X.grassCuts('river').filter(c=>c[2]>0&&c[3]>0);
+      const disc=L.r+2.5;
+      const covers=cuts.some(c=>Math.abs(c[0]-L.x)<1&&Math.abs(c[1]-L.z)<1&&c[2]>=disc&&c[3]>=disc);
+      ok(covers,'the grass cut clears the whole lake DISC ('+disc.toFixed(1)+
+         ' m), not just its basin'); } }
+
+  /* WATER DOES NOT SURVIVE A TRIP TO ANOTHER MAP. Same law rivFloes needed after a carpark boot was
+     found still carrying three floes: a registry a build fills must be a registry the dispatcher
+     empties, or the ripple loop walks a drowned lake in a scene that was thrown away. */
+  { ok(X.WORLDREGS.indexOf('water')>=0,'`water` is in WORLDREGS, so the dispatcher empties it');
+    X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+    ok((G.water||[]).length===0,'and a carpark boot leaves no water behind ('+
+       (G.water||[]).length+')');
+    X.update(1/60);
+    ok(true,'and updating a map with no water does not throw'); }
+
   /* ---- THE FLOES: THE ONLY NEW CLAIM ON THIS MAP, DRIVEN ---- */
   boot(); X.startGame(1); tick(10);
   { ok(Array.isArray(G.rivFloes)&&G.rivFloes.length===R.FLOES.length,

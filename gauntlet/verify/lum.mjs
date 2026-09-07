@@ -81,8 +81,58 @@ export function lumStats(png, box){
           clip, clipPct:clip/n*100, p99, max, min, sat:mx>0?(mx-mn)/mx:0, hue};
 }
 
+/* ---- THE LOOK BUDGETS. `node lum.mjs --budgets` checks every one against gauntlet/capture ----
+
+   THIS IS WHAT ERIC ASKED FOR: "assert a luminance clamp on that vantage". A clamp is only an
+   assertion if something runs it, and it has to live somewhere that a re-pin cannot silently move —
+   which is why it is a NUMBER here and not a comparison against a baseline frame. Re-pin the world
+   and diff.mjs starts agreeing with whatever the world now looks like; this file keeps disagreeing.
+
+   Run it after a capture pass, beside diff.mjs and pxdiff.mjs.
+   A budget names the box, the ceiling, and WHAT IT IS PROTECTING — because a bare number in a table
+   is the thing that gets nudged when it goes red. */
+export const BUDGETS={
+  '37_river_bridge':{ box:{x0:0,y0:300,x1:960,y1:492}, clipPct:0.5, mean:0.82, satMax:0.40,
+    what:'the braid, lower half. Glacial water must not blow out: measured at 0.06% clipped '+
+         'after the WATER material landed, against 0.5% allowed.' },
+  '38_river_floes':{ box:{x0:0,y0:245,x1:960,y1:492}, clipPct:0.5, mean:0.82, satMax:0.40,
+    what:'the glacier lake. THIS IS THE FRAME ERIC FLAGGED — it shipped with a specular hot spot '+
+         '15.53% clipped pure white inside the box, and 5.17% across the whole band. Roughness '+
+         '0.72 took it to 0.00%. sunangle.mjs has the one-variable-at-a-time evidence.' },
+};
+/* WHY SATURATION IS BUDGETED HERE AND NOT IN THE BATTERY. The plates Eric named measure
+   PHOTOGRAPHS — nz_river_01 at sat 0.20, nz_water_01 at 0.33 — and the comparable quantity in this
+   game is a rendered frame, not a material's albedo. The render adds the sky's blue and the sun's
+   warm and tone-maps the highlights toward white, which measured out at about half: albedo 0.42
+   photographs at 0.22. A battery holding an albedo to a photograph's number is comparing two
+   different things, so the albedo carries a ceiling there and the plate comparison lives here. */
+
+function checkBudgets(dir){
+  let bad=0, n=0;
+  console.log('LOOK BUDGETS');
+  for(const id of Object.keys(BUDGETS)){
+    const B=BUDGETS[id], f=dir+'/'+id+'.png';
+    if(!fs.existsSync(f)){ console.log('  - '+id+'  NOT SHOT — nothing to check'); continue; }
+    const s=lumStats(f,B.box); n++;
+    const overClip=B.clipPct!==undefined&&s.clipPct>B.clipPct;
+    const overMean=B.mean!==undefined&&s.mean>B.mean;
+    const overSat=B.satMax!==undefined&&s.sat>B.satMax;
+    const okk=!overClip&&!overMean&&!overSat;
+    console.log((okk?'  \x1b[32m✓\x1b[0m ':'  \x1b[31m✗\x1b[0m ')+id.padEnd(18)+
+      'clip '+s.clipPct.toFixed(2)+'% of '+B.clipPct+'%   mean '+s.mean.toFixed(3)+
+      ' of '+B.mean+'   hue '+Math.round(s.hue)+'  sat '+s.sat.toFixed(2)+
+      (B.satMax!==undefined?' of '+B.satMax:''));
+    if(!okk){ console.log('      '+B.what); bad++; }
+  }
+  console.log('LUM BUDGETS: '+n+' checked, '+bad+' over budget');
+  return bad;
+}
+
 if(import.meta.url===new URL(process.argv[1],'file:').href||process.argv[1]&&
    import.meta.url.endsWith(process.argv[1].split('/').pop())){
+  if(process.argv.includes('--budgets')){
+    const dir=process.argv.find(a=>a.endsWith('/capture'))||'gauntlet/capture';
+    process.exit(checkBudgets(dir)?1:0); }
   const box={};
   for(const k of ['x0','y0','x1','y1'])
     if(process.env[k.toUpperCase()]!==undefined)box[k]=+process.env[k.toUpperCase()];

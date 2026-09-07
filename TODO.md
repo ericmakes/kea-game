@@ -1916,3 +1916,49 @@ The diagnosis has now held from every direction it has been tested from. It is t
 instrument fix outstanding: it is costing real re-pin time (eleven sweeps instead of five this
 session) and it permanently muddies two frames in a forty-frame set.
 
+
+### 106. WATER IS A SYSTEM NOW — DONE session 33, and what it does NOT yet do
+Eric's HIGH item 3: "WATER is an unsigned system, and three of six new frames contain it." Shipped
+as `WATER` + `waterMat()` + `waterTint()` + `waterBody()` + `updateWater()`, with the brief's
+binding line asserted as OBJECT IDENTITY: the braid and the glacier lake are one material, and
+`waterBody()` is how a tarn or a melt pool in any later map gets the same water for free.
+EVERY NUMBER IN IT IS MEASURED, which is new for a look piece here: the colours come off Eric's two
+plates via `gauntlet/verify/lum.mjs` (nz_river_01 sat 0.20 hue 191; nz_water_01 sat 0.33 hue 203 —
+the surprise being how DESATURATED real rock-flour water is; both shipped colours were about twice
+the plate), and the roughness comes off `gauntlet/verify/sunangle.mjs`, which moves one variable at
+a time at vantage 38 and settles Eric's eyeball item 10 outright.
+WHAT IS STILL OWED ON WATER, so it is on the list and not in my head:
+  - **WHITE WATER.** A braid breaks over its bars and there is none. The bars now stand 100 mm proud
+    of the surface, so the geometry for it exists; what is missing is a foam band at the upstream
+    edge of each bar and along the shingle margins. It is the single biggest remaining cue in
+    nz_river_01, where roughly a fifth of the water is white.
+  - **THE BRAID DOES NOT ACTUALLY BRAID.** The channel is one rectangle with pale margins and four
+    bars in it. A real braid is threads that divide and rejoin, which wants the WATER surface cut to
+    a shape rather than tinted — probably a ShapeGeometry from a generated centreline, and therefore
+    a piece rather than a tweak. TODO 47's uuid-stripping note applies: ExtrudeGeometry/ShapeGeometry
+    serialise a seeded uuid into the world digest.
+  - **DEPTH DARKENING IS FAKED FROM DISTANCE-TO-SHORE**, not from actual depth. It reads correctly
+    at both vantages because the channel is symmetrical; it will read wrong the first time a body of
+    water has a deep side and a shallow side.
+  - **NO REFLECTION OF ANYTHING.** Still water reflects its mountains, and the lake does not. That
+    is a render-target job and it is expensive; noted as a deliberate omission, not an oversight.
+  - **THE FLOES STILL RIDE HIGH** — TODO 104, untouched on purpose, and the submersion it wants is
+    now cheap because the water surface it would be cut by is a proper system.
+
+### 107. NEW INSTRUMENTS, session 33 — what they are and where they stop
+Three landed this session and each closes a hole the other instruments could not see:
+  - `gauntlet/verify/walkable.js` — is a ROUTE continuous, or is there a hole in it? Closes the
+    "the collider exists" vs "the bird can get to it" gap. See TODO 99 for its coverage debt.
+  - `gauntlet/verify/lum.mjs` (+ `lum-selftest.mjs`) — the first instrument here that measures ONE
+    frame against a NUMBER instead of against another frame. diff/boxdiff/stability are all SSIM,
+    which is a similarity measure and blind to the absolute level of both frames it compares: a
+    frame can be uniformly blown out and every one of them calls it clean, because it IS clean
+    against an equally blown baseline. Carries `BUDGETS`, a per-vantage look budget that survives a
+    re-pin. **RUN IT AFTER A CAPTURE PASS, beside diff.mjs and pxdiff.mjs** — `--budgets`.
+  - `gauntlet/verify/sunangle.mjs` — separates a specular blowout's causes by moving one variable at
+    a time (roughness, envMap, camera, sun).
+WHERE THEY STOP: `lum.mjs --budgets` is not in `gate.sh`, and nor is any capture-time check, because
+the gate is a logic gate that must run without a browser. That is the honest state, not a plan —
+wiring photographic budgets into the gate would make the gate need a GPU. The other half of the
+answer is that only two vantages have budgets at all; every frame with a sky, a snowfield or a
+lit interior could carry one.
