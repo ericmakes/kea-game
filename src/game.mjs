@@ -2086,12 +2086,30 @@ function terrainMesh(){
       col[k*3]=q.r; col[k*3+1]=q.g; col[k*3+2]=q.b;
     }
   }
-  /* indices: quads between adjacent rings, wrapping in theta */
+  /* INDICES: quads between adjacent rings, wrapping in theta — AND THE WINDING IS LOAD-BEARING.
+     It shipped as (a,c,b) and (b,c,d), which is inside out, and that ONE ordering was BOTH of the
+     first two faults Eric found in the range. Worked through on the flat patch at i=0:
+         a=(r,0,0)  b=(r,0,r.dTheta)  c=(r+dR,0,0)
+         normal = (c-a) x (b-a) = (dR,0,0) x (0,0,r.dTheta) = (0, -dR.r.dTheta, 0)
+     — straight DOWN. Measured on the shipped mesh before the change: 27648 of 27648 vertex normals
+     had negative y, mean n.y -0.9239, and with the sun at (-0.696,0.636,0.333) only 0.62% of
+     vertices had N.L > 0. So:
+       - "the terrain reads flat and unlit" (Eric's point 2) was not a tuning problem. The range was
+         receiving NO diffuse sun at all — every face turned away from it — and what was on screen
+         was ambient and IBL alone. There is nothing to tune in a surface with no lit side.
+       - "geometric gaps between massifs where sky shows through the ring" (Eric's point 0) was
+         BACKFACE CULLING. The material is FrontSide, so with the normals down, every part of the
+         range whose surface sits BELOW the eye is culled and the sky behind it shows through, while
+         the parts above the eye survive because there the camera really is under the surface.
+         That is why the holes sat in a band at the horizon and why the peaks looked solid.
+     (a,b,c) and (b,d,c) put it right: (b-a) x (c-a) = (0,0,r.dTheta) x (dR,0,0) = (0,+dR.r.dTheta,0).
+     ASSERTED, not eyeballed — a winding is invisible until something measures it, which is exactly
+     how it survived ten assertions about this mesh. See harness-everything's normals check. */
   const idx=[];
   for(let j=0;j<nR-1;j++)for(let i=0;i<nTheta;i++){
     const a=j*nTheta+i, b=j*nTheta+((i+1)%nTheta);
     const c=(j+1)*nTheta+i, d=(j+1)*nTheta+((i+1)%nTheta);
-    idx.push(a,c,b, b,c,d);
+    idx.push(a,b,c, b,d,c);
   }
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));

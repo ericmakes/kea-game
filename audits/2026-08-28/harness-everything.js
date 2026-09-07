@@ -6484,6 +6484,43 @@ C.section('the range: a heightfield, not a ring of cones');
        'lies in gullies while bare rock stands out on the steep faces beside them at the SAME '+
        'altitude. A horizontal snowline is what the cones had.'); }
 
+  /* 6b. THE MESH FACES UP, AND IT IS THE ONLY ONE OF THESE ELEVEN CHECKS THAT WOULD HAVE CAUGHT
+        WHAT WAS ACTUALLY WRONG. terrainMesh shipped with its triangle winding inside out —
+        (a,c,b) and (b,c,d), which puts the face normal at (0,-dR.r.dTheta,0) — and every assertion
+        above went green anyway, because every one of them is a claim about the FIELD: heights,
+        slopes, correlations, summit profiles. None of them looks at the geometry the field is
+        turned into. Measured on the shipped mesh: 27648 of 27648 vertex normals had negative y,
+        mean n.y -0.9239, and with the sun at (-0.696,0.636,0.333) only 0.62% of vertices had
+        N.L > 0. That single ordering was BOTH of the first two faults Eric found in the range:
+          - "the terrain reads flat and unlit" was not a tuning problem. The range was receiving no
+            diffuse sun AT ALL, and there is nothing to tune in a surface with no lit side.
+          - "geometric gaps between massifs where sky shows through the ring" was BACKFACE CULLING.
+            The material is FrontSide, so everything whose surface sat below the eye was culled and
+            the sky behind it showed through, while the peaks above the eye survived. At the strip
+            camera the range covered 17.6% of the eye-level row; it covers 100% now.
+        THREE CLAIMS, BECAUSE THE THIRD IS THE ONE THAT MATTERS. "No normal points down" is the
+        direct statement, "the mean is up" is a shape check, and N.L is the one that says the range
+        can actually be LIT — a mesh can have upward normals and still face away from this sun. The
+        pixel-side proof is gauntlet/verify/terrainholes.mjs. */
+  { const T2=G.terrainMesh;
+    ok(!!T2&&!!T2.geometry.attributes.normal,'the range mesh has normals');
+    const n=T2.geometry.attributes.normal.array, cnt=n.length/3;
+    let sy=0, down=0;
+    for(let k=0;k<cnt;k++){ sy+=n[k*3+1]; if(n[k*3+1]<=0)down++; }
+    ok(down===0,'NOT ONE OF THE RANGE\'S '+cnt+' VERTEX NORMALS POINTS DOWN ('+down+
+       ' do), so the triangle winding is right way out. Inside-out winding is invisible to every '+
+       'field-side assertion above and cost this range both its lighting and its silhouette.');
+    ok(sy/cnt>0.5,'and they point up on average (mean n.y '+(sy/cnt).toFixed(4)+
+       '), as a heightfield\'s must');
+    /* THE SUN IS READ FROM THE SCENE, not from SKY's constants, because what matters is where the
+       light actually is in the world the player sees. */
+    const L=G.sun.position.clone().normalize();
+    let lit=0;
+    for(let k=0;k<cnt;k++)if(n[k*3]*L.x+n[k*3+1]*L.y+n[k*3+2]*L.z>0)lit++;
+    ok(lit/cnt>0.90,'AND THE RANGE RECEIVES THE SUN — '+(lit/cnt*100).toFixed(2)+'% of its '+
+       'vertices have N.L > 0 with the sun at ('+L.toArray().map(v=>v.toFixed(3)).join(', ')+
+       '). It was 0.62% when the winding was inside out, which is what "flat and unlit" was.'); }
+
   /* 7. THE ROAD CORRIDOR IS FLAT, because the carpark's road runs to r 129 with 61 pieces of
         furniture on it and a rising heightfield would bury the lot. A road through foothills is a
         cutting; this asserts the cutting exists. */

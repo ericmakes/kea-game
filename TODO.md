@@ -2683,3 +2683,13 @@ AND A THIRD, CHEAPER THAN BOTH: after any interrupted pass, `diff.mjs` and frien
 whatever is in gauntlet/capture, which may be a mix of two builds. A frame's mtime against the
 bundle's is enough to catch that. All 42 frames were checked for truncation this time (size, PNG
 signature, trailing IEND) and none was suspect, but that check was done by hand.
+
+### 117. THE MESH DIGEST DOES NOT COVER TRIANGLE WINDING
+The terrain's winding was inside out and the PRESEAM mesh digest went green across the fix —
+so the digest is computed over vertex data and not over the index buffer's ORDER. That is the
+strongest invariant the gauntlet has, and a reversed winding is invisible to it: it costs a
+surface its lighting and, under FrontSide, its existence. The eleven field-side assertions about
+the range were blind for the same reason from the other direction — every one was a claim about
+the heightfield, none about the geometry the heightfield becomes. Widen the digest to include
+index order, or add a per-mesh "normals point outward" census across every generated mesh in both
+maps rather than only the range. Cheap; catches a whole class.
