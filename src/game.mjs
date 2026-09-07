@@ -1612,6 +1612,95 @@ function matGround(fam,rough){
   { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF,fam==='grass'); }
   matFam(fam).mats.push(m); matDress(m); return m;
 }
+/* ---------- SNOW FORMS — A PATCH IS A MOUND, NOT A PAINTED CIRCLE ----------
+
+   Every snow patch in the game was a flat `CircleGeometry(r,20)` at y 0.05 with a second
+   transparent circle at 0.042 pretending to be a soft edge, and the drifts against buildings were
+   `sph(r*0.8, PAL.snow)` scaled to (1.15, 0.42, 1.15) — a squashed ball, the same defect the
+   boulders had. A spring snow patch on tussock is none of those things: it is 100-400 mm DEEP so it
+   has a convex profile and casts its own shadow, its outline is ragged because it melts back
+   unevenly, its surface is sun-cupped rather than smooth, and its margin THINS to dirty grey
+   where the last of it is going. A flat white circle reads as a paint spot.
+
+   THE OUTLINE IS THE BIGGEST CUE AND IT WAS THE CHEAPEST TO FIX: a perfect circle is the one shape
+   melting snow never leaves.
+
+   NOTHING HERE DRAWS A RANDOM, for the third time this session and the same reason (TODO 47): the
+   call sites already make their draws in an order the seeded stream depends on. Every variation is
+   hashed out of the position, so a patch moved a metre is a different patch.
+
+   A RING, NOT A CIRCLE. CircleGeometry is a triangle fan — a centre and a rim, nothing in between
+   to shape — which is exactly the trap the glacier lake was in before the water piece. */
+const SNOW={
+  ring:{r:26, h:5},
+  crown:0.20,        // depth at the middle, as a fraction of radius
+  ragged:0.26,       // how far the outline wanders off a circle
+  cups:0.035,        // sun-cupping on the surface
+  /* VALUE, AND IT IS HERE BECAUSE THE FORM WAS BEING DESTROYED BY ITS OWN BRIGHTNESS. Measured
+     with lum.mjs on the patch at 10_skifield: 27.5% of it CLIPPED to pure white, so the crown, the
+     sun cups and the thinning margin — every part of the shape this piece exists to add — were all
+     being flattened into one flat white blob over a quarter of the form. The old flat disc clipped
+     just as hard and it did not matter, because a flat disc has no detail to lose.
+     PAL.snow is left alone: it also dresses the piste slab, the hut's roof cap and the floes, and
+     retuning a palette entry to fix one form would move three other things. */
+  val:0.78,
+  shade:0x9FB0BE,    // PAL.snowShade is for slabs; a melting margin is dirtier than that
+  margin:0.62,       // the outer fraction where it starts thinning
+  /* 1.0, NOT 0.55, AND MEASURED. At 0.55 the height-weighted centroid of a drift shifted only
+     4-7% of its radius off centre — the crown falls off as (1-t^2)^0.7 so the middle dominates the
+     mass whatever the bias does to the edges, and a 5% offset is not a drift, it is a patch with a
+     slight opinion. At 1.0 the bias reaches zero on the far side, which is the shape a real drift
+     has: banked hard against the wall and feathering to nothing away from it. */
+  lean:1.0,          // for drifts: how far the crown shifts toward the thing it piled against
+};
+/* snowForm(x,y,z,r,opts) — y is the ground. opts.lean={x,z} tilts the mound toward a wall, which
+   is what makes a drift a drift rather than a patch that happens to be near a building. */
+function snowForm(x,y,z,r,opts){
+  const S=SNOW, o=opts||{};
+  const h1=(v=>v-Math.floor(v))(Math.sin(x*12.9898+z*78.233)*43758.5453);
+  const h2=(v=>v-Math.floor(v))(Math.sin(x*39.3468+z*11.135)*24634.6345);
+  let lx=0, lz=0;
+  if(o.lean){ const L=Math.hypot(o.lean.x,o.lean.z)||1; lx=o.lean.x/L; lz=o.lean.z/L; }
+  const geo=new THREE.RingGeometry(0.001,r,S.ring.r,S.ring.h);
+  const pos=geo.attributes.position, cols=[];
+  const cS=new THREE.Color(PAL.snow).convertSRGBToLinear().multiplyScalar(S.val);
+  const cD=new THREE.Color(S.shade).convertSRGBToLinear().multiplyScalar(S.val);
+  const c=new THREE.Color();
+  for(let v=0;v<pos.count;v++){
+    const px=pos.getX(v), py=pos.getY(v);
+    const d=Math.hypot(px,py)||1e-6, ang=Math.atan2(py,px);
+    /* THE RAGGED OUTLINE. Every vertex is pushed along its own radius by a noise of its ANGLE, so
+       the whole form deforms coherently instead of only its rim — a patch with a wavy edge and a
+       circular interior still reads as a circle with a frill on it. */
+    const rag=0.55*Math.sin(ang*3+h1*6.3)+0.30*Math.sin(ang*5+h2*6.3)+0.15*Math.sin(ang*9+h1*3.1);
+    const k=1+rag*S.ragged;
+    const nx=px*k, ny=py*k;
+    const t=Math.min(1,d/r);                             // 0 at the middle, 1 at the rim
+    /* THE CROWN. A lens profile, biased toward the lean direction so a drift is tall at the wall
+       and feathers away from it. */
+    const bias=o.lean?1+S.lean*((nx*lx+ny*lz)/r):1;
+    const crown=r*S.crown*Math.pow(Math.max(0,1-t*t),0.7)*Math.max(0,bias);
+    /* SUN CUPS: shallow pitting, so the surface is not a polished lens */
+    const cup=r*S.cups*Math.sin(nx*2.7+h1*6.3)*Math.cos(ny*2.3+h2*6.3)*(1-t*0.6);
+    pos.setXYZ(v,nx,ny,crown+cup);
+    /* THE MARGIN THINS TO DIRTY GREY, which is what replaces the transparent halo disc: the old
+       one was a second circle at a lower y faking a soft edge, and a mound with a thinning margin
+       does the job in the geometry it already has. */
+    const m=Math.max(0,(t-S.margin)/(1-S.margin));
+    c.copy(cS).lerp(cD,m*m);
+    cols.push(c.r,c.g,c.b);
+  }
+  geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
+  geo.computeVertexNormals();
+  const mm=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true,roughness:0.90}));
+  mm.rotation.x=-Math.PI/2; mm.position.set(x,y,z);
+  if(!HEADLESS)mm.receiveShadow=true;
+  mm.castShadow=false;                       // a 200 mm mound shadowing the country reads wrong
+  G.scene.add(mm);
+  (G.snowForms=G.snowForms||[]).push(mm);
+  return mm;
+}
+
 /* ---------- ROCKS — ANGULAR, BEDDED, AND LICHENED ----------
 
    Every boulder in the game was `sph(rnd(0.5,1.8), PAL.rock, ...)` with six width segments and
@@ -3726,7 +3815,7 @@ const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','
                  /* EVERY BODY OF WATER, so the ripple loop does not carry a drowned lake from a
                     previous map. rivFloes was added to this list for exactly the same reason after
                     a carpark boot was found with three floes still registered. */
-                 'water','rivBars','mountains','rocks'];
+                 'water','rivBars','mountains','rocks','snowForms'];
 /* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
    sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
    thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
@@ -4252,12 +4341,9 @@ function buildCarpark(){
     // snow patches — the only ground decal that used to ignore what was already built there
     for(let i=0;i<10;i++){ const x=rnd(SNOWFIELD.x0,SNOWFIELD.x1),z=rnd(SNOWFIELD.z0,SNOWFIELD.z1),r=rnd(1.5,3.6);
       const q=snowSpot(x,z,r);
-      const sp=new THREE.Mesh(new THREE.CircleGeometry(r,20),mat(PAL.snow)); sp.rotation.x=-Math.PI/2;
-      sp.position.set(q.x,0.05,q.z); sp.receiveShadow=true; G.scene.add(sp);
-      const so=new THREE.Mesh(new THREE.CircleGeometry(r*1.35,20),new THREE.MeshStandardMaterial({color:0xFFFFFF,transparent:true,opacity:0.42,roughness:0.96}));
-      so.rotation.x=-Math.PI/2; so.position.set(q.x,0.042,q.z); G.scene.add(so);
+      const sp=snowForm(q.x,0.04,q.z,r);
       // registered the way G.wear and G.stones are, so what actually landed is inspectable
-      G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x,z},slid:q.slid,stuck:!!q.stuck,disc:sp,halo:so}); }
+      G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x,z},slid:q.slid,stuck:!!q.stuck,disc:sp}); }
     /* the boulders out on the country. NOTE FOR ANYONE WRITING AN ASSERTION ABOUT THESE: they are
        inside this `if(!HEADLESS)` block, so node never builds them and no battery can see them —
        the ski field's ring is the one that is testable. */
@@ -4536,19 +4622,24 @@ function buildSkifield(){
     for(const [wx,wz,at] of want){ const r=1.3+rnd(0,1.3);
       const q=snowSpot(wx,wz,r,SKISNOW);
       G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x:wx,z:wz},at,slid:q.slid,stuck:!!q.stuck,bank:true}); }
-    if(!HEADLESS)for(const s of G.snow){
-      const disc=new THREE.Mesh(new THREE.CircleGeometry(s.r,20),mat(PAL.snow));
-      disc.rotation.x=-Math.PI/2; disc.position.set(s.x,0.05,s.z); disc.receiveShadow=true; G.scene.add(disc);
-      const halo=new THREE.Mesh(new THREE.CircleGeometry(s.r*1.35,20),
-        new THREE.MeshStandardMaterial({color:0xFFFFFF,transparent:true,opacity:0.42,roughness:0.96}));
-      halo.rotation.x=-Math.PI/2; halo.position.set(s.x,0.042,s.z); G.scene.add(halo);
-      s.disc=disc; s.halo=halo;
-      /* THE WEDGE ONLY EXISTS WHERE THE DRIFT IS STILL AT THE WALL. One ladder step out is snow
+    /* NO LONGER BEHIND `if(!HEADLESS)`, AND THAT IS A DELIBERATE PART OF THIS PIECE. The records
+       above are built in node and the GEOMETRY was not, so every battery that has ever asserted
+       anything about this map's snow was asserting about a list of coordinates with no shapes
+       attached — sixteen records, zero meshes. Geometry no battery can see is geometry that
+       regresses silently, which is how a flat white circle survived this long.
+       IT COSTS NOTHING TO MOVE. This loop makes no rnd() calls at all, so the seeded stream is
+       untouched (TODO 47) — the only consequence is that node now builds ~16 more meshes, which
+       the P6A digest records with its reason. The CARPARK's snow is a different story and is NOT
+       moved: there the whole loop including three rnd() draws per patch is inside the guard, so
+       node has never had any carpark snow at all, and moving it would reshuffle every later seeded
+       draw in that map. See TODO 112. */
+    for(const s of G.snow){
+      s.disc=snowForm(s.x,0.04,s.z,s.r);
+      /* THE DRIFT ONLY EXISTS WHERE THE SNOW IS STILL AT THE WALL. One ladder step out is snow
          piled against a building; four steps out is a drift that had to go somewhere else entirely,
          and leaning a bank at a wall six metres away would be drawing a lie. */
-      if(s.slid>0.01&&s.slid<=3.3){ const ux=s.want.x-s.x, uz=s.want.z-s.z, ul=Math.hypot(ux,uz)||1;
-        const wedge=sph(s.r*0.8,PAL.snow,s.x+ux/ul*s.r*0.6,0.02,s.z+uz/ul*s.r*0.6,null,10);
-        wedge.scale.set(1.15,0.42,1.15); s.wedge=wedge; } } }
+      if(s.slid>0.01&&s.slid<=3.3){ const ux=s.want.x-s.x, uz=s.want.z-s.z;
+        s.wedge=snowForm(s.x,0.04,s.z,s.r*1.05,{lean:{x:ux,z:uz}}); } } }
 
   buildNest(G.nestPos.x,G.nestPos.z);
   /* THE TEACHING BELONGS TO THIS MAP (TODO 58, applied by TODO 40). Four hints, one per job that is
@@ -10036,7 +10127,7 @@ if(typeof globalThis!=='undefined'){
     VILL:{NEST:VILLNEST,ST:VILLST,PATH:VILLPATH,VER:VILLVER,SHOP:VILLSHOP,UNITS:VILLUNITS,
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
-    WATER,waterMat,waterTint,updateWater, MTN,mountainRing, ROCK,mkBoulder,rockMat,
+    WATER,waterMat,waterTint,updateWater, MTN,mountainRing, ROCK,mkBoulder,rockMat, SNOW,snowForm,
     RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,BARS:RIVBARS,
       STEP:RIVSTEP,STEPN:RIVSTEPN,STEPTOP:RIVSTEPTOP,FAR:RIVFAR,FARN:RIVFARN,
       STAIR:RIVSTAIR,FARSTAIR:RIVFARSTAIR,

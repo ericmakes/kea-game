@@ -106,6 +106,13 @@ export const BUDGETS={
     what:'the glacier lake. THIS IS THE FRAME ERIC FLAGGED — it shipped with a specular hot spot '+
          '15.53% clipped pure white inside the box, and 5.17% across the whole band. Roughness '+
          '0.72 took it to 0.00%. sunangle.mjs has the one-variable-at-a-time evidence.' },
+  '10_skifield':{ box:{x0:280,y0:300,x1:400,y1:340}, clipPct:1.0,
+    what:'the ski field snow patch. It shipped as a flat CircleGeometry that clipped 27.5% of '+
+         'itself to pure white, which did not matter while it was flat and matters now that it is '+
+         'a mound with a crown, sun cups and a thinning margin to lose. kea_snow_01 — real '+
+         'photographed sunlit snow — clips 0.04% with a p99 of 246, so this budget is the plate\'s '+
+         'own discipline and not a preference: snow may be the brightest thing in the frame and '+
+         'still keep its detail.' },
 };
 /* WHY SATURATION IS BUDGETED HERE AND NOT IN THE BATTERY. The plates Eric named measure
    PHOTOGRAPHS — nz_river_01 at sat 0.20, nz_water_01 at 0.33 — and the comparable quantity in this
@@ -125,10 +132,14 @@ function checkBudgets(dir){
     const overMean=B.mean!==undefined&&s.mean>B.mean;
     const overSat=B.satMax!==undefined&&s.sat>B.satMax;
     const okk=!overClip&&!overMean&&!overSat;
+    /* A BUDGET THIS VANTAGE DOES NOT SET PRINTS THE MEASUREMENT ALONE. Written as an
+       unconditional 'of '+B.mean it reported "mean 0.797 of undefined" the first time a vantage
+       budgeted only its clipping, which reads like a broken instrument rather than an unset limit. */
+    const of=(v,b)=>v+(b!==undefined?' of '+b:'');
     console.log((okk?'  \x1b[32m✓\x1b[0m ':'  \x1b[31m✗\x1b[0m ')+id.padEnd(18)+
-      'clip '+s.clipPct.toFixed(2)+'% of '+B.clipPct+'%   mean '+s.mean.toFixed(3)+
-      ' of '+B.mean+'   hue '+Math.round(s.hue)+'  sat '+s.sat.toFixed(2)+
-      (B.satMax!==undefined?' of '+B.satMax:''));
+      'clip '+of(s.clipPct.toFixed(2)+'%',B.clipPct!==undefined?B.clipPct+'%':undefined)+
+      '   mean '+of(s.mean.toFixed(3),B.mean)+
+      '   hue '+Math.round(s.hue)+'  sat '+of(s.sat.toFixed(2),B.satMax));
     if(!okk){ console.log('      '+B.what); bad++; }
   }
   console.log('LUM BUDGETS: '+n+' checked, '+bad+' over budget');

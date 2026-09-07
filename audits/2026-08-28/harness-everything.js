@@ -6687,6 +6687,141 @@ C.section('rocks: angular, settled, bedded');
   X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }
 
+/* ---- SNOW FORMS: A PATCH IS A MOUND, NOT A PAINTED CIRCLE ----
+   Every snow patch was a flat CircleGeometry with a second transparent circle under it faking a
+   soft edge, and every drift against a building was a squashed sphere. A spring patch on tussock is
+   100-400 mm deep, ragged in plan because it melts back unevenly, sun-cupped, and thinning to dirty
+   grey at its margin. A flat white circle reads as a paint spot.
+   AND THIS SECTION CAN ONLY EXIST BECAUSE THE GEOMETRY CAME OUT OF `if(!HEADLESS)`. The ski field
+   built sixteen snow RECORDS in node and zero snow MESHES, so every battery that ever asserted
+   anything about this map's snow was asserting about coordinates with no shapes attached. Moving
+   the mesh loop out cost no rnd() draws — it makes none — so the seeded stream is untouched. The
+   carpark's snow is still invisible to node and TODO 112 says why it has to stay that way for now. */
+C.section('snow forms: a patch is a mound');
+{
+  const THREE=H.THREE||require('three');
+  const lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+  const S=X.SNOW;
+  ok(typeof X.snowForm==='function','snow forms come from one builder');
+  X.setSeed(20260828); X.boot({biome:'skifield'});
+  const forms=G.snowForms||[], recs=G.snow||[];
+  if(ok(forms.length>10,'the ski field builds them in node now, not only in a browser ('+
+        forms.length+' forms for '+recs.length+' records)')){
+
+    /* 1. NOT A FLAT DISC. Two claims: the geometry is a RING (a CircleGeometry fan has a centre
+          and a rim and nothing between them to shape — the trap the glacier lake was in), and it
+          has real DEPTH. */
+    /* GUARDED, because everything below reads RingGeometry's own parameters and a CircleGeometry
+       has no `outerRadius` — putting the flat discs back made this whole section THROW on an
+       undefined, which takes the collector's findings list with it and turns a named claim into a
+       stack trace. Same lesson the woolshed section learned earlier today. */
+    const allRing=forms.every(m=>m.geometry.type==='RingGeometry');
+    if(ok(allRing,'every form is a RING, so it has interior vertices to shape — '+
+          [...new Set(forms.map(m=>m.geometry.type))].join(', '))){
+    /* DEPTH IS MEASURED AGAINST THE RADIUS, not against an absolute floor. At `d < 0.05 m` the
+       SUN CUPS alone satisfied it: they are 3.5% of the radius, so on a 1.8 m patch they give
+       0.126 m of relief and a mound with its crown set to ZERO still passed. What has to be there
+       is the crown, and the crown is a fraction of the radius. */
+    { let flat=0, ratios=[];
+      for(const m of forms){ m.geometry.computeBoundingBox(); const bb=m.geometry.boundingBox;
+        /* built in the XY plane and rotated -PI/2, so the mound's HEIGHT is the geometry's z */
+        const d=bb.max.z-bb.min.z, R=m.geometry.parameters.outerRadius;
+        ratios.push(d/R); if(d/R<0.08)flat++; }
+      /* 8% IS A CLAIM, NOT A DERIVATION, and that distinction is the whole reason this assertion
+         works. Written as `d/R < S.crown*0.5` it read the very constant it was testing: setting
+         SNOW.crown to zero also set the threshold to zero, so a patch with no crown at all passed.
+         Same failure mode as a literal that agrees with the world, arrived at from the opposite
+         direction. What is being claimed is about SNOW, not about the recipe — a spring patch is
+         100-400 mm deep, so on a 2 m patch a floor of 8% of the radius is 160 mm and sits inside
+         that range whatever the recipe later decides its crown should be. */
+      ok(flat===0,'and every one has real depth — '+(Math.min(...ratios)*100).toFixed(1)+'% to '+
+         (Math.max(...ratios)*100).toFixed(1)+'% of its own radius ('+flat+
+         ' under the 8% floor, which is 160 mm on a 2 m patch)'); }
+
+    /* 2. RAGGED IN PLAN. A perfect circle is the one shape melting snow never leaves, and it is
+          the biggest cue of the three. Measured as the spread of vertex radius round the rim. */
+    { const m=forms[0], pos=m.geometry.attributes.position;
+      const R=m.geometry.parameters.outerRadius;
+      let rim=[];
+      for(let v=0;v<pos.count;v++){
+        const rr=Math.hypot(pos.getX(v),pos.getY(v));
+        if(rr>R*0.75)rim.push(rr); }
+      const lo=Math.min(...rim), hi=Math.max(...rim);
+      ok(rim.length>10,'its rim has vertices to measure ('+rim.length+')');
+      ok(hi/lo>1.25,'and the OUTLINE IS RAGGED, not a circle — rim radius '+lo.toFixed(2)+' to '+
+         hi.toFixed(2)+' m ('+(hi/lo).toFixed(2)+'x)'); }
+
+    /* 3. THE MARGIN THINS TO DIRTY GREY, which is what replaced the transparent halo disc: the old
+          soft edge was a second circle at a lower y, and a mound with a thinning margin does the
+          job in geometry it already has. */
+    { const m=forms[0], pos=m.geometry.attributes.position, col=m.geometry.attributes.color;
+      const R=m.geometry.parameters.outerRadius;
+      ok(!!col,'the forms carry vertex colours');
+      const c=new THREE.Color(); let crown=[], edge=[];
+      for(let v=0;v<col.count;v++){ c.fromBufferAttribute(col,v);
+        const rr=Math.hypot(pos.getX(v),pos.getY(v));
+        if(rr<R*0.3)crown.push(lum(c)); else if(rr>R*0.95)edge.push(lum(c)); }
+      const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+      ok(crown.length>2&&edge.length>2,'with a crown and a margin to compare');
+      ok(avg(crown)>avg(edge)*1.15,'and the MARGIN IS DIRTIER than the crown — '+
+         avg(crown).toFixed(4)+' against '+avg(edge).toFixed(4)+' ('+
+         (avg(crown)/avg(edge)).toFixed(2)+'x): that is where the last of it is going');
+      ok(S.val<1,'and the snow is held below the palette value it is authored at ('+S.val+
+         '), because at full value 27.5% of the patch at 10_skifield clipped to pure white and '+
+         'took the crown, the cups and the margin with it — kea_snow_01, real photographed sunlit '+
+         'snow, clips 0.04%'); }
+
+    /* 4. A DRIFT LEANS, A PATCH DOES NOT. The drifts against buildings were squashed spheres; the
+          thing that makes a drift a drift is that its crown sits toward the wall it piled against,
+          not in the middle. Measured as the offset of the highest vertex from the centre. */
+    /* MEASURED AS THE HEIGHT-WEIGHTED CENTROID, not as the position of the single highest vertex.
+       The highest-vertex version called EVERY form a drift, and it was right to: the sun cups
+       perturb the surface by up to 3.5% of the radius, which is enough to move the tallest point
+       off a symmetric crown and onto the first ring at 0.2r. What distinguishes a drift is where
+       the BULK of the snow sits, so that is what this weights. */
+    { const leanOf=m=>{ const pos=m.geometry.attributes.position;
+        let sx=0, sy=0, sw=0;
+        for(let v=0;v<pos.count;v++){ const w=Math.max(0,pos.getZ(v));
+          sx+=pos.getX(v)*w; sy+=pos.getY(v)*w; sw+=w; }
+        if(!sw)return 0;
+        return Math.hypot(sx/sw,sy/sw)/m.geometry.parameters.outerRadius; };
+      /* 0.05 SITS IN A REAL GAP. Measured across the ski field's 26 forms the distribution is
+         cleanly bimodal — plain patches 0.010 to 0.017, drifts 0.086 to 0.115, a fivefold
+         separation with nothing in between. */
+      const withLean=forms.filter(m=>leanOf(m)>0.05);
+      ok(withLean.length>0,'some of them LEAN — their crown sits off-centre, toward whatever they '+
+         'piled against ('+withLean.length+' of '+forms.length+' are drifts rather than patches)');
+      ok(withLean.length<forms.length,'and not all of them, because a patch out on the open '+
+         'country piled against nothing ('+(forms.length-withLean.length)+' are plain patches)'); }
+
+    /* 5. DERIVED, NOT DRAWN — the third time this session, and asserted the same way: the same
+          position and radius must give a byte-identical form whatever the seeded stream has done. */
+    { X.setSeed(4242); const f1=X.snowForm(9,0,13,2.0);
+      X.setSeed(777);  const f2=X.snowForm(9,0,13,2.0);
+      const p1=f1.geometry.attributes.position, p2=f2.geometry.attributes.position;
+      let same=p1.count===p2.count;
+      if(same)for(let v=0;v<p1.count*3;v++)
+        if(Math.abs(p1.array[v]-p2.array[v])>1e-12){ same=false; break; }
+      ok(same,'the same position and radius give a byte-identical form, so snowForm draws no '+
+         'randoms and cannot shift the seeded stream its call sites depend on');
+      const f3=X.snowForm(10,0,13,2.0), p3=f3.geometry.attributes.position;
+      let diff=false;
+      for(let v=0;v<p3.count*3;v++)
+        if(Math.abs(p1.array[v]-p3.array[v])>1e-9){ diff=true; break; }
+      ok(diff,'and a patch a metre away is a different patch'); }
+
+    }
+    ok(X.WORLDREGS.indexOf('snowForms')>=0,'`snowForms` is in WORLDREGS');
+    /* AND THE RECORDS STILL DRIVE THE MISSIONS. The snow system is a mechanic before it is a look:
+       snowSpot slides a drift off whatever it landed on, and the records are what the missions and
+       snowBlocked read. Changing the geometry must not have touched them. */
+    ok(recs.length===16,'and the sixteen snow RECORDS are untouched by the shape work ('+
+       recs.length+')');
+    ok(recs.every(r=>r.disc&&r.disc.isObject3D),'each record still points at its own mesh');
+  }
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
 C.section('TODO 79: the hut roof');
 {
   const THREE=H.THREE||require('three');
@@ -6900,12 +7035,23 @@ C.section('REPLAT P6A: the model-swap seam');
      night register for exactly the reason the mountains did. The CARPARK's own boulder ring is
      inside an `if(!HEADLESS)` block, so node never builds it and the carpark's numbers below do
      not move for this piece at all — which is worth knowing before anyone wonders why only one
-     map changed. */
+     map changed.
+
+     AND THE SNOW FORMS, last of the session: skifield meshes 364 -> 390. Those 26 are the point of
+     the change rather than a side effect — the ski field built sixteen snow RECORDS in node and
+     ZERO snow meshes, because the mesh loop sat inside `if(!HEADLESS)`, so every battery that ever
+     asserted anything about this map's snow was asserting about coordinates with no shapes
+     attached. The loop makes no rnd() calls, so moving it out cost nothing but these meshes and
+     the seeded stream is untouched. 16 patches + 10 drifts = 26, and tris 49866 -> 56626,
+     being 260 a form for a RingGeometry(26,5) where the old flat CircleGeometry(20) cost 20.
+     THE CARPARK'S SNOW IS STILL INVISIBLE TO NODE and stays that way: its loop makes three rnd()
+     draws per patch INSIDE the guard, so moving it would insert thirty draws into the middle of
+     buildCarpark and relocate every later seeded draw in the map. TODO 112. */
   const PRESEAM={
     carpark :{mesh:'45f8362c7377ca36', col:'1b025c57715cb017', meshes:1005, tris:230528,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'8f573a2a1ada9dd0', col:'fc06ef03250ea1ed', meshes:364, tris:49866,
+    skifield:{mesh:'82f217becef3eddd', col:'fc06ef03250ea1ed', meshes:390, tris:56626,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

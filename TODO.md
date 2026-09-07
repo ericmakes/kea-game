@@ -2527,3 +2527,56 @@ every call site first. `PAL.rock` is also the nest KNOLL — a mossy mound that 
 gravel — and `0x6E5334` next door is tree bark, which wants a family of its own eventually too.
 NOT URGENT. Rock appears in far fewer frames than timber did, and the vertex-colour work is doing
 most of the job the map would have done. Filed so the trade is recorded rather than forgotten.
+
+### 112. THE CARPARK'S SNOW DOES NOT EXIST IN NODE, AND THE BATTERIES HAVE BEEN TESTING AN EMPTY LIST
+Filed 2026-09-07, session 33, found while doing the snow forms. Two halves of one system, each
+half-invisible to the gauntlet in the opposite way:
+    carpark    G.snow records  0 in node, 10 in a browser    snow meshes  0 in node
+    skifield   G.snow records 16 in node                     snow meshes  0 in node
+The ski field half is FIXED — its mesh loop makes no `rnd()` calls, so moving it out of
+`if(!HEADLESS)` cost nothing and the geometry is asserted now (+26 meshes, recorded in the P6A
+comment). The CARPARK half is not, and cannot be cheaply: there the whole loop is inside the guard,
+including THREE `rnd()` draws per patch across ten patches, so moving it out inserts thirty draws
+into the middle of `buildCarpark` and every later seeded draw in that map lands somewhere else —
+the props, the gravel, the stones, the wear patches, all of it. That is a re-pin of the carpark and
+everything in it (TODO 47's law), which makes it a piece with Eric's name on it and not a tidy-up.
+WHAT IT COSTS TODAY: every assertion this repo has ever made about carpark snow — `snowBlocked`,
+`snowSpot`, the peck-the-roof-snow mission's interaction with ground patches — runs against
+`G.snow.length === 0`. They are not wrong, they are VACUOUS. The ski field's sixteen records are
+the only reason the snow system has any test coverage at all.
+THE CHEAP HALF, IF SOMEBODY WANTS IT: draw the ten positions from a SEPARATE seeded generator
+(`setSeed`-style, its own state) rather than from `rnd()`. Then node can build them without touching
+the shared stream and the carpark keeps its baseline. That is probably the right answer and it is
+worth doing before anything else depends on carpark snow.
+
+### 113. SNOW FORMS ARE MOUNDS NOW — DONE session 33, and what snow still isn't
+Eric's procedural-geometry list, last item. Every snow patch was a flat `CircleGeometry(r,20)` at
+y 0.05 with a second transparent circle at 0.042 faking a soft edge, and every drift against a
+building was `sph(r*0.8, PAL.snow)` squashed to (1.15, 0.42, 1.15) — the same defect the boulders
+had. Now a ring-based mound: 20% of its radius deep, ragged in plan, sun-cupped, thinning to dirty
+grey at the margin, and leaning toward whatever it piled against when it is a drift.
+THREE THINGS FOUND BY MEASURING RATHER THAN LOOKING:
+  - **27.5% OF THE PATCH WAS CLIPPED TO PURE WHITE** at 10_skifield. It did not matter while the
+    patch was flat and it destroys a crown, sun cups and a thinning margin. `SNOW.val` holds the
+    forms below the palette value they are authored at (PAL.snow is left alone — it also dresses
+    the piste slab, the hut cap and the floes). 27.5% -> 0.00%, and kea_snow_01, real photographed
+    sunlit snow, clips 0.04% with a p99 of 246, so the budget is the plate's own discipline.
+  - **THE DRIFT LEAN WAS INVISIBLE** at the value first chosen: the height-weighted centroid moved
+    only 4-7% of the radius, because the crown falls off as (1-t^2)^0.7 and the middle dominates the
+    mass whatever the bias does to the edges. At `lean:1.0` the bias reaches zero on the far side,
+    which is the shape a real drift has, and the centroid separation becomes fivefold: patches
+    0.010-0.017, drifts 0.086-0.115, nothing in between.
+  - **THE GEOMETRY WAS INVISIBLE TO EVERY BATTERY.** See TODO 112 — the ski field half is fixed.
+WHAT IS STILL OWED:
+  - **NO SNOW ON THE GROUND WHERE IT SHOULD BE, AND SOME WHERE IT SHOULD NOT.** `snowSpot` slides a
+    drift off whatever it landed on, which is a good mechanic, but nothing biases patches to the
+    SHADY side of objects or into hollows, which is where spring snow actually survives. The
+    aspect term the mountains got would work here.
+  - **THE SUN CUPS ARE INVISIBLE AT PLAY DISTANCE.** 3.5% of the radius on a 2 m patch is 70 mm,
+    which reads at 3 m and not at 30. They cost nothing and they are honest; noted so nobody
+    spends an afternoon looking for them in a wide frame.
+  - **NO REFROZEN CRUST, NO FOOTPRINTS, NO MELT RUNNELS.** The margin thins in COLOUR only; a real
+    melting edge is undercut and has a lip.
+  - **THE HUT'S ROOF SNOW IS STILL A BOX** (`BoxGeometry(2.6, 0.2, 1.2)` with three spheres on it).
+    It is the one snow form left that is not a snowForm, and it is on a pitched plane so it wants a
+    variant that beds to a slope rather than to the ground.
