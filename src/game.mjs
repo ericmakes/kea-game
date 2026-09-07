@@ -1862,6 +1862,18 @@ const TERRAIN={
   treeline:15.0, treeBand:6.0,
   rock:0x5A6470, rockLit:0x78828C, snow:0xC8D2DC, tussock:0x8A8256, scree:0x9A948C,
 };
+/* __KEA_TERRAIN__ OVERRIDES ANY LEAF, the same seam and the same reason as __KEA_SKY__, __KEA_MATS__
+   and __KEA_GRASS__: the SILHOUETTE FAMILY is a taste call and Eric picks it from a strip, so
+   switching recipes must not need a code edit. Nested two levels, so a recipe's own numbers are
+   reachable and not only the choice between them:
+       KEATERRAIN='{"recipe":"a"}'
+       KEATERRAIN='{"recipes":{"c":{"valleyDepth":0.8}}}'
+       KEATERRAIN='{"snowY":22,"snowSlope":0.5}'
+   TERRAINIGNORED gets the same treatment MATSIGNORED does — a silently dropped override is how a
+   variant strip gets shot with none of its variation applied, which webrig's own comment records
+   happening to a KEAMATS pass. */
+const TERRAINIGNORED=[];
+matMerge(TERRAIN,(typeof globalThis!=='undefined'&&globalThis.__KEA_TERRAIN__)||{},'',2,TERRAINIGNORED);
 /* THE FLATTEN MASKS, per biome, the way grassCuts is per biome. Each entry is a straight band:
    {z, halfW, x0, x1} flattens |z-band.z| < halfW between x0 and x1, smoothstepped at the edges so
    the ground rises away from the corridor instead of stepping out of it. */
@@ -2003,7 +2015,8 @@ function buildTerrain(biome){
       if(fk>0)H[k]*=1-fk;
     }
   }
-  G.terrain={field:H, scree:SCREE, r0, r1, nTheta, nR, dR, recipe:T.recipe, biome};
+  G.terrain={field:H, scree:SCREE, r0, r1, nTheta, nR, dR, recipe:T.recipe, biome,
+             ignored:TERRAINIGNORED.slice()};
   return H;
 }
 

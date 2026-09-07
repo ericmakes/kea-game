@@ -152,6 +152,18 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
     try { grass = JSON.parse(process.env.KEAGRASS); }
     catch (e) { throw new Error('webrig: KEAGRASS is not valid JSON — ' + e.message); }
   }
+  /* TERRAIN.md: KEATERRAIN reaches the heightfield range. Same seam and the same reason as the
+     others — the SILHOUETTE FAMILY is a taste call Eric picks from a strip, so switching recipes
+     must not need a code edit, and a strip shot by editing the source is a strip nobody can
+     reproduce. Nested two levels, so a recipe's own numbers are reachable and not just the choice
+     between them: KEATERRAIN='{"recipes":{"c":{"valleyDepth":0.8}}}'.
+     NO KEY LIST, for the reason KEAGRASS's note gives: the names live in game.mjs, which reports
+     every path it refused in G.terrain.ignored. */
+  let terrain = null;
+  if (process.env.KEATERRAIN) {
+    try { terrain = JSON.parse(process.env.KEATERRAIN); }
+    catch (e) { throw new Error('webrig: KEATERRAIN is not valid JSON — ' + e.message); }
+  }
   /* REPLAT P5b: KEABIRD reaches the bird model tier. Same seam and same reason as the three above —
      the model is a look decision and has to be shootable without a rebuild. Nested one level, so
      KEABIRD='{"bones":{"head":"..."}}' reaches a leaf. */
@@ -193,8 +205,16 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
        game.mjs reports what it ignored and assertBooted refuses the pass below. */
   }
   const nopropmodels = !!process.env.NOPROPMODELS;
-  if (nopost || nosky || nomats || film || sky || mats || grass || bird || props || nopropmodels)
-    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt, gr, bd, pr, npm) => {
+  /* EVERY OVERRIDE MUST BE IN THIS GUARD AS WELL AS IN THE BLOCK BELOW, and forgetting the guard
+     is a silent no-op rather than an error: KEATERRAIN was added to the injection and not to this
+     line, so a strip asking for recipe `a` got the default `c` three times over and would have been
+     three copies of one frame. Caught by terrainstrip.mjs reading G.terrain.recipe back out of the
+     page and refusing to write a shot that did not match — the same defence assertBooted gives the
+     MATS families, and the same failure this file's KEAMATS comment records happening once already. */
+  if (nopost || nosky || nomats || film || sky || mats || grass || bird || props || nopropmodels ||
+      terrain)
+    await page.evaluateOnNewDocument((np, f, ns, sk, nm, mt, gr, bd, pr, npm, tr) => {
+      if (tr) globalThis.__KEA_TERRAIN__ = tr;
       if (pr) globalThis.__KEA_PROPS__ = pr;
       if (npm) globalThis.__KEA_NOPROPMODELS__ = true;
       if (bd) globalThis.__KEA_BIRD__ = bd;
@@ -205,7 +225,7 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
       if (nm) globalThis.__KEA_NOMATS__ = true;
       if (mt) globalThis.__KEA_MATS__ = mt;
       if (gr) globalThis.__KEA_GRASS__ = gr;
-    }, nopost, film, nosky, sky, nomats, mats, grass, bird, props, nopropmodels);
+    }, nopost, film, nosky, sky, nomats, mats, grass, bird, props, nopropmodels, terrain);
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);
