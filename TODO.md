@@ -2631,6 +2631,31 @@ changed since session 32's re-pin, so this predates session 33 entirely. Worth r
 fixture (a lift of 8 or 10 levels would sit clear of the boundary) rather than leaving a contract
 test that reports red for being nearly right.
 
+### 116. "BARE MAJORITY" AND "BIMODAL" ARE DIFFERENT SETS, AND I CONFLATED THEM
+Filed 2026-09-07, session 34, against my own recorded prediction.
+Eric's standing rule is to raise N to 11 when a vantage comes back a bare majority, so bare
+majorities are the thing sessions talk about and write down. That made it easy to slide into
+treating them as THE unstable frames. They are not: they are the frames that are unstable MOST
+OFTEN.
+    a 6/5 frame lands off its pinned mode about 45% of the time
+    a 7/4 frame about 36%
+    an 8/3 frame about 27%
+By session 34's eleven-run splits roughly **twenty-eight of the forty vantages have two modes**,
+against six that are bare majorities. So a post-pin sweep flagging a frame that is not a coin-flip
+is unremarkable, and this session's verification proved it directly: `13_idle_preen` (a 7/4) flagged
+at 0.9640, then reshot 0.9994 / 0.9624 / 0.9992 on an identical tree.
+WHY IT MATTERS: I had written into BASELINE.md that a flagged frame outside the six "would mean
+something is wrong with the pin". Had a later session trusted that, a perfectly normal 7/4 flag
+would have started a hunt for a defect that was not there — or worse, the prediction would have been
+quietly reinterpreted to fit. The honest form of that sentence is: **a flagged frame whose N-run
+split was UNANIMOUS would mean something is wrong.** Five vantages qualify (15_sign,
+34_village_street, 37_river_bridge at spread 0, plus 35_village_glass and 39_river_walk at 10/1) and
+those five are the real tripwire.
+THE PIECE, IF ANYONE WANTS IT: `repin.mjs` already computes every split, so it could emit the mode
+structure per vantage — cluster sizes and the implied flag probability — into BASELINE.md instead of
+leaving the next session to infer it from the totals by eye. That would make the tripwire above
+automatic rather than a paragraph.
+
 ### 115. THE CAPTURE RIG NEEDS MORE MEMORY THAN THE MACHINE HAS SPARE, AND A KILLED PASS POISONS THE NEXT SWEEP
 Filed 2026-09-07, session 34, after two consecutive kills during a re-pin verification.
 WHAT HAPPENED: the eleven-run consensus re-pin completed and its verification sweep was killed twice

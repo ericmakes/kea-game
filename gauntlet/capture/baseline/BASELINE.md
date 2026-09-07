@@ -741,7 +741,28 @@ re-pin most of these frames again, and it needs something honest to move away fr
 **26_tour_brochure and 27_travel_card are still not in the set** and still reported by the tool every
 time. Three sessions of waiting on Eric's call.
 
-### THE VERIFICATION SWEEP IS **PENDING**, AND NOT BECAUSE IT WAS SKIPPED
+### VERIFIED ON A FRESH SWEEP — 39 of 40 clean
+
+    DIFF: 40 compared, 1 flagged (worst 0.9640, threshold 0.965)
+
+The one flagged frame was `13_idle_preen` at 0.9640 — ten-thousandths under the line — and **it is
+not one of the six coin-flips listed above**, which is exactly the case the note below said would
+mean something was wrong. So it was checked instead of waved through. Three reshoots on an identical
+tree: **0.9994, 0.9624, 0.9992.** Bimodal, two of three landing on the pinned mode, precisely as its
+7/4 split predicts.
+
+**AND THAT MEANS MY OWN PREDICTION WAS WRONG, IN A WAY WORTH RECORDING.** The note below said the
+verification should flag "the six coin-flips and no others". That conflated BARE MAJORITY with
+BIMODAL, and they are different sets: a 6/5 frame lands off its pinned mode about 45% of the time, a
+7/4 frame about 36%, and an 8/3 about 27%. **The set of frames that can legitimately flag is the
+BIMODAL set, which is much larger than the coin-flip set** — by the N=11 splits above, roughly
+twenty-eight of the forty have two modes. What the coin-flips are is the frames that flag MOST
+OFTEN, not the only ones that can.
+The prediction was also wrong in the other direction: it guessed about 34 clean and got 39. Being
+lucky is not the same as being right, and a sweep landing inside expectations is not evidence the
+expectation was well formed — the same warning TODO 77 gives about churn ceilings.
+
+### THE VERIFICATION HAD TO WAIT FOR MEMORY, AND THE ATTEMPTS THAT DIED ARE ON THE RECORD
 
 Every previous entry in this file ends with a fresh sweep confirming the pin, and this one cannot,
 yet. Two attempts were killed by the system for low memory — the first a full forty-frame pass
@@ -759,6 +780,8 @@ missing is the independent check that a fresh sweep lands on the pinned state.
 34 of 40 clean, and up to six flagged — and specifically the six 6/5 coin-flips listed above, no
 others. A flagged frame outside that list would mean something is wrong with the pin.
     node gauntlet/verify/capture.mjs && node gauntlet/verify/diff.mjs
+
+(Eric freed memory and it then ran first time.)
 
 **AND THIS BELONGS TO TODO 78's FAMILY.** That entry is about the photographer hanging and leftover
 browsers; this is the same rig meeting the same machine from the other side. Two orphaned headless
