@@ -5763,53 +5763,34 @@ C.section('REPLAT P4e: the field stops being a disc');
     ok(/alive\*=keaCutK\(uCuts\[ci\]/.test(vs),'and the factors MULTIPLY, so overlapping cut-outs '+
        'thin each other rather than one winning at a seam'); }
 
-  /* ---- (8) TODO 80: THE ROLLING HILLS HAVE FORM, AND THEY WEAR THE GROUND TINT ----
-     Filed in P4d as the last straight edge in a wide frame. The sculpt only ever scaled x and z, so
-     at the pole — where x and z are zero — it multiplied nothing and no amount of noise in it could
-     break the flat cap. Read off the built geometry, not off the source. */
+  /* ---- (8) TODO 80 IS SUPERSEDED: THERE ARE NO SPHERE HILLS AT ALL ----
+     This section used to assert that the nine rolling tussock hills had form in their caps — TODO
+     80, filed in P4d as the last straight edge in a wide frame, because the sculpt scaled only x
+     and z and at the pole those are zero, so no amount of noise in it could break a flat top. P4e
+     fixed that and left them SPHERES.
+     Eric's terrain verdict retires them outright: "real mountains don't need a 3D model, they need
+     TERRAIN", and he asked for the foothills to get the same treatment. So the nine
+     SphereGeometry hills are gone and the heightfield annulus covers the ground they stood on. The
+     claim worth asserting is no longer "their caps have form" but "no squashed sphere is standing
+     in for a landform anywhere". */
   { const hills=[]; G.scene.traverse(o=>{ if(o.name==='tussockHill')hills.push(o); });
-    ok(hills.length>=9,'the rolling tussock hills are in the world and nameable ('+hills.length+')');
-    const h0=hills[0];
-    ok(!!h0&&h0.geometry.parameters.heightSegments>=14,
-       'with enough height bands to shape a crown with ('+
-       (h0?h0.geometry.parameters.heightSegments:0)+', was 10)');
-    ok(/pos\.setY\(v,y\*k\)/.test(code),
-       'and the sculpt displaces Y as well as X and Z — scaling x,z alone multiplies ZERO at the '+
-       'pole, which is why the old cap could not be broken');
-    /* THE CAP IS MEASURED, NOT ASSERTED FROM THE CODE. Take the highest vertices and check they do
-       not all sit at one height: a flat cap is a plateau of identical y, and that is the defect. */
-    { const pp=h0.geometry.attributes.position; let ymax=-1e9;
-      for(let v=0;v<pp.count;v++) ymax=Math.max(ymax,pp.getY(v));
-      let spread=0,n=0;
-      for(let v=0;v<pp.count;v++){ const y=pp.getY(v);
-        if(y>ymax*0.90){ spread=Math.max(spread,ymax-y); n++; } }
-      ok(n>3,'there are vertices in the top tenth of the hill to measure ('+n+')');
-      ok(spread>ymax*0.02,'and they are NOT a plateau — the crown has relief ('+
-         spread.toFixed(2)+' m of spread across the top tenth)'); }
-    /* AND THE TINT. The hills never went through matGround, so tinted flat ground met untinted gold
-       hill along a visible join — an open colour seam in the P4b, P4c and P4d recipes. */
-    /* THE TINT IS CHECKED AGAINST WHAT THE VERTEX WOULD BE WITHOUT IT, and the first cut of this
-       was not: it asserted the hill's blue was below 0.45, and the UNTINTED palette is already at
-       0.029 in linear space, so removing the tint sailed straight through. A threshold that the
-       broken state also satisfies is not a test. The colour is now RECONSTRUCTED — the same lerp
-       the builder does, at the same vertex — and the tinted and untinted predictions are BOTH
-       compared, so the assertion can only pass one of them. */
-    { const cc=h0.geometry.attributes.color, pp2=h0.geometry.attributes.position;
-      const T=new H.THREE.Color(GR.groundTint).convertSRGBToLinear();
-      const cG2=new H.THREE.Color(X.PAL.ground2).convertSRGBToLinear();
-      const cT2=new H.THREE.Color(X.PAL.tussock).convertSRGBToLinear();
-      let hi=0; for(let v=1;v<pp2.count;v++) if(pp2.getY(v)>pp2.getY(hi)) hi=v;
-      const rad=h0.geometry.parameters.radius;
-      const t=Math.max(0,Math.min(1,pp2.getY(hi)/rad*0.5+0.5));
-      const plain=cG2.clone().lerp(cT2,t*0.85);
-      const tinted=plain.clone().multiply(T);
-      const got={r:cc.getX(hi),g:cc.getY(hi),b:cc.getZ(hi)};
-      const d=(c)=>Math.abs(got.r-c.r)+Math.abs(got.g-c.g)+Math.abs(got.b-c.b);
-      ok(T.b<0.25,'the ground tint is an olive, so blue is what it removes ('+T.b.toFixed(3)+')');
-      ok(d(tinted)<0.01,'the hill\'s crown vertex IS its palette colour times groundTint ('+
-         d(tinted).toFixed(4)+' away)');
-      ok(d(plain)>0.05,'and it is NOT the untinted colour — the two predictions are far enough '+
-         'apart for this to be a test ('+d(plain).toFixed(4)+' away)'); } }
+    ok(hills.length===0,'the sphere tussock hills are retired — the foothills are heightfield now ('+
+       hills.length+' left)');
+    /* AND NOTHING ELSE IS QUIETLY DOING THEIR JOB. A landform-scale sphere squashed flat is the
+       shape being refused, so it is refused by its measurements rather than by its name. */
+    { const fakes=[];
+      for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
+        G.scene.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='SphereGeometry')return;
+          const r=(o.geometry.parameters.radius||0);
+          if(r<8)return;                                   // pebbles, floes, the nest knoll
+          if(o.scale.y>0.55)return;                        // a sphere, not a squashed landform
+          const wp=new (H.THREE||require('three')).Vector3(); o.getWorldPosition(wp);
+          if(wp.y>15)return;                               // clouds
+          fakes.push(b+' r'+r.toFixed(0)); }); }
+      ok(fakes.length===0,'and no squashed landform-scale sphere stands in for terrain in any map ('+
+         fakes.length+(fakes.length?': '+fakes.slice(0,4).join(', '):'')+')');
+      X.setSeed(20260828); X.boot({biome:'carpark'}); } }
+
 
   /* ---- (9) EVERY LAYER IS DRIVEN, WHICH IS THE ONE THAT CANNOT BE SEEN IN A STILL ----
      A layer left off the per-frame list keeps its anchor at (0,0) — a static disc round the world
@@ -6327,231 +6308,262 @@ C.section('REPLAT P5b: the rig adapter');
    written. The fix derives the drawn panels from the collider, and the claim asserted is the one
    that matters to a player: THE ROOF YOU CAN SEE IS THE ROOF YOU STAND ON. Nothing here restates a
    pitch or a height — every number is read off the collider or off a raycast into the built world. */
-/* ---- MOUNTAINS: ONE RING, A WORLD SNOWLINE, AND A RANGE THAT HAS A RANGE ----
+/* ---- THE RANGE IS A HEIGHTFIELD (TERRAIN.md) ----
 
-   Eric's item 9: "Mountains as grey slabs with hard bases, one in 38 with no snow at all." Three
-   complaints, and all three were measurable before anything was changed:
-
-     SIX COPIES. The ring was written once and pasted into all six biome builders, differing only in
-     the count and the size ranges. Same shape of problem the water had.
-     EIGHTEEN MOUNTAINS, TWO COLOURS. In the river, every far mountain was identical to every other
-     far mountain and every near one to every near one, to four decimal places — far rock luma
-     0.3258 / snow 0.8587, near 0.1075 / 0.9236. Nothing varied per massif, nothing varied across a
-     face. That is what makes a range read as cardboard.
-     THE SNOWLINE WAS A FRACTION OF EACH PEAK. `(y/h+0.5-0.72)` puts snow at 72% of each mountain's
-     OWN height, so with h from 20 to 64 the lines landed anywhere from 14.6 m to 35.8 m. A real
-     range has ONE snowline, because it is set by the freezing level and not by how tall each hill
-     happens to be — and the consequence of getting it backwards is a modest peak whose top barely
-     clears its own line showing a cap too small to see. Which is Eric's "no snow at all": the peak
-     dominating frame 38 is a near one at 22.2 m.
-
-   THESE ASSERTIONS HOLD THE OBJECTIVE PROPERTIES AND NOT THE TASTE. How dark a distant alpine range
-   should read at midday is Eric's call and there is a variant strip for it (MTN_a/b/c). What is
-   asserted is what cannot be a matter of opinion: one ring, one altitude, every mountain carrying
-   snow, no two massifs the same value, rock reading darker than snow by a measured margin, and the
-   feet not meeting the plain in a clean cone. */
-C.section('mountains: one ring, one snowline');
+   Eric rejected the cone ring: "a varied cone is still a cone, and real mountains don't need a 3D
+   model, they need TERRAIN." What replaces the nine assertions that used to live here is a set that
+   makes claims about SHAPE, because that was the whole failure of the old ones — every single one
+   was true of a cone. TERRAIN.md section 5 specifies them; the arithmetic behind them was validated
+   offline first in gauntlet/verify/terrainlab.mjs, whose selftest carries a CONE CONTROL proving
+   the silhouette measurement can detect the rejected direction (it scores identical cones at 1.00
+   and the three recipes at 0.08, -0.00 and 0.05). */
+C.section('the range: a heightfield, not a ring of cones');
 {
   const THREE=H.THREE||require('three');
-  const lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
-  const M=X.MTN;
-  ok(typeof X.mountainRing==='function','the mountain ring is ONE function, not six copies');
-  /* AND EVERY MAP USES IT. Six pasted copies is six places for a defect to survive a fix, so the
-     claim is that no biome builds a cone any other way: every ConeGeometry in every map must be a
-     registered mountain. */
-  { const per={}; let unregistered=0;
+  const T=X.TERRAIN;
+  ok(typeof X.buildTerrain==='function'&&typeof X.terrainHeightAt==='function',
+     'the range is a heightfield with a height function');
+
+  /* 1. NO CONE MOUNTAIN SURVIVES ANYWHERE, and mountainRing is GONE rather than merely unused —
+        an unused generator is a generator somebody re-calls. */
+  ok(X.mountainRing===undefined&&X.MTN===undefined,
+     'mountainRing and MTN are removed from the game, not left dormant');
+  /* SCOPED BY RADIUS **AND** HEIGHT, because a cone is not necessarily a mountain and radius alone
+     is not enough: the maps build tree and bush canopies as cones and some are 23 m across, which
+     reported sixteen "massif-scale cones" that are foliage. A mountain was 20-64 m TALL; a canopy
+     is 5-9. Same lesson the rock census taught an hour ago, arrived at from the other direction. */
+  { const left=[];
     for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
-      const reg=new Set(G.mountains||[]); let cones=0;
-      /* DISCRIMINATED STRUCTURALLY, NOT BY SIZE. A cone is not necessarily a mountain — the maps
-         also build tree and bush canopies as cones, and some of those are 23 m across, so a size
-         filter reported "19 built some other way" about geometry that has nothing to do with the
-         horizon. What a mountain has is the RING'S OWN segment count, and what a resurrected pasted
-         copy would have is the old (22, 7) signature. Both are checked: every registered mountain
-         carries M.seg, and nothing anywhere carries the old one. */
       G.scene.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='ConeGeometry')return;
         const q=o.geometry.parameters;
-        if(q.radialSegments===22&&q.heightSegments===7)unregistered++;
-        if(!reg.has(o))return;
-        cones++;
-        if(q.radialSegments!==M.seg.r||q.heightSegments!==M.seg.h)unregistered++; });
-      per[b]=cones; }
-    ok(Object.keys(per).every(b=>per[b]>=16),'every map in the tour has a horizon ('+
-       Object.keys(per).map(b=>b+' '+per[b]).join(', ')+')');
-    ok(unregistered===0,'every mountain carries the ring\'s own segment count and nothing anywhere '+
-       'carries the old pasted-copy signature of (22, 7) ('+unregistered+' offenders)'); }
+        if((q.radius||0)>=15&&(q.height||0)>=15)left.push(b+' r'+q.radius.toFixed(0)+' h'+q.height.toFixed(0)); }); }
+    ok(left.length===0,'and no massif-scale cone is left in any map ('+left.length+
+       (left.length?': '+left.slice(0,4).join(', '):'')+')'); }
 
-  /* THE SNOWLINE IS AN ALTITUDE, AND EVERY MOUNTAIN CARRIES SOME. The second half is the one that
-     answers Eric directly, and it has to hold in EVERY map — a snowline that clears the shortest
-     peak in the river can still leave a campground foothill bare. */
-  X.setSeed(20260828); X.boot({biome:'river'});
-  { let minFrac=1e9, minPeak=1e9, worst=null, vals=[];
-    const c=new THREE.Color();
+  /* 2. ONE MESH PER MAP, AND ITS INNER SEAM IS AT ZERO. The annulus meets the play area's own
+        ground plane, and a step there would be a crease running right round the world. */
+  X.setSeed(20260828); X.boot({biome:'carpark'});
+  { const D=G.terrain;
+    if(ok(!!D&&!!G.terrainMesh,'the carpark builds one terrain field and one mesh')){
+      ok(D.nTheta===T.nTheta&&D.nR===T.nR,'at the recipe\'s resolution ('+D.nR+' x '+D.nTheta+')');
+      let seam=0;
+      for(let i=0;i<D.nTheta;i++)seam=Math.max(seam,Math.abs(D.field[i]));
+      ok(seam<0.05,'and its inner ring sits at zero, so it meets the play area with no step ('+
+         seam.toFixed(4)+' m worst)');
+      ok(Math.abs(X.terrainHeightAt(0,0))<1e-9&&Math.abs(X.terrainHeightAt(40,0))<1e-9,
+         'terrainHeightAt is zero inside the annulus, so a caller in the play area needs no '+
+         'special case');
+      ok(Math.abs(X.terrainHeightAt(300,0))<1e-9,'and zero beyond it');
+      ok(X.terrainHeightAt(150,0)>4,'and it actually returns the range in between ('+
+         X.terrainHeightAt(150,0).toFixed(1)+' m at r 150)'); } }
+
+  /* 3. IT IS SCENERY. Eric was explicit and TERRAIN.md section 6 repeats it: the bird never walks
+        on the range, so it carries no colliders and terrainHeightAt is NOT wired into
+        groundHeightAt. This is the assertion that stops a later session "helpfully" joining them. */
+  { const before=G.colliders.length;
+    ok(X.terrainHeightAt(150,0)>4&&X.groundHeightAt(150,0,99)===0,
+       'the range is SCENERY — terrainHeightAt reports '+X.terrainHeightAt(150,0).toFixed(1)+
+       ' m at r 150 where groundHeightAt reports 0, because groundHeightAt reads colliders and the '+
+       'range has none');
+    ok(G.colliders.length===before,'and asking did not add one'); }
+
+  /* 4. EVERY MAP HAS ITS OWN RANGE. The height function is purely positional, so the first cut
+        gave all six biomes the identical horizon — 0.0 to 40.7 m in every one of them, same peaks,
+        same valleys. Six maps sharing a skyline reads as copy-paste. */
+  { const sig=[];
     for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
-      for(const o of (G.mountains||[])){
-        const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
-        g.computeBoundingBox();
-        const peak=o.position.y+g.boundingBox.max.y;
-        if(peak<minPeak)minPeak=peak;
-        /* MEASURED RELATIVE TO EACH MOUNTAIN'S OWN ROCK, not against an absolute brightness.
-           An absolute threshold ("luma > 0.55") is a threshold on the TASTE levers — move rockVal
-           or snowVal and it changes meaning — and it reported 0% snow on a peak that genuinely had
-           a 53% blend, because the blend never reached near-white. What matters is that the top of
-           every mountain is conspicuously brighter than its own flanks. */
-        /* THE ROCK WINDOW IS BELOW THE SNOWLINE, not below a fraction of the summit. Sampled at
-           35% of each peak's height it worked for foothills and lied about the big ones: 35% of a
-           53.7 m peak is 18.8 m, which is ABOVE the 16 m snowline, so "rock" was sampling snow and
-           the ratio came out 2.1x on the most heavily capped mountain in the map. Everything below
-           line minus band is bare by construction. */
-        const bare=M.snowline.y-M.snowline.band-1;
-        let rockL=[], topL=0;
-        for(let v=0;v<col.count;v++){ c.fromBufferAttribute(col,v);
-          const L=lum(c), wy=pos.getY(v)+o.position.y;
-          if(wy>peak*0.97&&L>topL)topL=L;
-          if(wy<bare)rockL.push(L); }
-        const rockAvg=rockL.length?rockL.reduce((x,y)=>x+y,0)/rockL.length:1;
-        const f=topL/rockAvg;
-        if(f<minFrac){ minFrac=f; worst=b+', a '+peak.toFixed(1)+' m peak'; }
-        if(rockL.length)vals.push(rockAvg); } }
-    /* 2.0x IS THE FLOOR AND THE DISTRIBUTION IS WHY. Measured across all 104 mountains in the six
-       maps, the ratio is cleanly bimodal: the FAR ring runs 2.28-2.86 and the NEAR ring 5.60-7.02.
-       The far ring is lower BY DESIGN — its rock is hazed toward the sky, so there is less range
-       left between rock and snow, which is what atmospheric perspective is. So the floor sits under
-       the far ring, and the near/far difference gets an assertion of its own below rather than
-       being averaged away into one number that means neither. */
-    ok(minFrac>2.0,'EVERY MOUNTAIN IN EVERY MAP CARRIES SNOW — the least capped has a summit '+
-       minFrac.toFixed(1)+'x brighter than its own rock ('+worst+'). Eric\'s "one in 38 with no '+
-       'snow at all" was a peak that never reached its own proportional line');
-    ok(M.snowline.y<minPeak-1.5,'and the line at '+M.snowline.y+
-       ' m clears the SHORTEST peak anywhere ('+minPeak.toFixed(1)+
-       ' m) — an altitude, not a fraction of each summit');
-    /* THE SNOWLINE IS AN ALTITUDE, AND THIS IS THE ASSERTION THAT SAYS SO. Everything above it
-       passes perfectly well on the OLD proportional formula — sabotage put `(y/h+0.5-0.72)*8`
-       back and not one finding appeared, because a proportional line still caps every summit; what
-       it does not do is put the caps at the same HEIGHT. So the measurement is the world y at which
-       snow first appears on each mountain, across peaks from 19.7 m to 53.7 m. Under one altitude
-       those onsets cluster inside the deliberate variation (jitter plus aspect plus the band);
-       under a fraction of each summit they spread with peak height, which is the defect.
-       AND IT IS CHECKED AS A CORRELATION TOO, because a spread bound alone could be satisfied by
-       accident on a set of similar peaks: onset must not track peak height. */
-    { X.setSeed(20260828); X.boot({biome:'river'});
-      const c3=new THREE.Color(), onset=[], peaks=[];
-      for(const o of (G.mountains||[])){
-        const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
-        g.computeBoundingBox();
-        const peak=o.position.y+g.boundingBox.max.y;
-        let rl=[], top=0;
-        for(let v=0;v<col.count;v++){ c3.fromBufferAttribute(col,v);
-          const L=lum(c3), wy=pos.getY(v)+o.position.y;
-          if(wy>peak*0.97&&L>top)top=L;
-          if(wy<M.snowline.y-M.snowline.band-1)rl.push(L); }
-        if(!rl.length||!top)continue;
-        const rock=rl.reduce((x,y)=>x+y,0)/rl.length, half=rock+(top-rock)*0.5;
-        let lowest=1e9;
-        for(let v=0;v<col.count;v++){ c3.fromBufferAttribute(col,v);
-          if(lum(c3)>=half){ const wy=pos.getY(v)+o.position.y; if(wy<lowest)lowest=wy; } }
-        if(lowest<1e9){ onset.push(lowest); peaks.push(peak); } }
-      const lo=Math.min(...onset), hi=Math.max(...onset);
-      const allow=M.snowline.jitter+M.snowline.aspect+M.snowline.band;
-      ok(onset.length>10,'snow onset is measurable on the range ('+onset.length+' mountains)');
-      ok(hi-lo<allow,'THE SNOWLINE IS AN ALTITUDE, NOT A FRACTION OF EACH SUMMIT — snow starts '+
-         'between '+lo.toFixed(1)+' m and '+hi.toFixed(1)+' m across peaks of '+
-         Math.min(...peaks).toFixed(0)+'-'+Math.max(...peaks).toFixed(0)+' m, inside the '+
-         allow.toFixed(1)+' m this recipe deliberately allows (jitter + aspect + band)');
-      /* Pearson r between onset and peak height. A proportional line makes this ~1. */
-      { const n=onset.length;
-        const mo=onset.reduce((x,y)=>x+y,0)/n, mp=peaks.reduce((x,y)=>x+y,0)/n;
-        let num=0, do2=0, dp2=0;
-        for(let i=0;i<n;i++){ const a2=onset[i]-mo, b2=peaks[i]-mp;
-          num+=a2*b2; do2+=a2*a2; dp2+=b2*b2; }
-        const r=num/Math.sqrt(do2*dp2||1);
-        ok(Math.abs(r)<0.55,'and it does not track how tall each mountain is (r='+r.toFixed(2)+
-           '); a snowline set as a fraction of each summit measures about +1'); } }
+      const D=G.terrain; let hi=0, sum=0;
+      for(const v of D.field){ if(v>hi)hi=v; sum+=v; }
+      sig.push({b,hi:+hi.toFixed(2),mean:+(sum/D.field.length).toFixed(3)}); }
+    const uniq=new Set(sig.map(s=>s.hi+'/'+s.mean));
+    ok(uniq.size===sig.length,'every map has its own range — '+uniq.size+' distinct of '+
+       sig.length+' ('+sig.map(s=>s.b.slice(0,4)+' '+s.hi).join(', ')+')');
+    /* AND THE FIELDS THEMSELVES ARE UNCORRELATED, which max-and-mean cannot tell you. Removing the
+       per-biome domain offset left the valley axes still biome-dependent, so the maxima and means
+       still differed and this assertion passed while five of six maps shared their entire
+       skyline. Correlation is the claim: two maps must not be the same range with different
+       ditches cut into it. */
+    { X.setSeed(20260828); X.boot({biome:'carpark'});
+      const A=Float32Array.from(G.terrain.field);
+      X.setSeed(20260828); X.boot({biome:'station'});
+      const B=G.terrain.field;
+      /* PER-RING RESIDUALS, NOT THE RAW FIELD, and getting this wrong gave r=0.85 on two maps that
+         genuinely differ. Both fields share the same RADIAL AMPLITUDE RAMP — zero at the seam,
+         about forty metres at the crest — and that trend dominates the variance, so any two ranges
+         correlate strongly through it whatever their noise is doing. Subtracting each ring's own
+         mean leaves the ANGULAR structure, which is the thing that makes one range a different
+         range from another.
+         THIS IS THE THIRD TIME THIS SESSION the same mistake has appeared: correlating a signal
+         whose variance is dominated by a trend measures the trend. It caught the skyline sector
+         test twice (envelope) and this one once (radial ramp). Worth remembering as a shape. */
+      const {nTheta,nR}=G.terrain;
+      const resid=(F)=>{ const out=new Float64Array(F.length);
+        for(let j=0;j<nR;j++){ let m2=0;
+          for(let i=0;i<nTheta;i++)m2+=F[j*nTheta+i];
+          m2/=nTheta;
+          for(let i=0;i<nTheta;i++)out[j*nTheta+i]=F[j*nTheta+i]-m2; }
+        return out; };
+      const RA=resid(A), RB=resid(B);
+      let nu=0, da=0, db=0;
+      for(let i=0;i<RA.length;i++){ nu+=RA[i]*RB[i]; da+=RA[i]*RA[i]; db+=RB[i]*RB[i]; }
+      const r=nu/Math.sqrt(da*db||1);
+      ok(Math.abs(r)<0.35,'and with the radial ramp removed the two maps\' fields are uncorrelated '+
+         '(r='+r.toFixed(2)+'), so they are different ranges rather than one range with different '+
+         'valleys cut into it'); } }
 
-    /* NO TWO MASSIFS THE SAME VALUE. This is the assertion that would have caught the original
-       defect: eighteen mountains and two numbers between them. */
-    const uniq=new Set(vals.map(v=>v.toFixed(4)));
-    ok(uniq.size>vals.length*0.6,'and no two massifs share a rock value ('+uniq.size+
-       ' distinct of '+vals.length+' mountains; it used to be 2)');
-    const lo=Math.min(...vals), hi=Math.max(...vals);
-    ok(hi/lo>2,'with a real spread of rock value across the range ('+lo.toFixed(3)+' to '+
-       hi.toFixed(3)+', '+(hi/lo).toFixed(1)+'x)');
-    /* ATMOSPHERIC PERSPECTIVE, MEASURED. The far ring must hold LESS contrast than the near one —
-       that is the whole content of "distance hazes", and it is the thing that was missing when the
-       mountains were rendering at nine tenths fog with rock and snow within 0.06 of each other. */
-    { X.setSeed(20260828); X.boot({biome:'river'});
-      const bare2=M.snowline.y-M.snowline.band-1, c2=new THREE.Color();
-      const ring=[[],[]];
-      (G.mountains||[]).forEach((o,i)=>{
-        const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
-        g.computeBoundingBox();
-        const peak=o.position.y+g.boundingBox.max.y;
-        let rl=[], top=0;
-        for(let v=0;v<col.count;v++){ c2.fromBufferAttribute(col,v);
-          const L=lum(c2), wy=pos.getY(v)+o.position.y;
-          if(wy>peak*0.97&&L>top)top=L;
-          if(wy<bare2)rl.push(L); }
-        if(rl.length)ring[i%2].push(top/(rl.reduce((x,y)=>x+y,0)/rl.length)); });
-      const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
-      const fr=mean(ring[0]), nr=mean(ring[1]);
-      ok(fr<nr*0.7,'and the FAR ring holds less contrast than the NEAR one, which is what '+
-         'distance hazing means — far '+fr.toFixed(2)+'x against near '+nr.toFixed(2)+'x'); } }
-
-  /* ROCK READS DARKER THAN SNOW. The fog was flattening this to sixty thousandths of a frame value
-     and the mountains came off it — so the claim now belongs on the ALBEDO, where this battery can
-     see it, and the frame measurement lives in the commit and the variant strip. */
-  { X.setSeed(20260828); X.boot({biome:'river'});
-    const c=new THREE.Color(); let rock=[], snow=[];
-    for(const o of (G.mountains||[])){
-      const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
-      g.computeBoundingBox();
-      const peak=o.position.y+g.boundingBox.max.y;
-      for(let v=0;v<col.count;v++){ c.fromBufferAttribute(col,v);
-        const wy=pos.getY(v)+o.position.y;
-        if(wy<peak*0.3)rock.push(lum(c)); else if(wy>peak*0.97)snow.push(lum(c)); } }
-    const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
-    ok(avg(snow)/avg(rock)>2.5,'SNOW READS AS SNOW AND ROCK AS ROCK — '+avg(snow).toFixed(3)+
-       ' against '+avg(rock).toFixed(3)+' ('+(avg(snow)/avg(rock)).toFixed(1)+'x)');
-    ok(!!X.mountainRing&&(G.mountains||[]).length>0&&
-       G.mountains[0].material.fog===false,'and the mountains are OFF the scene fog, which was '+
-       'washing bare rock and full snow to within 0.06 of each other in the frame — they carry '+
-       'their atmospheric perspective in their own vertex colours now, where it can be measured'); }
-
-  /* THE FEET DO NOT MEET THE PLAIN IN A CLEAN CONE — Eric's "hard bases". A cone's base is a
-     circle; the skirt flares it and the foot dips unevenly, so the assertion is that the radius at
-     the bottom VARIES round the mountain rather than being one number. */
-  { X.setSeed(20260828); X.boot({biome:'river'});
-    const o=(G.mountains||[])[1];
-    if(ok(!!o,'a mountain to measure')){
-      const g=o.geometry, pos=g.attributes.position, h=g.parameters.height;
-      let rr=[], yy=[];
-      for(let v=0;v<pos.count;v++){
-        const y=pos.getY(v);
-        if(y>-h/2+h*0.10)continue;                       // the bottom tenth only
-        rr.push(Math.hypot(pos.getX(v),pos.getZ(v))); yy.push(y); }
-      const lo=Math.min(...rr), hi=Math.max(...rr);
-      ok(rr.length>10,'its foot has vertices to measure ('+rr.length+')');
-      ok(hi/lo>1.25,'and the foot radius VARIES round it — '+lo.toFixed(1)+' to '+hi.toFixed(1)+
-         ' m ('+(hi/lo).toFixed(2)+'x), so it does not meet the plain in a circle');
-      ok(Math.max(...yy)-Math.min(...yy)>h*0.02,'and the foot DIPS rather than sitting level ('+
-         (Math.max(...yy)-Math.min(...yy)).toFixed(2)+' m of relief), which is what buries the '+
-         'cone-meets-plain intersection'); }
-    ok(M.skirt>0&&M.foot>0,'the skirt and the dipping foot are both switched on ('+M.skirt+
-       ', '+M.foot+')'); }
-
-  /* AND IT DID NOT DISTURB ANYTHING ELSE. Six pasted blocks became one function, and each made
-     SEVEN rnd() draws per mountain in a fixed order that every later seeded draw depends on
-     (TODO 47). Measured on the carpark: 1005 meshes before and after, and exactly 18 digest lines
-     differed, all of them ConeGeometry. The count is what this can check cheaply. */
+  /* 5. EVERY PEAK A DIFFERENT SILHOUETTE — the claim the cones could never have met, measured the
+        way the lab measures it: summits found, each windowed by its own half-width and normalised
+        to its own height, then the MEAN correlation over all pairs. Identical cones score 1.00. */
   { X.setSeed(20260828); X.boot({biome:'carpark'});
-    ok((G.mountains||[]).length===18,'the carpark still has its eighteen mountains ('+
-       (G.mountains||[]).length+')');
-    ok(X.WORLDREGS.indexOf('mountains')>=0,'and `mountains` is in WORLDREGS, so a second boot '+
-       'does not stack a second range on the first');
-    X.boot({biome:'river'});
-    ok((G.mountains||[]).length===18,'and a trip to the river replaces the range rather than '+
-       'adding to it ('+(G.mountains||[]).length+')'); }
-  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+    const D=G.terrain, {nTheta,nR,r0,r1}=D, dR=(r1-r0)/(nR-1);
+    const sk=[];
+    for(let i=0;i<nTheta;i++){ let best=0;
+      for(let j=0;j<nR;j++)best=Math.max(best,Math.atan2(D.field[j*nTheta+i]-1.6,r0+dR*j));
+      sk.push(best); }
+    const n=sk.length;
+    const smo=[]; for(let i=0;i<n;i++){ let s2=0;
+      for(let o=-6;o<=6;o++)s2+=sk[(i+o+n)%n]; smo.push(s2/13); }
+    const pk=[];
+    for(let i=0;i<n;i++)if(smo[i]>smo[(i+n-1)%n]&&smo[i]>=smo[(i+1)%n])pk.push({i,h:smo[i]});
+    pk.sort((a,b)=>b.h-a.h);
+    const prof=pk.slice(0,9).map(p=>{
+      const half=p.h*0.5; let L2=0,R2=0;
+      while(L2<n/4&&smo[(p.i-L2+n)%n]>half)L2++;
+      while(R2<n/4&&smo[(p.i+R2)%n]>half)R2++;
+      const wid=Math.max(4,L2+R2), out=[];
+      for(let k=-12;k<=12;k++)out.push(sk[(p.i+Math.round(k/12*wid*1.4)+n)%n]/p.h);
+      return out; });
+    const corr=(A,B)=>{ const ma=A.reduce((x,y)=>x+y,0)/A.length, mb=B.reduce((x,y)=>x+y,0)/B.length;
+      let nu=0,da=0,db=0;
+      for(let i=0;i<A.length;i++){ const a=A[i]-ma,b=B[i]-mb; nu+=a*b; da+=a*a; db+=b*b; }
+      return nu/Math.sqrt(da*db||1); };
+    let s2=0,c2=0;
+    for(let i=0;i<prof.length;i++)for(let k=i+1;k<prof.length;k++){ s2+=corr(prof[i],prof[k]); c2++; }
+    const mean=c2?s2/c2:1;
+    ok(prof.length>=7,'the skyline has summits to compare ('+prof.length+')');
+    ok(mean<0.35,'EVERY PEAK IS ITS OWN SHAPE — mean correlation between the summits\' normalised '+
+       'profiles is '+mean.toFixed(2)+', where a ring of identical cones measures 1.00'); }
+
+  /* 6. SNOW IS SLOPE-DEPENDENT, which is the biggest cue in both plates Eric named: in nz_alps_01
+        it lies in gullies and on gentle faces while bare rock stands out on the steep faces
+        immediately beside them, AT THE SAME ALTITUDE. A horizontal snowline is what the cones had,
+        and it was an improvement on what preceded them and still wrong. */
+  { const D=G.terrain, {nTheta,nR,r0,r1}=D, dR=(r1-r0)/(nR-1);
+    const col=G.terrainMesh.geometry.attributes.color;
+    const lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+    const at=(j2,i2)=>D.field[Math.max(0,Math.min(nR-1,j2))*nTheta+((i2%nTheta)+nTheta)%nTheta];
+    const c=new THREE.Color();
+    /* THE ALTITUDE TERM IS SATURATED ABOVE snowY+snowBand, which is what makes this a clean
+       control: up there the altitude blend is already 1, so the ONLY thing that can still vary the
+       snow is the slope. That lets the band be wide enough for a real sample instead of the narrow
+       nine-metre slice the first version used, which found only 7 gentle faces.
+       AND THE THRESHOLDS ARE THE DISTRIBUTION'S OWN TERCILES rather than multiples of the recipe's
+       snowSlope. Fixed multiples both under-sampled (gentle < 0.31 barely exists up there) and, more
+       importantly, read the very constant being tested — set snowSlope to zero and a fixed-multiple
+       test moves with it. Terciles cannot. */
+    const cells=[];
+    for(let j2=1;j2<nR-1;j2++){ const r=r0+dR*j2, dT=2*Math.PI*r/nTheta;
+      for(let i2=0;i2<nTheta;i2++){
+        const k=j2*nTheta+i2, h=D.field[k];
+        if(h<T.snowY+T.snowBand)continue;                    // below saturation: altitude still counts
+        const slope=Math.hypot((at(j2+1,i2)-at(j2-1,i2))/(2*dR),(at(j2,i2+1)-at(j2,i2-1))/(2*dT));
+        c.fromBufferAttribute(col,k);
+        cells.push({slope,l:lum(c)}); } }
+    ok(cells.length>120,'there is high ground above the snowline to sample ('+cells.length+
+       ' cells above the saturation altitude)');
+    cells.sort((a,b)=>a.slope-b.slope);
+    const t3=Math.floor(cells.length/3);
+    const gentle=cells.slice(0,t3), steep=cells.slice(-t3);
+    const avg=a=>a.reduce((x,y)=>x+y.l,0)/a.length;
+    const gs=gentle[gentle.length-1].slope, ss=steep[0].slope;
+    ok(avg(gentle)>avg(steep)*1.25,'SNOW IS SLOPE-DEPENDENT — at altitudes where the altitude term '+
+       'is already saturated, the gentlest third of faces (slope up to '+gs.toFixed(2)+') reads '+
+       avg(gentle).toFixed(3)+' against '+avg(steep).toFixed(3)+' for the steepest third (from '+
+       ss.toFixed(2)+'), a factor of '+(avg(gentle)/avg(steep)).toFixed(2)+
+       '. Snow does not hold on a cliff, which is the biggest cue in both of Eric\'s plates: it '+
+       'lies in gullies while bare rock stands out on the steep faces beside them at the SAME '+
+       'altitude. A horizontal snowline is what the cones had.'); }
+
+  /* 7. THE ROAD CORRIDOR IS FLAT, because the carpark's road runs to r 129 with 61 pieces of
+        furniture on it and a rising heightfield would bury the lot. A road through foothills is a
+        cutting; this asserts the cutting exists. */
+  { const masks=X.terrainFlat('carpark');
+    ok(masks.length>0,'the carpark declares a flatten corridor for its road');
+    let onRoad=0, offRoad=0, nOn=0, nOff=0;
+    for(let x=-120;x<=120;x+=4){
+      const r=Math.hypot(x,34);
+      if(r<=T.r0+6||r>=T.r1)continue;
+      onRoad+=X.terrainHeightAt(x,34); nOn++;
+      offRoad+=X.terrainHeightAt(x,34+26); nOff++; }
+    ok(nOn>8,'with road samples inside the annulus to measure ('+nOn+')');
+    ok(onRoad/nOn<0.6,'and the carriageway is FLAT where it crosses the range — mean '+
+       (onRoad/nOn).toFixed(2)+' m along z 34 against '+(offRoad/nOff).toFixed(2)+
+       ' m twenty-six metres off it');
+    ok(offRoad/nOff>2,'while the ground beside it is not, so the corridor is a cutting and not a '+
+       'flattened world'); }
+
+  /* 8. THE TREES STAND ON IT. Every tree used to be placed at y 0 because the ground out there WAS
+        y 0; the ski field's nine beech sit at r 74-92, which the range now occupies. */
+  { X.setSeed(20260828); X.boot({biome:'skifield'});
+    /* FOUND BY NAME, NOT BY SHAPE. The first version looked for "a Group with more than eight
+       children out beyond r0" and measured CLOUDS — groups of spheres at y 41 to 56 — reporting a
+       40.4 m error against terrain that was 22 m below them. It also missed the ski field's beech
+       entirely, because those are not mkTree groups at all but bare stylised clump cones placed at
+       a fixed y 1.2. Both are named now, which is what the retired tussock hills already did. */
+    const stand=[];
+    G.scene.traverse(o=>{ if(o.name!=='tree'&&o.name!=='beech')return;
+      const r=Math.hypot(o.position.x,o.position.z);
+      if(r>T.r0&&r<T.r1)stand.push(o); });
+    ok(stand.length>=8,'the ski field stands trees out on the range ('+stand.length+')');
+    let worst=0, worstAt='';
+    for(const t of stand){
+      const want=X.terrainHeightAt(t.position.x,t.position.z)+(t.name==='beech'?1.2:0);
+      const e=Math.abs(t.position.y-want);
+      if(e>worst){ worst=e; worstAt=t.name+' at r '+Math.hypot(t.position.x,t.position.z).toFixed(0); } }
+    ok(worst<0.01,'and every one sits ON the terrain rather than at y 0 ('+worst.toFixed(4)+
+       ' m worst'+(worst>0.01?', '+worstAt:'')+'; they would otherwise be out by up to 6 m here '+
+       'and 20 m where the range is highest)');
+    /* AND NOTHING IN THE PLAY AREA MOVED, which is the other half: terrainHeightAt returns 0
+       inside r0, so the carpark's six trees — all within r 57 — must still be at y 0 exactly. */
+    X.setSeed(20260828); X.boot({biome:'carpark'});
+    const inner=[];
+    G.scene.traverse(o=>{ if(o.name==='tree')inner.push(o); });
+    ok(inner.length>=6,'the carpark still has its six trees ('+inner.length+')');
+    ok(inner.every(t=>Math.abs(t.position.y)<1e-9),'and every one of them is still at y 0 exactly, '+
+       'because terrainHeightAt is zero inside the annulus');
+    /* AND mkTree's OWN SAMPLING IS TESTED DIRECTLY, because nothing in the game exercises it.
+       Sabotaging mkTree back to y 0 produced NO finding, and that is not a hole in the assertion —
+       it is a fact about the world: every biome's buildTrees plants the same six positions, all
+       within r 57, and the ski field's trees out at r 74-92 are not mkTree groups at all but bare
+       'beech' clump cones. So mkTree's terrain lookup is DEFENSIVE code today. Defensive code that
+       nothing runs is code that rots, so it gets a direct test rather than an implicit one. */
+    { const far=X.mkTree?X.mkTree(150,0,1.0):null;
+      if(ok(!!far,'mkTree is reachable to test on its own')){
+        const want=X.terrainHeightAt(150,0);
+        ok(want>4,'and there is real terrain at the test point ('+want.toFixed(1)+' m)');
+        ok(Math.abs(far.position.y-want)<1e-9,'a tree planted out on the range stands ON it ('+
+           far.position.y.toFixed(3)+' against '+want.toFixed(3)+
+           ') — no biome does this today, which is exactly why it is asserted here');
+        far.parent&&far.parent.remove(far); } } }
+
+  /* 9. DETERMINISM — same rule as the water, the rocks and the snow before it, and the reason is
+        unchanged: a rnd() in here would shift every later seeded draw in the build (TODO 47). */
+  { X.setSeed(101); X.boot({biome:'river'});
+    const a=Float32Array.from(G.terrain.field);
+    X.setSeed(999); X.boot({biome:'river'});
+    const b=G.terrain.field;
+    let same=a.length===b.length;
+    for(let i=0;i<a.length&&same;i++)if(a[i]!==b[i])same=false;
+    ok(same,'the range is identical under two different seeds, so buildTerrain draws no randoms '+
+       'and cannot shift the seeded stream'); }
+
+  /* 10. AND IT DOES NOT SURVIVE A TRIP TO ANOTHER MAP. */
+  ok(X.WORLDHANDLES.indexOf('terrain')>=0&&X.WORLDHANDLES.indexOf('terrainMesh')>=0,
+     'terrain and terrainMesh are in WORLDHANDLES, so a boot replaces the range rather than '+
+     'stacking a second one on it');
+  X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }
+
 
 /* ---- ROCKS: ANGULAR, SETTLED, BEDDED AND DERIVED ----
    Every boulder in the game was a six-segment sphere squashed to scale.y 0.6 — a low-poly ball
@@ -7046,12 +7058,38 @@ C.section('REPLAT P6A: the model-swap seam');
      being 260 a form for a RingGeometry(26,5) where the old flat CircleGeometry(20) cost 20.
      THE CARPARK'S SNOW IS STILL INVISIBLE TO NODE and stays that way: its loop makes three rnd()
      draws per patch INSIDE the guard, so moving it would insert thirty draws into the middle of
-     buildCarpark and relocate every later seeded draw in the map. TODO 112. */
+     buildCarpark and relocate every later seeded draw in the map. TODO 112.
+
+     --- AND THE BIG ONE: THE CONE RING BECAME A HEIGHTFIELD (TERRAIN.md, session 34) ---
+
+     Eric rejected the cones outright. Replacing them moves these numbers more than anything else
+     has, and every part of it is accounted for by a census taken before and after rather than
+     inferred:
+         carpark   +1 BufferGeometry (the terrain), -18 ConeGeometry (the mountains),
+                   -9 SphereGeometry (the tussock hills, which are the FOOTHILLS and got the same
+                   treatment on Eric's instruction).            meshes 1005 -> 979
+         skifield  +1 terrain, -16 cones, and -1 IcosahedronGeometry.  meshes 390 -> 374
+     tris 230528 -> 266588 and 56626 -> 99554: one 384x72 annulus is 54,528 triangles where the
+     cones it replaces were 12,420, and it also carries the ground the nine sphere hills used to.
+
+     THE MISSING SKI-FIELD BOULDER IS NOT A DEFECT AND IS WORTH THE SENTENCE. Deleting a system that
+     made about 120 rnd() draws per biome shifts every later seeded draw (TODO 47), and the ski
+     field's boulder loop SKIPS any rock that lands on the piste. With the stream shifted, one more
+     landed there and was skipped: 13 boulders became 12. That is the loop doing its job.
+
+     AND THE MISSION ANCHORS MOVED, WHICH WAS CHECKED RATHER THAN ASSUMED — a digest changing on 64
+     anchors could mean anything, so they were dumped and compared position by position:
+         61 of 64 unchanged, 3 moved, worst move 2.25 m
+         none outside the +/-52 play box, none below y -0.5
+     Almost everything is a registry placement at a fixed `at`; only the few loose carryables drawn
+     with rnd() moved, and they moved a couple of metres within bounds. Eric's own note on this
+     piece was "this re-pins most vantages - expected", and the baseline was re-pinned from an
+     eleven-run consensus immediately beforehand for exactly this reason. */
   const PRESEAM={
-    carpark :{mesh:'45f8362c7377ca36', col:'1b025c57715cb017', meshes:1005, tris:230528,
+    carpark :{mesh:'4a6fc19b3a4ce578', col:'1b025c57715cb017', meshes:979, tris:266588,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'82f217becef3eddd', col:'fc06ef03250ea1ed', meshes:390, tris:56626,
+    skifield:{mesh:'a491ca9ea6f3fc40', col:'fc06ef03250ea1ed', meshes:374, tris:99554,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };
@@ -7265,7 +7303,7 @@ C.section('REPLAT P6A: the model-swap seam');
       const md=o=>crypto.createHash('md5').update(JSON.stringify(o)).digest('hex').slice(0,16);
       return {n:rows.length, inter:md(rows), hints:md(hints), hn:hints.length};
     };
-    const WANT={carpark :{n:65, inter:'4a9acee400d03854', hn:9, hints:'6e9458ae1276c86f'},
+    const WANT={carpark :{n:65, inter:'50b3ca201d910e5d', hn:9, hints:'6e9458ae1276c86f'},
                 skifield:{n:12, inter:'d468e22d35759485', hn:4, hints:'1383d48400f14029'}};
     for(const b of ['carpark','skifield']){
       const r=digest(b), w=WANT[b];
