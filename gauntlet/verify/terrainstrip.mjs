@@ -23,31 +23,10 @@ const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..'
 const OUT=path.join(ROOT,'gauntlet/capture');
 const BOARD=path.join(ROOT,'gauntlet/reference/board');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const W=1920, Hh=620;
-
-/* A LONGER LENS, AND THAT IS THE WHOLE TRICK. At head height with the game's 60-degree vertical
-   FOV the range is a thin band behind the carpark — the first attempt came back mostly cars and
-   grass, with the mountains occupying about a tenth of the frame. A 40 m peak at r 150 subtends 15
-   degrees, so at 60 degrees it can never be more than a quarter of the picture however it is aimed.
-   The plates were plainly not shot on a wide lens either.
-   So: narrow the FOV to 26 degrees and lift the camera clear of the props. The range then fills
-   about 60% of the frame, which is what makes a silhouette judgeable. The aim is IDENTICAL across
-   all three recipes — a fair comparison has to be the same camera. */
-const CAM=`KEAGAME.G.camLock={x:0,y:9,z:-46,lx:0,ly:26,lz:160};
-  for(const c of KEAGAME.G.cams){ c.fov=26; c.updateProjectionMatrix(); }`;
-const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true);
-  { const td=document.getElementById('todo'); if(td)td.style.display='none'; }
-  KEAGAME.G.cfOpen=false; KEAGAME.G.paused=false;
-  KEAGAME.G.humans.forEach(h=>{h._park=true;});
-  { const _p=()=>{ try{
-      KEAGAME.G.humans.forEach(h=>{ if(!h._park)return; h.x=46;h.z=46;h.home={x:46,z:46};
-        h.patrol=null; h.state='idle'; h.t=0; if(h.g)h.g.position.set(46,0,46); });
-      const fd=document.getElementById('feed'); if(fd)fd.textContent='';
-      const td=document.getElementById('todo'); if(td)td.style.display='none';
-      KEAGAME.G.time=12.0;
-      const k=KEAGAME.G.keas[0]; k.x=46;k.z=46;k.y=0;k.vy=0;k.stun=0;k.grounded=true;
-    }catch(e){} requestAnimationFrame(_p); }; requestAnimationFrame(_p); }
-  KEAGAME.G.poseLock=true;`;
+/* THE CAMERA, THE STAGING AND THE BANDS ALL COME FROM stripcam.mjs, so the tool that shoots the
+   strip and the tool that scores it cannot disagree about what the strip IS. They used to be
+   copies. */
+import {W, H as Hh, CAM, QUIET, BANDS, GAMEBAND, RECIPENAME} from './stripcam.mjs';
 
 const RECIPES=['a','b','c'];
 const srv=await(async()=>{ ensureBuild(); return serve(); })();
@@ -75,23 +54,13 @@ for(const r of RECIPES){
   await page.screenshot({path:f});
   await browser.close();
   shots.push({r,f,st});
-  console.log('  recipe '+r+'  ('+TERRAINNAME(r)+')   max height '+st.maxH+' m');
+  console.log('  recipe '+r+'  ('+RECIPENAME(r)+')   max height '+st.maxH+' m');
 }
 delete process.env.KEATERRAIN;
 await srv.close();
 
-function TERRAINNAME(r){ return {a:'broad massifs',b:'serrated aretes',c:'glaciated troughs'}[r]||r; }
 
-/* THE COMPARISON IS CROPPED TO THE RIDGE BANDS, and that is not cosmetic. Stacking the whole plate
-   over the whole game frame gave a 1920x1900 image in which the plate was 1281 px tall and the game
-   strip 620 — so fitting it to a window shrank the thing being judged to a third of the picture and
-   put the two skylines a long way apart. Cropping each to the band its mountains actually occupy
-   puts the two ridgelines adjacent at comparable scale, which is what a side-by-side is for.
-   The bands are read off the images rather than guessed: nz_alps_01's massif sits in the middle
-   third, nz_alps_02's ridge a little lower, and the game's range is the upper-middle of its
-   letterbox once the lens is narrowed to 26 degrees. */
-const BANDS={ nz_alps_01:[0.31,0.80], nz_alps_02:[0.44,0.76] };
-const GAMEBAND=[0.28,0.72];
+
 const bandCrop=(src,dst,lo,hi,w)=>{
   const d=execSync(`ffprobe -v error -select_streams v -show_entries stream=width,height `+
     `-of csv=p=0 "${src}"`,{encoding:'utf8'}).trim().split(',').map(Number);
