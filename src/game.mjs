@@ -346,6 +346,21 @@ const MATS={
        gravel is a mis-assignment. It is a poured-concrete footing. NOT iso: concrete_layers_02
        carries the horizontal lines a timber form leaves, and those must stay level. */
     concrete:     {asset:'concrete_layers_02', tileM:2.000, mode:'scan', tint:0.30, iso:false},
+    /* THE NINTH FAMILY (TODO 47b), and the one that was asked for FOUR times before it existed:
+       defineProp's family guard threw on family:'wood' while building the campground, then the
+       river, then the station, then the bridge approach — each time answered with `null`, which is
+       honest and loses information, because `material.family` is what the model pass reads to know
+       what a primitive was standing in for.
+       TIMBER IS THE MOST COMMON SURFACE IN THE GAME. Boardwalk, bridge deck and slats, approach
+       stairs, drafting pens and their gates, the loading race, the woolshed floor, every picnic
+       table and bench, the verandah posts, the ticket window, the lodge deck, the tow beam and
+       every paddock rail — and until now every one of them wore a procedural canvas grain.
+       PAINT, NOT SCAN, for the reason weatherboard is: PAL.wood and PAL.woodD are two DIFFERENT
+       authored colours sharing one family, and paint mode keeps each object's own colour while
+       taking grain and relief from the set. A scan would flatten both to the photograph's albedo.
+       NOT iso: planks run along their length, so per-tile rotation would scramble the grain — the
+       same reason concrete's form lines must stay level. */
+    timber:       {asset:'weathered_planks',   tileM:2.000, mode:'paint', iso:false},
   },
 };
 /* AND IT REPORTS WHAT IT IGNORED. Unknown keys are skipped by design — a leaf merge that invented
@@ -1008,6 +1023,12 @@ const PAL={ // v6 (2026-08-26): colours lifted from the real country — Lindis 
      that belongs to one object cannot be borrowed to speak for another object's material. It was a
      `const WOOL` inside the builder, which is exactly how it ended up wearing no family at all. */
   woolshed:0x8E3A2A,
+  /* LEATHER, and it exists for exactly the reason the anchor block's concrete hex does. A boot and
+     a belt were both drawn in PAL.woodD, which was harmless while woodD had no family and became a
+     mis-assignment the moment TODO 47b gave it one: a tramping boot in sawn-plank grain. Found by
+     reading all 97 call sites of the two timber colours BEFORE registering them, which is the care
+     TODO 47b asked for in its own text. */
+  leather:0x6B4A33,
   skin:0xE0AC7E, skin2:0xC08A5C, hiviz:0xFF6A1A, ranger:0x24513B, red:0xC03A30,
   blue:0x3E6484, green:0x3F7A44, white:0xF2F1EC, dark:0x2E3238, yellow:0xE9B93A,
   cone:0xFF5A14, rubber:0x232629, metal:0xAEB3B9, paper:0xE9E1CB, cash:0x76A263,
@@ -1100,7 +1121,15 @@ function detailTex(kind){ // subtle multiply-maps: texture without killing the t
 }
 const MAPKIND={};
 function _mk(c,k){ MAPKIND[c]=k; }
-_mk(PAL.wood,'grain'); _mk(PAL.woodD,'grain'); _mk(0x9C7B52,'grain'); _mk(0x7E6644,'grain'); _mk(0x6E5334,'grain');
+/* TODO 47b TOOK FOUR COLOURS OUT OF THIS LINE. PAL.wood, PAL.woodD, 0x9C7B52 (the village
+   verandah deck) and the duplicate 0x7E6644 (which IS PAL.wood, registered twice) are all milled
+   timber and belong to the scanned `timber` family now. A colour in BOTH registries takes whichever
+   branch mat() tested first, which is a coin toss dressed as a decision — the gauntlet asserts
+   against it, and caught exactly this when the family landed.
+   0x6E5334 STAYS, and it is the reason this needed reading rather than a search-and-replace: it is
+   a TREE TRUNK and a walking-pole knob. Bark is not sawn plank, and a trunk in plank grain would
+   have been the boot-and-belt mistake a second time. */
+_mk(0x6E5334,'grain');
 _mk(PAL.rock,'speckle'); _mk(PAL.rockD,'speckle'); _mk(0x7A7468,'speckle');
 _mk(PAL.metal,'brushed');
 _mk(PAL.white,'panel'); _mk(0x596068,'panel');
@@ -1164,6 +1193,8 @@ _mf(PAL.tarmac,'asphalt');   _mf(PAL.road,'asphalt');
 _mf(PAL.gravel,'gravel');    _mf(0x9AA0A6,'gravel');    _mf(0x8E8B84,'gravel');
 _mf(PAL.hutRoof,'corrugate');_mf(0x4A545C,'corrugate');
 _mf(PAL.woolshed,'corrugate');
+_mf(PAL.wood,'timber');      _mf(PAL.woodD,'timber');
+_mf(0x9C7B52,'timber');      // the village verandah deck, which sits beside a woodD door
 _mf(0x8C8F93,'brick');
 _mf(0xA9A7A2,'concrete');
 _mf(PAL.snow,'snow');        _mf(PAL.snowShade,'snow');
@@ -6582,7 +6613,7 @@ const PB={
   gopro(g){ rbox(0.16,0.12,0.1,0.02,PAL.dark,0,0,0,g); const lens=cyl(0.035,0.035,0.035,PAL.glass,0.035,0.02,0.055,g,10); lens.rotation.x=1.57; cyl(0.042,0.042,0.02,0x596068,0.035,0.02,0.05,g,10).rotation.x=1.57; },
   can(g){ cyl(0.07,0.07,0.2,PAL.metal,0,0,0,g,12); cyl(0.072,0.072,0.012,0x9AA2AC,0,0.1,0,g,12); const tab=new THREE.Mesh(new THREE.TorusGeometry(0.02,0.006,5,8),mat(0x9AA2AC)); tab.position.set(0,0.11,0.02); tab.rotation.x=1.57; g.add(tab);
     box(0.1,0.07,0.002,PAL.red,0,0,0.071,g,{noshadow:true}); },
-  boot(g){ rbox(0.17,0.15,0.32,0.045,PAL.woodD,0,0.02,0,g); rbox(0.18,0.06,0.14,0.02,PAL.dark,0,-0.055,0.15,g);
+  boot(g){ rbox(0.17,0.15,0.32,0.045,PAL.leather,0,0.02,0,g); rbox(0.18,0.06,0.14,0.02,PAL.dark,0,-0.055,0.15,g);
     for(let i=0;i<3;i++)box(0.11,0.012,0.012,0xE8E2D2,0,0.06-i*0.035,0.13-i*0.02,g,{noshadow:true}); },
   rubbish(g){ const a=sph(0.085,PAL.paper,0,0,0,g,7); a.scale.set(1,0.7,1); const b=sph(0.055,0xE2D8BE,0.06,0.04,0.03,g,6); b.scale.set(1,0.75,0.9); },
   branch(g){ cyl(0.03,0.05,0.7,PAL.woodD,0,0,0,g,7).rotation.z=1.5; cyl(0.015,0.02,0.22,PAL.woodD,0.15,0.1,0,g,5).rotation.z=0.7; },
@@ -8492,7 +8523,7 @@ class Human{
     this.legL=mkLeg(-0.13); this.legR=mkLeg(0.13);
     const torso=this.torso=new THREE.Group(); torso.position.set(0,1.05,0); g.add(torso);
     const tc=capsule(0.3,0.78,color,0,0,0,torso); hull(tc.children[0],0.05);
-    rbox(0.5,0.09,0.34,0.04,PAL.woodD,0,-0.3,0,torso,{noshadow:true}); // belt
+    rbox(0.5,0.09,0.34,0.04,PAL.leather,0,-0.3,0,torso,{noshadow:true}); // belt — LEATHER, see PAL
     const mkArm=(sx)=>{ const A=new THREE.Group(); A.position.set(sx,1.34,0); g.add(A);
       capsule(0.075,0.52,color,0,-0.26,0,A);
       sph(0.075,this.skin||PAL.skin,0,-0.56,0,A,8); return A; };

@@ -4281,6 +4281,47 @@ C.section('REPLAT P2: sky and sun');
    against the millimetres written in assets/LICENCES.md — two independent records of the same
    fact, on purpose, because "no asset lands without its licence line" is only worth something if
    the line and the code cannot drift apart. */
+/* ---- EVERY TODO THE CODE CITES MUST STILL EXIST ----
+
+   WHY THIS EXISTS, and it is not a tidiness check. On 2026-09-07 a scripted edit of TODO.md — mine,
+   a bad splice that recomputed a slice it had already truncated — silently deleted EVERY ENTRY
+   AFTER 88: eighteen entries recoverable from git, and seven filed minutes earlier in the same
+   session that were not in any commit. Two commits shipped with the file in that state and nothing
+   noticed, because nothing was watching. TODO.md is the only record of a great deal of measured
+   reasoning; three hundred and twenty lines of it went missing between two green gates.
+
+   THE CHECK IS SELF-MAINTAINING, which is why it is this check and not a line count. The source and
+   the batteries cite TODO numbers in their comments constantly — forty-five distinct ones — because
+   that is how a decision in the code points at the reasoning behind it. Every one of those
+   references must resolve to a real heading. A truncation, a renumbering, or a deleted entry
+   somebody was still relying on all break it, and adding a new entry cannot: a citation is only
+   written when the entry it names already exists.
+   IT DOES NOT ASSERT THE REVERSE. An entry nothing cites is perfectly normal — most of the list is
+   unshipped work that no code mentions yet. */
+{
+  const fs=require('fs'), path=require('path');
+  const ROOT=path.resolve(__dirname,'..','..');
+  const todo=fs.readFileSync(path.join(ROOT,'TODO.md'),'utf8');
+  const heads=new Set([...todo.matchAll(/^### ([0-9]+[a-z]?)\./gm)].map(m=>m[1]));
+  const FILES=['src/game.mjs','src/materials.mjs','src/sky.mjs','src/post.mjs','src/bird.mjs',
+    'src/models.mjs','audits/2026-08-28/harness-everything.js','gauntlet/verify/walkable.js',
+    'gauntlet/verify/lum.mjs','gauntlet/verify/sunangle.mjs','gauntlet/verify/repin.mjs',
+    'gauntlet/verify/capture.mjs'];
+  const cited=new Map();
+  for(const f of FILES){ const p2=path.join(ROOT,f); if(!fs.existsSync(p2))continue;
+    const src=fs.readFileSync(p2,'utf8');
+    for(const m of src.matchAll(/TODO ([0-9]+[a-z]?)/g)){
+      if(!cited.has(m[1]))cited.set(m[1],new Set());
+      cited.get(m[1]).add(f); } }
+  ok(heads.size>100,'TODO.md carries its list of entries ('+heads.size+' headings)');
+  ok(cited.size>30,'and the source cites a lot of them, which is what makes this checkable ('+
+     cited.size+' distinct TODOs referenced)');
+  const missing=[...cited.keys()].filter(n=>!heads.has(n)).sort((a,b)=>parseInt(a)-parseInt(b));
+  ok(missing.length===0,'EVERY TODO THE CODE CITES RESOLVES TO A REAL ENTRY — a citation with no '+
+     'entry means the list lost something somebody is still relying on'+
+     (missing.length?': '+missing.map(n=>n+' (cited by '+[...cited.get(n)].join(', ')+')').join('; '):''));
+}
+
 C.section('REPLAT P3: scanned materials');
 {
   const MATS=X.MATS, FAM=MATS.families, NAMES=Object.keys(FAM);
@@ -4298,6 +4339,59 @@ C.section('REPLAT P3: scanned materials');
     ok(NAMES.length===listed,'the recipe and the licence ledger agree on the family count ('+
        NAMES.length+' in MATS, '+listed+' in LICENCES.md: '+NAMES.join(', ')+')');
     ok(NAMES.length>=7,'and it is at least REPLAT P3 six plus snow ('+NAMES.length+')'); }
+
+  /* ---- TODO 47b: THE TIMBER FAMILY, AND THE COLOUR AUDIT THAT HAD TO COME FIRST ----
+     Four maps in a row asked defineProp for family:'wood' and four times the answer was `null`.
+     Timber is the most common surface in the game — 651 meshes across the six maps — and every one
+     of them wore a procedural canvas grain until this landed. */
+  { ok(FAM.timber&&FAM.timber.mode==='paint','TIMBER IS A PAINT FAMILY, like weatherboard: '+
+       'PAL.wood and PAL.woodD are two different authored colours sharing one family, and paint '+
+       'mode keeps each object\'s own colour while taking grain and relief from the set');
+    ok(FAM.timber&&FAM.timber.iso===false,'and it is NOT iso — planks run along their length, so '+
+       'per-tile rotation would scramble the grain, the same reason concrete\'s form lines '+
+       'must stay level');
+    ok(X.MATFAM[X.PAL.wood]==='timber'&&X.MATFAM[X.PAL.woodD]==='timber',
+       'both timber colours are registered to it');
+
+    /* THE COLOUR AUDIT. TODO 47b's own text warned that this "is a colour-as-a-key change and
+       therefore wants the same care the lodge chimney needed when it was found wearing driveway
+       gravel". Reading all 97 call sites turned up two that were NOT timber: a tramping boot and
+       a human's belt, both drawn in PAL.woodD. Both LEATHER. Harmless while woodD had no family;
+       a boot in sawn-plank grain the moment it had one. */
+    ok(X.PAL.leather!==undefined&&X.MATFAM[X.PAL.leather]===undefined,
+       'LEATHER HAS A HEX OF ITS OWN AND NO FAMILY — the boot and the belt are not planks, and a '+
+       'colour that belongs to one object must not speak for another\'s material');
+    ok(X.PAL.leather!==X.PAL.wood&&X.PAL.leather!==X.PAL.woodD,
+       'and it is a different colour from both, or the split would be cosmetic ('+
+       '0x'+X.PAL.leather.toString(16).toUpperCase()+')');
+    /* AND THE TREE TRUNK IS STILL NOT TIMBER, which is the other half of the same judgement and
+       the reason this needed reading rather than a search-and-replace: 0x6E5334 is a trunk and a
+       walking-pole knob. Bark is not sawn plank. */
+    ok(X.MATFAM[0x6E5334]===undefined,'and the tree-trunk colour is NOT in the timber family — '+
+       'bark is not sawn plank, and a trunk in plank grain would have been the boot mistake twice');
+
+    /* NO COLOUR IN BOTH REGISTRIES. This is a standing assertion elsewhere in the file and it
+       CAUGHT this piece: PAL.wood and PAL.woodD were both in MAPKIND ('grain') and, for one run,
+       in MATFAM as well — and a colour in both takes whichever branch mat() tested first, which
+       is a coin toss dressed as a decision. Repeated here scoped to timber so the finding names
+       the piece that would cause it. */
+    for(const c of [X.PAL.wood,X.PAL.woodD,0x9C7B52])
+      ok(X.MAPKIND[c]===undefined,'0x'+c.toString(16).toUpperCase()+
+         ' left MAPKIND when it joined the timber family, so mat() has one branch to take');
+
+    /* AND IT IS ACTUALLY ON THE WORLD, per map, measured. A family nothing wears is a family that
+       does not exist. */
+    { const seen={};
+      for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b}); let n=0;
+        G.scene.traverse(o=>{ const m=o.material;
+          if(o.isMesh&&m&&m.userData&&m.userData.matFamily==='timber')n++; });
+        seen[b]=n; }
+      const tot=Object.values(seen).reduce((a,b)=>a+b,0);
+      ok(Object.keys(seen).every(b=>seen[b]>0),'every map in the tour wears timber ('+
+         Object.keys(seen).map(b=>b+' '+seen[b]).join(', ')+')');
+      ok(tot>500,'and it is the most common surface in the game — '+tot+
+         ' meshes, which is why it was worth a family'); }
+    X.boot({biome:'carpark'}); tick(4); }
 
   // ---- EVERY FAMILY RESOLVES A REAL TEXTURE SET ----
   /* The strongest claim a headless battery can make about a file it cannot decode: the file is
@@ -6225,12 +6319,31 @@ C.section('REPLAT P6A: the model-swap seam');
   const ROOT=path.resolve(__dirname,'..','..');
   const THREE=H.THREE||require('three');
 
-  /* the pre-seam readings, one line per biome, taken on the commit before the registry landed */
+  /* the pre-seam readings, one line per biome, taken on the commit before the registry landed.
+
+     THE MESH HASH WAS RE-TAKEN ONCE, ON 2026-09-07 (TODO 47b), AND HERE IS EXACTLY WHY — because a
+     pinned digest that gets quietly refreshed whenever it goes red is worth nothing.
+     Registering the `timber` material family moved these two hashes. The first thing checked was
+     whether the FAMILY did it, and it did not: with the two _mf rows removed the carpark's 1029
+     digest lines are byte-identical, because matDress pre-install restores the authored colour and
+     roughness, and paint-mode families take no breakup. Zero lines differed.
+     What moved them was the LEATHER SPLIT in the same piece. Auditing all 97 call sites of the
+     timber colours before registering them turned up a tramping boot and a human's belt drawn in
+     PAL.woodD — leather, which would have rendered in sawn-plank grain — so both went to a
+     PAL.leather hex of their own. Diffed line by line, the change is:
+         carpark   2 meshes, at (27.30, 0.12, 0.80) and (27.70, 0.12, 0.90)
+         skifield  1 mesh,   at (-13.20, 0.22, 17.70)
+         all three: MeshStandardMaterial colour 1d1208 -> 251108, roughness unchanged at 0.820,
+                    geometry unchanged, transform unchanged, shadow flags unchanged.
+     Three boots changed colour. Nothing moved, nothing was added, nothing was removed — the mesh
+     COUNT and the triangle count below are untouched, as is every collider hash, and those are the
+     numbers that carry P6A's actual claim. The old hashes were 1c53ebbf15dcb55c (carpark) and
+     28d3d95a94deefcc (skifield); they are recorded here so this line can be audited backwards. */
   const PRESEAM={
-    carpark :{mesh:'1c53ebbf15dcb55c', col:'1b025c57715cb017', meshes:1029, tris:223592,
+    carpark :{mesh:'63098c529fcf2be8', col:'1b025c57715cb017', meshes:1029, tris:223592,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:6},
-    skifield:{mesh:'28d3d95a94deefcc', col:'fc06ef03250ea1ed', meshes:364, tris:43014,
+    skifield:{mesh:'e0fed85dba572881', col:'fc06ef03250ea1ed', meshes:364, tris:43014,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:6},
   };
@@ -7442,25 +7555,26 @@ C.section('THE HIGH STATION - the last map, the drafting cascade, and riding a s
        saw the back wall (16 x 4.4) and missed both END walls (0.22 wide, 9.0 deep, 4.4 high),
        so a sabotage that orphaned all four walls was reported as orphaning two. A panel does not
        care which axis it is thin on. */
-    /* MILLED TIMBER IS THE ONE ALLOWED EXCEPTION, and it is named rather than tolerated. The
-       shed's floor is a 16 x 9 m panel and it carries no family because MATFAM has no wood row —
-       TODO 47b, now asked for by four maps in a row. When 47b lands this exception goes red on the
-       next run, which is the point: it is a reminder with a date on it, not a permanent hole. */
-    /* MATCHED BY COLOUR, because a family-less material records no authored hex — mat() only
-       stores matBase for materials a family CLAIMED, which is precisely the set this is looking
-       outside of. So the comparison is against the same sRGB->linear conversion mat() did. */
-    const lin=h=>new H.THREE.Color(h).convertSRGBToLinear().getHexString();
-    const TIMBER=new Set([lin(X.PAL.wood),lin(X.PAL.woodD)]);
+    /* THE TIMBER EXCEPTION IS GONE, AND THIS ASSERTION IS WHAT REMOVED IT. The previous version
+       allowed exactly one thing: a large family-less panel whose colour was milled timber, because
+       MATFAM had no wood row. It was written to go RED the moment TODO 47b landed — "a reminder
+       with a date on it, not a permanent hole" — and on the run that registered the timber family
+       it did exactly that, reporting 0 where it demanded more than 0. So the exception comes out,
+       and what is left is the stronger, general claim: NOTHING large on this shed is family-less.
+       AREA IS THE TWO LARGEST DIMENSIONS, not width x height. Measured the naive way this test saw
+       the back wall (16 x 4.4) and missed both END walls (0.22 wide, 9.0 deep, 4.4 high), so a
+       sabotage that orphaned all four walls was reported as orphaning two. A panel does not care
+       which axis it is thin on. */
     const orphan=(byFam['(none)']||[]).filter(o=>{ const g=o.geometry.parameters; if(!g)return false;
       const d=[g.width,g.height,g.depth].sort((x,y)=>y-x);
       return d[0]*d[1]>8&&d[2]<0.4; });
-    const painted=orphan.filter(o=>!TIMBER.has(o.material.color.getHexString()));
-    ok(painted.length===0,'and no large PAINTED panel on the shed is left without a family ('+
-       painted.length+' of '+orphan.length+' family-less panels, the rest milled timber awaiting '+
-       'TODO 47b)');
-    ok(orphan.length>0&&orphan.every(o=>TIMBER.has(o.material.color.getHexString())),
-       'every family-less panel it does have is timber, so the exception is exactly TODO 47b and '+
-       'not a second defect hiding behind it ('+orphan.length+')'); }
+    ok(orphan.length===0,'and NO large panel on the shed is family-less at all — the timber '+
+       'exception this assertion used to allow was closed by TODO 47b, on the run that landed it ('+
+       orphan.length+')');
+    /* AND ITS TIMBER IS ACTUALLY ON THE NEW FAMILY, which is the other half of the claim: closing
+       the exception would also "pass" if the floor had simply stopped existing. */
+    ok((byFam['timber']||[]).length>=3,'and its floor, stand board and smoko step are on the '+
+       'TIMBER family now ('+(byFam['timber']||[]).length+' meshes)'); }
 
   /* THE LIST, over ALL SIX MAPS and both modes — which is every map the tour has. */
   { const listOf=(biome,mode)=>{ X.boot({biome}); X.startGame(mode); return G.missions.map(m=>m.id); };

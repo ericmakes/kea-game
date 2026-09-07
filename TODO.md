@@ -1916,6 +1916,448 @@ The diagnosis has now held from every direction it has been tested from. It is t
 instrument fix outstanding: it is costing real re-pin time (eleven sweeps instead of five this
 session) and it permanently muddies two frames in a forty-frame set.
 
+### 89. 27_travel_card HAS NO camLock, SO ITS CAMERA IS A FUNCTION OF THE FRAME-TIME HISTORY
+Filed 2026-09-06, session 31, as the answer to "should 27_travel_card join the pinned set". It
+should, and it cannot yet, and this is the one line in the way.
+It is the ONLY shot in the sweep that does not set `G.camLock`, so it is the only one whose camera
+is whatever the game leaves it at. Its stage pins `G.travel.t` and that pin WORKS — probed across
+six runs, `t` is exactly 0.85 and `u` exactly 0.5 every time. The camera still lands 2.8 m apart in
+y (20.238 to 23.068), because both stages that place it are RELATIVE:
+    the follow cam   cam.position += (target - cam.position) * (1 - 0.0018^dt)
+    the travel blend cam.position = lerp(cam.position, anchor, e)
+so the resting position depends on the entire dt sequence, and the anchor it is easing from is the
+flyover at (7, 26, 34) — twenty-five metres up. Ten pairwise distances over five sweeps: 736, 3259,
+3954, 26913, 30236, 30921, 96949, 102834, 103658, 103863. The worst pair moves a fifth of the frame.
+THE FIX IS TO GIVE IT A camLock, like all twenty-eight pinned vantages have. Pick the framing from
+the state it is MEANT to photograph — the beat at u=0.5, which is what the stage already asks for —
+read the camera back out of the page once, and write it in as a literal. Fixing TODO 88 alone would
+make `u` exact but would NOT fix this, because the follow-cam smoother is history-dependent
+whatever the clock does; the camLock is the part that actually pins it.
+THEN PIN IT. It is the only frame in the set that photographs the travel beat and the biome label,
+which is the tour chassis's own UI, and the card is already deterministic — it is raised from
+`updateUI` off `G.travel.phase` and the pin holds the phase indefinitely.
+AND WHILE THAT IS OPEN: 26_tour_brochure is ready to be pinned TODAY. All ten pairwise distances
+across five independent sweeps are exactly 0 px — it is a DOM screen with no 3D world in it. Both
+have been named as unpinned every run for five sessions; adding a vantage is Eric's call.
+
+### 90. THE BIRD IS PARKED — WHAT THE TAIL INVESTIGATION FOUND BEFORE IT WAS
+Filed 2026-09-06, session 32, when Eric parked the bird pending externally-sourced models. The P5e
+tail work is stashed (`git stash list` — "PARKED P5e bird work"), not deleted, and the tree is back
+at the certified tip with the model off by default. Three findings are worth more than the code and
+are recorded here so nobody pays for them twice.
+
+**1. THE CREST DELETION DID NOT TAKE THE VANE GEOMETRY. P5d IS EXONERATED.** P5E.md section 4 asks
+which of missing/hidden/culled the tail is, and says a culled vane is "a bug in P5d". It is not.
+The tail-feather geometry is present and IDENTICAL through the whole derivation chain — **594
+triangles** entirely on `TailEnd_LongFeather` bones in `rockatoo.glb`, `kea_base.glb` AND
+`kea_bill.glb`. The crest pass took the mesh from 16,989 to 4,927 triangles and left every one of
+those 594 alone. Measured by parsing the GLB directly, and confirmed at runtime: the strip removes
+exactly 594 faces.
+
+**2. THE ASSET'S TAIL IS GENUINELY THREE BARE RODS, so a replacement IS the right call.** Per
+feather bone, the geometry is 3 clusters of length 5.50 with thickness/width 0.91 (round rods) plus
+27 flat zero-thickness cards of width 1.49 that are too small to read. Photographed with the strip
+disabled, it is exactly what Eric described: three bare wires and no vane. So the parked work's
+INTENT was right even though its premise was wrong.
+
+**3. THE PARKED REPLACEMENT DOES NOT RENDER, AND THE NUMBER SAYS WHY.** Its five vanes measure
+0.09 x 0.15 x 0.17 m and sit at z 0.194..0.365 against a body whose rear edge is z 0.383 — **the
+tip lands 17 mm INSIDE the bird**, so the whole 0.188 m is spent crossing the body it starts in.
+That is why three "different" tail profiles photographed identically to each other and to no tail.
+A measured sweep of length/drop, if it is ever wanted: 25u/0.50 gives -17 mm, 40u/0.26 gives
++94 mm, 50u/0.16 gives +156 mm past the rear edge. The plate wants a closed near-horizontal tail;
++156 mm on this 0.525 m body is the band that reads.
+
+**AND A TRAP FOR WHOEVER RESUMES IT: THE TAIL IS REMOVED TWICE.** The index strip in `keaRegions`
+deletes the faces AND the fragment shader discards on `vKeaQl>0.5`. Turning off only the strip
+leaves a control that still photographs a tailless bird — a control that quietly agrees with the
+thing it is controlling for. The stash gates both on one knob (`plume.tailStrip`).
+
+### 41. campground-biome  — DONE session 32
+The third map, and the first of the four that finish the tour. CAMPGROUND.md is the brief.
+ADDITIVE, and the P6A instrument PROVED it rather than the piece asserting it: the carpark and ski
+field mesh digests and collider digests are byte-identical to the values measured before the prop
+seam landed, so nothing graduated and nothing moved. Four existing vantages spot-shot at 0.99999 /
+0.9818 / 0.99983 / 0.99978 — 05's is that vantage's own churn, not this piece.
+WHAT IT IS: a gravel access track with six numbered sites hung off it, two of them occupied; a cook
+shelter, an ablutions block, a tap stand, a rat-proof bin corral, and an information board with the
+honesty box that is the map's signature target. Seventeen registry placements, three campers, ten
+jobs on two star pages plus a coop badge and a finale.
+THE ROAD IS A TRACK AND NOT THE LOOP THE BRIEF IMAGINED, because grassCuts gives a biome FOUR boxes
+and says a fifth is a new uniform. An oval spends the whole budget on itself. The four cuts are the
+track, the shelter pad, the ablutions pad and the campervan hardstand — and the sites keep their
+grass on purpose, because a tent standing in mown pasture is the picture and a tent on a bald disc
+is not.
+EVERY PROP IS A REGISTRY ENTRY, which is the placeholder note the brief promised: there is no list
+of "things to model later" anywhere in the tree, because `PROPS.ALL` filtered by biome IS the list,
+and the battery asserts it can be read that way.
+THREE FIRST PINS — 31_camp_shelter, 32_camp_sites, 33_camp_gate — shot and LEFT FLAGGED per the ski
+field's precedent. Nothing in the existing 28 was re-pinned.
+STILL TO DO UP THERE: no signature act (the ski field's 40b verbs are still unbuilt and this map was
+deliberately built out of verbs that already work), and no graduation of anything.
+
+### 41b. THE TOUR'S OWN ASSERTIONS WERE COUNTING, NOT MEASURING  — FIXED session 32
+Landing a third biome turned six assertions red and not one of them because anything leaked. Every
+one was a LITERAL restating a fact about the world that the world was always going to change:
+`length===2` for the biome registry, `const STUB=2` under a comment defining STUB as "the first pin
+with a price and no builder", `4*S.KINDS.length` for the star total, `T.TABLE[3]` for "a locked
+map", `planes.length===2` for the terrain planes, and five cleanup checks reading `length===2`.
+ALL SIX NOW DERIVE, and two got STRONGER for it: the biome count asks that the registered set is
+exactly a PREFIX of the tour table, which also catches maps built out of order and which the old
+literal could not; and the terrain-plane count is one per registered map. Proven by sabotage —
+registering the station without the village goes red on both.
+AND SABOTAGE FOUND A REAL GAP IN THE NEW WORK: the cross-map mission-id check compared one-player
+lists only, so a deliberate collision on `tarp` came back green, because `tarp` is a COOP mission
+that only exists in mode 2. Half the ids on every map were outside the check. Both modes now.
+
+### 91. camp_van IS A PLACEHOLDER WHITE BOX — REFINE OR REPLACE IN THE MODEL PASS
+Filed 2026-09-06, session 32, by Eric when he judged the campground first pins. Deferred
+deliberately, not overlooked: the campground passed with it in frame.
+WHAT IT IS: `defineProp('camp_van')` — a plain white rbox shell with a black skirt, four wheels, a
+window band, and an awning made of one 2.5 x 4.0 m plank on a rail. It reads as a bread loaf.
+WHY IT WAS BUILT THAT WAY: the piece landed while the bird was parked pending externally-sourced
+models, so nothing that needs an asset could be sourced, and P6A's registry exists precisely so a
+placeholder can be swapped by editing one row. It is `source:'primitive'`, biome `campground`, with
+its collider and its `roof` / `door` / `awning` anchors already declared.
+IT IS DELIBERATELY PLAIN, and that part should survive a refinement: it carries NO wipers, NO
+mirrors and NO door seal, because those are the CARPARK campervan's mission anchors and a prop name
+is a detector in this engine. Whatever replaces it must not acquire them.
+THE FIND IT: `PROPS.ALL` filtered to biome 'campground' IS the model-pass work list — the battery
+asserts it can be read that way — so this row needs no separate hunting.
+THE AWNING IS THE WEAKEST PART and is worth a look even without a model: fabric sag on a rail is
+two triangles and a sine, and the plank is what makes the whole site read as a toy.
+
+### 92. THE RIVER-FLAT GRASS MAY READ AS MOWN LAWN — REVISIT bare AGAINST THE nz_ PLATES
+Filed 2026-09-06, session 32, by Eric on the campground first pins.
+THE NUMBER: `GRASS.biomes.campground.bare = 0.10`, against the carpark's 0.18 and the ski field's
+0.34. `bare` is the lever that decides how much ground has no blade on it, so 0.10 is the lushest
+ground in the tour by a wide margin — and the intent was "somebody grazes this", which is not the
+same as "somebody mows this". Photographed at 31/32/33 it may have crossed into lawn.
+WHY IT WAS SET THERE AND WHAT MUST NOT BE UNDONE: the heights (0.18-0.42) sit deliberately inside
+the band the carpark's were LOCKED at against the SUBJECT FLOORS — the P4b measurement where
+h 0.30-0.78 buried the bird and put three classifiers red at once (03_kea_plate 465 against a floor
+of 1600). Raising `bare` is safe; raising HEIGHT to compensate is the move that costs the bird.
+DO IT AGAINST THE PLATES, NOT BY EYE: the nz_ wall is what governs the country, and a grazed river
+flat in those photographs is patchy, tufted and shows dirt between clumps — measure the bare
+fraction off a plate rather than picking a number that looks better in one frame.
+AND IT IS A RE-PIN: 31, 32 and 33 are all grass-dominated, so any change here re-pins all three.
+
+### 93. THE SHELTER'S CONCRETE PAD IS BRIGHT IN FRAME — FIX WITH WEAR, NOT A HAND TINT
+Filed 2026-09-06, session 32, by Eric on 31_camp_shelter, WITH the method specified.
+THE PROBLEM: the cook shelter's pad is the `concrete` P3 scanned family doing exactly what it does,
+and against this map's green pasture and muted track it is the brightest thing in the frame — it
+pulls the eye off the structure standing on it.
+ERIC'S CONSTRAINT, AND IT IS THE WHOLE POINT OF THE ENTRY: **fix it with WEAR AND EDGE STAINING,
+not with a hand tint.** Darkening the material is a lie that spreads — `concrete` is a shared family
+and the ski field's tow-top footing wears it too, so tinting it here either tints that or forks the
+family. What a real campground slab has is a scuffed centre where everybody walks, dirt washed
+against its edges, and moss in the corners. G.wear already exists in the carpark and does exactly
+this: a circle of the surface's own colour, darkened, laid on top and REGISTERED as a record.
+SO THE SHAPE OF THE FIX is a wear pass on the pad, reusing the carpark's own idiom, not a colour
+edit. Cheaper than it sounds and it is the same tool.
+
+### 94. THE GRASS CUT BUDGET IS EIGHT NOW, AND IT IS ONE CONSTANT  — DONE session 32
+VILLAGE.md step 0, shipped before any village geometry. `grassCuts(biome)` returned exactly FOUR
+boxes because the shader carried four hand-written uniforms and four hand-written multiplies, and
+the battery pinned `cuts.length===4`. That limit is why the campground came out a straight gravel
+track instead of the loop road its brief imagined: an oval cannot be cut with boxes, and two long
+sides plus two ends is the whole budget before a building is clear of grass. A village street
+layout needs seven before anything optional.
+NOW: `GRASS.cuts=8`, a `vec4 uCuts[GRASS_CUTS]` array, and one loop. The token is SUBSTITUTED into
+the GLSL rather than declared as a const, because an array size must be a compile-time literal in
+GLSL ES — and `grassSub` throws if the token survives, so a failed substitution says what happened
+instead of dying inside a shader compile. `grassPad` pads every biome's list to the budget, so a
+short list is an explicit pad rather than a truncation waiting to happen. Raising it again is one
+edit.
+AND IT CLOSED A HOLE THE CAMPGROUND OPENED: the cut assertion looped over a hardcoded
+['carpark','skifield'], so the campground's four boxes had never been checked once and the
+village's would not have been either. It loops every registered biome now.
+PROVED A NO-OP: nine batteries green, and all 31 vantages shot. Two flagged — 13_idle_preen and
+17_flight — and BOTH were cleared by measurement rather than argument: 17 came back 0.9997 on a
+reshoot, and 13 was shot three times on the step-0 build (0.9639/0.9638/0.9639), three times on the
+PRE-step-0 build (0.9994/0.9997/0.9631) and three more times on step 0 (0.9997/0.9992/0.9639). Both
+builds produce both states, identically. That is TODO 88 and not this piece.
+
+### 42. village-biome  — DONE session 32
+The fourth map. VILLAGE.md is the brief; its step 0 (the grass cut budget, TODO 94) shipped first
+and separately. An alpine village main street: one sealed road with a dashed centre line, a kerbed
+footpath each side, three abutting shop units under a continuous verandah, and a great deal of
+glass. Fourteen registry placements, three shopkeepers, ten jobs on two star pages plus a coop
+badge and a finale.
+THE VERANDAH IS THE SIGNATURE STRUCTURE and it is a 26 m ROOF collider, not a box — a climbable
+ridge running the whole shop row, which nothing else in the tour has. The battery drives it at both
+ends as well as the middle, because a 26 m collider that only works in the middle is a 2 m collider.
+THE FIRST NEW MAP THAT DECLARES ROAD LANES. The carpark declares them; the ski field and campground
+declare none. Asserted in both directions: 6 cars in 40 s on the village street, all of them inside
+the sealed width in exactly two lanes, and still zero on the campground and the ski field.
+ADDITIVE. The P6A digests answer it — three maps' mesh and collider digests unchanged.
+THREE FIRST PINS — 34_village_street, 35_village_glass, 36_village_bakery — shot and LEFT FLAGGED.
+Baseline stays at 31.
+
+### 43. THE SHOPFRONT GLASS IS A MATERIAL, AND THE GEOMETRY WAS THE HALF THAT MATTERED
+Eric's call: make the glass a proper material decision, not a pane() reuse, judged against the
+windows in ref_bow_00 and ref_bow_06.
+WHAT THE PLATES ACTUALLY SAY, and it is the opposite of what "reflective window" suggests: the
+windows are DARK — well below the trim and brick around them — the mullions read as a grid AGAINST
+a near-black interior, and the sheen is subtle and does not carry the read. ref_bow_06's garage is
+legible because light falls INTO it.
+THE MATERIAL: `SHOPGLASS` + `shopGlassMat()` — MeshPhysicalMaterial, dark cool body, roughness 0.10,
+clearcoat 1.0 over it, envMapIntensity 1.9 off the P2 HDRI, opacity 0.68, depthWrite false. NOT
+pane(), whose vertex ramp runs bright at the SILL because it is cut for a raked windscreen, and
+would have put the bright end on the ground. Memoised, so six panes are one PMREM lookup.
+BUT THE MATERIAL WAS NEVER THE HARD PART. Shot at 35_village_glass the first two cuts came back as
+flat matte black rectangles, and neither fix was a colour:
+  (1) THE INTERIOR HAD TO BE LIT. A dark sheet over a dark recess is just dark, and under a verandah
+      there is no sky in the reflection direction to rescue it. The verandah shading is authentic —
+      it means the reflection CANNOT carry the read here, so the interior must. The back wall is
+      bmat (unlit) so it holds its value whatever the sun does, which is the hut window's own idiom.
+  (2) THE SHOP WAS A SOLID BOX. The recess was placed INSIDE it, so the carcass's own front face
+      stood between the lens and the interior it was meant to show. A shopfront has to be an
+      OPENING: the shell is walls now and the front is the masonry around the holes — four piers,
+      a sill under each window, a spandrel over, and a transom over the door (which was a 0.75 m
+      band of daylight straight through the shop until it was shot).
+LESSON WORTH KEEPING: two of the three defects here were geometry wearing a material's clothes. A
+material call that photographs wrong is not necessarily a material problem.
+
+### 95. THE VILLAGE SHOP WALLS DO NOT WEAR A SCANNED FAMILY — AND THE ENTRY SAYS THEY DO
+Filed 2026-09-06, session 32, flagged mid-build and deferred by Eric. **This one is a defect rather
+than a taste call.** `defineProp('vill_shop')` declares `material:{family:'weatherboard'}`, but the
+carcass is painted with `mat(u.wall)` — a flat palette colour with no family — so the declaration
+is INTENT that nothing honours. Three flat single colours (red, cream, blue) are why the street
+reads a little like a toy town next to the campground's scanned surfaces.
+WHY THE DECLARATION IS NOT A LIE, EXACTLY: `material.family` is documented as the family a MODEL
+should be dressed in, and P6A's own note says it is deliberately NOT a claim about what the
+primitive body wears — the primitive's real families are MEASURED into `propsState().families`.
+Read that way the entry is honest and the shop simply resolves no family at all. Read carelessly it
+looks like a promise.
+THE FIX: put the shop walls on a real family. `weatherboard` and `brick` both exist and are
+already installed by P3; MATFAM keys off COLOUR, so this means giving each unit a wall colour that
+is registered to a family rather than an arbitrary hex — which is the same colour-as-a-key hazard
+MATFAM's own note describes and the reason the lodge chimney was found wearing driveway gravel.
+IT IS A RE-PIN: all three village vantages are shop-wall dominated.
+
+### 96. THE VILLAGE SHOPKEEPERS ARE PLACEHOLDER HUMANS
+Filed 2026-09-06, session 32, by Eric with the village judgement. `castVillage` pushes three
+`Human`s — baker, barista, tourist — built from the same primitive body every human in the game
+has had since before the re-platform. They are not a village-specific problem; they are the whole
+HUMAN tier, which has never had a model pass and is on the blocked list with the bird.
+WHAT IS VILLAGE-SPECIFIC and worth noting for whoever does that pass: these three are the first
+cast whose JOB is visible in the frame — a baker behind a lit shopfront, a barista among the cafe
+tables — so they are the first humans where a costume would read. The carpark's four are mostly
+seen at distance.
+
+### 97. THE VILLAGE CARS ARE mkCar PLACEHOLDERS, ANGLE-PARKED
+Filed 2026-09-06, session 32, by Eric with the village judgement. Two `mkCar` bodies at the kerb,
+which is the same rounded-box car the carpark has had all along. They are NOT registry placements —
+`mkCar` is called directly, the way the traffic spawner does — so unlike every other prop on this
+map the model pass will not find them by listing `PROPS.ALL`.
+THAT IS THE ACTUAL ITEM: either give the village's two parked cars registry entries the way the
+carpark's four bays got them in P6A (`carEntry`), or accept that parked cars on new maps are
+invisible to the registry and say so in P6A's own notes. The first is about six lines and is
+obviously right; it was skipped only because the village piece was already long.
+
+### 98. VILLAGE DECORATION DEFERRED: SHOP INTERIORS AND THE VERANDAH UNDERSIDE
+Filed 2026-09-06, session 32, flagged mid-build and deferred by Eric as decoration.
+THE INTERIORS are a lit back wall and two shelf boards per unit. They read as a shop and they are
+what makes the glass work at all (TODO 43), but there is nothing ON the shelves — a bakery with
+empty shelves is a closed bakery. Cheap: a row of boxes per shelf, and the bakery's could be the
+pies the mission spawns.
+THE VERANDAH UNDERSIDE is flat grey corrugate across a large part of 35_village_glass. A real one
+has rafters, and staining where the roof leaks at the joints. Also cheap, also decoration.
+NEITHER IS URGENT and both are in the frame Eric judged and passed.
+
+### 44. river-biome  — DONE session 32
+The fifth map. RIVER.md is the brief. A DOC swing-bridge crossing on a braided glacier river: a
+24 m slat-deck bridge between two A-frame towers with sagging wire handrails, a raised boardwalk to
+the bridge mouth, a milky blue braid channel, a glacier lake with three drifting ice floes, a DOC
+shelter, a jetboat on the shingle, three daypacks and three tourists mid-selfie. Eight registry
+placements, eleven jobs on two star pages plus a coop badge and a finale.
+THE FLOES ARE THE ONLY NEW CLAIM AND THEY ARE DRIVEN, not eyeballed: a floe drifts, its COLLIDER
+moves with its mesh (a drifting mesh over a stationary collider is a bird standing on nothing), and
+the bird's RELATIVE drift over four seconds is 0.0000 m — which is what makes it a floor rather than
+scenery. Four sabotages: stop the drift, freeze the collider, remove the carry, shorten the bridge.
+All four bite.
+AND IT CAUGHT A FIFTH INSTANCE OF THE OLDEST BUG IN THIS FILE: `rivFloes` is a LIST a build fills,
+and the dispatcher did not take it back off the board — a carpark boot left three floes registered.
+Piece 39 found four globals pretending to be constants, TODO 62 found the handles; this is a list.
+It is in WORLDREGS now.
+THREE FIRST PINS — 37_river_bridge, 38_river_floes, 39_river_walk — LEFT FLAGGED. Baseline stays 34.
+FOUR LOOK DEFECTS FIXED BEFORE SHOOTING rather than flagged as judgement: the lake did not render at
+all (its disc was buried under un-cut terrain, because only the braid channel was cut and the lake
+sits outside that band); the water photographed as a salt flat (pale and desaturated at roughness
+0.34 blows out under the P2 HDRI — rock flour is milky but emphatically blue-green); the floes came
+back grey stone slabs (PAL.snow at 0.72 is not glacier ice); and the lake's edge was a hard polygon
+because the disc sat BELOW the bank near its rim, so the terrain clipped it — the terrain makes the
+shoreline now and it follows the ground's own noise.
+
+### 45. THE TOUR SECTION'S FIXTURE CANNOT BE PAID FOR BY ONE MAP ANY MORE  — FIXED session 32
+The brochure section grants stars to make the first UNBUILT pin affordable, so it can ask "a paid-for
+map with no builder is refused as unbuilt". With five maps built the first unbuilt pin is the LAST
+one — the station at thirty stars — and the carpark has eight pages, so twenty-four. One map can no
+longer pay for it.
+FIXED STRUCTURALLY RATHER THAN NUDGED, because this block had already been nudged twice as maps
+landed (four pages, then ceil(need/3)) and both nudges were the same fact arriving late: THE TOUR
+TOTAL IS THE SUM ACROSS MAPS. The fixture fills the carpark completely and earns the shortfall on
+the SECOND map — which exercises the per-biome save slots rather than avoiding them.
+AND THE LOCKED-MAP QUESTION HAD TO MOVE. A fixture that can afford the last pin can afford
+everything, so no locked pin was left and `T.TABLE[-1]` threw. It is asked BEFORE the top-up now,
+where the same pin answers both refusals in turn — locked while unaffordable, 'not built yet' once
+paid for — which is a better test than two pins each answering one.
+
+### 46. station-biome  — DONE session 32. THE TOUR IS COMPLETE.
+The sixth and last map. STATION.md is the brief. A high-country station: a woolshed on piles with an
+open bay, a wool press and a raised loading race; four drafting pens with three gates between them;
+a mud-to-the-sills farm ute; a kennel with a dog on it; a mob of seven sheep; and somebody's smoko
+on the shed step. Twelve registry placements, two on the place, eleven jobs on two star pages plus a
+coop badge and a finale.
+**EVERY PIN ON THE BROCHURE IS NOW BUILT** — six maps for six pins, which the tour has never been.
+TWO NEW MECHANICS, BOTH DRIVEN AS MECHANICS:
+  THE GATE CASCADE — opening gate i moves pen i's whole mob into pen i+1 and TOUCHES NOTHING ELSE,
+    which is what makes it a cascade rather than a switch. Asserted in that shape (pen 3 untouched),
+    plus idempotence (a second chew moves nobody twice) and that only the opened gate is open.
+  THE SHEEP CARRY — the river's floe mechanic on a carrier that panics, held to the same
+    measurement: the animal actually moves and the bird's RELATIVE drift stays near zero. It needed
+    a collider on the sheep, because nothing had ever stood on one before.
+THREE FIRST PINS — 40_station_yards, 41_station_shed, 42_station_ute — LEFT FLAGGED. Baseline 34.
+TWO LOOK DEFECTS FIXED BEFORE SHOOTING: the woolshed wore PAL.hut, the alpine hut's saturated red,
+which on a 16 x 4.4 m wall photographed as fluorescent (a woolshed is red LEAD OXIDE — dark, dusty,
+painted once in 1958); and two of the three frames had the bird as a speck, so the cameras came in.
+
+### 47b. THERE IS NO `wood` MATERIAL FAMILY — **DONE session 33 (2026-09-07)**, as `timber`.
+Registered from Poly Haven's `weathered_planks` (CC0, tagged *bridge* by its own authors, 2000 mm
+square so it lands on the same 2.000 m tile as weatherboard), paint mode, not iso. 651 meshes across
+the six maps, which makes timber the most common surface in the game. `wood_planks_grey` is kept in
+the tree as the alternate, reachable with
+`KEAMATS='{"families":{"timber":{"asset":"wood_planks_grey","tileM":1.5}}}'`.
+THE CARE THE ENTRY BELOW ASKED FOR WAS TAKEN, AND IT FOUND THINGS. All 97 call sites of the two
+timber colours were read BEFORE the family was registered:
+  - a tramping boot and a human's belt were drawn in `PAL.woodD` and are LEATHER — they would have
+    rendered in sawn-plank grain. Both now wear `PAL.leather`, a hex of its own with no family,
+    which is the repair the ski tow's anchor block got, for the same reason.
+  - `0x6E5334` is a TREE TRUNK and a walking-pole knob. Bark is not sawn plank; it keeps its
+    procedural grain and is now asserted to stay OUT of the family.
+  - `0x9C7B52` is the village verandah DECK and did join, because it sits beside a `PAL.woodD` door
+    that now gets scanned grain and would otherwise have been the one odd plank in the frame.
+  - `_mk(0x7E6644,'grain')` turned out to be a duplicate registration of `PAL.wood` under its own
+    literal, so the MAPKIND list had been carrying the same colour twice.
+AND THE STANDING "no colour is registered in BOTH registries" ASSERTION CAUGHT THIS PIECE: `PAL.wood`
+and `PAL.woodD` were in MAPKIND as well as MATFAM for one run, and a colour in both takes whichever
+branch `mat()` tested first — a coin toss dressed as a decision. Four rows came out of MAPKIND.
+IT ALSO MOVED TWO PINNED DIGESTS, and the reason is written into the PRESEAM block in
+harness-everything.js rather than left to be re-derived: the FAMILY changes nothing headless (with
+the two `_mf` rows removed, all 1029 carpark digest lines are byte-identical, because matDress
+pre-install restores the authored colour and roughness and a paint family takes no breakup). What
+moved them was the leather split — three boot meshes, colour only, nothing moved, added or removed.
+STILL OWED: 0x6E5334's tree trunks want a BARK family of their own eventually; `dark_planks` remains
+the weatherboard set, which is cladding, and the two are now correctly distinct.
+
+### 47b (as filed, kept because its warning is what made the audit happen). THERE IS NO `wood` MATERIAL FAMILY, AND THREE MAPS IN A ROW HAVE WANTED ONE
+Filed 2026-09-07, session 32. Not a typo — a gap, and the third occurrence is the evidence.
+`defineProp`'s family guard threw on `family:'wood'` while building the CAMPGROUND, then the RIVER,
+then the STATION. Each time the fix was to declare `null`, which is honest but loses information:
+the boardwalk, the bridge deck, the drafting pens, the loading race, the shelter, the verandah posts
+and every fence in the game are TIMBER, and the P3 family list has grass, gravel, asphalt, snow,
+weatherboard, corrugate, brick and concrete — no bare wood at all.
+WHY IT MATTERS BEYOND TIDINESS: `material.family` is what the model pass reads to know what a
+primitive was standing in for, and "null" tells it nothing. Timber is also the single most common
+surface across the six maps now, so it is the largest un-scanned family in the game.
+THE PIECE: source a CC0 rough-sawn timber set (Poly Haven has several), register it as `timber`,
+and give PAL.wood / PAL.woodD to it via MATFAM — which is a colour-as-a-key change and therefore
+wants the same care the lodge chimney needed when it was found wearing driveway gravel.
+IT IS A RE-PIN: timber is in almost every frame in the set.
+
+### 99. THE WALKABILITY GAP — "the collider is there" is not "the bird can get to it"
+Filed 2026-09-07, session 33, and the reason the two pre-pin fixes were needed at all.
+The swing bridge shipped with its deck 2.04 m above the boardwalk that led to it and no far-side
+landing, and it shipped past a battery that asserted the deck was a roof collider, that it spanned
+the crossing, that it held at near, mid and far, that it was slats not a plank, and that crossing it
+paid. Every one of those was true. The mission passed because the battery TELEPORTED the bird onto
+the far anchor to test it — which is the right way to test a mission and the wrong way to learn
+whether a route exists.
+`gauntlet/verify/walkable.js` now closes it for the routes it knows. WHAT REMAINS IS COVERAGE: it
+knows two routes, both on the river. Every map has walks that ought to be continuous — the
+campground track to the shelter, the village footpath to a verandah, the station race to the
+woolshed ridge, the ski field's piste to the lodge deck — and none of them is measured. Adding a
+route is two lines in `routes()`. The reason it is a TODO and not done here is that each new route
+is a claim about what the map is FOR, and a couple of them will fail, which makes them pieces.
+THE GENERAL SHAPE OF THE BUG: an assertion that a thing EXISTS, standing in for an assertion that
+the thing is REACHABLE. Worth looking for elsewhere — anchors no bird can fly to, ledges with
+nothing to launch from, a mission whose only proof teleports the subject into position.
+
+### 100. THE WOOLSHED LEVITATES — the piles do not read as piles
+Filed 2026-09-07, session 33. Eric's eyeball item 11, answered by reshooting rather than guessed.
+At play distance in 40_station_yards the woolshed reads as a big red box HOVERING over a shadow,
+not as a shed on piles. Three causes, all cheap:
+  - FIFTEEN piles, 0.34 m square and 0.55 m tall, is too few and too thin to read at 20 m;
+  - they are inset a full metre from the floor edge, so the eye sees the floor overhang with
+    nothing at all under it, which is exactly the levitation cue;
+  - they are 0xA9A7A2, the same pale concrete as the wool bales, so what little of them is visible
+    disappears into its own shadow.
+THE FIX: bring the outer row to the floor edge, add rows so the spacing reads, and darken them — a
+real woolshed pile is a creosoted timber stump or a dirty concrete block, not clean pale concrete.
+A skirt of shadow-catching rubbish along the base would do as much work as the piles themselves.
+NOT DONE HERE because Eric asked for a report on this one, not a fix, and because it wants judging
+at the vantage rather than measuring.
+
+### 101. STOCK YARDS SHOULD RECORD USE — trodden dirt, and mud at the gates
+Filed 2026-09-07, session 33. Eric's MEDIUM item 5. The station's yard ground is one flat grass cut
+with a gravel-family scrape over it; real drafting yards are bare trodden dirt, dust in the open and
+MUD at the gateways and along the rails, because that is where ten thousand sheep have stood. Ground
+that records use is most of what makes a working yard look worked.
+The cut already exists (grassCuts('station') box 1 covers all four pens), so this is a surface job,
+not a layout one: vertex-darkened mud pools at the three gate mouths and along the pen rails, and a
+dust value in the open that is lighter than the mud, not the same brown everywhere.
+RELATED AND BIGGER: **trodden ground as a CONSEQUENCE of the mob** (Eric's opportunity list). The
+sheep already walk and already panic; a ground mask that darkens where they have been would make the
+yards author themselves, and would be the first system in the game where the world records what
+happened in it. Filed as an idea, not a plan.
+
+### 102. THE BOARDWALK STANDS OVER DRY LAWN
+Filed 2026-09-07, session 33. Eric's MEDIUM item 6. `RIVWALK` runs z -24 .. -7 at x 6, and the braid
+channel starts at z -6: so the entire boardwalk is over dry flat ground and only the bridge is over
+water. A DOC boardwalk exists BECAUSE the ground under it is wet — it is there to keep boots out of
+a marsh and the marsh out of the boots.
+THE FIX IS THE FOOTPRINT, not the boardwalk: either run it along the wet margin of the channel
+rather than perpendicular to it, or put a marsh under where it already is — a shallow depression in
+the terrain, standing water at the water material's shallow end, and sedge rather than tussock. The
+second is cheaper and reads better, because it keeps the straight run into the bridge mouth that the
+approach stair now depends on. THE WATER SYSTEM MAKES IT CHEAP: `waterBody()` will dress a marsh
+pool with the same material for free (TODO 106).
+
+### 103. PER-BIOME GRASS DENSITY IS NOT CALIBRATED AGAINST THE PLATES
+Filed 2026-09-07, session 33. Eric's MEDIUM item 7. Grass cover reads THIN on the river and the
+station next to the carpark, which was tuned first and is the only biome whose density anyone chose.
+`GRASS.biomes[<id>]` carries h, w, lean, bare, clumpM, taper, base, tint and tip per map, and the
+river and station values were set by eye in one sitting each.
+THE LEVER IS `bare`, NOT `h`. TODO 92 is the standing warning: blade height is what buries the bird,
+and a river flat that reads as mown lawn is not fixed by growing the lawn. Density and clumping
+carry cover without costing legibility.
+Judge against nz_river_01 and the nz_ pasture plates, per biome, side by side — this is a strip job
+for Eric's eye, not a number to pick in a battery.
+
+### 104. THE FLOES ARE CLEAN WHITE PUCKS
+Filed 2026-09-07, session 33. Eric's MEDIUM item 8, with a constraint attached: **the float mechanic
+itself is right, do not touch it.** Only the shape and the surface are wrong.
+Tasman Lake floes are irregular, dirty grey-white, STRIATED with old compressed layers, low in the
+water and part-submerged — a berg shows about a tenth of itself. The game's are clean white faceted
+discs riding high and level, three of them, all the same.
+THE PIECE: shape variants — several silhouettes with different waterlines, tilt, and a dirty margin
+where the ice meets the water — shot as a STRIP for Eric's eye before any of them lands in the map.
+The submersion is the single biggest cue and it is now cheap: drop the disc's y and let the water
+plane cut it, which TODO 106's water system made a real surface rather than two hand-tuned planes.
+
+### 105. OPPORTUNITIES from the river and station audit — filed, not planned
+Filed 2026-09-07, session 33, all three Eric's.
+  A. **THE BRIDGE AS A BOUNCING FLOOR.** The floes proved a moving floor works — the collider
+     follows the mesh and the carrier applies its delta to any bird standing on it. A swing bridge
+     that SWAYS is the same mechanic with a different driver, and unlike the floes it is a mission
+     generator: cross it while it bucks, make it buck for the other player, knock a tourist off it.
+     The approach stair and the cable rebuild are what make it worth doing — there is now a route
+     across it to be interfered with, and a catenary to hang the motion on. See TODO 108.
+  B. **TRODDEN GROUND AS A CONSEQUENCE OF THE MOB.** See TODO 101.
+  C. **A WOOLSHED INTERIOR WITH A FLEECE TO STEAL.** The shed has an open bay, a wool press and a
+     floor already; what it has not got is an inside. A fleece is the best carryable in the game
+     that does not exist — big, soft, obviously valuable, and belonging to somebody who will mind.
 
 ### 106. WATER IS A SYSTEM NOW — DONE session 33, and what it does NOT yet do
 Eric's HIGH item 3: "WATER is an unsigned system, and three of six new frames contain it." Shipped

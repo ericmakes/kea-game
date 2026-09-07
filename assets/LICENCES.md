@@ -456,3 +456,62 @@ to be exercised by something, and a box already standing on its own origin would
 **NOTHING SHIPS SWAPPED.** No registry entry in `src/game.mjs` names this file. It is reached only
 through `KEAPROPS`, which is how `gauntlet/verify/p6a-swap.mjs` shoots the both-ways proof, and the
 P6A battery asserts that every entry ships `source:'primitive'`.
+
+---
+
+## TIMBER — the ninth family  (TODO 47b, session 33, 2026-09-07)
+
+### timber — `weathered_planks` (Weathered Planks)
+
+Author(s): Dario Barresi, Dimitrios Savva.  Licence: **CC0**.  Publisher category: Wood/Planks.
+Published real-world size: **2000.0 x 2000.0 mm** — this is the number the texel density is derived from, not a guess.
+
+| file | bytes | md5 (publisher API, verified against the file at import) |
+|---|---|---|
+| `tex/weathered_planks_diff_1k.jpg` | 599581 | `5d7c9e7088bfa54490ba03ba15b660d8` |
+| `tex/weathered_planks_nor_gl_1k.jpg` | 681552 | `119541f6b143f21f0a6e9774e9208905` |
+| `tex/weathered_planks_arm_1k.jpg` | 528272 | `54f44833fd158b22c3419d416debc113` |
+
+**THE NINTH FAMILY, AND THE ONE ASKED FOR FOUR TIMES BEFORE IT EXISTED.** `defineProp`'s family
+guard threw on `family:'wood'` while building the campground, then the river, then the station, then
+the bridge approach — four maps in a row, each answered by declaring `null`. TODO 47b was filed on
+the third occurrence as evidence that this was a gap and not a typo.
+
+**TIMBER IS THE MOST COMMON SURFACE IN THE GAME:** 651 meshes across the six maps wear
+`PAL.wood` or `PAL.woodD` — the boardwalk, the bridge deck and its slats, the approach stairs, the
+drafting pens and their gates, the loading race, the woolshed floor, every picnic table and bench,
+the verandah posts, the ticket window, the lodge deck, the tow beam and every paddock rail. Until
+now every one of them wore a procedural canvas grain.
+
+**WHY THIS SET.** Its own authors tag it *bridge*; it is 2000 mm square, so its texel density lands
+on the same 2.000 m tile as the weatherboard set; and rough grey-brown sawn plank is what all of the
+above actually is. Mode is **paint**, not scan, for the reason weatherboard is: `PAL.wood` and
+`PAL.woodD` are two different authored colours sharing one family, and paint mode keeps each
+object's own colour while taking grain and relief from the set. Not `iso` — planks run along their
+length, so per-tile rotation would scramble the grain, the same reason concrete's form lines must
+stay level.
+
+**AND A COLOUR THAT IS NOT TIMBER WAS FOUND FIRST.** All 97 call sites of the two timber colours
+were read BEFORE the family was registered, which is the care TODO 47b asked for in its own text.
+Two were not timber: a tramping boot and a human's belt, both drawn in `PAL.woodD` and both
+LEATHER. Harmless while `woodD` had no family; a boot rendered in sawn-plank grain the moment it
+had one. They now wear `PAL.leather`, which has a hex of its own and no family — the same repair
+the ski tow's anchor block got, for the same reason.
+
+**THE ALTERNATE, KEPT IN THE TREE** — not a second family, and deliberately not given a `###`
+heading of its own so it cannot inflate the family count the battery cross-checks:
+
+| file | bytes | md5 (publisher API, verified against the file at import) |
+|---|---|---|
+| `tex/wood_planks_grey_diff_1k.jpg` | 228279 | `f2b4a70fed329c13850917c5f2d1498c` |
+| `tex/wood_planks_grey_nor_gl_1k.jpg` | 157419 | `fe633ea606ac22b732d4204a7fa52b03` |
+| `tex/wood_planks_grey_arm_1k.jpg` | 155198 | `2da2c5b43105bd0b1bcc8712e8164406` |
+
+`wood_planks_grey` (Wood Planks Grey), Rob Tuytel, CC0, published size 1500 x 1500 mm. Kept for the
+same reason the three HDRIs are kept: a material is a taste call, and Eric should be able to see the
+other one without needing this session's network access back.
+
+    KEAMATS='{"families":{"timber":{"asset":"wood_planks_grey","tileM":1.5}}}'
+
+The tileM in that override is why tileM is per-family data and not a constant — getting it wrong
+does not break anything, it just tiles at the wrong scale.
