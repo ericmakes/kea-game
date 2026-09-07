@@ -191,5 +191,40 @@ console.log('TERRAINLAB SELFTEST');
     ok(worst<1.2,k+': no azimuth stands more than '+worst.toFixed(2)+
       ' deg clear of both neighbours (recipe b measured 2.59 before band-limiting and the crest fix)'); } }
 
+/* ---- THE LAB AND THE GAME MUST BE THE SAME RANGE ----
+   terrainlab.mjs carries its OWN copy of the recipes and of the erosion loop, because it runs
+   offline in about 50 ms per recipe and importing the specimen would drag a browser's worth of
+   module in with it. That copy is how Eric picked recipe c — so the moment it drifts from the game,
+   the lab describes a range nobody ships and every silhouette assertion above becomes a claim
+   about a different mountain.
+   IT HAD ALREADY DRIFTED. Step 2 raised recipe c's angle of repose from talus 0.50 — 26.6 degrees,
+   which was planing every face flat, and not an alpine slope — to 1.60, in the game only, and this
+   entire selftest stayed green across the change without noticing. That is precisely the failure
+   the check below makes impossible. */
+{
+  const { createRequire } = await import('module');
+  const require2 = createRequire(import.meta.url);
+  const { evalSpecimen } = require2('../../audits/2026-08-26/keasrc.js');
+  /* THE SPECIMEN IS HANDED ITS THREE, the way every battery hands it one — it takes THREE as a
+     parameter rather than importing it, which is what keeps its single static import single. */
+  const X = evalSpecimen(require2('three'));
+  const GR = X.TERRAIN.recipes, LB = RECIPES;
+  const keys = [...new Set([...Object.keys(GR), ...Object.keys(LB)])].sort();
+  ok(keys.length===Object.keys(GR).length && keys.length===Object.keys(LB).length,
+     'the lab knows exactly the recipes the game does ('+keys.join(',')+')');
+  const diffs=[];
+  const walk=(a,b,pth)=>{
+    if(a&&b&&typeof a==='object'&&typeof b==='object'){
+      for(const k of new Set([...Object.keys(a),...Object.keys(b)]))walk(a[k],b[k],pth+'.'+k);
+    } else if(a!==b) diffs.push(pth+': game '+JSON.stringify(a)+' vs lab '+JSON.stringify(b));
+  };
+  for(const k of keys)walk(GR[k],LB[k],k);
+  ok(diffs.length===0,'AND EVERY RECIPE PARAMETER IS IDENTICAL between the game and the lab'+
+     (diffs.length?' — '+diffs.length+' differ: '+diffs.slice(0,6).join('; '):
+      ' ('+keys.length+' recipes, every field)')+
+     '. The lab is where Eric chose the silhouette family; if it drifts, it is judging a range the '+
+     'game does not build.');
+}
+
 console.log(bad?('TERRAINLAB SELFTEST: '+bad+' FINDINGS'):'TERRAINLAB SELFTEST: ALL PASS');
 process.exit(bad?1:0);

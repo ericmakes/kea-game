@@ -6559,6 +6559,60 @@ C.section('the range: a heightfield, not a ring of cones');
        hz.toFixed(3)+' against fog colour '+sky.toFixed(3)+'. The far range tends to the haze '+
        'colour, so a haze no darker than the sky can never put rock darker than sky.'); }
 
+  /* 6d. THE ANGLE OF REPOSE IS AN ALPINE ONE — Eric's point 2, the part of it that can be checked
+        without a camera. "The terrain reads flat and unlit" had TWO causes and the winding was only
+        the first: with the normals fixed the range was lit and STILL flat, because recipe c's
+        erosion ran at talus 0.50. That is a true rise over run, so 26.6 DEGREES — shallower than
+        the angle loose gravel rests at — and it was relaxing every face in the range towards it.
+        Measured then: mean vertex n.y 0.9239, a mean slope of 22 degrees, and a rendered
+        lit-to-shadow ratio of 1.74 in linear terms. At 1.60 the unhazed luminance spread at the
+        wide vantages went from 0.167 to 0.286-0.391, against plates spanning 0.506-0.655.
+        THE CLAIM IS GEOLOGICAL, and it is the only honest one available here. Dry scree rests at
+        about 35 degrees (tan 0.70) and a rock face stands far steeper, so an angle of repose BELOW
+        the scree angle is planing solid rock at an angle gravel would not hold. That is a fact
+        about the world rather than a number read off our own output.
+        AND THE SLOPE STATISTICS ARE REPORTED, NOT ASSERTED, because they do not discriminate and
+        an assertion that cannot fail is worse than none. The erosion only RELAXES towards the
+        talus — move = (best-talus)*dist*rate*0.5 — so steep faces survive it, and at the flat
+        talus of 0.50 the carpark's 99th-percentile slope was already 1.20 (50 degrees). A p99
+        threshold would have passed the range Eric called flat. The rendered contrast is what
+        actually catches it, and that is asserted where it shows, in terrainvalue.mjs, against a
+        floor taken from the plates. */
+  /* THE ACTIVE RECIPE IS THE ONE ASSERTED, and the other two are NAMED rather than quietly fixed.
+     a sits at 0.55 (29 deg) and b at 0.68 (34 deg), both under the scree angle and both wrong for
+     the same reason c was — but they are the strips Eric judged the silhouette family from, and
+     raising them would change an artifact he has already looked at into something else. Either one
+     needs this fix before it is revived, which is why the message says so every run rather than
+     leaving it to be remembered. */
+  { const R=T.recipes[T.recipe];
+    const others=Object.entries(T.recipes).filter(([k])=>k!==T.recipe)
+      .map(([k,r])=>k+' '+r.erode.talus.toFixed(2)+' ('+
+        (Math.atan(r.erode.talus)*180/Math.PI).toFixed(0)+' deg)');
+    ok(R.erode.talus>0.70,'the shipping recipe '+T.recipe+' ("'+R.name+'") erodes to an ALPINE '+
+       'angle of repose — talus '+R.erode.talus.toFixed(2)+' is '+
+       (Math.atan(R.erode.talus)*180/Math.PI).toFixed(0)+' degrees, above the ~35 degrees dry '+
+       'scree rests at. Below that the pass planes solid rock flatter than gravel would hold, and '+
+       'c shipped at 0.50 (26.6 deg). THE UNSHIPPED RECIPES ARE STILL BELOW IT ('+others.join(', ')+
+       ') and each needs the same raise before it is revived; they are left alone because they are '+
+       'the strips Eric judged the family from.');
+    /* REPORTED so the numbers are in the log next to the claim, and measured on the map that is
+       booted here rather than by re-booting every biome — an earlier version of this block looped
+       REALBIOMES and left the world booted as the SKI FIELD, which broke item 7 below: it measures
+       the carpark's road corridor through terrainHeightAt, that reads G.terrain, and the ski field
+       has no road at z 34. It reported the carriageway 7.34 m deep in a range that is actually
+       flat to 0.000 m along every metre of it. State left where it was found. */
+    const D=G.terrain, {nTheta,nR,r0,r1}=D, dR=(r1-r0)/(nR-1);
+    const at=(j,i)=>D.field[Math.max(0,Math.min(nR-1,j))*nTheta+((i%nTheta)+nTheta)%nTheta];
+    const S=[];
+    for(let j=1;j<nR-1;j++){ const r=r0+dR*j, dT=2*Math.PI*r/nTheta;
+      for(let i=0;i<nTheta;i++)
+        S.push(Math.hypot((at(j+1,i)-at(j-1,i))/(2*dR),(at(j,i+1)-at(j,i-1))/(2*dT))); }
+    S.sort((x,y)=>x-y);
+    const q=t=>S[Math.floor(S.length*t)], dg=v=>(Math.atan(v)*180/Math.PI).toFixed(0);
+    C.note&&C.note('  '+G.biome+' slope: p50 '+q(0.5).toFixed(2)+' ('+dg(q(0.5))+' deg)  p90 '+
+      q(0.9).toFixed(2)+' ('+dg(q(0.9))+')  p99 '+q(0.99).toFixed(2)+' ('+dg(q(0.99))+')  max '+
+      S[S.length-1].toFixed(2)+' ('+dg(S[S.length-1])+')'); }
+
   /* 7. THE ROAD CORRIDOR IS FLAT, because the carpark's road runs to r 129 with 61 pieces of
         furniture on it and a rising heightfield would bury the lot. A road through foothills is a
         cutting; this asserts the cutting exists. */
@@ -7159,12 +7213,28 @@ C.section('REPLAT P6A: the model-swap seam');
      Almost everything is a registry placement at a fixed `at`; only the few loose carryables drawn
      with rnd() moved, and they moved a couple of metres within bounds. Eric's own note on this
      piece was "this re-pins most vantages - expected", and the baseline was re-pinned from an
-     eleven-run consensus immediately beforehand for exactly this reason. */
+     eleven-run consensus immediately beforehand for exactly this reason.
+
+     --- STEP 2 (FORM): THE ANGLE OF REPOSE, AND TWO BEECH TREES ---
+
+     Recipe c's erosion capped every slope at talus 0.50 — a true rise over run, so 26.6 degrees —
+     and that is not an alpine slope; it was planing the whole range flat. Measured: mean vertex
+     n.y 0.9239, a mean slope of 22 degrees, and a rendered lit-to-shadow ratio of just 1.74 in
+     linear terms. Raising it to 1.60 (58 degrees) took the range's unhazed luminance spread from
+     0.167 to 0.286-0.391 against plates that span 0.506-0.655.
+     ONLY THE SKI FIELD'S DIGEST MOVES, and all of it is two trees. The ski field plants its beeches
+     with terrainHeightAt, so a change in terrain height moves them; the carpark's six trees sit
+     inside r 57 where terrainHeightAt returns 0, so they do not move at all. Dumped and compared
+     position by position rather than inferred:
+         beech 9 -> 9,  moved in y: 2 of 9,  worst 0.068 m,  moved in x/z: 0
+         named-mesh counts differing: none
+     Two trees settling 68 mm onto a slightly different hillside. mesh a491ca9ea6f3fc40 ->
+     3556361c192c1047; meshes, tris and every count unchanged. */
   const PRESEAM={
     carpark :{mesh:'4a6fc19b3a4ce578', col:'1b025c57715cb017', meshes:979, tris:266588,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'a491ca9ea6f3fc40', col:'fc06ef03250ea1ed', meshes:374, tris:99554,
+    skifield:{mesh:'3556361c192c1047', col:'fc06ef03250ea1ed', meshes:374, tris:99554,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

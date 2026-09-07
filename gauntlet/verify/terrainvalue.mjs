@@ -54,6 +54,14 @@ const IDS=(process.env.IDS||'01_carpark_wide,06_skyline,10_skifield,28_skifield_
 const BAND=[0.39,0.50];
 const D=0.0085;                 // the probe density, and the shipping one
 const FAR=+(process.env.FAR||120);   // metres: beyond this is the range, nearer is its skirt
+/* THE FORM FLOOR COMES FROM THE PLATES AND NOT FROM OUR OWN OUTPUT, which is the only way it can
+   fail. Measured over the same ridge bands: nz_alps_01 spans p10 0.042 to p90 0.697, a spread of
+   0.655; nz_alps_02 spans 0.266 to 0.772, a spread of 0.506. The floor is HALF the smaller of the
+   two, so a range with less than half the tonal range of the flatter-lit plate is called flat.
+   Half, and not the plate itself, because our range is hazed to 0.49-0.98 by design and haze
+   compresses contrast — that is aerial perspective doing its job, and the assertion has to leave
+   room for it while still catching a sheet with no lit side. */
+const FLOOR=0.506/2;
 
 const lum=p=>(0.2126*p[0]+0.7152*p[1]+0.0722*p[2])/255;
 function frame(f){
@@ -65,19 +73,26 @@ function frame(f){
   return {W,H,at:(x,y)=>{const i=(y*W+x)*3;return [buf[i],buf[i+1],buf[i+2]];}};
 }
 
+/* KEATERRAINX={"treeline":8} is merged into ALL THREE sweeps, so a terrain constant can be landed
+   against these vantages the way KEAHAZE lands the haze. It exists because this tool SETS
+   KEATERRAIN itself for each sweep — an outer KEATERRAIN is clobbered, which silently made two
+   different treeline candidates return byte-identical numbers before this seam existed. */
+const XTRA=process.env.KEATERRAINX?JSON.parse(process.env.KEATERRAINX):{};
+const terr=o=>JSON.stringify(Object.assign({},XTRA,o));
 ensureBuild();
 const TMP=fs.mkdtempSync(path.join(os.tmpdir(),'kea-value-'));
 const dFlag=path.join(TMP,'A'), dHaze=path.join(TMP,'B'), dShip=path.join(TMP,'S');
 try{
-  process.env.KEATERRAIN=JSON.stringify({haze:{color:0x000000,density:0.00001}});
+  process.env.KEATERRAIN=terr({haze:{color:0x000000,density:0.00001}});
   shootRun(dFlag,IDS); console.log('A: unhazed sweep shot');
-  process.env.KEATERRAIN=JSON.stringify({haze:{color:0x000000,density:D}});
+  process.env.KEATERRAIN=terr({haze:{color:0x000000,density:D}});
   shootRun(dHaze,IDS); console.log('B: black-haze sweep shot');
   /* KEAHAZE={"color":...,"density":...} shoots S with a candidate instead of the shipping value.
      It exists so the constant can be LANDED against these vantages rather than against the strip
      camera, which turned out to be a flattering one: the strip's tele view at eye y 9 sees the far
      peaks, and every wide vantage sees the near skirt. */
-  if(process.env.KEAHAZE)process.env.KEATERRAIN=JSON.stringify({haze:JSON.parse(process.env.KEAHAZE)});
+  if(process.env.KEAHAZE)process.env.KEATERRAIN=terr({haze:JSON.parse(process.env.KEAHAZE)});
+  else if(Object.keys(XTRA).length)process.env.KEATERRAIN=terr({});
   else delete process.env.KEATERRAIN;
   shootRun(dShip,IDS); console.log('S: shipping sweep shot'+(process.env.KEAHAZE?'  [KEAHAZE candidate '+process.env.KEAHAZE+']':''));
 
@@ -107,15 +122,27 @@ try{
     const frac=(near.length+far.length)/(W*(H-2*HUD));
     if(frac<0.01){ rows.push({id,skip:'range not in frame ('+(frac*100).toFixed(2)+'% of it)'}); continue; }
     if(far.length<2000){ rows.push({id,skip:'no range beyond '+FAR+' m in frame ('+far.length+' px)'}); continue; }
-    const stat=(m)=>{ if(!m.length)return null;
-      const rgb=[0,0,0]; let ml=0;
-      for(const [x,y] of m){ const p=S.at(x,y); rgb[0]+=p[0];rgb[1]+=p[1];rgb[2]+=p[2]; ml+=lum(p); }
+    const stat=(m,FR)=>{ if(!m.length)return null; FR=FR||S;
+      const rgb=[0,0,0]; let ml=0; const LL=[];
+      for(const [x,y] of m){ const p=FR.at(x,y); rgb[0]+=p[0];rgb[1]+=p[1];rgb[2]+=p[2];
+        const l=lum(p); ml+=l; LL.push(l); }
       ml/=m.length; for(let i=0;i<3;i++)rgb[i]/=m.length;
       const mx=Math.max(...rgb), mn=Math.min(...rgb);
       let hue=Math.atan2(Math.sqrt(3)*(rgb[1]-rgb[2]),2*rgb[0]-rgb[1]-rgb[2])*180/Math.PI;
       if(hue<0)hue+=360;
-      return {ml,rgb,sat:(mx-mn)/(mx||1),hue,px:m.length}; };
+      /* FORM (Eric's point 2): the spread of luminance ACROSS the range. A heightfield lit by a
+         real sun has a bright flank and a dark one; a flat unlit sheet has one value. p90-p10 is
+         the statement, robust to the handful of blown snow pixels a max-minus-min would hang on. */
+      LL.sort((a,b)=>a-b);
+      const q=t=>LL[Math.min(LL.length-1,Math.floor(LL.length*t))];
+      let v=0; for(const l of LL)v+=(l-ml)*(l-ml);
+      return {ml,rgb,sat:(mx-mn)/(mx||1),hue,px:m.length,
+              p10:q(0.10),p50:q(0.50),p90:q(0.90),spread:q(0.90)-q(0.10),sd:Math.sqrt(v/LL.length)}; };
     const R=stat(far), N=stat(near);
+    /* THE SAME MASK ON THE UNHAZED FRAME, so the two things that could make a range look flat can
+       be told apart: geometry that is not being lit, and haze that has compressed what the light
+       did. Without this column a flat reading has two suspects and no evidence. */
+    const RAW=stat(far,A);
     /* the sky immediately above the rock, per column */
     const sk=[];
     for(let x=0;x<W;x++){
@@ -126,8 +153,9 @@ try{
     sk.sort((a,b)=>a-b);
     const sky=sk.length?sk[sk.length>>1]:NaN;
     const inBand=R.ml>=BAND[0]&&R.ml<=BAND[1], darker=R.ml<sky;
-    if(!inBand||!darker)fails++;
-    rows.push({id,R,N,sky,frac,inBand,darker});
+    const hasForm=R.spread>=FLOOR;
+    if(!inBand||!darker||!hasForm)fails++;
+    rows.push({id,R,N,RAW,sky,frac,inBand,darker,hasForm});
   }
 
   console.log('');
@@ -135,11 +163,19 @@ try{
     ' (what nz_alps_01 and nz_alps_02 span)');
   for(const r of rows){
     if(r.skip){ console.log('  -  '+r.id.padEnd(18)+r.skip); continue; }
-    console.log('  '+(r.inBand&&r.darker?'ok ':'XX ')+r.id.padEnd(18)+
+    console.log('  '+(r.inBand&&r.darker&&r.hasForm?'ok ':'XX ')+r.id.padEnd(18)+
       'RANGE (>'+FAR+'m) luma '+r.R.ml.toFixed(3)+'  rgb '+
       r.R.rgb.map(v=>v.toFixed(0)).join(',').padEnd(12)+' sat '+r.R.sat.toFixed(2)+
       '  hue '+r.R.hue.toFixed(0).padStart(3)+'   sky '+r.sky.toFixed(3)+
       (r.inBand?'':'   OUT OF BAND')+(r.darker?'':'   BRIGHTER THAN ITS SKY'));
+    console.log('     '+''.padEnd(18)+'FORM          p10 '+r.R.p10.toFixed(3)+'  p50 '+
+      r.R.p50.toFixed(3)+'  p90 '+r.R.p90.toFixed(3)+'   spread '+r.R.spread.toFixed(3)+
+      '  sd '+r.R.sd.toFixed(3)+'   floor '+FLOOR.toFixed(3)+
+      (r.hasForm?'':'   FLAT — NO LIT/SHADOW CONTRAST'));
+    console.log('     '+''.padEnd(18)+'  unhazed    p10 '+r.RAW.p10.toFixed(3)+'  p50 '+
+      r.RAW.p50.toFixed(3)+'  p90 '+r.RAW.p90.toFixed(3)+'   spread '+r.RAW.spread.toFixed(3)+
+      '   — the same pixels with the range\'s own haze off: how much form the LIGHT made, before '+
+      'the haze compressed it');
     console.log('     '+''.padEnd(18)+'skirt (<'+FAR+'m) luma '+
       (r.N?r.N.ml.toFixed(3)+'  rgb '+r.N.rgb.map(v=>v.toFixed(0)).join(',').padEnd(12)+
         ' sat '+r.N.sat.toFixed(2)+'  hue '+r.N.hue.toFixed(0).padStart(3)+

@@ -1851,15 +1851,28 @@ const TERRAIN={
     c:{ name:'glaciated troughs',
         warp:{f:0.012,amp:30}, fbm:{f:0.018,oct:5,lac:2.0,gain:0.55,amp:0.85},
         ridge:{f:0.026,oct:4,lac:2.1,gain:0.52,sharp:2.3,amp:0.75},
-        valleys:4, valleyW:0.30, valleyDepth:0.68, erode:{iters:26,talus:0.50,rate:0.55} },
+        valleys:4, valleyW:0.30, valleyDepth:0.68, erode:{iters:26,talus:1.60,rate:0.55} },
   },
   /* MATERIAL BY SLOPE AND ALTITUDE. Provisional vertex colours for the silhouette strip; the
      triplanar rock family is TERRAIN.md step 4, after Eric picks a family. Every value measured
      off nz_alps_01 and nz_alps_02 with lum.mjs — see TERRAIN.md 1. THE SNOWLINE IS SLOPE-DEPENDENT,
      which is the biggest cue in both plates: snow lies in gullies and on gentle faces while bare
      rock stands out on the steep faces beside them AT THE SAME ALTITUDE. */
-  snowY:26.0, snowBand:7.0, snowSlope:0.62,   // above snowSlope, rock shows through whatever the altitude
-  treeline:15.0, treeBand:6.0,
+  /* THE SNOWLINE COMES DOWN TOO, 26 m to 18. Both plates are conspicuously snowy and ours had
+     almost none: the field tops out at 42.4 m with a mean of 11.3, so a snowline at 26 with a 7 m
+     band meant snow only saturated above 33 and the range had no BRIGHT END at all. That is what
+     06_skyline's flat reading was — its p90 sat at 0.51 against 0.57 elsewhere — and lowering the
+     line took its spread from 0.248 to 0.291, comfortably over the floor, where squeezing the
+     albedo had only ever got it to 0.254: a margin of 0.001, which is a flake and not a pass. Fix
+     the cause and the margin follows. */
+  snowY:18.0, snowBand:6.0, snowSlope:0.62,   // above snowSlope, rock shows through whatever the altitude
+  /* THE TREELINE COMES DOWN, from 15 m to 8, and it is a colour decision rather than a botanical
+     one. The range's heights run to 42 m with a mean of 11.3, so a treeline at 15 put MOST of the
+     annulus in tussock: the range rendered rgb(201,191,146) at hue 50 — yellow — where both plates
+     are blue-grey at hue 210-212. At 8 m the rock band starts where the skirt ends, which is what
+     puts the range's hue on the plates (measured 206-211 against 210-212) while the low inner
+     skirt Eric wants as walkable foothills stays tussock. */
+  treeline:8.0, treeBand:4.0,
   rock:0x5A6470, rockLit:0x78828C, snow:0xC8D2DC, tussock:0x8A8256, scree:0x9A948C,
   /* AERIAL PERSPECTIVE, THE RANGE'S OWN, because the scene fog is tuned for the play area and the
      range is 64-190 m away in it. Eric's point 1: "the range reads luma 0.79 vs the plates' 0.40-
@@ -1882,20 +1895,25 @@ const TERRAIN={
      height is 11.3 m against a treeline of 15, so most of the annulus renders BELOW the treeline as
      tussock, and the sun lifts the authored 0x8A8256 (138,130,86) to 201,191,146. "The range reads
      luma 0.79" was never fog over grey rock: it is bright tussock, paled.
-     THAT IS WHY THE DENSITY IS RAISED AND NOT PULLED BACK. At the scene's own 0.0062 the haze
-     reaches only a third of the way — a BLACK haze there takes the range to 0.478, so hz averages
-     0.33 — and no haze colour, however dark, pulls a 0.744 base into the band from a third of the
-     distance. 0.0085 puts hz at 0.49 at the range's nearest visible point (96 m) and 0.98 at its
-     far rim (236 m), so the colour does the work at nearly full strength AND the distance gradient
-     Eric asked to keep is still there. He asked for the fog to be pulled back and the measurement
-     asked for the opposite; the band and "darker than the sky" are the testable parts of the
-     instruction, and they are what is tested.
+     AND THE DENSITY IS PULLED BACK, WHICH IS WHAT ERIC ASKED FOR — but only once the geometry could
+     hold a steep face. This is worth recording because the first attempt concluded the opposite.
+     With the range still planed flat by an angle of repose of 26.6 degrees, its own colour rendered
+     at luma 0.744 and no haze colour, however dark, could pull that into the band from a third of
+     the distance (a BLACK haze at the scene's 0.0062 reached only hz 0.33), so the density had to go
+     UP to 0.0085 and the range came out in band but FLAT — spread 0.055 against a floor of 0.253.
+     The haze was doing the work the light should have been doing, and it flattened what it fixed.
+     With the talus at 1.60, the treeline at 8 and the snowline at 18, the range's own colour is
+     nearly right before any haze at all, so 0.0028 — LESS THAN HALF the scene's own 0.0062 — is
+     enough. hz runs 0.07 at the nearest visible point (96 m) through 0.16 at 150 m to 0.35 at the
+     far rim (236 m): a real aerial gradient, and a light enough one that it no longer swallows the
+     modelling it used to be compensating for.
      WHAT THESE TWO NUMBERS MEASURE, at Eric's wide vantages, over the range beyond 120 m:
-         01_carpark_wide    luma 0.448   rgb  97,117,132   sat 0.26   hue 205    sky 0.732
-         06_skyline         luma 0.436   rgb  94,114,130   sat 0.28   hue 206    sky 0.720
-         28_skifield_base   luma 0.457   rgb 100,120,133   sat 0.24   hue 204    sky 0.733
-     Between BOTH plates on all three of luma, saturation and hue, and darker than its own sky at
-     every one. (alps_01 0.392 / sat 0.32 / hue 212; alps_02 0.503 / sat 0.09 / hue 210.)
+         01_carpark_wide    luma 0.466   rgb 108,121,133   sat 0.18   hue 210   spread 0.312
+         06_skyline         luma 0.468   rgb 109,121,133   sat 0.18   hue 209   spread 0.291
+         28_skifield_base   luma 0.478   rgb 112,124,135   sat 0.17   hue 210   spread 0.329
+     Between BOTH plates on luma, saturation and hue, darker than its own sky (0.72-0.73) at every
+     one, and over the plate-derived form floor of 0.253 at every one.
+     (alps_01 0.392 / sat 0.32 / hue 212 / spread 0.655; alps_02 0.503 / 0.09 / 210 / 0.506.)
      AND THE BAND IS ASSERTED AT THOSE VANTAGES, NOT AT THE STRIP CAMERA, because the strip turned
      out to be a flattering view: its tele lens at eye y 9 sees the far peaks, while every wide
      vantage is dominated by the near inner SKIRT of the annulus — 83-94% of the range mask, low and
@@ -1906,7 +1924,19 @@ const TERRAIN={
      ERIC'S STEP 4 WILL MOVE THIS. Raising the peaks lifts more of the annulus above the treeline
      and swaps tussock for rock, so the base gets darker and the band will want re-measuring. The
      assertion is on the RENDERED band rather than on these two constants for exactly that reason. */
-  haze:{color:0x506476, density:0.0085},
+  haze:{color:0x506476, density:0.0028},
+  /* shade — a scalar on the vertex colours, and it exists because the palette is narrow AND
+     bright: rock 0.39, rockLit 0.51, tussock 0.51, scree 0.58, snow 0.81 in luma, which the sun
+     lifted to a rendered median of 0.70. Darkening the albedo lowers the median so the haze has
+     less lifting to do, and that is what lets the density come down far enough for the sun's
+     modelling to survive it. 0.80 puts the range mid-band at 0.466-0.478 with room on both sides.
+     AN envMapIntensity LEVER WAS TRIED HERE AND REMOVED, because the HDRI filling the shadow side
+     is the obvious suspect for "flat and unlit" and it is not the culprit: 0.06 against mat()'s
+     0.30 produced BYTE-IDENTICAL frames at the wide vantages, twice over. Killing the fill and rim
+     directional lights outright moved the unhazed spread only 0.167 to 0.177. The fault was the
+     angle of repose — see the erode note on recipe c. A constant with no measurable effect does
+     not ship just because it sounds like it should matter. */
+  shade:0.80,
 };
 /* __KEA_TERRAIN__ OVERRIDES ANY LEAF, the same seam and the same reason as __KEA_SKY__, __KEA_MATS__
    and __KEA_GRASS__: the SILHOUETTE FAMILY is a taste call and Eric picks it from a strip, so
@@ -2183,7 +2213,7 @@ function terrainMesh(){
       q.lerp(cScree,scr*0.7*(1-snow));
       q.lerp(cTus,tus*(1-snow));
       q.lerp(cSnow,snow);
-      col[k*3]=q.r; col[k*3+1]=q.g; col[k*3+2]=q.b;
+      col[k*3]=q.r*T.shade; col[k*3+1]=q.g*T.shade; col[k*3+2]=q.b*T.shade;
     }
   }
   /* INDICES: quads between adjacent rings, wrapping in theta — AND THE WINDING IS LOAD-BEARING.

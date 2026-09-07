@@ -79,7 +79,7 @@ export const RECIPES={
       valleys:5, valleyW:0.20, valleyDepth:0.42, erode:{iters:12,talus:0.55,rate:0.42} },
   /* b — SERRATED: ridge-dominant, high frequency, many sharp peaks. The Darran/Kaikoura read:
        a saw of arêtes with cirques between them. */
-  b:{ name:'serrated arêtes',
+  b:{ name:'serrated aretes',
       warp:{f:0.016,amp:34}, fbm:{f:0.022,oct:5,lac:2.2,gain:0.48,amp:0.62},
       ridge:{f:0.034,oct:5,lac:2.3,gain:0.55,sharp:2.8,amp:1.00},
       valleys:7, valleyW:0.13, valleyDepth:0.52, erode:{iters:18,talus:0.68,rate:0.48} },
@@ -88,7 +88,7 @@ export const RECIPES={
   c:{ name:'glaciated troughs',
       warp:{f:0.012,amp:30}, fbm:{f:0.018,oct:5,lac:2.0,gain:0.55,amp:0.85},
       ridge:{f:0.026,oct:4,lac:2.1,gain:0.52,sharp:2.3,amp:0.75},
-      valleys:4, valleyW:0.30, valleyDepth:0.68, erode:{iters:26,talus:0.50,rate:0.55} },
+      valleys:4, valleyW:0.30, valleyDepth:0.68, erode:{iters:26,talus:1.60,rate:0.55} },
 };
 
 /* ---------- the annulus ---------- */
