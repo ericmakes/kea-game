@@ -679,3 +679,93 @@ So this baseline will be replaced deliberately and soon: the water material (TOD
 HIGH item 3), the swing bridge rebuild against the Hooker Valley archetype (item 4), then mountains,
 rocks and snow forms. Every one of those re-pins the river frames at least. The pin exists so that
 those changes have something honest to move AWAY from.
+
+---
+
+## 2026-09-07, session 34 — ALL 40 RE-PINNED FROM ELEVEN RUNS. The clean baseline the terrain is judged against.
+
+Eric rejected the cone-mountain direction and ordered the re-pin FIRST: *"This re-pins most vantages
+- expected. Do the re-pin of the current 32 first so we have a clean baseline to judge the terrain
+against, then build the terrain."*
+
+**RE-PINNED ALL 40, NOT "THE 32", AND THE REASON IS THAT THE FLAGGED SET IS NOT A SET.** It came back
+32 on one sweep and 31 on the next, because the bimodal frames flip between takes — so "the flagged
+ones" is not well defined and pinning only them would leave a baseline that is coherent in 31 places
+and stale in the rest. A whole-set consensus re-pin is the only thing that yields what Eric actually
+asked for, which is something clean to judge the terrain against. It is also what the last two full
+re-pins did, and `repin.mjs` with no ids does exactly this.
+
+### N WENT TO ELEVEN, PER ERIC'S STANDING INSTRUCTION
+
+At N=5, roughly twenty of the forty came back a bare 3-of-5. His rule is explicit — raise to 11 if
+any comes back a bare majority — so eleven it was. Five sweeps at 102 frames each, then six more
+restricted to the forty baseline ids (the first five had been shooting every proof frame in the
+capture directory as well, which is harmless but slow).
+
+### SIX VANTAGES ARE STILL 6/5 COIN-FLIPS AT ELEVEN RUNS
+
+    02_hut_snow          51252 x6  /  61293 x5
+    14_player_view      105330 x6  / 126083 x5
+    16_trish             67397 x6  /  80706 x5
+    29_lodge_deck        67776 x6  /  80884 x5
+    36_village_bakery     1197 x6  /   1444 x5
+    41_station_shed      43457 x6  /  52068 x5
+
+Eleven is the ceiling Eric set, so these are pinned from their eleven-run medoid and the fact is
+recorded rather than chased. **Until TODO 88 is fixed, each of these six will flag on roughly half of
+all sweeps and that is not a regression.** EVERY ONE OF THOSE MEDOIDS SITS IN THE MAJORITY CLUSTER,
+which is worth checking and is not automatic: a medoid minimises total distance, so on a lopsided
+split a tighter minority can win.
+
+### AND TWENTY-TWO RESOLVED CLEANLY, WHICH IS THE ARGUMENT FOR N=11
+
+Twenty-two came in at 7/4 or better, and five are UNANIMOUS across all eleven independent browser
+processes: `15_sign`, `34_village_street`, `37_river_bridge` at spread 0, plus `35_village_glass` and
+`39_river_walk` at 10/1.
+**03_kea_plate HAS RESOLVED.** It was a 6/5 fair coin at N=11 last session and is 8/3 this time —
+small but real evidence that the population of bimodal frames is not fixed, which matters because
+TODO 88's diagnosis predicts the split depends on frame CONTENT and this session changed the content
+of most frames.
+
+PIN PROVENANCE: run1 13, run5 6, run2 5, run3 4, run7 4, run10 2, run4 2, run11 1, run6 1, run8 1,
+run9 1. No sweep dominates the baseline, which is the property the per-vantage medoid exists to give:
+a run is disqualified per frame, never wholesale.
+
+### WHAT IS PINNED IS THE WHOLE OF SESSION 33'S LOOK WORK
+
+This baseline carries the water system, the rebuilt swing bridge, the timber family, the gable hut
+roof, the mountains, the rocks and the snow forms — everything that was left flagged for Eric across
+nine pieces. Pinning it now is what makes the terrain piece measurable: the heightfield range will
+re-pin most of these frames again, and it needs something honest to move away from.
+
+**26_tour_brochure and 27_travel_card are still not in the set** and still reported by the tool every
+time. Three sessions of waiting on Eric's call.
+
+### THE VERIFICATION SWEEP IS **PENDING**, AND NOT BECAUSE IT WAS SKIPPED
+
+Every previous entry in this file ends with a fresh sweep confirming the pin, and this one cannot,
+yet. Two attempts were killed by the system for low memory — the first a full forty-frame pass
+chained with diff/pxdiff/lum, the second three bounded batches of fourteen, which produced no output
+at all before dying. Measured at the time: 43% memory free but **9.9 GB of swap in use**, with the
+largest consumers being long-running desktop apps (Claude.app, and Chrome processes up for a day and
+twenty-one hours). Every captured frame launches a full Chrome instance, and there is not headroom
+for one right now. Batching does not help because the problem is the floor, not the peak.
+
+**THE PIN ITSELF IS NOT IN DOUBT.** The forty baseline files are byte copies of the eleven-run
+consensus medoids, made before either kill; nothing about them depends on the verification. What is
+missing is the independent check that a fresh sweep lands on the pinned state.
+
+**WHAT IT SHOULD SAY WHEN IT RUNS**, recorded now so it cannot be quietly reinterpreted later: about
+34 of 40 clean, and up to six flagged — and specifically the six 6/5 coin-flips listed above, no
+others. A flagged frame outside that list would mean something is wrong with the pin.
+    node gauntlet/verify/capture.mjs && node gauntlet/verify/diff.mjs
+
+**AND THIS BELONGS TO TODO 78's FAMILY.** That entry is about the photographer hanging and leftover
+browsers; this is the same rig meeting the same machine from the other side. Two orphaned headless
+processes survived the first kill by at least 28 seconds, and they matter more than they look:
+TODO 73 exists BECAUSE session 15b shot a sweep while the machine was settling from a killed run and
+one run stood clear of the other three on 12 of 28 vantages. A killed capture pass is therefore not
+a neutral event — it poisons the next sweep. Both kills were cleaned up (`--headless` is the only
+safe discriminator, since puppeteer drives Eric's INSTALLED Chrome rather than a bundled Chromium,
+so the executable path cannot tell my instances from his) and all 42 numbered frames were checked
+for truncation — size, PNG signature and a trailing IEND chunk — with none suspect. See TODO 115.

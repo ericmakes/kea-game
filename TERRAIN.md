@@ -79,6 +79,40 @@ far. That retires the cone ring (18 per map) *and* the 73 squashed-sphere tussoc
 piece, which is the right shape — TODO 80 fixed the hills' flat tops in P4e and they are still
 spheres.
 
+### 2a. THE RADII ARE CONSTRAINED BY WHAT IS ALREADY THERE — measured, not chosen
+
+The lab's annulus spans r 55 → 185 and that cannot survive contact with the carpark. Surveyed every
+mesh standing at ground level beyond r 55:
+
+| what | where | consequence |
+|---|---|---|
+| the bird's own clamp (`pushOut` B=52) | r ≤ 52, so ≤ 73 at the box corner | the terrain must not touch the play area |
+| **the ROAD and its furniture** — 35 marker posts, 26 markings | **r 55 → 129**, a band at z 34, x ±120 | a rising heightfield would bury it |
+| the tussock hills (73 squashed spheres) | r 64 → 84 | these are what the foothills replace |
+| trees | r 74 → 92 | they stand at y 0 and would float or sink |
+| the cone mountains | r 80 → 157 | retired by this piece |
+
+**THREE THINGS FOLLOW.**
+
+1. **THE INNER RADIUS IS ABOUT 64, NOT 55** — where the tussock hills begin, comfortably outside the
+   play box's 73 m corner diagonal but still inside the hills so the foothills genuinely replace
+   them. Eric asked for the foothills to get the same treatment and this is what makes that possible
+   rather than nominal.
+2. **THE ROAD NEEDS A FLATTENED CORRIDOR**, and that is not a workaround — it is what a road through
+   foothills IS. A cutting. The heightfield takes a flatten mask on the band |z − 34| < ~8 out to
+   x ±125, smoothstepped at its edges so the ground rises away from the carriageway instead of
+   stepping. Same idea as `grassCuts`, which already cuts the grass field for the same road.
+3. **ANYTHING STANDING BEYOND THE INNER RADIUS MUST SAMPLE THE TERRAIN.** The trees are placed at
+   y 0 today because the ground there IS y 0. So the terrain must export a `terrainHeightAt(x, z)`
+   and the tree placement must use it — which is a small change with a large blast radius, since
+   `buildTrees` runs in every biome. It is also the same function the FOOTHILL boulders and snow
+   forms will need, and it must NOT be wired into `groundHeightAt`: the range is scenery, the bird
+   never walks on it, and `groundHeightAt` reads colliders only (section 6).
+
+**AND THE SKI FIELD AND RIVER HAVE NO ROAD**, so their masks differ — the river has its far track
+out to z 34 at x 6, which is inside r 64 only at its start. Each biome's flatten mask is its own
+data, like `grassCuts` is.
+
 Resolution target: 384 angular × 72 radial ≈ 27.6k verts / 55k tris. At r 135 that is 2.2 m
 angular and 1.25 m radial — about 15 screen pixels a cell at play distance, enough for a ridgeline
 to read as sharp. **Budget it honestly:** the rejected cones cost 12.4k tris, so this is roughly

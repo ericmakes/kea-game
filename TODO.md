@@ -2630,3 +2630,31 @@ its own 0.965 boundary on the frame it uses; its input, `baseline/18_rear_close.
 changed since session 32's re-pin, so this predates session 33 entirely. Worth re-cutting the
 fixture (a lift of 8 or 10 levels would sit clear of the boundary) rather than leaving a contract
 test that reports red for being nearly right.
+
+### 115. THE CAPTURE RIG NEEDS MORE MEMORY THAN THE MACHINE HAS SPARE, AND A KILLED PASS POISONS THE NEXT SWEEP
+Filed 2026-09-07, session 34, after two consecutive kills during a re-pin verification.
+WHAT HAPPENED: the eleven-run consensus re-pin completed and its verification sweep was killed twice
+by the system for low memory — first as a forty-frame pass chained with diff/pxdiff/lum, then as
+three bounded batches of fourteen, which produced no output at all. Measured at the time: 43% memory
+free, **9.9 GB of swap in use**, largest consumers long-running desktop apps. Every captured frame
+launches a full Chrome instance. **Batching does not help, because the problem is the floor and not
+the peak.**
+WHY IT IS WORSE THAN AN INCONVENIENCE: TODO 73 exists precisely because session 15b shot a sweep
+while the machine was settling from a killed run, and one run then stood clear of the other three on
+12 of 28 vantages — it would have mis-pinned about fifteen. So a killed capture pass is not neutral,
+it poisons whatever is shot next. This session's second kill happened in exactly that window.
+TWO THINGS THE RIG SHOULD DO ABOUT IT, neither of which it does:
+  1. **REFUSE TO START WHEN THERE IS NO HEADROOM.** `webrig.mjs` could read free memory and swap
+     before launching and decline with a clear message, instead of dying halfway through frame nine
+     and leaving the set half-shot. A re-pin that refuses to begin is recoverable; one that dies in
+     the middle needs its state audited.
+  2. **CLEAN UP AFTER ITSELF ON DEATH.** Two orphaned headless browsers survived the first kill by
+     at least 28 seconds. The discriminator has to be `--headless`, because puppeteer drives the
+     INSTALLED Google Chrome here rather than a bundled Chromium — so the executable path cannot
+     distinguish the rig's instances from the user's own 83 Chrome processes, and a naive pkill
+     would take his browser with it. Worth a `--headless`-scoped sweeper the rig calls on exit and
+     any tool can call before starting.
+AND A THIRD, CHEAPER THAN BOTH: after any interrupted pass, `diff.mjs` and friends are reading
+whatever is in gauntlet/capture, which may be a mix of two builds. A frame's mtime against the
+bundle's is enough to catch that. All 42 frames were checked for truncation this time (size, PNG
+signature, trailing IEND) and none was suspect, but that check was done by hand.
