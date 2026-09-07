@@ -1830,12 +1830,34 @@ function mkBoulder(x,y,z,r,c,parent){
    terrain derives its whole shape from position. Same recipe, same range, byte for byte. */
 const TERRAIN={
   r0:64, r1:190, nTheta:384, nR:72,
+  /* THE FOOTHILL SKIRT (Eric's point 3): "the range floats on a fog band because the r43-64 hills
+     were removed - restore walkable rolling foothills WITH colliders that rise continuously into
+     the range's inner edge, no step, no sky visible between ground and range at eye level."
+     footR0 — the field is EXTENDED INWARD to r 43, which is exactly the band the nine sphere hills
+     used to cover (they were centred r 64-84 with radii 13-21, so their skirts reached r 43). The
+     range itself is untouched: the skirt is built as extra rings BELOW the existing r0 after the
+     erosion pass has run, so every height at r >= 64 is bit-identical to the silhouette Eric chose.
+     footRoll — the skirt would otherwise be a smooth radial ramp off the range's toes. This is the
+     roll, and it is faded out at BOTH ends by s*(1-s): zero at r 43 so the play area is not stepped
+     into, and zero at r 64 so the join to the range is exact by construction rather than by tuning.
+     playFlat — the play pad. The carpark keeps real content out to r 60.6 (walking poles at 46.5,
+     -38.9, a ski cluster at -41,-38, five colliders past r 43), all of it inside |x|,|z| <= 46.5,
+     and a rising heightfield would bury it. So the box is flattened, on the same "a road through
+     foothills is a cutting" argument as the road corridor, applied to the ground the game is played
+     on. IT IS AS TIGHT AS THE CONTENT ALLOWS, because the pad and the skirt are competing for the
+     same 21 metres: at half 48 with a 9 m feather it reached r 57 and cancelled the roll exactly
+     where the roll peaks (r 53.5), which left the skirt contributing nothing. 47.5 clears the
+     furthest content by a metre and is fully faded by r 52. */
+  footR0:43, footRoll:{f:0.055, amp:3.4}, playFlat:{half:47.5, feather:4.5},
   peakH:56, footH:9,
   /* THE CREST IS INSIDE THE RIM, at 0.82 of the way out, falling away behind it. Found by
      measurement in the lab: elevation angle is h/r so the highest ground wins the silhouette, a
      ramp peaking AT the boundary made the boundary the skyline, and the boundary is the coarsest
      ring. Recipe b came back with 26 one-sample needles because of it. */
-  crest:0.82, fallOff:0.26, seamIn:0.22,
+  crest:0.82, fallOff:0.26,
+  /* seamIn IS RETIRED, not merely unused: it fed a feather that forced the range's inner ring to
+     zero, which the foothill skirt now supersedes. Left out rather than left at a value nothing
+     reads, so nobody tunes it and wonders why nothing moves. */
   recipe:'c',          // the shipped default until Eric picks from the strip
   /* THE THREE SILHOUETTE FAMILIES. Eric picks a family, not a tint (TERRAIN.md 4), so the material
      is held constant across the strip and only these vary. */
@@ -1954,15 +1976,18 @@ matMerge(TERRAIN,(typeof globalThis!=='undefined'&&globalThis.__KEA_TERRAIN__)||
    {z, halfW, x0, x1} flattens |z-band.z| < halfW between x0 and x1, smoothstepped at the edges so
    the ground rises away from the corridor instead of stepping out of it. */
 function terrainFlat(biome){
+  /* THE PLAY PAD IS EVERY MAP'S, because every map is played inside the same +/-52 clamp and every
+     map now carries a skirt that would otherwise rise through its furniture. */
+  const pad={half:TERRAIN.playFlat.half, feather:TERRAIN.playFlat.feather};
   if(biome==='carpark')
     /* THE ROAD. It runs at z 34 from x -120 to 120, which reaches r 129 — well inside this
        annulus — and carries 35 marker posts and 26 markings with it. A rising heightfield would
        bury the lot. grassCuts already cuts the grass field for the same road. */
-    return [{z:34, halfW:9.0, x0:-128, x1:128, feather:7.0}];
+    return [pad,{z:34, halfW:9.0, x0:-128, x1:128, feather:7.0}];
   if(biome==='river')
     /* the far track past the bridge, which runs out to z 34 at x 6 */
-    return [{z:30, halfW:7.0, x0:-4, x1:16, feather:6.0}];
-  return [];
+    return [pad,{z:30, halfW:7.0, x0:-4, x1:16, feather:6.0}];
+  return [pad];
 }
 /* ---- the noise, ported verbatim from gauntlet/verify/terrainlab.mjs ---- */
 const _thash=(x,y)=>{ let h=Math.imul(x|0,374761393)^Math.imul(y|0,668265263);
@@ -1992,9 +2017,30 @@ function _tridge(x,y,o,lac,gain,sharp,cellF){
   return norm>0?s/norm:0;
 }
 /* how much of the flatten corridor applies at (x,z): 1 is fully flat, 0 is untouched */
+/* terrainFlatAt(biome,x,z) — how strongly a point is flattened, 0 to 1. Exported so the harness
+   can tell a ROAD CUTTING from a fault: a cutting is supposed to have banks, so the "the ground
+   rises without a ditch" assertion has to skip the corridors rather than fail on them. */
+function terrainFlatAt(biome,x,z){ return _tflat(terrainFlat(biome),x,z); }
 function _tflat(masks,x,z){
   let k=0;
   for(const m of masks){
+    /* TWO MASK SHAPES. A CORRIDOR is a road: a z centre-line with a half-width and an x extent.
+       A BOX is the play pad, and it needs its own shape rather than four corridors because the
+       corners are where the content actually is — the carpark's outliers sit at (46.5,-38.9) and
+       (-41,-38), which no single z-corridor covers. */
+    if(m.half!==undefined){
+      /* THE SMOOTHSTEP ARGUMENT IS CLAMPED, and that is not defensive tidiness — _tsm is
+         t*t*(3-2*t), which is a smoothstep only on [0,1] and a runaway cubic outside it. The first
+         version of this mask fed it the raw distance ratio: at the annulus rim, (190-47.5)/4.5 is
+         31.7, _tsm returns -60660, the mask came out at 60661 and the flatten multiplied a third of
+         the field by -60660. The range read -262,640 m at its outer ring. The corridor branch below
+         is safe only because its two `continue` guards keep the ratio inside [0,1]; a mask with no
+         far-side guard has to clamp for itself. */
+      const ff=v=>{ const t=(Math.abs(v)-m.half)/m.feather;
+        return t<=0?1:(t>=1?0:1-_tsm(t)); };
+      k=Math.max(k,Math.min(ff(x),ff(z)));
+      continue;
+    }
     if(x<m.x0-m.feather||x>m.x1+m.feather)continue;
     const d=Math.abs(z-m.z);
     if(d>m.halfW+m.feather)continue;
@@ -2029,7 +2075,16 @@ function buildTerrain(biome){
     const t=j/(nR-1), r=r0+(r1-r0)*t;
     const rise=Math.pow(Math.min(1,t/T.crest),1.7);
     const fall=t>T.crest?1-T.fallOff*_tsm((t-T.crest)/(1-T.crest)):1;
-    RAMP[j]=_tsm(Math.min(1,t/T.seamIn))*(T.footH+(T.peakH-T.footH)*rise)/T.peakH*fall;
+    /* NO SEAM FEATHER ANY MORE, and this is the change that makes Eric's point 3 possible.
+       It used to be _tsm(min(1,t/T.seamIn)) * ... , which pins RAMP[0] to ZERO whatever seamIn is
+       set to (_tsm(0) is 0), so the range's innermost ring was always exactly 0 m. That was right
+       while the ground inside r0 was flat — it stopped the annulus starting with a 9 m cliff — but
+       it is wrong the moment there is a skirt, because the skirt rises to 3 m by r 53 and then had
+       to come back DOWN to 0 at r 64 before the range climbed again. A ring-shaped ditch all the way
+       round the map, which is the exact opposite of "rise continuously into the range's inner edge,
+       no step". The skirt does the seam's job now, and does it better: it carries the ground from 0
+       at r 43 up to whatever the range's inner ring actually is. */
+    RAMP[j]=(T.footH+(T.peakH-T.footH)*rise)/T.peakH*fall;
     const cell=Math.max(2*Math.PI*r/nTheta, dR);
     for(let i=0;i<nTheta;i++){
       const ang=i/nTheta*Math.PI*2;
@@ -2082,18 +2137,56 @@ function buildTerrain(biome){
       }
     }
   }
-  /* ---- 6. THE FLATTEN CORRIDORS, applied LAST so nothing puts a mountain back on the road ---- */
-  if(masks.length)for(let j=0;j<nR;j++){
-    const r=r0+dR*j;
+  /* ---- 5b. THE FOOTHILL SKIRT — extra rings INWARD, added after every pass above has run ----
+       Eric's point 3. It is built here, and not by lowering r0, for one reason: r0 is what the
+       radial profile is measured from, so lowering it would move the crest, the falloff and the
+       seam and change the silhouette he has just chosen. Adding rings below the finished field
+       leaves every height at r >= 64 bit-identical and cannot touch the skyline at all.
+       CONTINUITY IS BY CONSTRUCTION, NOT BY TUNING. The skirt at azimuth i is the range's own inner
+       ring scaled by a smoothstep that reaches exactly 1 at r0, plus a roll that is faded out at
+       BOTH ends by s*(1-s). At the join the scale is 1 and the roll is 0, so the skirt meets the
+       range at precisely its own height; at r 43 both terms are 0, so it meets the flats at zero.
+       There is no step at either end because neither end can have one. */
+  const nF=Math.max(0,Math.round((r0-T.footR0)/dR));
+  const nR2=nR+nF, fr0=r0-nF*dR;
+  const H2=new Float32Array(nR2*nTheta), S2=new Float32Array(nR2*nTheta);
+  H2.set(H,nF*nTheta); S2.set(SCREE,nF*nTheta);
+  /* THE SKIRT RISES AND NEVER FALLS, azimuth by azimuth, and that is enforced rather than hoped
+     for. "Rise continuously into the range's inner edge, no step" is a statement about the radial
+     profile, and a roll added to a ramp does not satisfy it on its own: where the range's inner ring
+     happens to be LOW, the roll humps above it and then has to come back down. Measured on the first
+     version, at azimuth 170 of the carpark, the ground climbed to 3.25 m by r 57 and fell to 0.41 m
+     by r 68 — a 0.637 m drop per ring, above the 0.55 m the bird can step down.
+     TWO THINGS MAKE IT MONOTONE. The skirt is CAPPED at the height it is leading up to, so it can
+     never overshoot the join; and it is accumulated as a RUNNING MAXIMUM outward, so a dip in the
+     noise cannot turn into a descent. What survives is angular variation — the roll reads across
+     the ring rather than along the radius, which is what a foothill skirt looks like anyway, and it
+     is what the harness measures when it asks whether the skirt rolls. */
+  for(let i=0;i<nTheta;i++){
+    const join=H[i];
+    let acc=0;
+    for(let j=0;j<nF;j++){
+      const r=fr0+dR*j, t=j/nF, sc=_tsm(t), bump=sc*(1-sc)*4;
+      const ang=i/nTheta*Math.PI*2;
+      const x=Math.cos(ang)*r+OX, y=Math.sin(ang)*r+OZ;
+      const roll=(_tfbm(x*T.footRoll.f,y*T.footRoll.f,3,2.0,0.5)*2-1)*T.footRoll.amp;
+      const v=Math.min(join,Math.max(0,join*sc+roll*bump));
+      if(v>acc)acc=v;
+      H2[j*nTheta+i]=acc;
+    }
+  }
+  /* ---- 6. THE FLATTEN MASKS, applied LAST so nothing puts a mountain back on the road ---- */
+  if(masks.length)for(let j=0;j<nR2;j++){
+    const r=fr0+dR*j;
     for(let i=0;i<nTheta;i++){
       const ang=i/nTheta*Math.PI*2, k=j*nTheta+i;
       const fk=_tflat(masks,Math.cos(ang)*r,Math.sin(ang)*r);
-      if(fk>0)H[k]*=1-fk;
+      if(fk>0)H2[k]*=1-fk;
     }
   }
-  G.terrain={field:H, scree:SCREE, r0, r1, nTheta, nR, dR, recipe:T.recipe, biome,
-             ignored:TERRAINIGNORED.slice()};
-  return H;
+  G.terrain={field:H2, scree:S2, r0:fr0, r1, nTheta, nR:nR2, dR, recipe:T.recipe, biome,
+             rangeR0:r0, nFoot:nF, ignored:TERRAINIGNORED.slice()};
+  return H2;
 }
 
 /* terrainHeightAt(x,z) — the height of the RANGE at a world point, sampled bilinearly from the very
@@ -3193,8 +3286,26 @@ function addBoxCollider(x,z,w,d,top,solid,ry){ G.colliders.push({kind:'box',x,z,
    every prop - so that nothing pops upward on the first frame. That is the difference between a prop
    that rests where it was placed and a prop that is merely caught by something. */
 function railTop(x,z,w,d,top,ry){ addBoxCollider(x,z,w,d,top,false,ry); return top+0.08; }
+/* groundHeightAt — WHAT THE PLAYER STANDS ON. Colliders, plus the terrain skirt.
+   THE SKIRT IS HERE AND THE RANGE IS NOT AN EXCEPTION TO THAT, which reverses what terrainHeightAt's
+   own comment used to claim ("MUST NEVER BE WIRED INTO IT ... the bird is clamped to +/-52 and can
+   never reach it"). That claim was FALSE and the file contradicted itself about it: the clamp is a
+   BOX of +/-52, so the bird reaches r 73.5 at the corners, which is nine metres INSIDE an annulus
+   that starts at r 64. Ground it can reach with no height under it is ground it walks through, and
+   it has been walking through the range's inner edge at all four corners since the heightfield
+   landed. Eric's point 3 asks for the base to be walkable; this is the mechanism.
+   AND IT IS A HEIGHTFIELD QUERY RATHER THAN COLLIDERS, deliberately, because Eric asked for
+   "colliders" and a collider cannot do this job: c.top is a FLAT top, so a box on a 23-degree
+   skirt mis-fits by 1.7 m across a 4 m tile and the player climbs an invisible staircase. Tiles
+   small enough to hide the step (about 1.5 m) would need roughly 700 colliders per map against the
+   29 the carpark has today. One bilinear sample of the field the mesh is drawn from cannot disagree
+   with what is drawn, at any resolution.
+   THE 0.55 REACH APPLIES TO IT TOO. Not because the skirt is a ledge — it is continuous — but
+   because the rule this function encodes is "you stand on what you can reach", and exempting the
+   terrain would let the bird snap to a hilltop from underneath it. */
 function groundHeightAt(x,z,curY){
   let h=0;
+  { const t=terrainHeightAt(x,z); if(t>h && curY>=t-0.55) h=t; }
   for(const c of G.colliders){
     let lx=x-c.x, lz=z-c.z;
     if(c.ry){ const sn=Math.sin(c.ry),cs=Math.cos(c.ry); const tx=lx*cs-lz*sn, tz=lx*sn+lz*cs; lx=tx; lz=tz; }
@@ -10420,7 +10531,7 @@ if(typeof globalThis!=='undefined'){
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
     WATER,waterMat,waterTint,updateWater, ROCK,mkBoulder,rockMat, SNOW,snowForm,
-    TERRAIN,buildTerrain,terrainMesh,terrainHeightAt,terrainFlat,rangeHaze,mkTree,
+    TERRAIN,buildTerrain,terrainMesh,terrainHeightAt,terrainFlat,terrainFlatAt,rangeHaze,mkTree,
     RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,BARS:RIVBARS,
       STEP:RIVSTEP,STEPN:RIVSTEPN,STEPTOP:RIVSTEPTOP,FAR:RIVFAR,FARN:RIVFARN,
       STAIR:RIVSTAIR,FARSTAIR:RIVFARSTAIR,

@@ -73,11 +73,22 @@ function stage(H,k,p){
   k.grounded=true; k.tug=null; k.slideV=0; k.slideD=0;
   if(k.held){k.held.heldBy=null;k.held=null;}
 }
-function far(H,k){ k.x=-49;k.z=-49;k.y=0;k.grounded=true;k.tug=null;k.slideV=0; if(k.held){k.held.heldBy=null;k.held=null;} }
+/* THE PARKING SPOT AND THE DEBRIS DUMP HAVE TO BE ON FLAT GROUND, and (-49,-49) no longer is.
+   The foothill skirt (TERRAIN step 3) extends the heightfield inward to r 43 and the play pad is
+   flattened to +/-47.5, so the corner these helpers used sits on 1.17 m of hillside — and a
+   teleport is not a walk: stage() sets y from groundHeightAt, which applies the 0.55 reach and so
+   leaves a bird dropped at y 0 UNDER the hill rather than on it. That cost six SYSTEMS findings
+   ("grab shiny ute keys" and five knock-ons) the first time the skirt was built: the sweep dumped
+   loose props at (-48,-45) where the ground had risen 0.18 m, the bird was staged standing on the
+   rise, and the prop it was sent to fetch was buried below its grab range. Nothing was wrong with
+   the game; the staging was standing somewhere that had become a hill.
+   -46 KEEPS THEM AS FAR AWAY AS THE INTENT REQUIRES and inside the pad, where terrainHeightAt
+   measures exactly 0.000. Verified for every spot changed here rather than assumed. */
+function far(H,k){ k.x=-46;k.z=-46;k.y=0;k.grounded=true;k.tug=null;k.slideV=0; if(k.held){k.held.heldBy=null;k.held=null;} }
 /* relocate loose debris away from a work zone so press edges don't grab it */
 function sweep(H,pos,r){
   for(const p of H.G.props){ if(p.heldBy||p.banked)continue;
-    if(Math.hypot(p.x-pos.x,p.z-pos.z)<(r||2.2)){ p.x=-49+Math.random()*2; p.z=-46+Math.random()*2; p.y=0.1; p.mesh.position.set(p.x,p.y,p.z);} }
+    if(Math.hypot(p.x-pos.x,p.z-pos.z)<(r||2.2)){ p.x=-46+Math.random()*2; p.z=-44+Math.random()*2; p.y=0.1; p.mesh.position.set(p.x,p.y,p.z);} }
 }
 function clearTraffic(H){
   const G=H.G;

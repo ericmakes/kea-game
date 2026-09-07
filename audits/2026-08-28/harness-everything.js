@@ -6345,7 +6345,15 @@ C.section('the range: a heightfield, not a ring of cones');
   X.setSeed(20260828); X.boot({biome:'carpark'});
   { const D=G.terrain;
     if(ok(!!D&&!!G.terrainMesh,'the carpark builds one terrain field and one mesh')){
-      ok(D.nTheta===T.nTheta&&D.nR===T.nR,'at the recipe\'s resolution ('+D.nR+' x '+D.nTheta+')');
+      /* THE RESOLUTION IS THE RECIPE'S PLUS THE SKIRT'S RINGS. nR counts the range only; the
+         foothill skirt adds nFoot rings BELOW r0 after every pass has run, at the same dR, which is
+         what keeps the range's own heights bit-identical to the silhouette Eric chose. */
+      ok(D.nTheta===T.nTheta&&D.nR===T.nR+D.nFoot&&D.nFoot>0,
+         'at the recipe\'s resolution plus its skirt ('+D.nR+' x '+D.nTheta+' = '+T.nR+
+         ' range rings + '+D.nFoot+' skirt rings)');
+      ok(Math.abs(D.r0-(T.r0-D.nFoot*D.dR))<1e-6&&Math.abs(D.rangeR0-T.r0)<1e-9,
+         'and the skirt is contiguous with the range at the same ring spacing — field from r '+
+         D.r0.toFixed(2)+', range from r '+D.rangeR0+', dR '+D.dR.toFixed(4));
       let seam=0;
       for(let i=0;i<D.nTheta;i++)seam=Math.max(seam,Math.abs(D.field[i]));
       ok(seam<0.05,'and its inner ring sits at zero, so it meets the play area with no step ('+
@@ -6357,15 +6365,31 @@ C.section('the range: a heightfield, not a ring of cones');
       ok(X.terrainHeightAt(150,0)>4,'and it actually returns the range in between ('+
          X.terrainHeightAt(150,0).toFixed(1)+' m at r 150)'); } }
 
-  /* 3. IT IS SCENERY. Eric was explicit and TERRAIN.md section 6 repeats it: the bird never walks
-        on the range, so it carries no colliders and terrainHeightAt is NOT wired into
-        groundHeightAt. This is the assertion that stops a later session "helpfully" joining them. */
+  /* 3. IT IS WALKABLE WHERE IT CAN BE REACHED, AND STILL CARRIES NO COLLIDERS.
+        THIS ASSERTION USED TO SAY THE OPPOSITE, and the reversal is Eric's, not a weakening: "(3)
+        BASE: ... restore walkable rolling foothills WITH colliders that rise continuously into the
+        range's inner edge". It read "the range is SCENERY ... terrainHeightAt is NOT wired into
+        groundHeightAt. This is the assertion that stops a later session 'helpfully' joining them."
+        The reason it gave for that was FALSE, and the file contradicted itself about it: it claimed
+        "the bird is clamped to +/-52 and can never reach it", while the tussock-hill note sixty
+        lines away had it right — the clamp is a BOX, so the bird reaches r 73.5 at the corners,
+        nine metres inside an annulus that starts at r 64. The bird has been walking through the
+        range's inner edge at all four corners since the heightfield landed.
+        SO THE CONTRACT IS NOW: the field is what you stand on, subject to the same 0.55 reach as
+        every collider, and it still has no colliders of its own. The reach half matters — without
+        it the bird would snap to a hilltop from underneath — and it is why a caller standing at
+        y 0 out at r 150 still gets 0. */
   { const before=G.colliders.length;
-    ok(X.terrainHeightAt(150,0)>4&&X.groundHeightAt(150,0,99)===0,
-       'the range is SCENERY — terrainHeightAt reports '+X.terrainHeightAt(150,0).toFixed(1)+
-       ' m at r 150 where groundHeightAt reports 0, because groundHeightAt reads colliders and the '+
-       'range has none');
-    ok(G.colliders.length===before,'and asking did not add one'); }
+    ok(X.terrainHeightAt(150,0)>4&&X.groundHeightAt(150,0,99)>4,
+       'the range IS WHAT YOU STAND ON where you can reach it — terrainHeightAt reports '+
+       X.terrainHeightAt(150,0).toFixed(1)+' m at r 150 and groundHeightAt agrees ('+
+       X.groundHeightAt(150,0,99).toFixed(1)+' m) for a walker who is up there');
+    ok(X.groundHeightAt(150,0,0)===0,'and it does NOT snap a walker up from below — the same '+
+       'point reports 0 for a walker at y 0, because the 0.55 reach applies to the field exactly '+
+       'as it applies to a collider');
+    ok(G.colliders.length===before,'and the range still carries no colliders of its own ('+
+       G.colliders.length+' unchanged) — the skirt is a heightfield query, because c.top is a FLAT '+
+       'top and a box on a slope is an invisible staircase'); }
 
   /* 4. EVERY MAP HAS ITS OWN RANGE. The height function is purely positional, so the first cut
         gave all six biomes the identical horizon — 0.0 to 40.7 m in every one of them, same peaks,
@@ -6612,6 +6636,155 @@ C.section('the range: a heightfield, not a ring of cones');
     C.note&&C.note('  '+G.biome+' slope: p50 '+q(0.5).toFixed(2)+' ('+dg(q(0.5))+' deg)  p90 '+
       q(0.9).toFixed(2)+' ('+dg(q(0.9))+')  p99 '+q(0.99).toFixed(2)+' ('+dg(q(0.99))+')  max '+
       S[S.length-1].toFixed(2)+' ('+dg(S[S.length-1])+')'); }
+
+  /* 6e. THE FOOTHILL SKIRT IS WALKABLE, AND IT RISES INTO THE RANGE WITHOUT A STEP — Eric's point
+        3: "the range floats on a fog band because the r43-64 hills were removed - restore walkable
+        rolling foothills WITH colliders that rise continuously into the range's inner edge, no
+        step, no sky visible between ground and range at eye level."
+        WHY THIS IS NOT COLLIDERS. c.top is a FLAT top, so a box on the skirt's slope mis-fits by
+        1.7 m across a 4 m tile and the player climbs an invisible staircase; tiles small enough to
+        hide it (about 1.5 m) need roughly 700 per map against the carpark's 29. groundHeightAt
+        samples the field the mesh is drawn from instead, so what you stand on cannot disagree with
+        what is drawn at any resolution. The walkability is asserted here rather than assumed from
+        the mechanism.
+        AND IT FIXES A LIVE DEFECT, not only Eric's look note. terrainHeightAt's own comment claimed
+        the range was unreachable — "the bird is clamped to +/-52 and can never reach it" — and the
+        file contradicted itself sixty lines later with the true statement: the clamp is a BOX, so
+        the bird reaches r 73.5 at the corners, nine metres inside an annulus that starts at r 64.
+        It has been walking through the range's inner edge at all four corners since the heightfield
+        landed.
+        FOUR CLAIMS. That the field has no negative cell — cheap, and it catches a whole class: the
+        play-pad mask fed an unclamped ratio to _tsm, which is a smoothstep only on [0,1] and a
+        runaway cubic outside it, so the flatten multiplied a third of the field by -60660 and the
+        range read -262,640 m at its outer ring. That the ground rises without a DITCH at the join,
+        which the old seam feather guaranteed by pinning the range's inner ring to zero. That a
+        radial walk from the play area to the clamp boundary never asks for more than the game's own
+        reach. And that the skirt actually ROLLS, so it is foothills and not a cone of ramp. */
+  { const {walkable}=require('../../gauntlet/verify/walkable.js');
+    for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
+      const D=G.terrain;
+      let neg=0, mn=1e9;
+      for(const v of D.field){ if(v<-0.001)neg++; if(v<mn)mn=v; }
+      ok(neg===0,b+': not one of the '+D.field.length+' field cells is negative ('+neg+
+         ' are, lowest '+mn.toFixed(2)+' m). A flatten mask that overshoots multiplies the field by '+
+         'a negative number and this is what says so.');
+
+      /* NO DITCH AT THE JOIN, MEASURED PER AZIMUTH AND AGAINST THE GAME'S OWN REACH. Moving
+         outward across the skirt and over the seam, the ground must not FALL by more than the bird
+         can step down.
+         THE FIRST VERSION OF THIS AVERAGED THE RINGS AND WAS TOO BLUNT TO FAIL. The seam feather
+         pins the range's innermost ring to zero, so the skirt rose to five metres at some azimuths
+         and came back down to nothing before the range climbed again — a ring-shaped ditch all the
+         way round the map. In the MEAN over 384 azimuths that is a fall of 0.065 m per ring, under
+         a 0.20 m threshold I had picked out of the air, and it went green on the very defect it was
+         written for. Restoring the feather now trips it at 0.83 m per ring.
+         AND THE THRESHOLD IS THE REACH, not a new number: 0.55 is what groundHeightAt already
+         means by "a step you can take", so a fall bigger than that is a fall the bird cannot make
+         and the ground is not continuous in the only sense the game has. */
+      { const REACH=0.55;
+        let worstFall=0, fallAt=null;
+        /* THE WINDOW IS THE SKIRT AND THE JOIN, and nothing past it. Ten rings further in — which
+           is what the first scope did — reaches r 82, well inside the range's own flanks, and those
+           are ALLOWED to fall a metre: they are mountainside, they sit outside the +/-52 clamp, and
+           the claim about ground the bird can reach is the box-scoped step check below. Scanned
+           that far it went red on four maps in a build with no ditch in it at all, at r 66-76. */
+        /* AND A ROAD CUTTING IS NOT A FAULT. The carpark's corridor is flattened to zero along
+           z 34 with a 7 m feather, so any ray running towards it descends into it as the radius
+           grows — that is a cutting with banks, which is the whole point of the corridor, and it
+           is where this check's worst reading came from (azimuth 170 of the carpark falls from
+           3.25 m at r 57 to 0.41 m by r 68 purely because it is approaching the road). Skipped by
+           asking the game itself, through terrainFlatAt, rather than by hard-coding where the
+           roads are. */
+        let skipped=0;
+        for(let i=0;i<D.nTheta;i++){
+          const ang=i/D.nTheta*Math.PI*2;
+          for(let j=1;j<=D.nFoot;j++){
+            const r=D.r0+D.dR*j;
+            if(X.terrainFlatAt(b,Math.cos(ang)*r,Math.sin(ang)*r)>0.01){ skipped++; continue; }
+            const f=D.field[(j-1)*D.nTheta+i]-D.field[j*D.nTheta+i];
+            if(f>worstFall){ worstFall=f; fallAt={r:+r.toFixed(0),az:i}; } } }
+        ok(worstFall<=REACH,b+': THE GROUND RISES INTO THE RANGE WITHOUT A DITCH — across the '+
+           'skirt and the seam, on all '+D.nTheta+' azimuths, the worst fall between adjacent '+
+           'rings going outward is '+worstFall.toFixed(3)+' m against the '+REACH+
+           ' m the bird can step down'+(fallAt?' (worst at r '+fallAt.r+', azimuth '+fallAt.az+')':'')+
+           ', with '+skipped+' samples inside a flatten corridor skipped as cuttings. The retired '+
+           'seam feather measured 0.83 m here, and an unenforced roll 0.637 m.'); }
+
+      /* THE STEP, MEASURED EVERYWHERE THE BIRD CAN STAND, not along one route. A straight line
+         through a map is not a claim about the skirt: the first version walked the diagonal from
+         the origin and went red in the village, the campground and the river with "50 surfaces out
+         of reach" — every one of them a BUILDING the route ran under. Those are real routes and
+         they have their own harness (walkable.js and the bridge crossing); this is about the
+         ground.
+         SCOPED TO THE +/-52 CLAMP, because that is where walkability means anything, and NOT to the
+         whole annulus: the range's upper faces stand at up to 74 degrees, which is 1.02 m of rise
+         per 0.30 m stride, and asserting you can walk up those would be asserting something false.
+         Every azimuth, radially outward in one stride at a time, until the ray leaves the box. */
+      { const STRIDE=0.30, REACH=0.55;
+        let worst=0, worstAt=null, samples=0;
+        for(let a=0;a<96;a++){
+          const ang=a/96*Math.PI*2, cx=Math.cos(ang), cz=Math.sin(ang);
+          let prev=null;
+          for(let r=D.r0;r<200;r+=STRIDE){
+            const x=cx*r, z=cz*r;
+            if(Math.abs(x)>52||Math.abs(z)>52)break;      // outside the clamp: unreachable
+            const h=X.terrainHeightAt(x,z); samples++;
+            if(prev!==null){ const d=Math.abs(h-prev);
+              if(d>worst){ worst=d; worstAt={r:+r.toFixed(1),ang:+(ang*180/Math.PI).toFixed(0)}; } }
+            prev=h; } }
+        ok(samples>500,b+': there is reachable skirt to walk on ('+samples+' samples inside the '+
+           '+/-52 clamp beyond r '+D.r0.toFixed(0)+')');
+        ok(worst<=REACH,b+': THE SKIRT HAS NO STEP the bird cannot take — the biggest height '+
+           'change between consecutive strides, over '+samples+' samples on 96 azimuths, is '+
+           worst.toFixed(3)+' m against a reach of '+REACH+
+           (worstAt?' (worst at r '+worstAt.r+', azimuth '+worstAt.ang+' deg)':'')); }
+
+      /* AND groundHeightAt ACTUALLY CARRIES IT, which is the wiring rather than the shape. Without
+         this the three claims above could all hold on a field nothing stands on. */
+      { let found=null;
+        for(let a=0;a<96&&!found;a++){ const ang=a/96*Math.PI*2;
+          for(let r=D.r0;r<74;r+=0.5){ const x=Math.cos(ang)*r, z=Math.sin(ang)*r;
+            if(Math.abs(x)>52||Math.abs(z)>52)break;
+            const t=X.terrainHeightAt(x,z);
+            if(t>0.5){ found={x,z,t}; break; } } }
+        ok(!!found,b+': the reachable skirt actually rises somewhere inside the clamp'+
+           (found?' (r '+Math.hypot(found.x,found.z).toFixed(1)+', '+found.t.toFixed(2)+' m)':''));
+        if(found)ok(Math.abs(X.groundHeightAt(found.x,found.z,found.t)-found.t)<1e-6,
+           b+': and groundHeightAt returns the skirt under a walker standing on it — '+
+           X.groundHeightAt(found.x,found.z,found.t).toFixed(3)+' m against the field\'s '+
+           found.t.toFixed(3)+' m'); }
+
+      /* NOTHING THE WORLD PLACES STANDS ON RISEN GROUND. Every collider, prop and interactable is
+         positioned with an explicit y, so a skirt that rises under one of them floats it or buries
+         it. The play pad exists to prevent exactly that and this is the check that the pad is
+         actually wide enough for the content it is protecting — the carpark keeps walking poles out
+         at (46.5,-38.9) and a ski cluster at (-41,-38), and 47.5 clears the furthest of them by a
+         metre.
+         THIS CLASS OF FAULT IS NOT HYPOTHETICAL. Building the skirt cost six SYSTEMS findings the
+         first time, because the audit rig's own staging helpers dumped loose props at (-48,-45) and
+         parked the bird at (-49,-49) — spots that had been flat for the whole life of the project
+         and are now 0.18 m and 1.17 m of hillside. The game was fine; the staging was standing on a
+         hill. Those spots moved to (-46,-46), and this assertion is what would have said so. */
+      { const risen=[];
+        const check=(what,x,z)=>{ const t=X.terrainHeightAt(x,z);
+          if(t>0.05)risen.push(what+' ('+x.toFixed(1)+','+z.toFixed(1)+') on '+t.toFixed(2)+' m'); };
+        for(const c of G.colliders)check('collider',c.x,c.z);
+        for(const pr of (G.props||[]))if(pr.x!==undefined)check('prop '+(pr.name||pr.id||''),pr.x,pr.z);
+        for(const it of (G.inter||[]))if(it.x!==undefined)check('interactable '+(it.id||''),it.x,it.z);
+        ok(risen.length===0,b+': nothing the world places stands on risen ground ('+risen.length+
+           ' does'+(risen.length?': '+risen.slice(0,4).join('; '):'')+'). The play pad is +/-'+
+           X.TERRAIN.playFlat.half+' with a '+X.TERRAIN.playFlat.feather+' m feather.'); }
+
+      /* AND IT ROLLS. A pure radial ramp has no variation ALONG a ring; foothills do. Measured as
+         the spread across each skirt ring, so it cannot be satisfied by the ramp itself. */
+      let roll=0;
+      for(let j=1;j<D.nFoot;j++){ let lo=1e9,hi=-1e9;
+        for(let i=0;i<D.nTheta;i++){ const v=D.field[j*D.nTheta+i];
+          if(v<lo)lo=v; if(v>hi)hi=v; }
+        roll=Math.max(roll,hi-lo); }
+      ok(roll>1.5,b+': and the skirt ROLLS rather than ramping — the widest spread of height '+
+         'around a single skirt ring is '+roll.toFixed(2)+' m. A radial ramp measures 0 here.'); }
+    X.setSeed(20260828); X.boot({biome:'carpark'}); }
 
   /* 7. THE ROAD CORRIDOR IS FLAT, because the carpark's road runs to r 129 with 61 pieces of
         furniture on it and a rising heightfield would bury the lot. A road through foothills is a
@@ -7229,12 +7402,32 @@ C.section('REPLAT P6A: the model-swap seam');
          beech 9 -> 9,  moved in y: 2 of 9,  worst 0.068 m,  moved in x/z: 0
          named-mesh counts differing: none
      Two trees settling 68 mm onto a slightly different hillside. mesh a491ca9ea6f3fc40 ->
-     3556361c192c1047; meshes, tris and every count unchanged. */
+     3556361c192c1047; meshes, tris and every count unchanged.
+
+     --- STEP 3 (BASE): THE FOOTHILL SKIRT, AND NINE BEECH TREES ---
+
+     Eric: "the range floats on a fog band because the r43-64 hills were removed - restore walkable
+     rolling foothills WITH colliders that rise continuously into the range's inner edge, no step."
+     The field is extended INWARD to r 43 — twelve more rings at the same 1.7746 m spacing — which
+     is the exact band the nine sphere hills used to cover. TRIS +9216 IN BOTH MAPS AND THAT IS THE
+     WHOLE OF IT: 12 rings x 384 azimuths x 2 triangles = 9216. carpark 266588 -> 275804, skifield
+     99554 -> 108770, meshes unchanged at 979 and 374.
+     THE CARPARK'S MESH DIGEST DOES NOT MOVE and the ski field's does, which is worth the sentence
+     because it looks inconsistent: the digest covers geometry TYPE and parameters, and a
+     BufferGeometry has no parameters to report, so changing the terrain's vertices is invisible to
+     it. What moves the ski field is its NINE BEECH TREES, which are placed with terrainHeightAt.
+     Dumped position by position rather than inferred:
+         beech 9 -> 9,  moved in y: 9 of 9,  worst +5.013 m,  moved in x/z: 0
+         named-mesh counts differing: none
+     They rose because retiring the seam feather raised the range's inner ground under them — the
+     feather pinned the innermost ring to zero, which is what put a ring-shaped ditch between the
+     skirt and the range. The carpark's six trees sit inside r 57, where terrainHeightAt returns 0,
+     so they do not move at all. mesh 3556361c192c1047 -> ebdf8239533c571a. */
   const PRESEAM={
-    carpark :{mesh:'4a6fc19b3a4ce578', col:'1b025c57715cb017', meshes:979, tris:266588,
+    carpark :{mesh:'4a6fc19b3a4ce578', col:'1b025c57715cb017', meshes:979, tris:275804,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'3556361c192c1047', col:'fc06ef03250ea1ed', meshes:374, tris:99554,
+    skifield:{mesh:'ebdf8239533c571a', col:'fc06ef03250ea1ed', meshes:374, tris:108770,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

@@ -170,7 +170,7 @@ ok(!!chip,'jammed driver throws a chip');
 const deadRefsBefore=G.inter.filter(i=>i.car===car).length;
 ok(deadRefsBefore>0,'car carries tear entries pre-despawn ('+deadRefsBefore+')');
 far(H,k0); k0.stun=0; G.trafT.a=999;
-for(const pr of G.props){ if(!pr.heldBy&&!pr.banked&&Math.abs(pr.z-34)<4.5){ pr.x=-49;pr.z=-44;pr.y=0.1;pr.mesh.position.set(pr.x,pr.y,pr.z);} } // AMENDED 2026-08-26: clear road strays
+for(const pr of G.props){ if(!pr.heldBy&&!pr.banked&&Math.abs(pr.z-34)<4.5){ pr.x=-46;pr.z=-44;pr.y=0.1;pr.mesh.position.set(pr.x,pr.y,pr.z);} } // AMENDED 2026-08-26: clear road strays
 let gone=false; for(let i=0;i<60*45&&!gone;i++){ X.update(1/60); if(!G.cars.includes(car))gone=true; }
 ok(gone,'car despawns after crossing');
 ok(G.inter.filter(i=>i.car===car).length===0,'despawn removes its tear entries from the registry (F4)');
