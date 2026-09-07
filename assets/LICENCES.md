@@ -515,3 +515,72 @@ other one without needing this session's network access back.
 
 The tileM in that override is why tileM is per-family data and not a constant — getting it wrong
 does not break anything, it just tiles at the wrong scale.
+
+---
+
+## ROCK — the tenth family  (TERRAIN.md step 1, session 34, 2026-09-07)
+
+Source: Poly Haven. CC0, as every Poly Haven asset is. All six files verified at import against the
+publisher's API md5, not against themselves.
+
+**THE FILES AND THEIR LICENCES LAND NOW; THE FAMILY LANDS WITH THE PIECE THAT WEARS IT.** This
+section deliberately has NO `### rock — ...` heading, and that is not a formatting choice. The
+everything battery cross-checks the number of `###` family headings in this file against the number
+of entries in `MATS.families` — two independent records of the same fact, on purpose — and it
+separately refuses any family that no surface in any map actually wears. Registering `rock` today to
+match a heading would have meant either an unused family (which that assertion correctly reds) or
+weakening the assertion to accommodate it, and FLAKES forbids the second. So the asset arrives with
+its licence, per P5F's law, and the heading plus the `MATS.families` row arrive together in the
+heightfield piece. Tried it the other way first and the battery was right.
+
+**`dark_rock_02` (Dark Rock 02)**
+
+Author(s): Amal Kumar.  Licence: **CC0**.  Publisher category: Rock.
+Published real-world size: **2000.0 x 2000.0 mm** — this is the number the texel density is derived from, not a guess.
+
+| file | bytes | md5 (publisher API, verified against the file at import) |
+|---|---|---|
+| `tex/dark_rock_02_diff_1k.jpg` | 592452 | `92e53acc3f9878b525d0234d8c51fadf` |
+| `tex/dark_rock_02_nor_gl_1k.jpg` | 1028835 | `ddae04d066a75ff94b7dd34e8c0f9b74` |
+| `tex/dark_rock_02_arm_1k.jpg` | 660892 | `bfb86b730d4a917a55b7e98e843edaa1` |
+
+**WHY THIS SET, AND IT WAS CHOSEN ON STRUCTURE RATHER THAN COLOUR.** Its own authors tag it
+*fractured, stratified, craggy, striated*, and stratification is exactly what `nz_alps_01`'s
+foreground shows: layered schist with visible bedding planes, not a boulder. Structure is the one
+thing a texture gives that a tint cannot, so it is what the choice was made on. It is also 2000 mm
+square, landing on the same 2.000 m tile as the weatherboard and timber sets.
+
+**AND ITS VALUE IS RIGHT WHILE ITS HUE IS NOT — measured, and it changes how the material is built.**
+Albedo means, via `gauntlet/verify/lum.mjs`:
+
+| | albedo luma | mean RGB | sat | hue |
+|---|---|---|---|---|
+| `dark_rock_02` | **0.208** | 58, 52, 44 | 0.24 | **34** (warm brown) |
+| `rock_face` | 0.292 | 97, 70, 50 | 0.49 | 26 (warmer, saturated) |
+| plate `nz_alps_01`, near schist | 0.227 | 54, 59, 62 | 0.13 | **202** (cool blue-grey) |
+
+The VALUE match is close and it is the hard part to find — most rock sets are far too pale for the
+0.23–0.47 band the plates measure. The HUE is wrong by about 170 degrees: both candidate sets are
+warm brown, and NZ alpine schist and greywacke are cool blue-grey with blue above red. **So the
+terrain material must take STRUCTURE from this set and COLOUR from the plates.** That is what
+`mode:'paint'` is for and what weatherboard, corrugate and timber already do; the terrain does it in
+its own triplanar shader, which is sampling and blending by hand anyway. Recorded here because a
+later session looking at the raw albedo would otherwise reasonably conclude the family was
+mis-chosen.
+
+**THE ALTERNATE, KEPT IN THE TREE** — not a second family, and deliberately without a `###` heading
+so it cannot inflate the family count the battery cross-checks:
+
+| file | bytes |
+|---|---|
+| `tex/rock_face_diff_1k.jpg` | 732721 |
+| `tex/rock_face_nor_gl_1k.jpg` | 1139857 |
+| `tex/rock_face_arm_1k.jpg` | 458661 |
+
+`rock_face` (Rock Face), Greg Zaal and Dario Barresi, CC0, published size 2380 x 2380 mm. Tagged
+*terrain, landscape, cliff, solid rock* by its authors, which is why it was worth keeping: it is the
+one candidate explicitly made for a landform rather than for a boulder. Reachable without needing
+this session's network access back:
+
+    KEAMATS='{"families":{"rock":{"asset":"rock_face","tileM":2.38}}}'
+
