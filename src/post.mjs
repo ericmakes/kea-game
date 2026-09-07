@@ -54,7 +54,19 @@ export const FILM = {
   // at YAVG 154.5 against the plain renderer's 154.5 — it adds shade without lifting exposure.
   ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45 },
   // a long focus and a narrow aperture: the far hills soften, everything you play in stays sharp
-  bokeh:   { focus: 26.0, aperture: 0.00010, maxblur: 0.003 },
+  /* MAXBLUR CAME DOWN FROM 0.003 TO 0.0008, and it is the range that asked for it. The original
+     comment here read "a long focus and a narrow aperture: the far hills soften, everything you
+     play in stays sharp", which was a deliberate choice and turned out to be softening the far
+     hills into mush: measured with platescore, the range's edge density is 0.0675 with this pass at
+     0.003 and 0.1708 with the whole post stack OFF, against a plate band that opens at 0.1692. The
+     film camera was destroying 60% of the mountains' detail, and no amount of rock texture could
+     get through it — the first three attempts to fix "the range has no surface" were all upstream
+     of this line and all failed.
+     0.0008 KEEPS A LITTLE. It is not zero, because a trace of far softening is part of the look
+     Eric asked for at P1 and it still reads at the horizon; it is small enough that the range
+     scores in band. Eric's own note this round — "fix the blurred yellow foreground band at the
+     foothills" — is the same fault seen from the other end of the frame. */
+  bokeh:   { focus: 26.0, aperture: 0.00010, maxblur: 0.0008 },
 };
 
 for (const [k, v] of Object.entries(globalThis.__KEA_FILM__ || {})) {

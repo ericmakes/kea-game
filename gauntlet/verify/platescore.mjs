@@ -75,13 +75,34 @@ const quant=(arr,q)=>{ const s=Float64Array.from(arr).sort();
       scale; a smooth shaded heightfield has almost none, which is what made ours read as a blob.
       THE FRACTION, NOT THE MEAN, because the mean is dominated by the vast smooth areas both
       images share and moves very little between a blob and a cliff. */
-export function edgeDensity(im,L){
+export function edgeDensity(im,L,keep){
   L=L||lumPlane(im); const {w,h}=im;
+  /* THE EXPOSURE IS NORMALISED AWAY FIRST, and that is a correction rather than a refinement. The
+     threshold below is an ABSOLUTE step in luma, so a darker image has smaller gradients everywhere
+     and scores lower on structure it actually has. Measured: adding the triplanar rock scan to the
+     range RAISED its detail and DROPPED this metric from 0.058 to 0.038, because the same change
+     darkened the band from 0.489 to 0.398. That is the metric reading brightness, and brightness is
+     already its own row in the table. Scaling each band to a common mean luma makes edge density a
+     statement about STRUCTURE and lets the two properties be chased independently.
+     THE PLATES ARE NORMALISED THE SAME WAY, so the comparison stays like for like — and their bands
+     move when this changes, which is why it is done inside the metric rather than to the image. */
+  let mean=0, mcount=0;
+  for(let i=0;i<L.length;i++)if(!keep||keep[i]){mean+=L[i];mcount++;}
+  mean=mcount?mean/mcount:0;
+  const k=mean>1e-4?0.45/mean:1;
+  if(Math.abs(k-1)>1e-6){ const N=new Float32Array(L.length);
+    for(let i=0;i<L.length;i++)N[i]=Math.min(1,L[i]*k); L=N; }
   let n=0, tot=0; const hist=new Array(12).fill(0);
   for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
     const g=(a,b)=>L[a]-L[b];
     const gx=g((y-1)*w+x+1,(y-1)*w+x-1)+2*g(y*w+x+1,y*w+x-1)+g((y+1)*w+x+1,(y+1)*w+x-1);
     const gy=g((y+1)*w+x-1,(y-1)*w+x-1)+2*g((y+1)*w+x,(y-1)*w+x)+g((y+1)*w+x+1,(y-1)*w+x+1);
+    /* ONLY WHERE THE SUBJECT IS, and the 3x3 neighbourhood must be entirely inside the mask —
+       otherwise the SILHOUETTE itself counts as an enormous edge and the metric measures how much
+       sky is in frame. */
+    if(keep){ let all=1;
+      for(let dy=-1;dy<=1&&all;dy++)for(let dx=-1;dx<=1;dx++)if(!keep[(y+dy)*w+x+dx]){all=0;break;}
+      if(!all)continue; }
     const m=Math.hypot(gx,gy)/4;
     tot++; if(m>0.06)n++;
     hist[Math.min(11,Math.floor(m*40))]++;
@@ -93,7 +114,9 @@ export function edgeDensity(im,L){
       sit near 0.04, meaning a real range has genuinely BLACK shadowed faces. Ours reached 0.27,
       which is a range with no dark end at all. p10 rather than the minimum, so one blown pixel
       cannot carry it. */
-export function ridgeP10(im,L){ L=L||lumPlane(im); return {value:quant(L,0.10)}; }
+export function ridgeP10(im,L,keep){ L=L||lumPlane(im);
+  const v=keep?Array.from(L).filter((_,i)=>keep[i]):L;
+  return {value:v.length?quant(v,0.10):null}; }
 
 /* 3. SNOW PATCHINESS — how HARD the snow's edges are. The snow mask is taken relative to each
       image's own distribution (above the midpoint between its median and its 98th percentile), so
@@ -105,14 +128,17 @@ export function ridgeP10(im,L){ L=L||lumPlane(im); return {value:quant(L,0.10)};
       one that distinguishes "hard-edged patches" from "a soft ramp" and that is what Eric asked
       for. If the mask is tiny the property is reported as absent rather than as a number: an image
       with no snow has no snow edges, and inventing a value for it would be worse than saying so. */
-export function snowPatch(im,L){
+export function snowPatch(im,L,keep){
   L=L||lumPlane(im); const {w,h}=im;
-  const med=quant(L,0.50), hi=quant(L,0.98);
+  const sub=keep?Array.from(L).filter((_,i)=>keep[i]):L;
+  if(keep&&sub.length<200)return {value:null,area:0,note:'nothing inside the mask'};
+  const med=quant(sub,0.50), hi=quant(sub,0.98);
   const thr=med+0.60*(hi-med);
   const m=new Uint8Array(w*h);
-  let area=0;
-  for(let i=0;i<L.length;i++)if(L[i]>thr){m[i]=1;area++;}
-  if(area<w*h*0.01)return {value:null,area:area/(w*h),note:'no snow to speak of'};
+  let area=0, room=0;
+  for(let i=0;i<L.length;i++){ if(keep&&!keep[i])continue; room++;
+    if(L[i]>thr){m[i]=1;area++;} }
+  if(area<room*0.01)return {value:null,area:room?area/room:0,note:'no snow to speak of'};
   let per=0, gsum=0, gn=0;
   for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
     const i=y*w+x; if(!m[i])continue;
@@ -121,20 +147,22 @@ export function snowPatch(im,L){
     const gx=(L[i+1]-L[i-1]), gy=(L[i+w]-L[i-w]);
     gsum+=Math.hypot(gx,gy)/2; gn++;
   }
-  return {value:gn?gsum/gn:0, area:area/(w*h), shape:per/Math.sqrt(area)};
+  return {value:gn?gsum/gn:0, area:room?area/room:0, shape:per/Math.sqrt(area)};
 }
 
 /* 4. LUMA AND HUE. The band's mean luma, its mean hue in degrees and its saturation. These are the
       properties the earlier pieces already chased; they are here so one table carries all of it
       and so a change that fixes texture by wrecking the colour cannot hide. */
-export function lumaHue(im){
+export function lumaHue(im,keep){
   const {w,h}=im; const s=[0,0,0]; let n=0, l=0;
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ const p=px(im,x,y);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ if(keep&&!keep[y*w+x])continue;
+    const p=px(im,x,y);
     s[0]+=p[0];s[1]+=p[1];s[2]+=p[2]; l+=lumOf(p); n++; }
+  if(!n)return {luma:null,hue:null,sat:null,rgb:[0,0,0],px:0};
   const rgb=s.map(v=>v/n), mx=Math.max(...rgb), mn=Math.min(...rgb);
   let hue=Math.atan2(Math.sqrt(3)*(rgb[1]-rgb[2]),2*rgb[0]-rgb[1]-rgb[2])*180/Math.PI;
   if(hue<0)hue+=360;
-  return {luma:l/n, hue, sat:(mx-mn)/(mx||1), rgb};
+  return {luma:l/n, hue, sat:(mx-mn)/(mx||1), rgb, px:n};
 }
 
 /* 5. SILHOUETTE ROUGHNESS — how jagged the skyline is, in pixels of second difference per column.
@@ -163,14 +191,30 @@ export function silhouette(im,isSky){
 /* ---------- the target bands, from the paired plate's own four tiles ---------- */
 export const PROPS=['edgeDensity','ridgeP10','snowPatch','luma','hue','sat','silhouette'];
 const MINREL=0.18;                // a band is never tighter than +/-18% of the plate's own mean
+const HUETOL=30;                  // degrees, about the plate's mean — see plateBand
 
+/* EVERY PROPERTY IS MEASURED ON THE SUBJECT ONLY, and finding that out cost a false 7-of-7. The
+   colour metrics were being taken over the whole ridge band, SKY INCLUDED, and the sky is a large
+   blue area: the strip scored hue 201 while terrainvalue.mjs — which masks the range by DEPTH and
+   measures nothing else — put the same rock at hue 24, warm. Both numbers were right about
+   different things and only one of them is about the rock. The sky also occupies a different
+   fraction of the game frame than of either plate, so including it makes the comparison
+   incomparable in a way no amount of band-fitting can fix.
+   edgeDensity NORMALISES ITS OWN COPY of the luma plane; ridgeP10 and snowPatch must NOT see a
+   normalised one, since their whole point is the image's real values. The plane is passed in and
+   never mutated — checked by the selftest, because an in-place normalisation here would silently
+   rewrite the contrast number too. */
 export function measureAll(im,isSky){
   const L=lumPlane(im);
-  const lh=lumaHue(im);
-  return { edgeDensity:edgeDensity(im,L).value, ridgeP10:ridgeP10(im,L).value,
-           snowPatch:snowPatch(im,L).value, luma:lh.luma, hue:lh.hue, sat:lh.sat,
+  const {w,h}=im;
+  let keep=null;
+  if(isSky){ keep=new Uint8Array(w*h);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++)keep[y*w+x]=isSky(px(im,x,y),x,y)?0:1; }
+  const lh=lumaHue(im,keep);
+  return { edgeDensity:edgeDensity(im,L,keep).value, ridgeP10:ridgeP10(im,L,keep).value,
+           snowPatch:snowPatch(im,L,keep).value, luma:lh.luma, hue:lh.hue, sat:lh.sat,
            silhouette:isSky?silhouette(im,isSky).value:null,
-           _extra:{snow:snowPatch(im,L), lh, edge:edgeDensity(im,L)} };
+           _extra:{snow:snowPatch(im,L,keep), lh, edge:edgeDensity(im,L,keep), subject:lh.px} };
 }
 
 /* FOUR TILES, and they are VERTICAL slices rather than quadrants on purpose: a mountain photograph
@@ -191,12 +235,19 @@ export function plateBand(im,isSky){
   for(const k of PROPS){
     const vs=tiles.map(t=>t[k]).filter(v=>v!==null&&isFinite(v));
     if(!vs.length||whole[k]===null){ band[k]=null; continue; }
+    const c=whole[k];
+    /* HUE IS THE ONE PROPERTY WHOSE BAND IS NOT THE TILE SPREAD, and the reason is arithmetic
+       rather than taste. Hue is an ANGLE, and nz_alps_02's four tiles run from warm rock to blue
+       distance — 22 degrees to 221 — so the spread rule handed it a band 199 degrees wide, which
+       accepts essentially any colour. The range duly measured hue 57, a warm yellow-tan against two
+       plates that sit at 210 and 212, and the table called it IN BAND. That is exactly the
+       "measurement says yes, picture says no" failure this whole file exists to stop, so hue gets a
+       FIXED tolerance about the plate's own mean instead: 30 degrees, which is roughly where two
+       greys stop reading as the same stone. This makes the test harder, not easier. */
+    if(k==='hue'){ band[k]={lo:c-HUETOL,hi:c+HUETOL,plate:c,tiles:vs,fixed:true}; continue; }
     let lo=Math.min(...vs), hi=Math.max(...vs);
-    const c=whole[k], pad=Math.abs(c)*MINREL;
-    /* HUE IS AN ANGLE and its band is widened in degrees rather than by a percentage — 18% of 212
-       degrees is 38 degrees, which would accept almost any blue-grey and quite a lot of green. */
-    const p2=(k==='hue')?Math.max(6,pad*0.06):pad;
-    lo=Math.min(lo,c-p2); hi=Math.max(hi,c+p2);
+    const pad=Math.abs(c)*MINREL;
+    lo=Math.min(lo,c-pad); hi=Math.max(hi,c+pad);
     band[k]={lo,hi,plate:c,tiles:vs};
   }
   return {band,whole};
@@ -215,7 +266,12 @@ async function shootStrip(recipe){
      times: blue-dominance stopped at the clouds, then missed desaturated horizon sky, then fog
      invariance called the grass at the camera's feet sky. */
   for(const [name,haze] of [['ship',null],['flag',{color:0xFF00FF,density:0.25}]]){
-    process.env.KEATERRAIN=JSON.stringify(haze?{recipe,haze}:{recipe});
+    /* KEATERRAINX merges extra terrain constants into both shots, so a candidate can be scored
+       without an edit-and-rebuild cycle. The tool sets KEATERRAIN itself, so an outer one would be
+       clobbered — the same trap terrainvalue.mjs hit, where two different treeline candidates came
+       back byte-identical. */
+    const xtra=process.env.KEATERRAINX?JSON.parse(process.env.KEATERRAINX):{};
+    process.env.KEATERRAIN=JSON.stringify(Object.assign({},xtra,haze?{recipe,haze}:{recipe}));
     const browser=await launch(); const page=await browser.newPage();
     await page.setViewport({width:SW,height:SH});
     await preparePage(page,{seed:GAUNTLETSEED,biome:'carpark'});
@@ -301,6 +357,54 @@ export function table(res){
   return L.join('\n');
 }
 
+/* plateSubject(name) — what a plate's ROCK measures, with its sky masked off. Exported so that
+   every instrument in the tree takes its plate references from one place. terrainvalue.mjs was
+   comparing the game's depth-masked RANGE against plate numbers taken over the whole ridge band
+   INCLUDING SKY, which is the same apples-to-oranges fault this file had until the subject mask
+   landed — and the two instruments duly disagreed about the same range, one calling it in band and
+   the other out. One measurement of the plates, imported, cannot do that. */
+export function plateSubject(name){
+  const im=bandNorm(path.join(BOARD,name+'.jpg'),BANDS[name][0],BANDS[name][1],NORMW);
+  const L=lumPlane(im), {w,h}=im;
+  const keep=new Uint8Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=(y*w+x)*3;
+    keep[y*w+x]=PLATESKY[name].test([im.buf[i],im.buf[i+1],im.buf[i+2]])?0:1; }
+  const v=Array.from(L).filter((_,i)=>keep[i]).sort((a,b)=>a-b);
+  const q=t=>v[Math.min(v.length-1,Math.floor(v.length*t))];
+  const lh=lumaHue(im,keep);
+  return {luma:lh.luma, hue:lh.hue, sat:lh.sat, p10:q(0.10), p50:q(0.50), p90:q(0.90),
+          spread:q(0.90)-q(0.10), px:v.length};
+}
+
+/* ---------- the composite, so the picture can be looked at beside the numbers ----------
+   Eric's loop is "shoot the c strip, score it, view the composite yourself against alps_01 and
+   alps_02, adjust". The scorer already crops and normalises exactly the bands it measures, so it
+   is the right thing to build the composite from: what I look at is then the same pixels the table
+   is about, rather than a differently-cropped picture that might disagree with it. */
+export function compose(frame){
+  const outs=[];
+  const gband=bandNorm(frame,GAMEBAND[0],GAMEBAND[1],NORMW);
+  const gtmp='/tmp/ps_compose_game.png';
+  execSync(`ffmpeg -v error -y -i "${frame}" -vf `+
+    `"format=rgb24,crop=iw:${Math.round(SH*(GAMEBAND[1]-GAMEBAND[0]))}:0:`+
+    `${Math.round(SH*GAMEBAND[0])},scale=${NORMW}:-2" "${gtmp}"`);
+  for(const n of Object.keys(BANDS)){
+    const ptmp='/tmp/ps_compose_'+n+'.png';
+    const src=path.join(BOARD,n+'.jpg');
+    const d=execSync(`ffprobe -v error -select_streams v -show_entries stream=width,height `+
+      `-of csv=p=0 "${src}"`,{encoding:'utf8'}).trim().split(',').map(Number);
+    execSync(`ffmpeg -v error -y -i "${src}" -vf `+
+      `"format=rgb24,crop=${d[0]}:${Math.round(d[1]*(BANDS[n][1]-BANDS[n][0]))}:0:`+
+      `${Math.round(d[1]*BANDS[n][0])},scale=${NORMW}:-2" "${ptmp}"`);
+    const out=path.join(OUT,'SCORE_vs_'+n.replace('nz_','')+'.png');
+    execSync(`ffmpeg -v error -y -i "${ptmp}" -i "${gtmp}" -filter_complex `+
+      `"[0:v]pad=${NORMW}:ih+3:0:0:color=0x202020[a];[a][1:v]vstack=inputs=2,format=rgb24" "${out}"`);
+    outs.push(out);
+  }
+  return outs;
+}
+
 /* ---------- CLI ---------- */
 /* RUN ONLY WHEN RUN, not when imported — the selftest imports every function above. argv[1] can
    be undefined (node -e), so it is guarded rather than assumed. */
@@ -313,6 +417,7 @@ if(_argv1.endsWith('platescore.mjs')){
       rows:res.rows.map(r=>({k:r.k,gv:r.gv,ok:r.ok,
         bands:r.cells.map(c=>c.b?{n:c.n,lo:c.b.lo,hi:c.b.hi,plate:c.b.plate}:null)}))},null,1)); }
   else {
+    if(process.env.COMPOSE)for(const f of compose(res.frame))console.log('  composite '+f);
     console.log('PLATESCORE — recipe '+res.recipe+' ('+RECIPENAME(res.recipe)+
       ') against nz_alps_01 and nz_alps_02');
     console.log('  band = the spread of the plate\'s own four vertical tiles, widened to at least '+

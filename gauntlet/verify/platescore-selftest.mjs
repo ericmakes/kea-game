@@ -65,6 +65,21 @@ const grey=v=>[v,v,v];
      edgeDensity(fine2).value.toFixed(4)+'), so 2 px is the finest structure it can claim');
 }
 
+/* ---- 1b. EDGE DENSITY IS ABOUT STRUCTURE, NOT EXPOSURE ---- */
+{
+  const mk=g=>synth(400,200,(x,y)=>grey(g*(((x>>3)+(y>>3))&1?0.2:1.0)*255));
+  const bright=edgeDensity(mk(1.0)).value, dark=edgeDensity(mk(0.35)).value;
+  ok(Math.abs(bright-dark)<0.03,'the SAME pattern at two exposures scores the same ('+
+     bright.toFixed(4)+' vs '+dark.toFixed(4)+') — before this was normalised, adding rock texture '+
+     'to the range LOWERED its edge density because the change also darkened it');
+  /* AND IT MUST NOT REWRITE THE PLANE IT WAS HANDED, or local contrast would be measured on a
+     normalised image and silently become a different property. */
+  const im=mk(0.35), L=lumPlane(im), before=Array.from(L.slice(0,64));
+  edgeDensity(im,L);
+  ok(before.every((v,i)=>v===L[i]),'and it does not mutate the luma plane it is given, so '+
+     'local contrast is still measured on the real values');
+}
+
 /* ---- 2. LOCAL CONTRAST ---- */
 {
   /* 15% OF ROWS, NOT 10, and the difference is an off-by-one that mattered: with exactly 10% dark

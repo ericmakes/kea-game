@@ -43,6 +43,7 @@
 import fs from 'fs'; import path from 'path'; import os from 'os'; import url from 'url';
 import { execSync } from 'child_process';
 import { shootRun } from './crossrun.mjs';
+import { plateSubject } from './platescore.mjs';
 import { ensureBuild } from './webrig.mjs';
 const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..');
 
@@ -51,17 +52,27 @@ const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..'
    frame" and not measured. That way the list can be generous without inventing measurements. */
 const IDS=(process.env.IDS||'01_carpark_wide,06_skyline,10_skifield,28_skifield_base,11_trailhead')
   .split(',').filter(Boolean);
-const BAND=[0.39,0.50];
+/* THE PLATE REFERENCES ARE IMPORTED, NOT TYPED, and that fixes a contradiction between two
+   shipped instruments. These bands used to be hand-entered from a measurement of the plates' whole
+   ridge bands — SKY INCLUDED — while the game side of this file masks the range by DEPTH and
+   measures nothing but rock. Rock against rock-plus-sky is not a comparison, and the two tools duly
+   disagreed about the same range: platescore called it in band on colour and contrast while this
+   one called it out. platescore.mjs now masks each plate's sky off and exports what its ROCK
+   measures, so both instruments answer to one measurement of the references.
+       nz_alps_01 rock only: luma 0.360, p10 0.024, p90 0.802, spread 0.778, hue 207, sat 0.060
+       nz_alps_02 rock only: luma 0.467, p10 0.259, p90 0.713, spread 0.454, hue 211, sat 0.108
+   THE BAND IS STILL WHAT THE TWO PLATES SPAN, and the FORM FLOOR still half the smaller of their
+   two spreads, for the reasons the originals gave — only the numbers going in are now right. */
+const PS01=plateSubject('nz_alps_01'), PS02=plateSubject('nz_alps_02');
+const BAND=[Math.min(PS01.luma,PS02.luma)-0.02, Math.max(PS01.luma,PS02.luma)+0.02];
 const D=0.0085;                 // the probe density, and the shipping one
 const FAR=+(process.env.FAR||120);   // metres: beyond this is the range, nearer is its skirt
 /* THE FORM FLOOR COMES FROM THE PLATES AND NOT FROM OUR OWN OUTPUT, which is the only way it can
-   fail. Measured over the same ridge bands: nz_alps_01 spans p10 0.042 to p90 0.697, a spread of
-   0.655; nz_alps_02 spans 0.266 to 0.772, a spread of 0.506. The floor is HALF the smaller of the
-   two, so a range with less than half the tonal range of the flatter-lit plate is called flat.
-   Half, and not the plate itself, because our range is hazed to 0.49-0.98 by design and haze
-   compresses contrast — that is aerial perspective doing its job, and the assertion has to leave
-   room for it while still catching a sheet with no lit side. */
-const FLOOR=0.506/2;
+   fail. Half the smaller of the two plates' rock-only spreads, so a range with less than half the
+   tonal range of the flatter-lit plate is called flat. Half, and not the plate itself, because our
+   range is hazed by design and haze compresses contrast — that is aerial perspective doing its job,
+   and the assertion has to leave room for it while still catching a sheet with no lit side. */
+const FLOOR=Math.min(PS01.spread,PS02.spread)/2;
 
 const lum=p=>(0.2126*p[0]+0.7152*p[1]+0.0722*p[2])/255;
 function frame(f){

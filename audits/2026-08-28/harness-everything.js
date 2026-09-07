@@ -6468,45 +6468,63 @@ C.section('the range: a heightfield, not a ring of cones');
     ok(mean<0.35,'EVERY PEAK IS ITS OWN SHAPE — mean correlation between the summits\' normalised '+
        'profiles is '+mean.toFixed(2)+', where a ring of identical cones measures 1.00'); }
 
-  /* 6. SNOW IS SLOPE-DEPENDENT, which is the biggest cue in both plates Eric named: in nz_alps_01
-        it lies in gullies and on gentle faces while bare rock stands out on the steep faces
-        immediately beside them, AT THE SAME ALTITUDE. A horizontal snowline is what the cones had,
-        and it was an improvement on what preceded them and still wrong. */
+  /* 6. SNOW IS SLOPE-DEPENDENT, AND IT LIES IN GULLIES — the biggest cue in both plates Eric
+        named: in nz_alps_01 snow sits in gullies and on gentle faces while bare rock stands out on
+        the steep faces immediately beside them, AT THE SAME ALTITUDE. A horizontal snowline is what
+        the cones had.
+        THIS NOW READS THE aSnow ATTRIBUTE RATHER THAN THE VERTEX COLOUR, because that is where snow
+        went. It used to be blended into the albedo per vertex, which can only ever be a GRADIENT —
+        vertices are 2 to 5 m apart, so a per-vertex blend cannot have an edge sharper than several
+        metres — and Eric asked for "hard-edged noise-broken patches in gullies not a gradient". The
+        weight is per vertex; the CUT is in the fragment shader, where it can be as sharp as a pixel.
+        Reading the weight directly is also a better test than reading luminance out of a blended
+        colour: it cannot be confused by the rock underneath getting darker.
+        AND THE GULLY TERM IS ASSERTED SEPARATELY, because slope and concavity are different claims:
+        a face can be gentle and convex (a shoulder, which blows clear) or gentle and concave (a
+        hollow, which fills). */
   { const D=G.terrain, {nTheta,nR,r0,r1}=D, dR=(r1-r0)/(nR-1);
-    const col=G.terrainMesh.geometry.attributes.color;
-    const lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+    const A=G.terrainMesh.geometry.attributes.aSnow;
+    ok(!!A,'snow is its own vertex attribute, not a colour blend');
     const at=(j2,i2)=>D.field[Math.max(0,Math.min(nR-1,j2))*nTheta+((i2%nTheta)+nTheta)%nTheta];
-    const c=new THREE.Color();
     /* THE ALTITUDE TERM IS SATURATED ABOVE snowY+snowBand, which is what makes this a clean
-       control: up there the altitude blend is already 1, so the ONLY thing that can still vary the
-       snow is the slope. That lets the band be wide enough for a real sample instead of the narrow
-       nine-metre slice the first version used, which found only 7 gentle faces.
-       AND THE THRESHOLDS ARE THE DISTRIBUTION'S OWN TERCILES rather than multiples of the recipe's
-       snowSlope. Fixed multiples both under-sampled (gentle < 0.31 barely exists up there) and, more
-       importantly, read the very constant being tested — set snowSlope to zero and a fixed-multiple
-       test moves with it. Terciles cannot. */
+       control: up there the altitude blend is already 1, so the only things that can still vary
+       the weight are the slope and the concavity. */
     const cells=[];
     for(let j2=1;j2<nR-1;j2++){ const r=r0+dR*j2, dT=2*Math.PI*r/nTheta;
       for(let i2=0;i2<nTheta;i2++){
         const k=j2*nTheta+i2, h=D.field[k];
-        if(h<T.snowY+T.snowBand)continue;                    // below saturation: altitude still counts
+        if(h<T.snowY+T.snowBand)continue;
         const slope=Math.hypot((at(j2+1,i2)-at(j2-1,i2))/(2*dR),(at(j2,i2+1)-at(j2,i2-1))/(2*dT));
-        c.fromBufferAttribute(col,k);
-        cells.push({slope,l:lum(c)}); } }
-    ok(cells.length>120,'there is high ground above the snowline to sample ('+cells.length+
-       ' cells above the saturation altitude)');
-    cells.sort((a,b)=>a.slope-b.slope);
-    const t3=Math.floor(cells.length/3);
-    const gentle=cells.slice(0,t3), steep=cells.slice(-t3);
-    const avg=a=>a.reduce((x,y)=>x+y.l,0)/a.length;
-    const gs=gentle[gentle.length-1].slope, ss=steep[0].slope;
-    ok(avg(gentle)>avg(steep)*1.25,'SNOW IS SLOPE-DEPENDENT — at altitudes where the altitude term '+
-       'is already saturated, the gentlest third of faces (slope up to '+gs.toFixed(2)+') reads '+
-       avg(gentle).toFixed(3)+' against '+avg(steep).toFixed(3)+' for the steepest third (from '+
-       ss.toFixed(2)+'), a factor of '+(avg(gentle)/avg(steep)).toFixed(2)+
-       '. Snow does not hold on a cliff, which is the biggest cue in both of Eric\'s plates: it '+
-       'lies in gullies while bare rock stands out on the steep faces beside them at the SAME '+
-       'altitude. A horizontal snowline is what the cones had.'); }
+        const lap=(at(j2+1,i2)+at(j2-1,i2)+at(j2,i2+1)+at(j2,i2-1))/4-h;
+        cells.push({slope,lap,w:A.array[k]}); } }
+    ok(cells.length>200,'there is saturated-altitude terrain to measure ('+cells.length+' cells)');
+    const avg=a=>a.reduce((p,c)=>p+c.w,0)/a.length;
+    /* TERCILES OF THE DISTRIBUTION, not multiples of snowSlope. A fixed multiple both under-samples
+       and — the real objection — reads the very constant under test: set snowSlope to zero and a
+       fixed-multiple threshold moves with it and catches nothing. Terciles cannot. */
+    { const by=cells.slice().sort((x,y)=>x.slope-y.slope), t=Math.floor(by.length/3);
+      const gentle=by.slice(0,t), steep=by.slice(-t);
+      ok(avg(gentle)>avg(steep)*1.25,'SNOW IS SLOPE-DEPENDENT — the gentlest third of faces '+
+         '(slope up to '+gentle[gentle.length-1].slope.toFixed(2)+') carries '+
+         avg(gentle).toFixed(3)+' against '+avg(steep).toFixed(3)+' for the steepest third (from '+
+         steep[0].slope.toFixed(2)+'), a factor of '+(avg(gentle)/avg(steep)).toFixed(2)+
+         '. Snow does not hold on a cliff.'); }
+    { const by=cells.slice().sort((x,y)=>x.lap-y.lap), t=Math.floor(by.length/3);
+      const convex=by.slice(0,t), hollow=by.slice(-t);
+      ok(avg(hollow)>avg(convex)*1.10,'AND IT LIES IN GULLIES — the most CONCAVE third carries '+
+         avg(hollow).toFixed(3)+' against '+avg(convex).toFixed(3)+' for the most convex third, a '+
+         'factor of '+(avg(hollow)/avg(convex)).toFixed(2)+'. Snow blows off a crest and collects '+
+         'in a hollow, which is a claim about concavity and not about slope.'); }
+    /* AND THE CUT IS HARD. The shader thresholds this weight, so what matters for "patches, not a
+       gradient" is that the weight actually SPANS the threshold rather than hovering at it — a
+       weight that never crosses snowEdge gives no snow, and one always above it gives a snowfield.
+       The rendered edge sharpness is measured against the plates in gauntlet/verify/platescore.mjs;
+       this is the headless half. */
+    { const w=Array.from(A.array).filter(v=>v>0).sort((a2,b2)=>a2-b2);
+      const below=w.filter(v=>v<T.snowEdge).length, above=w.length-below;
+      ok(above>0&&below>0,'the snow weight straddles its cut ('+below+' cells under '+T.snowEdge+
+         ', '+above+' over), so the shader has an EDGE to draw rather than an empty mask or a '+
+         'blanket'); } }
 
   /* 6b. THE MESH FACES UP, AND IT IS THE ONLY ONE OF THESE ELEVEN CHECKS THAT WOULD HAVE CAUGHT
         WHAT WAS ACTUALLY WRONG. terrainMesh shipped with its triangle winding inside out —

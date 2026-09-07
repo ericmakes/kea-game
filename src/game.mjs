@@ -1855,6 +1855,9 @@ const TERRAIN={
      ramp peaking AT the boundary made the boundary the skyline, and the boundary is the coarsest
      ring. Recipe b came back with 26 one-sample needles because of it. */
   crest:0.82, fallOff:0.26,
+  /* crestDetect turns the Laplacian (metres) into a 0..1 crest weight; spareCrest is how much of
+     the erosion a full crest is spared. */
+  crestDetect:1.30, spareCrest:0.92,
   /* seamIn IS RETIRED, not merely unused: it fed a feather that forced the range's inner ring to
      zero, which the foothill skirt now supersedes. Left out rather than left at a value nothing
      reads, so nobody tunes it and wonders why nothing moves. */
@@ -1895,7 +1898,76 @@ const TERRAIN={
      puts the range's hue on the plates (measured 206-211 against 210-212) while the low inner
      skirt Eric wants as walkable foothills stays tussock. */
   treeline:8.0, treeBand:4.0,
-  rock:0x5A6470, rockLit:0x78828C, snow:0xC8D2DC, tussock:0x8A8256, scree:0x9A948C,
+  /* THE ROCK IS WARM NOW, AND IT IS THE SCAN'S OWN COLOUR. dark_rock_02 measures rgb 58,52,44 at
+     luma 0.208, saturation 0.24, hue 34 — a warm brown — and the ledger recorded that at import.
+     What shipped was 0x5A6470, a cool blue-grey at hue 210, which is the colour of DISTANCE and
+     not of rock: both plates carry warm brown-grey stone and get their blue from the air in front
+     of it, which is the haze's job and is already measured. Painting the aerial perspective into
+     the albedo meant the near rock and the far rock were the same colour, and that is a large part
+     of why the range read as one flat tone.
+     rockLit is the same stone with the sun on it rather than a different stone. */
+  /* NEAR-NEUTRAL, AND THAT IS THE RESOLUTION OF A REAL TENSION. Eric asked for warm rock; both
+     plates measure their ridge at hue 210-212, cool. Both are right: the STONE is warm and the AIR
+     in front of it is not, and at 100-240 m the air wins. Chasing the hue with haze alone failed
+     in both directions — at density 0.0085 the hue came right (209) and edge density collapsed from
+     0.211 to 0.039 with the shadows washing out, because haze pulls everything toward one colour.
+     A near-neutral albedo breaks the tension: the scan's own warmth still colours the near skirt,
+     the per-channel modulation keeps the stone's character, and a MODEST haze is then enough to set
+     the distance's hue without flattening the relief that carries the form. */
+  /* THE TUSSOCK COMES DOWN OUT OF GOLD. 0x8A8256 rendered the foothill skirt as a bright gold
+     band across the bottom of every wide frame — Eric's "blurred yellow foreground band at the
+     foothills", which the DOF fix made sharp but no less yellow. NZ tussock IS gold, and it is
+     gold at the SATURATION of dry grass rather than of paint: the plates' near ground reads olive
+     brown under the same sun. */
+  /* COOL IN THE ALBEDO, WARM IN THE SCAN, AND THE HAZE LEFT LIGHT — the resolution of a real
+     tension, with both sides of it measured. Eric asked for warm rock; both plates measure their
+     ridge at hue 210-212, distinctly COOL. Both are right: the stone is warm and the air in front
+     of it is not. The question is which mechanism carries the blue.
+     THE HAZE CANNOT, and that was settled by sweeping it. At density 0.0065 the hue comes right
+     (214) and edge density falls from 0.307 to 0.132; at 0.0090, to 0.029, with local contrast
+     climbing out the top of its band as the shadows wash out. Haze is a mix toward ONE colour, so
+     paying for hue with haze spends the relief that carries the form, and at these distances no
+     setting buys both.
+     SO THE ALBEDO CARRIES IT: a cool grey-blue base at hue 208, with the scan's own warm brown
+     (dark_rock_02, hue 34) coming through the per-channel modulation. Cool overall, warm in its
+     detail, which is what stone at middle distance looks like — and the haze stays at a density the
+     relief survives. Measured on rock only: hue 208, saturation 0.160, edge density 0.3075. */
+  rock:0x3C4356, rockLit:0x6A8092, snow:0xC8D2DC, tussock:0x6E6A4C, scree:0x9A948C,
+  /* BAKED SELF-SHADOWING. shadeAmb is how much light a fully shadowed face keeps.
+     WHY IT IS BAKED AND NOT CAST. The plates' gullies go to p10 0.024-0.317 — genuinely black —
+     and ours measured 0.408, no dark end at all. The engine cannot give it: the range deliberately
+     has castShadow off (a 190 m annulus shadowing the play area reads wrong, and its shadow map
+     would be hopeless at that span), and there are four lights filling every face — killing the
+     fill and rim outright moved the measured spread by 0.010. But a heightfield can be asked
+     directly whether the sun reaches a point, by marching the field towards it, and that is exact,
+     free at runtime, and the only thing that puts a black gully in a range lit by ambient. */
+  shadeAmb:0.30, shadeSteps:48, shadeSoft:1.6,
+  /* THE TRIPLANAR ROCK, TERRAIN.md step 4. tex is metres per tile repeat; rockAmt is how hard the
+     scan's own detail modulates the authored albedo; snowEdge is where the snow mask cuts and
+     snowBreak how much noise breaks that cut up.
+     IT IS NOT A MATS FAMILY, and that is deliberate rather than an oversight. MATS.families dresses
+     mat()-created materials that have UVs and a tiling in metres; this annulus has NO UVs at all —
+     it is a bare BufferGeometry of positions, colours and normals — and a 74-degree face would
+     stretch any planar unwrap into smears, which is the whole reason Eric asked for triplanar. The
+     family machinery also requires an authored COLOUR to claim it, and the only rock colours in the
+     game (PAL.rock, PAL.rockD) are VERTEX colours on the boulders, not material colours: an earlier
+     attempt to register the family went red with "rock actually claims a surface in 0 materials",
+     correctly, and the family was backed out rather than the assertion weakened. So the licence
+     ledger keeps its rock section without a `###` family heading, the family count still agrees
+     with MATS, and the scan is wired to the terrain directly.
+     THE SET IS dark_rock_02 (Poly Haven, CC0, recorded in assets/LICENCES.md with its md5): it
+     measures rgb 58,52,44 at luma 0.208, saturation 0.24, hue 34, which is the warm brown both
+     plates are made of. */
+  /* 18 m PER TILE AND AN AMPLITUDE OF 2.2, both landed against platescore rather than by eye.
+     THE TILE IS DELIBERATELY HUGE. A 3.2 m tile is the right texel density for something you stand
+     next to and the wrong one for a massif 150 m away: at that distance a 3.2 m tile is 29 px, the
+     grazing footprint far exceeds anisotropy 8, and the mip the GPU picks is nearly flat. 18 m
+     tiles put the scan's own structure at the scale distant strata read at, which is what the
+     plates are full of.
+     THE AMPLITUDE IS HIGH BECAUSE THE MODULATION IS DIVIDED BY A LINEAR MEAN of 0.033 — a dark
+     scan — so 2.2 is a moderate swing about it, not a violent one. Measured: edge density 0.0675
+     -> 0.1855 against a plate band opening at 0.1692, with normal mipmapped sampling. */
+  tex:18.0, rockAmt:1.4, rockRelief:4.4, snowEdge:0.20, snowBreak:0.42, snowTint:0xF2F6FA,
   /* AERIAL PERSPECTIVE, THE RANGE'S OWN, because the scene fog is tuned for the play area and the
      range is 64-190 m away in it. Eric's point 1: "the range reads luma 0.79 vs the plates' 0.40-
      0.45 - pull the fog on the range back until rock sits in that band; rock must be DARKER than
@@ -1946,7 +2018,7 @@ const TERRAIN={
      ERIC'S STEP 4 WILL MOVE THIS. Raising the peaks lifts more of the annulus above the treeline
      and swaps tussock for rock, so the base gets darker and the band will want re-measuring. The
      assertion is on the RENDERED band rather than on these two constants for exactly that reason. */
-  haze:{color:0x506476, density:0.0028},
+  haze:{color:0x506476, density:0.0045},
   /* shade — a scalar on the vertex colours, and it exists because the palette is narrow AND
      bright: rock 0.39, rockLit 0.51, tussock 0.51, scree 0.58, snow 0.81 in luma, which the sun
      lifted to a rendered median of 0.70. Darkening the albedo lowers the median so the haze has
@@ -2125,6 +2197,7 @@ function buildTerrain(biome){
       const r=r0+dR*j, dT=2*Math.PI*r/nTheta;
       for(let i=0;i<nTheta;i++){
         const k=j*nTheta+i;
+        const HH=(jj,ii)=>H[Math.max(0,Math.min(nR-1,jj))*nTheta+((ii%nTheta)+nTheta)%nTheta];
         const nb=[[j*nTheta+((i+1)%nTheta),dT],[j*nTheta+((i+nTheta-1)%nTheta),dT]];
         if(j>0)nb.push([k-nTheta,dR]);
         if(j<nR-1)nb.push([k+nTheta,dR]);
@@ -2132,7 +2205,18 @@ function buildTerrain(biome){
         for(const [kk,dist] of nb){ const drop=(H[k]-H[kk])/dist;
           if(drop>best){ best=drop; lo=kk; loD=dist; } }
         if(lo<0||best<=R.erode.talus)continue;
-        const move=(best-R.erode.talus)*loD*R.erode.rate*0.5;
+        /* THE CREST IS SPARED, which is Eric's "sharpen ridgelines (erosion that spares crests)".
+           Thermal erosion is a smoothing operator: it takes material off whatever stands proud,
+           which is exactly the arete you wanted. A ridge is CONVEX — its neighbours average LOWER
+           than it does — so the discrete Laplacian is negative there and positive in a hollow, and
+           scaling the transport by it erodes faces and gullies at full rate while leaving the crest
+           lines standing. This is what turns "broad massifs" into ridges; Eric read the strip as
+           family a, and a smoothed crest is what family a looks like. */
+        const lapc=(HH(j+1,i)+HH(j-1,i)+HH(j,i+1)+HH(j,i-1))/4-H[k];
+        const crest=Math.max(0,Math.min(1,-lapc*T.crestDetect));
+        const spare=1-crest*T.spareCrest;
+        if(spare<=0.001)continue;
+        const move=(best-R.erode.talus)*loD*R.erode.rate*0.5*spare;
         H[k]-=move; H[lo]+=move; SCREE[lo]+=move;
       }
     }
@@ -2184,8 +2268,54 @@ function buildTerrain(biome){
       if(fk>0)H2[k]*=1-fk;
     }
   }
-  G.terrain={field:H2, scree:S2, r0:fr0, r1, nTheta, nR:nR2, dR, recipe:T.recipe, biome,
-             rangeR0:r0, nFoot:nF, ignored:TERRAINIGNORED.slice()};
+  /* ---- 7. SUN OCCLUSION, MARCHED ON THE FIELD ITSELF ----
+       For every vertex, step towards the sun and ask whether the terrain gets in the way. The sun
+       is read from SKY.sunPosDay, so this cannot disagree with the light the scene actually has.
+       THE STEP IS THE RING SPACING and the march is in WORLD space, not in grid space: a ray
+       towards a sun 42 units up and 46 west crosses rings and azimuths at a rate that has nothing
+       to do with the grid, and marching the grid instead would shadow along spokes.
+       SOFT, NOT BINARY. A hard occlusion test gives a stencil edge that reads as a decal; keeping
+       the WORST clearance ratio along the ray and smoothing it gives a penumbra that widens with
+       distance, which is what a real terrain shadow does. */
+  { const SUN=SKY.sunPosDay, sl=Math.hypot(SUN[0],SUN[1],SUN[2]);
+    const sx=SUN[0]/sl, sy=SUN[1]/sl, sz=SUN[2]/sl;
+    const SH=new Float32Array(nR2*nTheta);
+    const step=dR, n=T.shadeSteps;
+    const at=(x,z)=>{ const rr=Math.hypot(x,z);
+      if(rr<=fr0||rr>=r1)return 0;
+      const fj=Math.max(0,Math.min(nR2-1.001,(rr-fr0)/dR));
+      let an=Math.atan2(z,x); if(an<0)an+=Math.PI*2;
+      const fi=(an/(Math.PI*2)*nTheta)%nTheta;
+      const j0=Math.floor(fj), i0=Math.floor(fi), tj=fj-j0, ti=fi-i0;
+      const j1=Math.min(nR2-1,j0+1), i1=(i0+1)%nTheta;
+      const a1=H2[j0*nTheta+i0], b1=H2[j0*nTheta+i1];
+      const c1=H2[j1*nTheta+i0], d1=H2[j1*nTheta+i1];
+      return (a1*(1-ti)+b1*ti)*(1-tj)+(c1*(1-ti)+d1*ti)*tj; };
+    for(let j=0;j<nR2;j++){ const r=fr0+dR*j;
+      for(let i=0;i<nTheta;i++){
+        const ang=i/nTheta*Math.PI*2;
+        const px0=Math.cos(ang)*r, pz0=Math.sin(ang)*r, py0=H2[j*nTheta+i];
+        let worst=1;
+        for(let k=1;k<=n;k++){
+          const d=step*k;
+          const h=at(px0+sx*d, pz0+sz*d);
+          const ray=py0+sy*d;
+          if(h>ray){ const over=(h-ray)/Math.max(1e-3,d*0.25);
+            worst=Math.min(worst,Math.max(0,1-over)); }
+        }
+        SH[j*nTheta+i]=worst;
+      } }
+    /* one smoothing pass around each ring, so the penumbra is not a staircase of grid cells */
+    const SM=new Float32Array(SH.length);
+    for(let j=0;j<nR2;j++)for(let i=0;i<nTheta;i++){
+      let a=0,c=0;
+      for(let d=-1;d<=1;d++){ const jj=Math.max(0,Math.min(nR2-1,j+d));
+        for(let e=-1;e<=1;e++){ a+=SH[jj*nTheta+((i+e+nTheta)%nTheta)]; c++; } }
+      SM[j*nTheta+i]=a/c; }
+    G.terrainShade=SM;
+  }
+  G.terrain={field:H2, scree:S2, shade:G.terrainShade, r0:fr0, r1, nTheta, nR:nR2, dR,
+             recipe:T.recipe, biome, rangeR0:r0, nFoot:nF, ignored:TERRAINIGNORED.slice()};
   return H2;
 }
 
@@ -2245,13 +2375,147 @@ function rangeHaze(m){
      behaviour worth having, and this is the line that delivers it. */
   const u={ c:{value:new THREE.Color(TERRAIN.haze.color).convertSRGBToLinear()},
             d:{value:TERRAIN.haze.density} };
-  m.userData.rangeHaze=u;
+  /* THE TRIPLANAR SEAM. Two 1x1 WHITE textures and a switch, so the shader compiles and renders
+     identically to the untextured range until something hands it real maps — which is what
+     src/materials.mjs does in the browser, and what node never does. A headless battery therefore
+     sees exactly the world it saw before, and G.terrainTex says which of the two it got. */
+  const white=()=>{ const t=new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1);
+    t.needsUpdate=true; return t; };
+  const tx={ rock:{value:white()}, snow:{value:white()}, nrm:{value:white()}, has:{value:0},
+             nrmAmt:{value:TERRAIN.rockRelief},
+             scale:{value:1/TERRAIN.tex}, amt:{value:TERRAIN.rockAmt},
+             rockMean:{value:0.5}, edge:{value:TERRAIN.snowEdge},
+             brk:{value:TERRAIN.snowBreak},
+             snowCol:{value:new THREE.Color(TERRAIN.snowTint).convertSRGBToLinear()} };
+  m.userData.rangeHaze=u; m.userData.terrainTex=tx;
   m.fog=true;
   m.onBeforeCompile=(sh)=>{
     sh.uniforms.uHazeColor=u.c; sh.uniforms.uHazeDensity=u.d;
+    sh.uniforms.uRockMap=tx.rock; sh.uniforms.uSnowMap=tx.snow; sh.uniforms.uHasTex=tx.has;
+    sh.uniforms.uRockNrm=tx.nrm; sh.uniforms.uRockRelief=tx.nrmAmt;
+    sh.uniforms.uTexScale=tx.scale; sh.uniforms.uRockAmt=tx.amt;
+    sh.uniforms.uRockMean=tx.rockMean; sh.uniforms.uSnowEdge=tx.edge;
+    sh.uniforms.uSnowBreak=tx.brk; sh.uniforms.uSnowCol=tx.snowCol;
+
+    /* WORLD POSITION AND NORMAL, because a triplanar projection is defined in world space — that
+       is what makes it independent of any unwrap and what stops a steep face stretching. */
+    sh.vertexShader=sh.vertexShader
+      .replace('#include <common>',
+        '#include <common>\nattribute float aSnow;\nattribute float aShade;\n'+
+        'varying vec3 vWPos;\nvarying vec3 vWNrm;\nvarying float vSnow;\nvarying float vShade;')
+      .replace('#include <fog_vertex>',
+        '#include <fog_vertex>\n'+
+        '  vWPos = (modelMatrix * vec4(position,1.0)).xyz;\n'+
+        '  vWNrm = normalize(mat3(modelMatrix) * normal);\n'+
+        '  vSnow = aSnow; vShade = aShade;');
+    /* THE RELIEF, AND IT IS THE THING THAT WAS ACTUALLY MISSING. Three attempts to raise edge
+       density by modulating the ALBEDO all failed or cheated: a gentle modulation is invisible at
+       150 m, and the amplitude that scored in band did it by clipping against its own clamp into
+       binary light-dark blotches that read as sand dunes. The plates' edge density is not paint, it
+       is RELIEF — every one of those edges is a face turning away from the sun. A normal map put
+       through the same triplanar projection gives that, and it responds to the light and to the
+       baked occlusion instead of fighting them.
+       THE REORIENTATION IS EXPLICIT PER PLANE rather than a swizzle-and-hope: for the Y plane the
+       sampled x and y run along world X and Z, for the X plane along Z and Y, for the Z plane along
+       X and Y. Perturb the geometric world normal, renormalise, then take it into VIEW space,
+       because that is the space three.js's `normal` lives in at this point in the shader. */
     sh.fragmentShader=sh.fragmentShader
+      .replace('#include <normal_fragment_begin>',
+        '#include <normal_fragment_begin>\n'+
+        '#ifdef USE_FOG\n'+
+        'if(uHasTex > 0.5 && uRockRelief > 0.0){\n'+
+        '  vec3 aN = pow(abs(vWNrm), vec3(6.0));\n'+
+        '  aN /= max(1e-4, aN.x + aN.y + aN.z);\n'+
+        '  mat2 rot = keaTileRot(vWPos);\n'+
+        '  vec2 nX = rot * (vWPos.zy * uTexScale), nY = rot * (vWPos.xz * uTexScale),'+
+        ' nZ = rot * (vWPos.xy * uTexScale);\n'+
+        '  vec3 tX = texture2D(uRockNrm,nX).xyz * 2.0 - 1.0;\n'+
+        '  vec3 tY = texture2D(uRockNrm,nY).xyz * 2.0 - 1.0;\n'+
+        '  vec3 tZ = texture2D(uRockNrm,nZ).xyz * 2.0 - 1.0;\n'+
+        /* THE TANGENT XY IS ROTATED BY THE SAME MATRIX as the lookup, or the relief would light
+           from a direction the texture is no longer facing. */
+        '  tX.xy = rot * tX.xy; tY.xy = rot * tY.xy; tZ.xy = rot * tZ.xy;\n'+
+        '  vec3 pert = aN.x * (tX.x*vec3(0,0,1) + tX.y*vec3(0,1,0))\n'+
+        '            + aN.y * (tY.x*vec3(1,0,0) + tY.y*vec3(0,0,1))\n'+
+        '            + aN.z * (tZ.x*vec3(1,0,0) + tZ.y*vec3(0,1,0));\n'+
+        '  vec3 wN = normalize(vWNrm + pert * uRockRelief);\n'+
+        '  normal = normalize((viewMatrix * vec4(wN,0.0)).xyz);\n'+
+        '}\n'+
+        '#endif')
       .replace('#include <fog_pars_fragment>',
-        '#include <fog_pars_fragment>\nuniform vec3 uHazeColor;\nuniform float uHazeDensity;')
+        '#include <fog_pars_fragment>\nuniform vec3 uHazeColor;\nuniform float uHazeDensity;\n'+
+        'uniform sampler2D uRockMap;\nuniform sampler2D uSnowMap;\nuniform float uHasTex;\n'+
+        'uniform float uTexScale;\nuniform float uRockAmt;\nuniform float uRockMean;\n'+
+        'uniform float uSnowEdge;\nuniform float uSnowBreak;\nuniform vec3 uSnowCol;\n'+
+        'uniform sampler2D uRockNrm;\nuniform float uRockRelief;\n'+
+
+        'varying vec3 vWPos;\nvarying vec3 vWNrm;\nvarying float vSnow;\nvarying float vShade;\n'+
+        'float keaHash(vec3 p){ return fract(sin(dot(p,vec3(12.9898,78.233,37.719)))*43758.5453); }\n'+
+        'float keaVN(vec3 p){ vec3 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);\n'+
+        '  float a=mix(mix(mix(keaHash(i),keaHash(i+vec3(1,0,0)),f.x),\n'+
+        '                  mix(keaHash(i+vec3(0,1,0)),keaHash(i+vec3(1,1,0)),f.x),f.y),\n'+
+        '              mix(mix(keaHash(i+vec3(0,0,1)),keaHash(i+vec3(1,0,1)),f.x),\n'+
+        '                  mix(keaHash(i+vec3(0,1,1)),keaHash(i+vec3(1,1,1)),f.x),f.y),f.z);\n'+
+        '  return a; }\n'+
+        /* THE TILE REPEAT IS BROKEN BY A SLOWLY TURNING LOOKUP. An 18 m tile crosses a 200 m range
+           about eleven times, and at full relief that repetition read as embossed scales — clearly
+           a tiled texture rather than rock. Rotating the sampling frame by an angle that varies
+           over tens of metres means neighbouring repeats no longer line up, which is what turns a
+           pattern back into a surface. Cheap: one noise fetch and a 2x2 matrix, shared between the
+           albedo and the relief so they cannot disagree. */
+        'mat2 keaTileRot(vec3 p){ float a = keaVN(p*0.013) * 6.2831853;\n'+
+        '  float c = cos(a), s = sin(a); return mat2(c,-s,s,c); }')
+      .replace('#include <color_fragment>',
+        '#include <color_fragment>\n'+
+        '#ifdef USE_FOG\n'+
+        'if(uHasTex > 0.5){\n'+
+        /* THE PROJECTION WEIGHTS are the normal raised to a power so the blend zone is narrow;
+           at power 1 a 45-degree face is an even mix of two projections and reads as a cross-hatch. */
+        '  vec3 an = pow(abs(vWNrm), vec3(6.0));\n'+
+        '  an /= max(1e-4, an.x + an.y + an.z);\n'+
+        '  mat2 rot2 = keaTileRot(vWPos);\n'+
+        '  vec2 uX = rot2 * (vWPos.zy * uTexScale), uY = rot2 * (vWPos.xz * uTexScale),'+
+        ' uZ = rot2 * (vWPos.xy * uTexScale);\n'+
+        /* NORMAL MIPMAPPED SAMPLING. A forced LOD was tried while chasing what turned out to be a
+           colour-space bug, and it is the wrong tool here: mip 0 on a texture minified to a few
+           pixels shimmers in motion, and the range is on screen from every vantage. */
+        '  vec3 rk = texture2D(uRockMap,uX).rgb*an.x + texture2D(uRockMap,uY).rgb*an.y'+
+        ' + texture2D(uRockMap,uZ).rgb*an.z;\n'+
+        /* THE SCAN MODULATES THE AUTHORED ALBEDO rather than replacing it: the vertex colour
+           already carries the slope-and-altitude classification and the baked sun occlusion, and
+           throwing that away for a flat scan would lose both. Normalised about the scan's own mean
+           so the modulation adds detail without shifting the value the plates were matched on. */
+        /* TWO OCTAVES, PER CHANNEL, AND SOFT-LIMITED RATHER THAN CLAMPED.
+           A single octave at one tile size is not what distant rock looks like: the plates carry
+           structure from the whole massif down to the texel. The second octave is the same scan at
+           4.5x the tile, which reads as strata and shadowed benching.
+           PER CHANNEL, because the scan's own colour variation is half of what makes rock look like
+           rock — a luminance-only modulation greys it out.
+           AND THE LIMIT IS A tanh RATHER THAN A clamp, which matters more than it sounds. With a
+           hard clamp at [0.40,1.90] an amplitude of 2.8 slammed most texels onto one end or the
+           other: edge density duly rose to 0.1855 and INTO band, and the range came out as binary
+           light-dark blotches that read as sand dunes. That is the metric being gamed by clipping,
+           not detail being added. tanh saturates smoothly, so a high amplitude compresses instead
+           of posterising and the number has to be earned with real structure. */
+        '  vec3 rk2 = texture2D(uRockMap,uX*0.222).rgb*an.x'+
+        ' + texture2D(uRockMap,uY*0.222).rgb*an.y'+
+        ' + texture2D(uRockMap,uZ*0.222).rgb*an.z;\n'+
+        '  vec3 dev = (mix(rk, rk2, 0.42) - uRockMean) / max(1e-3,uRockMean);\n'+
+        '  vec3 d = vec3(1.0) + tanh(dev * uRockAmt) * 0.62;\n'+
+        '  diffuseColor.rgb *= d;\n'+
+        /* SNOW, CUT HARD AND BROKEN BY NOISE. Two octaves at metre scale, so the edge wanders at
+           the size of a real drift rather than at the size of a grid cell. smoothstep over a
+           narrow band, not a ramp: it is an EDGE. It also keeps the baked occlusion, so snow in a
+           shadowed gully stays blue-dark instead of glowing. */
+        '  float n = keaVN(vWPos*0.35)*0.65 + keaVN(vWPos*1.30)*0.35;\n'+
+        '  float m = smoothstep(uSnowEdge, uSnowEdge+0.06,\n'+
+        '                       mix(vSnow, vSnow*(0.55+0.90*n), uSnowBreak));\n'+
+        '  vec3 sc = texture2D(uSnowMap,uY).rgb;\n'+
+        '  float sd = dot(sc, vec3(0.2126,0.7152,0.0722));\n'+
+        '  diffuseColor.rgb = mix(diffuseColor.rgb,\n'+
+        '                         uSnowCol * (0.72 + 0.56*sd) * vShade, m);\n'+
+        '}\n'+
+        '#endif')
       .replace('#include <fog_fragment>',
         '#ifdef USE_FOG\n'+
         '  float hz = 1.0 - exp( - uHazeDensity * uHazeDensity * vFogDepth * vFogDepth );\n'+
@@ -2260,7 +2524,7 @@ function rangeHaze(m){
   };
   /* WITHOUT THIS the range shares a compiled program with any other material of the same shape and
      gets that one's fog_fragment — or hands it ours. */
-  m.customProgramCacheKey=()=>'rangeHaze';
+  m.customProgramCacheKey=()=>'rangeHazeTriplanar';
   m.needsUpdate=true;
   return m;
 }
@@ -2279,6 +2543,12 @@ function terrainMesh(){
   const {nTheta,nR,r0,r1,dR,field}=D;
   const geo=new THREE.BufferGeometry();
   const pos=new Float32Array(nR*nTheta*3), col=new Float32Array(nR*nTheta*3);
+  /* SNOW LEAVES THE VERTEX COLOUR AND BECOMES ITS OWN ATTRIBUTE. It used to be blended into the
+     albedo here, which can only ever produce a GRADIENT — the vertices are 2-5 m apart, so a
+     per-vertex blend cannot have an edge sharper than several metres, and Eric asked for
+     "hard-edged noise-broken patches in gullies not a gradient". A weight per vertex, cut and
+     broken in the fragment shader, can be as sharp as a pixel. */
+  const asnow=new Float32Array(nR*nTheta), shd=new Float32Array(nR*nTheta);
   const cRock=new THREE.Color(T.rock).convertSRGBToLinear();
   const cLit=new THREE.Color(T.rockLit).convertSRGBToLinear();
   const cSnow=new THREE.Color(T.snow).convertSRGBToLinear();
@@ -2299,14 +2569,25 @@ function terrainMesh(){
       const tus=1-_tsm(Math.min(1,Math.max(0,(h-T.treeline)/T.treeBand)));
       const snowAlt=_tsm(Math.min(1,Math.max(0,(h-T.snowY)/T.snowBand)));
       const holds=1-_tsm(Math.min(1,Math.max(0,(slope-T.snowSlope*0.55)/(T.snowSlope*0.9))));
-      const snow=snowAlt*holds;
+      /* AND IT FAVOURS GULLIES, which is the other half of Eric's sentence. Snow blows off ridges
+         and collects in hollows, so the weight is lifted where the surface is CONCAVE — the
+         discrete Laplacian of the height field, positive in a hollow and negative on a crest. */
+      const lap=(at(j+1,i)+at(j-1,i)+at(j,i+1)+at(j,i-1))/4-h;
+      const gully=_tsm(Math.min(1,Math.max(0,0.5+lap*1.6)));
+      const snow=snowAlt*holds*(0.45+0.55*gully);
+      asnow[k]=snow;
       /* the scree the erosion deposited, where it is thick enough to show */
       const scr=_tsm(Math.min(1,D.scree[k]/1.4));
       q.copy(cRock).lerp(cLit,Math.max(0,1-slope*1.4));    // gentle faces catch the light
-      q.lerp(cScree,scr*0.7*(1-snow));
-      q.lerp(cTus,tus*(1-snow));
-      q.lerp(cSnow,snow);
-      col[k*3]=q.r*T.shade; col[k*3+1]=q.g*T.shade; col[k*3+2]=q.b*T.shade;
+      q.lerp(cScree,scr*0.7);
+      q.lerp(cTus,tus);
+      /* THE BAKED SUN OCCLUSION, applied to the albedo. It multiplies rather than replaces, so a
+         shadowed snowfield is still brighter than a shadowed cliff — which is true, and a flat
+         darkening would lose it. */
+      const sh=D.shade?T.shadeAmb+(1-T.shadeAmb)*Math.pow(D.shade[k],T.shadeSoft):1;
+      const g2=T.shade*sh;
+      col[k*3]=q.r*g2; col[k*3+1]=q.g*g2; col[k*3+2]=q.b*g2;
+      shd[k]=sh;
     }
   }
   /* INDICES: quads between adjacent rings, wrapping in theta — AND THE WINDING IS LOAD-BEARING.
@@ -2336,6 +2617,8 @@ function terrainMesh(){
   }
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   geo.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  geo.setAttribute('aSnow',new THREE.Float32BufferAttribute(asnow,1));
+  geo.setAttribute('aShade',new THREE.Float32BufferAttribute(shd,1));
   geo.setIndex(idx);
   geo.computeVertexNormals();
   /* THE FOG STAYS ON, which is Eric's explicit instruction and the plates agree with him: aerial

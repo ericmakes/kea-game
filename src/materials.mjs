@@ -171,7 +171,83 @@ export async function installMaterials(KEAGAME) {
     }
   }
 
+  /* ---- THE RANGE'S TRIPLANAR SCAN (TERRAIN.md step 4) ----
+     The annulus is not a MATS family and cannot be: it has no UVs at all, and a 74-degree face
+     would smear under any planar unwrap, which is exactly why Eric asked for triplanar. So its two
+     maps are handed straight to the shader's own uniforms, which game.mjs created holding 1x1 white
+     textures and a switch set to 0. Until this runs the range renders precisely as it did
+     untextured — which is what every headless battery sees, because node never gets here.
+     THE MEAN IS MEASURED OFF THE IMAGE, not assumed. The scan modulates the authored albedo about
+     its own mean luminance, so that number has to be the real one: dark_rock_02 is a dark set
+     (measured 0.208 at import) and dividing by an assumed 0.5 would darken the whole range by a
+     factor of two and quietly undo the value work.
+     IT CANNOT TAKE THE RANGE DOWN. A failed fetch leaves the white textures and the switch at 0,
+     G.terrainTex records the failure, and the range keeps the look it shipped with. */
+  try {
+    const mesh = G.terrainMesh;
+    const tx = mesh && mesh.material && mesh.material.userData
+             && mesh.material.userData.terrainTex;
+    if (!tx) { G.terrainTex = { mode: 'none', why: 'no terrain material with texture uniforms' }; }
+    else {
+      const [rock, snow, nrm] = await Promise.all([
+        loadTex(loader, matURL(KEAGAME, 'dark_rock_02', 'map')),
+        loadTex(loader, matURL(KEAGAME, 'snow_02', 'map')),
+        loadTex(loader, matURL(KEAGAME, 'dark_rock_02', 'normalMap'))]);
+      /* THE NORMAL MAP IS RAW VECTORS AND MUST STAY LINEAR. Tagging it sRGB bends every normal
+         toward the surface and looks merely "flatter" rather than broken — the class of defect
+         that survives review, and the reason this file already says so about the family sets. */
+      nrm.colorSpace = THREE.NoColorSpace;
+      nrm.wrapS = nrm.wrapT = THREE.RepeatWrapping;
+      nrm.repeat.set(1, 1); nrm.anisotropy = 8; nrm.needsUpdate = true;
+      for (const t of [rock, snow]) {
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        /* THE REPEAT IS 1,1 AND THE SCALE LIVES IN THE SHADER. A triplanar lookup builds its own
+           UVs from world position, so a texture-space repeat would multiply the shader's metres
+           twice over. */
+        t.repeat.set(1, 1);
+        t.anisotropy = 8;                 // the range is seen at a grazing angle from every vantage
+        t.needsUpdate = true;
+      }
+      const mean = meanLuma(rock.image);
+      tx.rock.value = rock; tx.snow.value = snow; tx.nrm.value = nrm;
+      tx.rockMean.value = mean;
+      tx.has.value = 1;
+      mesh.material.needsUpdate = true;
+      G.terrainTex = { mode: 'triplanar', rock: 'dark_rock_02', snow: 'snow_02',
+                       relief: 'dark_rock_02 normal',
+                       rockMean: +mean.toFixed(4), metresPerTile: 1 / tx.scale.value };
+    }
+  } catch (e) {
+    G.terrainTex = { mode: 'none', why: String(e && e.message || e) };
+    console.error('materials: the range keeps its untextured look —', e);
+  }
+
   G.mats = KEAGAME.matState();
   G.mats.report = report;
   return G.mats;
+}
+
+/* MEAN LINEAR LUMINANCE OF A LOADED IMAGE, on a downsampled canvas — 64x64 is ample for a mean and
+   avoids pulling a megapixel through getImageData for a single number.
+   LINEAR, AND THAT WORD IS THE WHOLE FUNCTION. The shader divides the sampled texel by this number
+   to centre the scan's detail on 1, and `texture2D` on a map tagged SRGBColorSpace returns LINEAR
+   data — three.js decodes on sample. Averaging the canvas's ENCODED bytes instead gave 0.2002 where
+   the shader sees about 0.033, so the modulation came out at 1 - 0.83*amt, hit the clamp floor
+   everywhere, and painted the entire range a uniform 0.40x darker. It looked like a texture that
+   would not resolve: edge density did not move for any tile scale from 3.2 m to 28 m, nor for a
+   forced mip level of 0 against 6, because the value being sampled was constant. Two hours of
+   mip-and-anisotropy theory for a missing sRGB decode — the same colour-space fault the range's
+   haze hit earlier in this session, from the same direction. */
+function meanLuma(img) {
+  const N = 64;
+  const c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.drawImage(img, 0, 0, N, N);
+  const d = g.getImageData(0, 0, N, N).data;
+  const dec = u => (u <= 0.04045) ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4);
+  let s = 0;
+  for (let i = 0; i < d.length; i += 4)
+    s += 0.2126 * dec(d[i] / 255) + 0.7152 * dec(d[i + 1] / 255) + 0.0722 * dec(d[i + 2] / 255);
+  return s / (N * N);
 }
