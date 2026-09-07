@@ -608,3 +608,74 @@ wear no scanned family at all — flagged mid-build as a defect rather than a ta
 the first cast whose JOB is visible in frame), TODO 97 (the two parked cars are `mkCar` calls, not
 registry placements, so the model pass will not find them by listing PROPS.ALL), TODO 98 (shop
 interiors have empty shelves; the verandah underside is flat grey corrugate).
+
+---
+
+## 2026-09-07, session 33 — 37 TO 42 FIRST-PINNED. BASELINE 34 -> 40. THE SET IS THE WHOLE TOUR.
+
+Six first pins, on Eric's call after judging the river and the station: layouts PASS. Consensus per
+TODO 73, and N went to 11 per Eric's standing instruction because three of the six came back a bare
+3-of-5 at N=5 (38, 41, 42).
+
+**PINNED AFTER TWO PRE-PIN FIXES, NOT BEFORE THEM.** Eric's order was explicit and it was the right
+order: the swing bridge did not connect to the path (a 2.04 m step at the mouth and no far-side
+landing at all) and the woolshed walls wore no material family. Both are in b2632ac, which shipped
+BEFORE this pin — so what is pinned is the fixed world, and 39_river_walk is re-staged around the
+new approach stair. Pinning first would have baked a bridge nobody could walk onto into the
+baseline and then required a re-pin to take it out.
+
+### THE ELEVEN-RUN CONSENSUS
+
+    37_river_bridge   medoid run  1 of 11   spread     0   UNANIMOUS across all eleven
+    38_river_floes    medoid run  1 of 11   spread   450   7/4  (600 x7, 1050 x4)
+    39_river_walk     medoid run  1 of 11   spread     0   UNANIMOUS across all eleven
+    40_station_yards  medoid run  9 of 11   spread  3855   continuous, 1649..5504 — not bimodal
+    41_station_shed   medoid run  1 of 11   spread  8612   6/5  (43462 x6, 52012 x5)  A FAIR COIN
+    42_station_ute    medoid run  4 of 11   spread 19443   7/4  (26035 x7, 45457 x4)
+
+PIN PROVENANCE: run1 4, run4 1, run9 1. Every medoid sits in its own frame's MAJORITY mode, which
+is the property worth checking and is not automatic — a medoid minimises total distance, and on a
+lopsided split the minority cluster can win if it is tighter.
+
+### WHAT THE SPREADS SAY, AND IT IS TODO 88 AGAIN
+
+Two frames are IDENTICAL across eleven independent browser processes: 37 and 39. Both look down the
+bridge line with water, timber and shingle filling the frame and almost no grass in it. Three are
+bimodal — 38, 41 and 42 — and all three carry tussock. 40 is neither: its spread is smooth from
+1649 to 5504 because its subject is a MOB OF SHEEP, which is a different kind of variance
+altogether (a moving cast, not a shifted wind phase).
+
+That is TODO 88's off-by-one clock pin, confirmed from a third and fourth direction in one session.
+The other two: 17_flight came back 0.9610 then 0.9993 on an identical tree, and 03_kea_plate was
+shot twice on a STASHED pre-change tree and came back 0.9648 then 0.9997 — proving both flagged
+frames in the pre-pin gate were the clock and not the change.
+
+**41_station_shed IS STILL A BARE MAJORITY AT N=11**, 6/5, which is the same place 03_kea_plate
+ended up last session. Eleven runs is where Eric's instruction stops, so it is pinned from the
+eleven-run medoid and the fact is recorded rather than papered over: **until TODO 88 is fixed,
+41_station_shed will flag on roughly half of all sweeps and that is not a regression.** The two
+modes are ~8,600 px apart. The same warning already stands on 03_kea_plate.
+
+### VERIFIED ON A FRESH SWEEP — all six, and all forty
+
+    37_river_bridge   ssim 1.0000        40_station_yards  ssim 0.9998
+    38_river_floes    ssim 1.0000        41_station_shed   ssim 0.9999
+    39_river_walk     ssim 1.0000        42_station_ute    ssim 0.9998
+
+    DIFF: 40 compared, 0 flagged (worst 0.9754, threshold 0.965)
+
+### THE PINNED SET IS NOW EVERY MAP THE TOUR HAS
+
+Forty frames: 30 of the carpark, the bird and the ski field; 31-33 the campground; 34-36 the
+village; 37-39 the river; 40-42 the station. Six maps, six brochure pins, all photographed and all
+pinned. 26_tour_brochure and 27_travel_card remain the only frames that shoot every pass and have
+never been in the set — still awaiting Eric's call, still reported by repin.mjs every time.
+
+### WHAT IS PINNED IS NOT WHAT IS FINISHED
+
+Eric's audit of these six frames produced a fix list that is now the work queue, and the pin was
+ordered to happen in the MIDDLE of it — after the two flow/material defects, before the look work.
+So this baseline will be replaced deliberately and soon: the water material (TODO filed as Eric's
+HIGH item 3), the swing bridge rebuild against the Hooker Valley archetype (item 4), then mountains,
+rocks and snow forms. Every one of those re-pins the river frames at least. The pin exists so that
+those changes have something honest to move AWAY from.
