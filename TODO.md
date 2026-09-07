@@ -2580,3 +2580,37 @@ WHAT IS STILL OWED:
   - **THE HUT'S ROOF SNOW IS STILL A BOX** (`BoxGeometry(2.6, 0.2, 1.2)` with three spheres on it).
     It is the one snow form left that is not a snowForm, and it is on a pitched plane so it wants a
     variant that beds to a slope rather than to the ground.
+
+### 114. TWELVE PINNED VANTAGES HAVE NO MEASURED CHURN, AND IT MUST NOT BE FITTED YET
+Filed 2026-09-07, session 33. `gauntlet/verify/pxdiff-selftest.mjs` reports it by name:
+    missing: 31_camp_shelter 32_camp_sites 33_camp_gate 34_village_street 35_village_glass
+             36_village_bakery 37_river_bridge 38_river_floes 39_river_walk 40_station_yards
+             41_station_shed 42_station_ute
+Six of those (31-36) arrived in session 32 and six (37-42) in this one, so this entry is half
+inherited and half mine. Without a `CHURN` row a vantage falls back to the table's DEFAULT, which
+means twelve of forty frames are being judged against a band nobody measured for them.
+
+**IT MUST NOT BE FITTED NOW, AND TODO 77 IS THE REASON.** That entry is explicit: "re-fitting a
+churn ceiling inside a re-pin is a recalibration smuggled in as housekeeping", and FLAKES is
+explicit that a ceiling moved to accommodate today's number is that ceiling deleted. Churn is the
+worst distance between two captures of the SAME BUILD in different processes — a property of a
+pinned build — and right now **32 of 40 vantages are flagged pending Eric's re-pin decision** after
+this session's water, bridge, timber, hut-roof, mountain, rock and snow work. A ceiling fitted to a
+build that is about to be replaced is stale the moment it is written.
+I ALSO HAD THE DATA AND DID NOT USE IT: eleven consensus sweeps of 37-42 survive from this session's
+pin, and the max pairwise distance across them is exactly the churn definition. They were taken
+BEFORE the seven look pieces, so they characterise a river that no longer exists. Recording that I
+chose not to, rather than leaving it to look like an oversight.
+
+**THE ORDER THIS WANTS:** Eric decides the re-pin -> re-pin -> THEN one deliberate `crossrun`
+RUNS=5 pass on a quiet machine (TODO 78 on leftover browsers) that fits all twelve at once and
+re-checks the three TODO 77 says have outgrown their ceilings. One measurement, once, with the
+before/after printed per vantage so a widened ceiling cannot hide in the batch.
+
+**AND THE OTHER pxdiff-selftest FINDING IS NOT A DEFECT.** "a whole frame lifted 12 levels still
+passes the diff threshold" asserts that SSIM's blind spot EXISTS (TODO 31) — it is the selftest
+documenting why pxdiff had to be written. It reads as a ✗ because the assertion has drifted below
+its own 0.965 boundary on the frame it uses; its input, `baseline/18_rear_close.png`, has not
+changed since session 32's re-pin, so this predates session 33 entirely. Worth re-cutting the
+fixture (a lift of 8 or 10 levels would sit clear of the boundary) rather than leaving a contract
+test that reports red for being nearly right.

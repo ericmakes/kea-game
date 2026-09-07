@@ -133,3 +133,68 @@ Eric judges the two kea side by side. Handoff package (ASTRA_BRIEF.md + P5E.md
   control until P6.
 - The bird model: assets/models/rockatoo.glb (original) and kea_base.glb
   (de-crested derivative), CC-BY Macauley.B, changes recorded in LICENCES.md.
+
+---
+
+# SESSION 33 — 2026-09-07. Eric's river/station audit, worked end to end.
+
+Nine certified pieces, each gated and pushed. Eric judged the river and the station, ordered the
+pass, and the order was: two pre-pin fixes, then the pin, then water, bridge, TODO 47b, TODO 79,
+mountains, rocks, snow forms. All of it landed.
+
+## WHAT SHIPPED
+1. **The two pre-pin fixes.** The swing bridge did not CONNECT — its deck sat 2.04 m above the
+   boardwalk with no far-side landing, past a battery that asserted the deck existed at three points
+   and a mission that TELEPORTED the bird onto it. And the woolshed's walls wore no material family
+   despite its entry declaring one. New instrument: `gauntlet/verify/walkable.js`.
+2. **37-42 pinned** from an eleven-run consensus. Baseline 34 -> 40; the pinned set is now every map
+   the tour has. 41_station_shed is a 6/5 coin at N=11, like 03_kea_plate.
+3. **Water as a system.** One material for the braid, the lake and any later tarn. Hot spot
+   15.53% -> 0.00% clipped. New instruments: `lum.mjs` (+ selftest) and `sunangle.mjs`.
+4. **The swing bridge** against the Hooker Valley archetype: A-frames, catenary, hangers, mesh,
+   one-person deck.
+5. **TODO 47b, the timber family** — 651 meshes, the most common surface in the game.
+6. **TODO 79, the hut roof** — a gable at last, derived from its own collider.
+7. **Mountains** — one ring instead of six copies, a world snowline instead of a fraction of each
+   peak, and the "grey slabs" turned out to be the FOG.
+8. **Rocks** — icosahedra, settled, bedded, lichened, and hashed out of position rather than drawn.
+9. **Snow forms** — mounds with ragged outlines instead of flat discs.
+
+## THE PATTERN OF THE SESSION, WORTH KEEPING
+Every one of the four look pieces turned out to be an UNSIGNED SYSTEM that had been copied rather
+than shared: the water was two hand-tuned planes, the mountains were six pasted blocks, the rocks
+were a sphere call at four sites, the snow was a disc call at two. Each is now one function with a
+constants table and no `rnd()` of its own — every variation hashed out of position, because the call
+sites' draw ORDER is load-bearing (TODO 47).
+AND THREE OF THEM WERE INVISIBLE TO THE GAUNTLET. The carpark's boulders and snow are inside
+`if(!HEADLESS)`; the ski field's snow built records in node and meshes only in a browser. Geometry
+no battery can see is geometry that regresses silently, which is how a flat white circle and a
+squashed-sphere boulder survived this long. One half is fixed; TODO 112 carries the rest.
+
+## MY OWN MISTAKES, RECORDED
+- **I deleted most of TODO.md** with a bad scripted edit and did not notice for two commits. 18
+  entries recovered byte-identical from git; 7 existed in no commit and were rewritten from Eric's
+  fix list, so they are close but not guaranteed identical. There is now a self-maintaining check:
+  all 45 TODO numbers the code cites must resolve, sabotage-tested with the exact bug. It has since
+  caught me twice more, citing TODO 111 and 112 before filing them.
+- **Roughly a third of the sabotages this session found MY assertions rather than the code.** The
+  recurring shapes: a threshold derived from the constant it was testing (the snow crown); an
+  absolute threshold that a lesser effect already satisfied (snow depth, met by sun cups alone); a
+  literal that agreed with the world (the gravel-bar heights); a raycast grid coarser than the thing
+  it hunted (40 mm purlins on a 500 mm grid); and a measurement taken in the wrong space (rock
+  sampled above the snowline, albedo compared with a photograph).
+
+## OPEN THREADS AT EXPORT TIME
+- **31 of 40 vantages are FLAGGED and nothing is re-pinned** — cumulative across water, bridge,
+  timber, hut roof, mountains, rocks and snow. Re-pinning is Eric's call and is the next thing.
+- **A mountain variant strip is waiting on Eric**: `MTN_a_darker`, `MTN_b_shipped`, `MTN_c_paler`.
+- **Two eyeball answers are waiting on Eric**: the woolshed reads as levitating (TODO 100), and the
+  hut's "solar panels" are the bird spikes and nails, which are missions (TODO 109).
+- Still deferred from before: TODO 82 (grass to the horizon), 76 (sky tone), night stars/moon/
+  moonlit caps, the ambient particle layer, the ski-field graduation (piece 61, supervised), and the
+  instrument tail (60, 77, 33, vantages 26/27).
+- New this session and unshipped: 99 (walkability coverage), 100-105 (Eric's MEDIUM list and
+  opportunities), 106 (what water still isn't), 107 (where the new instruments stop), 108 (the
+  bridge does not sway), 110 (mountains are still cones), 111 (no scanned rock family), 112 (the
+  carpark's snow is invisible to node), 113 (what snow still isn't).
+- **The bird is still PARKED.** Nothing this session touched it.
