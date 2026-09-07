@@ -2494,15 +2494,31 @@ words suggest:
   - **18 MOUNTAINS, 2 COLOURS.** Every far mountain was identical to every other to four decimals.
     Per-massif value and ridge/gully shading now, both DERIVED from the sculpt's own phases because
     a single extra `rnd()` would reshuffle every later seeded draw in the map (TODO 47).
-WHAT IS STILL OWED:
-  - **THE LEVEL IS ERIC'S CALL AND THERE IS A STRIP FOR IT.** `MTN_a_darker`, `MTN_b_shipped`,
-    `MTN_c_paler` in gauntlet/capture, on the two value levers (`MTN.rockVal` / `MTN.snowVal`).
-    Measured inside one massif, the game now reads near-peak 0.542 / far-peak 0.794 against the
-    plate's near-ridge 0.382 / far-massif 0.595 — the same ~0.21 spread, about 0.16 brighter
-    overall, which is a midday-versus-sunrise difference and defensible. Eric should pick.
-  - **THEY ARE STILL CONES.** Sculpted, skirted and shaded cones, but the silhouette is a cone: no
-    subsidiary spurs, no cirques, no rock faces. A real range is jagged and this is smooth. That is
-    silhouette work and a piece of its own.
+**REJECTED BY ERIC, 2026-09-07, AND THE REJECTION IS THE POINT OF THIS ENTRY NOW.** His verdict:
+"My brief said fix the cones; a varied cone is still a cone, and real mountains don't need a 3D
+model, they need TERRAIN." He is right, and it is worth naming what I did wrong rather than filing
+it as a difference of opinion: the brief asked me to replace the cones and I improved them — one
+ring instead of six, a world snowline, per-massif value, ridge shading, a skirt — every one of which
+is a true improvement to a shape that should not be there at all. Fixing the colour of a wrong
+silhouette is the most expensive kind of near-miss, because it looks like progress.
+THE VARIANT STRIP IS WITHDRAWN. `MTN_a_darker`, `MTN_b_shipped` and `MTN_c_paler` were shot to let
+Eric choose a value level; he declined to pick, correctly — "don't pick a/b/c" — because the choice
+on offer was a tint and the defect was the form. The strip stays on disk as evidence of the
+rejected direction and nothing should be chosen from it.
+WHAT REPLACES IT: a procedural heightfield range. See TERRAIN.md. Layered noise for the massif,
+ridged noise for arêtes, domain warping so ridgelines wander, an erosion pass for gullies and scree
+fans, real U-shaped valleys between peaks, every peak a different silhouette; material by SLOPE and
+ALTITUDE with a sourced CC0 rock/cliff PBR family, triplanar so steep faces do not stretch; the
+existing fog kept for aerial perspective. The foothills get the same treatment.
+WHAT SURVIVES FROM THIS PIECE, and is worth carrying into the heightfield rather than rediscovering:
+  - the snowline must be an ALTITUDE, not a fraction of each summit, and its jitter and aspect must
+    only ever push it DOWN (r=1.00 correlation with peak height is the tell);
+  - the measured plate targets — nz_river_01's near rock ridge at luma 0.382 and its far massif at
+    0.595, the same ~0.21 spread the range needs;
+  - `fog:false` was a workaround for cones having no form for light to describe, and Eric has
+    explicitly asked for the fog BACK on the terrain for aerial perspective. If it flattens the
+    heightfield the way it flattened the cones, that is a measurement to report, not to route
+    around.
   - **NO SNOW GULLIES.** Snow above the line is continuous; real snow fingers down gullies well
     below it and bare rock stands out of it above. The sculpt's `NZ` noise is already per-vertex and
     already drives the shading, so feeding it into the snowline would cost nothing but a decision
