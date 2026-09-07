@@ -6688,15 +6688,67 @@ defineProp('hut',{
     box(0.05,1.02,0.02,0x8E4A3A,wx,1.6,2.76,g,{noshadow:true}); box(1.24,0.05,0.02,0x8E4A3A,wx,1.6,2.76,g,{noshadow:true}); }
   rbox(0.7,1.6,0.7,0.08,0x8C8F93,2.4,4.0,-1.6,g); rbox(0.86,0.12,0.86,0.04,PAL.dark,2.4,4.82,-1.6,g); // chimney
   { const _ch=new THREE.Object3D(); _ch.position.set(2.4,4.95,-1.6); g.add(_ch); G.chimneyRef=_ch; }
-  // gable roof, ridge along x
-  const rl=new THREE.Mesh(new THREE.BoxGeometry(7.8,0.18,3.6),mat(PAL.hutRoof));
-  for(let ri=0;ri<12;ri++){ const rg=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,3.5,5),mat(0x4A545C));
-    rg.rotation.x=Math.PI/2; rg.position.set(-3.45+ri*0.62,0.1,0); rl.add(rg); }
-  rl.position.set(0,3.35,-1.45); rl.rotation.x=0.62; rl.castShadow=rl.receiveShadow=!HEADLESS; g.add(rl);
-  const rr=rl.clone(); rr.position.z=1.45; rr.rotation.x=-0.62; g.add(rr);
-  const cap=box(8,0.14,0.5,PAL.dark,0,3.98,0,g);
-  // snow cap on the sunny-side eave over the door
-  const sn=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.2,1.2),mat(PAL.snow)); sn.position.set(0,3.0,2.4); sn.rotation.x=-0.62; g.add(sn);
+  /* ---- THE GABLE ROOF, AND IT IS A GABLE NOW (TODO 79) ----
+
+     WHAT WAS WRONG. The two roof planes met in a VALLEY, not a ridge — the roof was a shallow V
+     collecting water where it should shed it, and every other cue on the hut said gable, so the eye
+     read the roof as broken rather than as a design. In arithmetic: each panel was 3.6 deep and
+     rotated ±0.62, so `rl` ran from y 4.39 at z −2.91 DOWN to y 2.31 at z 0, and `rr` ran back UP
+     to 4.39 at z +2.91. The two rotation signs were simply swapped.
+     TWO MORE DEFECTS FELL OUT OF THAT ONE, which is why TODO 79 filed it as one piece:
+       - the ridge batten sat at y 3.98 while the panels met at 2.31, so a dark bar hung 1.67 m in
+         mid-air above the valley;
+       - with the pitch inverted the EAVES were lifted to 4.39 instead of dropping onto the wall
+         plate, which is the "hut roof floats off its walls" daylight ARTBIBLE's PHASE 4 gap list
+         has carried since the 24-frame audit. It is the same bug seen sideways.
+
+     THE COLLIDER WAS THE HALF THAT WAS RIGHT, so the geometry is DERIVED FROM IT rather than
+     re-guessed. groundHeightAt walks the bird on `ridge − |z−c.z|·slope`, and the entry declares
+     ridge 4.05, slope 0.52, half-depth 3.05 — so the bird has been walking an invisible CORRECT
+     ridge above a visible wrong valley this whole time (19_roof_follow is the vantage that shows
+     it). Reading the numbers off the collider means the drawn roof cannot drift from the walkable
+     one again: move one and the other follows.
+     AND THE EAVE LANDS ON THE WALL WITHOUT ANY PACKING GEOMETRY. TODO 79 warned to check before
+     adding any, or the fix would double up. Checked: the wall top is 2.60 and its face is at
+     z 2.70, where the derived plane sits at 4.05 − 2.70·0.52 = 2.646 — 46 mm proud of the plate,
+     with the eave carrying on to y 2.464 at z 3.05 as a real overhang. Nothing added. */
+  const RC=p.entry.collider.find(c=>c.kind==='roof');
+  const R_TH=Math.atan(RC.slope);                    // 0.4795 rad, 27.5 deg — a real hut pitch
+  const R_RUN=Math.hypot(RC.d,RC.d*RC.slope);        // 3.438 m measured along the slope
+  const R_H=R_RUN/2, R_T=0.18;
+  /* THE PANEL'S TOP SURFACE IS THE COLLIDER'S PLANE, not its centre line. Measured the first way
+     the drawn roof came out exactly parallel to the collider and a constant 101 mm above it —
+     0.09/cos(27.5deg), the panel's own half-thickness measured perpendicular — which is the right
+     pitch and the wrong height: the bird would stand on the walkable plane with its feet 100 mm
+     inside the visible roof. Dropping the panels by that offset puts the surface you can SEE on
+     the surface the bird walks. The parallel-planes check is what proved the pitch, so it is kept
+     as an assertion. */
+  const R_OFF=(R_T/2)/Math.cos(R_TH);
+  const R_CZ=R_H*Math.cos(R_TH), R_CY=RC.ridge-R_OFF-R_H*Math.sin(R_TH);
+  const rl=new THREE.Mesh(new THREE.BoxGeometry(RC.w*2,R_T,R_RUN),mat(PAL.hutRoof));
+  /* THE TWELVE PURLINS ARE GONE, AND THEY WERE ERIC'S THIRD DEFECT. TODO 79 could not find a solar
+     panel mesh in this builder — there is none — and guessed that what reads as "panels off-pitch"
+     at 02_hut_snow was these: twelve 20 mm cylinders parented to the panel at local y +0.10, on a
+     panel whose top face is at +0.09. They stood 30 mm PROUD OF THE ROOF, so they photographed as
+     a row of pale objects lying on it at their own angle. The guess was right about what they were
+     and wrong about the fix: correcting the pitch does not bury them, it just re-aims them.
+     DELETED RATHER THAN MOVED UNDER, on this file's own precedent twelve lines up — the five fake
+     weatherboard lines went the same way in REPLAT P3, for the same reason: "the scan has real
+     ones". corrugated_iron_02 is a 2.7 m tile of real ribs at a real 79 mm pitch, running down the
+     slope (asserted elsewhere in the everything battery), so a hand-built rib standing on top of a
+     scanned rib is a second, wrong, thirty-times-too-coarse set of lines over the right ones.
+     Nothing referenced them: no collider, no anchor, no mission. */
+  /* +z PANEL: Rx(+θ) sends the +z edge DOWN and leaves it at +z, which is a plane falling away
+     from the ridge. That sign is the whole fix. */
+  rl.position.set(0,R_CY,R_CZ); rl.rotation.x=R_TH; rl.castShadow=rl.receiveShadow=!HEADLESS; g.add(rl);
+  const rr=rl.clone(); rr.position.z=-R_CZ; rr.rotation.x=-R_TH; g.add(rr);
+  /* THE CAP SITS ON THE RIDGE IT CAPS, at the panels' own top surface, not 1.67 m above it. */
+  const cap=box(RC.w*2,0.14,0.5,PAL.dark,0,RC.ridge+0.07,0,g);
+  // snow cap on the sunny-side eave over the door — ON the +z plane, at the +z plane's pitch
+  const SN_Z=2.4, SN_T=0.2;
+  const sn=new THREE.Mesh(new THREE.BoxGeometry(2.6,SN_T,1.2),mat(PAL.snow));
+  sn.position.set(0,RC.ridge-SN_Z*RC.slope+(SN_T/2)/Math.cos(R_TH),SN_Z);
+  sn.rotation.x=R_TH; g.add(sn);
   for(const bx of [-0.8,0,0.85]){ const sb=sph(rnd(0.32,0.42),PAL.snow,bx,0.16,rnd(-0.1,0.1),sn,9); sb.scale.y=0.55; }
   sph(0.3,PAL.snowShade,0.4,0.1,0.3,sn,8).scale.y=0.5;
   G.snowCap={mesh:sn,hut:{x:g.position.x,z:g.position.z},loaded:true,reloadT:0};

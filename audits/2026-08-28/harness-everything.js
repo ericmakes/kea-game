@@ -6313,6 +6313,160 @@ C.section('REPLAT P5b: the rig adapter');
    THE COLLIDER HASH IS NORMALISED FOR THE SAME CLASS OF REASON. Three sites pushed raw literals
    into G.colliders with their own key order while addBoxCollider used another, so a JSON.stringify
    digest compared spelling. Fixed field order, fixed precision, absent ry === 0. */
+/* ---- TODO 79: THE HUT ROOF IS A GABLE NOW, AND THE DRAWN ROOF IS THE WALKABLE ONE ----
+
+   Eric filed three defects in one object: the pitch was INVERTED (the two planes met in a valley,
+   not a ridge), the roof had visible daylight between it and the walls, and something on it read as
+   off-pitch solar panels. The first two were one bug seen twice — the rotation signs were swapped,
+   which lifted the eaves to 4.39 instead of dropping them onto the wall plate — and the floating
+   ridge batten was a third symptom of the same thing, hanging 1.67 m above the valley it capped.
+
+   THE COLLIDER WAS ALWAYS RIGHT, and that is what these assertions are built on. The entry declares
+   ridge 4.05 slope 0.52, and groundHeightAt walks the bird on `ridge − |z−c.z|·slope`, so the bird
+   has been walking an invisible CORRECT ridge above a visible wrong valley since the hut was
+   written. The fix derives the drawn panels from the collider, and the claim asserted is the one
+   that matters to a player: THE ROOF YOU CAN SEE IS THE ROOF YOU STAND ON. Nothing here restates a
+   pitch or a height — every number is read off the collider or off a raycast into the built world. */
+C.section('TODO 79: the hut roof');
+{
+  const THREE=H.THREE||require('three');
+  X.setSeed(20260828); X.boot({biome:'carpark'}); tick(4);
+  const p=X.PROPS.placed('hut');
+  if(ok(!!p,'the hut is a placement')){
+    G.scene.updateMatrixWorld(true);
+    const RC=p.entry.collider.find(c=>c.kind==='roof');
+    ok(!!RC&&RC.slide===true,'its roof is a slide zone (ridge '+RC.ridge+', slope '+RC.slope+')');
+    const panels=[]; p.group.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='BoxGeometry')return;
+      const g=o.geometry.parameters;
+      if(Math.abs(g.width-RC.w*2)<0.01&&g.height<0.3&&g.depth>2.5)panels.push(o); });
+    ok(panels.length===2,'and two roof panels the width of it ('+panels.length+')');
+
+    /* 1. IT IS A RIDGE, NOT A VALLEY. The centre line must be the HIGHEST point of the roof, not
+          the lowest — which is the whole of Eric's first defect, stated as a comparison rather
+          than as an angle. On the shipped roof the centre was the lowest point at 2.31 and both
+          eaves stood at 4.39. */
+    const ray=new THREE.Raycaster();
+    const surf=(z)=>{ ray.set(new THREE.Vector3(p.at.x,9,p.at.z+z),new THREE.Vector3(0,-1,0));
+      const hit=ray.intersectObjects(panels,true)[0]; return hit?hit.point.y:null; };
+    const mid=surf(0), eaveN=surf(-RC.d*0.92), eaveP=surf(RC.d*0.92);
+    ok(mid!==null&&eaveN!==null&&eaveP!==null,'the roof surface can be sampled across its depth');
+    ok(mid>eaveN+0.8&&mid>eaveP+0.8,'IT SHEDS: the centre line is the HIGHEST point of the roof, '+
+       'not a valley — mid '+(mid||0).toFixed(2)+' against eaves '+(eaveN||0).toFixed(2)+' and '+
+       (eaveP||0).toFixed(2)+' (the shipped roof had mid 2.31 and eaves 4.39)');
+    ok(Math.abs(eaveN-eaveP)<0.02,'and it is symmetrical about the ridge ('+
+       Math.abs(eaveN-eaveP).toFixed(4)+' m apart)');
+
+    /* 2. THE DRAWN ROOF IS THE WALKABLE ROOF. Sampled across the whole depth against the
+          collider's own formula. This is the assertion that makes the fix a fix rather than a
+          different guess: any pitch error shows as a growing offset, any height error as a
+          constant one. Measured at 0.00000 m on the piece that landed it. */
+    { let worst=0, worstZ=null;
+      for(let z=-RC.d*0.95; z<=RC.d*0.95; z+=RC.d/12){
+        const y=surf(z); if(y===null)continue;
+        const want=RC.ridge-Math.abs(z)*RC.slope;
+        if(Math.abs(y-want)>worst){ worst=Math.abs(y-want); worstZ=z; } }
+      ok(worst<0.02,'THE ROOF YOU SEE IS THE ROOF YOU STAND ON — the drawn surface tracks '+
+         'groundHeightAt\'s plane to '+worst.toFixed(5)+' m across the whole depth'+
+         (worstZ!==null?' (worst at z '+worstZ.toFixed(2)+')':'')+
+         '. It used to disagree by 1.7 m at the centre line.'); }
+
+    /* 3. THE RIDGE CAP CAPS THE RIDGE. It floated 1.67 m above the valley; found by geometry, as
+          the only thin wide box sitting near the centre line. */
+    { let cap=null; p.group.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='BoxGeometry')return;
+        const g=o.geometry.parameters;
+        if(g.width>RC.w*1.8&&g.height<0.2&&g.depth<0.8&&Math.abs(o.position.z)<0.2)cap=o; });
+      /* MEASURED AS "ITS UNDERSIDE MEETS THE ROOF SURFACE", not "its centre is near the ridge".
+         The loose version passed a cap sunk 140 mm into the roof, because 3.98 is within 150 mm of
+         a 4.05 ridge — a tolerance wide enough to swallow the whole cap. What the cap has to do is
+         SIT on the two panels it covers. */
+      if(ok(!!cap,'the ridge cap is there')){
+        const under=cap.position.y-cap.geometry.parameters.height/2;
+        ok(Math.abs(under-RC.ridge)<0.03,'and its UNDERSIDE meets the roof surface at the ridge ('+
+           under.toFixed(3)+' against '+RC.ridge+'), rather than floating over it or sinking into '+
+           'it — it used to hang at 3.98 above panels that met at 2.31'); } }
+
+    /* 4. NO DAYLIGHT BETWEEN ROOF AND WALLS — Eric's second defect, and ARTBIBLE's PHASE 4 gap
+          list has carried it since the 24-frame audit. Stated as: where the roof plane crosses the
+          wall FACE it must be at or just above the wall top, so the eave lands on the plate.
+          TODO 79 warned to check this before adding packing geometry or the fix would double up;
+          it closed on the pitch correction alone, and nothing was added. */
+    { const wallBox=p.entry.collider.find(c=>c.kind==='box');
+      /* THE TWO COLLIDER KINDS USE DIFFERENT CONVENTIONS AND THIS ASSERTION GOT IT WRONG FIRST
+         TIME. `kind:'roof'` passes half-extents VERBATIM (RC.d is already a half-depth), while
+         `kind:'box'` takes FULL dims and propCollider halves them on the way out. Reading
+         wallBox.d as a half-extent put the wall face at 5.4 m instead of 2.7 and reported the roof
+         plane at 1.242 — a finding about the assertion, not about the roof. */
+      const wallTop=wallBox.top, wallFace=wallBox.d/2;
+      const atFace=RC.ridge-wallFace*RC.slope;
+      ok(atFace>=wallTop&&atFace<wallTop+0.25,'the roof lands ON the wall plate: the plane is at '+
+         atFace.toFixed(3)+' where it crosses the wall face, against a '+wallTop+
+         ' wall top — no daylight, and no packing geometry was needed');
+      ok(RC.d>wallFace,'and the eave overhangs the wall rather than stopping short of it ('+
+         ((RC.d-wallFace)*1000).toFixed(0)+' mm of overhang)'); }
+
+    /* 5. NOTHING IS LYING ON THE ROOF — Eric's third defect, and the one TODO 79 could not
+          confirm. There is no solar panel mesh in this builder. What DID stand proud of the roof
+          was twelve purlins parented to the panel at local y +0.10 on a panel whose top face is
+          +0.09: 30 mm of hand-built rib lying on top of a scanned 79 mm rib, which is the same
+          two-sets-of-lines mistake the five fake weatherboard lines were deleted for in P3.
+          They are gone, and this raycast is what stops them or anything like them coming back:
+          from above, inside the roof footprint, the first thing you hit is the roof, the ridge cap,
+          the snow cap or the chimney — and nothing else. */
+    { /* THE TEST IS "LYING ON", NOT "ABOVE", and the distinction is the whole assertion. A CHIMNEY
+         passes through a roof and rises 800 mm clear of it; that is a chimney. A purlin sat 30 mm
+         over the surface; that is something lying on the roof. So a stray is a non-roof mesh that
+         intrudes into a thin SHELL just above the plane, and anything reaching higher than the
+         shell is structure rising through the roof and is left alone.
+
+         IT ENUMERATES MESHES, IT DOES NOT SAMPLE SPACE, and that was the second thing sabotage
+         taught this block. Written as a raycast over a grid it MISSED the very objects it was for:
+         the purlins are 40 mm cylinders at 626 mm spacing, and a 500 mm ray grid walks straight
+         between them. Putting all twelve back was caught only by the mesh count. Bounding boxes
+         over every mesh in the group cannot miss a thin object, however thin.
+         AND THE SHELL STARTS STRICTLY AT THE PLANE. A 50 mm tolerance below it reported the WALL:
+         rbox rounds its corners, so the wall's top edge reaches 2.692 where the eave plane is
+         2.702 — ten millimetres UNDER the roof, which is not something lying on it, and is
+         incidentally a second confirmation that the roof lands on the wall. */
+      const SHELL=0.45;
+      const allowed=new Set(panels);
+      p.group.traverse(o=>{ if(!o.isMesh)return;
+        const g=o.geometry.parameters||{};
+        if(g.width>RC.w*1.8&&g.height<0.2&&g.depth<0.8&&Math.abs(o.position.z)<0.2)allowed.add(o); });
+      if(G.snowCap&&G.snowCap.mesh)
+        G.snowCap.mesh.traverse(o=>{ if(o.isMesh)allowed.add(o); });
+      const bb=new H.THREE.Box3(), strays=[];
+      p.group.traverse(o=>{
+        if(!o.isMesh||allowed.has(o))return;
+        o.updateWorldMatrix(true,false);
+        bb.setFromObject(o);
+        /* clip the mesh's footprint to the roof's, then take the HIGHEST plane it sits under —
+           that is the strictest place to test, nearest the ridge. */
+        const z0=Math.max(bb.min.z-p.at.z,-RC.d), z1=Math.min(bb.max.z-p.at.z,RC.d);
+        const x0=Math.max(bb.min.x-p.at.x,-RC.w), x1=Math.min(bb.max.x-p.at.x,RC.w);
+        if(z1<z0||x1<x0)return;                                   // not over the roof at all
+        const nearest=(z0<=0&&z1>=0)?0:Math.min(Math.abs(z0),Math.abs(z1));
+        const plane=RC.ridge-nearest*RC.slope;
+        if(bb.max.y>plane+SHELL)return;                           // rises THROUGH it: a chimney
+        if(bb.max.y>plane+0.001&&bb.min.y<plane+SHELL)
+          strays.push(o.geometry.type+' '+((bb.max.y-plane)*1000).toFixed(0)+
+            ' mm over the plane at z '+nearest.toFixed(2)); });
+      ok(strays.length===0,'NOTHING LIES ON THE ROOF — no mesh intrudes into the '+
+         (SHELL*1000).toFixed(0)+' mm above the roof plane except the roof, its cap and its snow ('+
+         strays.length+' stray'+(strays.length?': '+strays.slice(0,4).join(' | '):'')+
+         '). Twelve purlins used to sit 30 mm into that shell.'); }
+
+    /* 6. AND THE SNOW SITS ON THE PLANE IT IS SUPPOSED TO BE ON, at the plane's own pitch — it
+          was on the OPPOSITE pitch to the panel it lies on, because it copied the wrong sign. */
+    if(G.snowCap&&G.snowCap.mesh){ const sn=G.snowCap.mesh;
+      const want=RC.ridge-Math.abs(sn.position.z)*RC.slope;
+      ok(Math.abs(sn.position.y-want)<0.20,'the roof snow lies ON the roof ('+
+         sn.position.y.toFixed(3)+' against a plane at '+want.toFixed(3)+' at its own z)');
+      ok(sn.rotation.x>0,'and at the +z panel\'s pitch, not the mirror of it ('+
+         sn.rotation.x.toFixed(4)+' rad) — it used to carry the opposite sign'); }
+  }
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
 C.section('REPLAT P6A: the model-swap seam');
 {
   const crypto=require('crypto'), fs=require('fs'), path=require('path');
@@ -6338,9 +6492,27 @@ C.section('REPLAT P6A: the model-swap seam');
      Three boots changed colour. Nothing moved, nothing was added, nothing was removed — the mesh
      COUNT and the triangle count below are untouched, as is every collider hash, and those are the
      numbers that carry P6A's actual claim. The old hashes were 1c53ebbf15dcb55c (carpark) and
-     28d3d95a94deefcc (skifield); they are recorded here so this line can be audited backwards. */
+     28d3d95a94deefcc (skifield); they are recorded here so this line can be audited backwards.
+
+     AND THE CARPARK'S MESH COUNT MOVED ONCE, SAME DAY, FOR TODO 79 — the hut roof rebuild. Twelve
+     purlins were deleted from the roof panel (they stood 30 mm proud of the surface and duplicated
+     the scanned corrugate ribs at thirty times the pitch, which is the mistake the five fake
+     weatherboard lines were deleted for in P3). The panel is cloned, so that is 24 meshes and 480
+     triangles:
+         meshes  1029 -> 1005   (12 purlins x 2 panels)
+         tris  223592 -> 223112 (24 x 20, a 5-segment cylinder)
+         mesh hash 63098c529fcf2be8 -> 16596980bc1a2066
+     The COLLIDER hash did not move, and that is the point worth noting: the roof was rebuilt from
+     end to end — pitch inverted back, panels re-derived, ridge cap re-seated, snow re-pitched — and
+     not one collider changed, because the collider was the half that was already right.
+
+     WHAT THIS BLOCK IS NOW. It was written as a one-off proof that the P6A seam changed nothing,
+     and it has become the world's general mesh digest — which is more useful and needs saying out
+     loud, because "the pre-seam readings" is no longer strictly what these numbers are. Two
+     deliberate updates in one session, each with its own diff recorded above. A third update with
+     no explanation attached would be the point at which this stopped being evidence. */
   const PRESEAM={
-    carpark :{mesh:'63098c529fcf2be8', col:'1b025c57715cb017', meshes:1029, tris:223592,
+    carpark :{mesh:'16596980bc1a2066', col:'1b025c57715cb017', meshes:1005, tris:223112,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:6},
     skifield:{mesh:'e0fed85dba572881', col:'fc06ef03250ea1ed', meshes:364, tris:43014,

@@ -1643,7 +1643,57 @@ its own piece and a stability sweep; (3) capture the browser's stderr on a timeo
 NOT URGENT: the pass now self-heals and says so in its output. But a 3% stall rate on a 30-shot
 sweep means most sweeps take a 90s penalty, and crossrun with RUNS=5 takes five of them.
 
-### 79. THE HUT ROOF IS AN INVERTED GABLE — IT MEETS IN A VALLEY WHERE A RIDGE SHOULD BE
+### 79. THE HUT ROOF IS AN INVERTED GABLE — **DONE session 33 (2026-09-07)**.
+Rebuilt as a gable, DERIVED FROM ITS OWN COLLIDER, which was the half that had always been right:
+the entry declares ridge 4.05 slope 0.52 and groundHeightAt walks the bird on
+`ridge − |z−c.z|·slope`, so the bird had been walking an invisible correct ridge over a visible
+wrong valley since the hut was written. The drawn surface now tracks that plane to **0.00000 m**
+across the whole depth, and the panels sit so their TOP FACE is the walkable plane — measured the
+other way first, the roof came out exactly parallel and a constant 101 mm high (the panel's own
+half-thickness perpendicular), which is the right pitch and the wrong height: the bird would have
+stood with its feet 100 mm inside the visible roof.
+DEFECT 2 CLOSED ON THE PITCH FIX ALONE, exactly as this entry warned to check before adding packing
+geometry. The wall top is 2.60 and its face at z 2.70, where the corrected plane sits at 2.646 — 46
+mm proud of the plate, with the eave carrying on to 2.464 at z 3.05 as a real overhang. Nothing was
+added. (Incidental confirmation from an assertion that went red on the way: rbox rounds its corners,
+so the wall's top edge reaches 2.692, ten millimetres under the eave plane.)
+DEFECT 3 WAS NOT WHAT THIS ENTRY GUESSED, AND NOT WHAT ERIC IS LOOKING AT EITHER — see TODO 109.
+The twelve purlins WERE standing 30 mm proud of the roof and duplicating the scanned corrugate ribs
+at thirty times their pitch, so they are deleted on this file's own P3 precedent ("the scan has real
+ones", which retired the five fake weatherboard lines for the same reason). But correcting the pitch
+does NOT bury them, as this entry predicted it would — it just re-aims them — and they are not the
+pale off-pitch objects in 02_hut_snow.
+FIVE ASSERTIONS, ALL DERIVED, ALL SABOTAGED: it sheds (the centre line is the HIGHEST point, which
+is Eric's first defect stated as a comparison rather than an angle); the drawn surface tracks
+groundHeightAt's plane; the cap's UNDERSIDE meets the roof at the ridge; the plane lands on the wall
+plate with the eave overhanging; and nothing lies in the 450 mm above the roof.
+TWO OF THOSE ASSERTIONS WERE TOO WEAK AND SABOTAGE FOUND IT. The cap check allowed a cap sunk 140 mm
+into the roof, because 3.98 is within 150 mm of a 4.05 ridge — a tolerance wide enough to swallow
+the whole cap; it measures the underside now. And the stray check was a raycast over a 500 mm grid,
+which walked straight between 40 mm purlins at 626 mm spacing: putting all twelve back was caught
+only by the mesh count. It enumerates bounding boxes now and cannot miss a thin object.
+COLLIDERS UNCHANGED. The roof was rebuilt end to end and not one collider moved — the P6A collider
+hash is identical — which is what "the collider was the one that is right" means in practice.
+LEFT FLAGGED, NOT RE-PINNED: 02_hut_snow ssim 0.9423 / 40,952 px, 19_roof_follow 0.7973 / 100,078
+px, 01_carpark_wide 0.9956 / 2,221 px.
+
+### 109. WHAT ERIC IS SEEING AS "SOLAR PANELS OFF-PITCH" ON THE HUT ROOF — A REPORT, NOT A DEFECT
+Filed 2026-09-07, session 33, closing out TODO 79's one unresolved item ("if Eric means a mesh I
+have not found, it is elsewhere in the hut group"). Investigated at the vantage, as instructed.
+THERE IS NO SOLAR PANEL MESH ANYWHERE IN THE HUT. What is on the roof and reads as a row of pale
+objects lying at their own angle is, in order of prominence:
+  - **THE SIX BIRD SPIKES**, `PB.spike` groups at y 3.52 on the front beam at z+3.4, spaced 1.2 m
+    from x−3 to x+3. They stand VERTICALLY on a horizontal beam, so against a pitched roof behind
+    them they read as boards at the wrong angle. They are a mission — "RIP OFF SPIKES", 15 points
+    and a loose carryable each — and they are the single most legible thing on that roofline.
+  - **THE THREE LEAD-HEAD NAILS**, at y 3.15 on the roof edge at z+2.62, also a mission ("PULL
+    NAIL", stash them sorted by size).
+Both are deliberate gameplay furniture and both are doing their job. THE CALL IS ERIC'S: if those
+are what he means, the fix is art direction on the spikes (a dark galvanised strip rather than pale
+lumps would read as anti-bird spikes instead of as panels) and not geometry. Filed rather than
+changed, because deleting or restyling a mission's own object on my own judgement is not a look fix.
+
+### 79 (as filed). THE HUT ROOF IS AN INVERTED GABLE — IT MEETS IN A VALLEY WHERE A RIDGE SHOULD BE
 Filed 2026-09-04, session 21, on Eric's instruction: FILE, DO NOT FIX. This is P6 geometry work and
 it is on the BLOCKED list at the top of this file (`hut roof rebuild`), so it must not be improvised
 overnight.
