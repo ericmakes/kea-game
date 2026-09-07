@@ -7422,12 +7422,25 @@ C.section('REPLAT P6A: the model-swap seam');
      They rose because retiring the seam feather raised the range's inner ground under them — the
      feather pinned the innermost ring to zero, which is what put a ring-shaped ditch between the
      skirt and the range. The carpark's six trees sit inside r 57, where terrainHeightAt returns 0,
-     so they do not move at all. mesh 3556361c192c1047 -> ebdf8239533c571a. */
+     so they do not move at all. mesh 3556361c192c1047 -> ebdf8239533c571a.
+
+     --- STEP 4 (SCALE), AFTER THE STRIP CONTRADICTED THE MEASUREMENT ---
+
+     peakH 56 -> 70 and the snowline 18 -> 30. The frame-fill measurement said the scale target was
+     already met and it was answering the wrong question: the ridge did fill the frame, and the
+     range still read as one pale monotone mass because the SNOWLINE was at 39% of peak height,
+     putting snow over the upper 61% of the relief where both plates carry it on roughly the upper
+     40%. Lowering the snowline was how the previous piece bought its form floor, and it bought it
+     by turning a mountain range into a snowfield. Taller peaks give the relief that floor needs
+     and leave room for a snowline in the plates' proportion.
+     Nine beech trees again, y only: moved 9 of 9, worst 0.847 m, x/z unchanged, counts unchanged.
+     mesh ebdf8239533c571a -> 376da6539031a7a4; tris unchanged, because the ring count did not
+     change — only the heights. */
   const PRESEAM={
     carpark :{mesh:'4a6fc19b3a4ce578', col:'1b025c57715cb017', meshes:979, tris:275804,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'ebdf8239533c571a', col:'fc06ef03250ea1ed', meshes:374, tris:108770,
+    skifield:{mesh:'376da6539031a7a4', col:'fc06ef03250ea1ed', meshes:374, tris:108770,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

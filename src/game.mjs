@@ -1849,7 +1849,7 @@ const TERRAIN={
      where the roll peaks (r 53.5), which left the skirt contributing nothing. 47.5 clears the
      furthest content by a metre and is fully faded by r 52. */
   footR0:43, footRoll:{f:0.055, amp:3.4}, playFlat:{half:47.5, feather:4.5},
-  peakH:56, footH:9,
+  peakH:70, footH:9,
   /* THE CREST IS INSIDE THE RIM, at 0.82 of the way out, falling away behind it. Found by
      measurement in the lab: elevation angle is h/r so the highest ground wins the silhouette, a
      ramp peaking AT the boundary made the boundary the skyline, and the boundary is the coarsest
@@ -1887,7 +1887,7 @@ const TERRAIN={
      line took its spread from 0.248 to 0.291, comfortably over the floor, where squeezing the
      albedo had only ever got it to 0.254: a margin of 0.001, which is a flake and not a pass. Fix
      the cause and the margin follows. */
-  snowY:18.0, snowBand:6.0, snowSlope:0.62,   // above snowSlope, rock shows through whatever the altitude
+  snowY:30.0, snowBand:7.0, snowSlope:0.62,   // above snowSlope, rock shows through whatever the altitude
   /* THE TREELINE COMES DOWN, from 15 m to 8, and it is a colour decision rather than a botanical
      one. The range's heights run to 42 m with a mean of 11.3, so a treeline at 15 put MOST of the
      annulus in tussock: the range rendered rgb(201,191,146) at hue 50 — yellow — where both plates
