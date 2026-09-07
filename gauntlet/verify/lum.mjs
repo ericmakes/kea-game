@@ -52,7 +52,14 @@ export function lumStats(png, box){
   const x1=Math.min(S.w,b.x1===undefined?S.w:b.x1), y1=Math.min(S.h,b.y1===undefined?S.h-HUDBOT:b.y1);
   const w=x1-x0, h=y1-y0;
   if(w<=0||h<=0)throw new Error('lum: empty box '+JSON.stringify({x0,y0,x1,y1})+' in '+S.w+'x'+S.h);
-  const raw=execSync(`ffmpeg -v error -i "${png}" -vf "crop=${w}:${h}:${x0}:${y0},format=rgb24" `+
+  /* format=rgb24 BEFORE THE CROP, not after, and the order is the whole difference between an
+     instrument that works on the reference plates and one that only works on our own captures.
+     A JPEG decodes to a chroma-subsampled YUV, and `crop` in that space silently rounds an ODD
+     width down to a legal one — asked for a 335 px band of nz_river_01 it returned 332 and this
+     function threw "short decode". Our own frames are 960x540 and even in both axes, so the fault
+     was invisible until the first time a plate was measured. Converting first makes every crop
+     legal, because RGB has no subsampling to round to. */
+  const raw=execSync(`ffmpeg -v error -i "${png}" -vf "format=rgb24,crop=${w}:${h}:${x0}:${y0}" `+
     `-f rawvideo -`,{maxBuffer:1<<28,encoding:'buffer'});
   const n=w*h;
   if(raw.length<n*3)throw new Error('lum: short decode, got '+raw.length+' want '+n*3);

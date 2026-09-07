@@ -2472,3 +2472,40 @@ WHAT IS STILL OWED:
   - **287 MESHES IN ONE PROP**, up from 141, and the river scene went 548 -> 694. Nothing measured
     a frame cost; perf.mjs is not in the gate. If any prop is going to be the one that wants
     instancing or a merged geometry, it is this one.
+
+### 110. MOUNTAINS ARE ONE RING NOW — DONE session 33, and what a range still isn't
+Eric's HIGH item 9: "Mountains as grey slabs with hard bases, one in 38 with no snow at all."
+Three complaints, all three measurable before anything changed, and the causes were not what the
+words suggest:
+  - **SIX COPIES.** The ring was written once and pasted into all six biome builders, differing only
+    in count and size ranges. It is `mountainRing()` and a per-biome table now.
+  - **THE FOG WAS THE "SLAB".** Shooting one peak with the snowline forced off the top and then off
+    the bottom: all rock read luma 0.834, all snow 0.894 — sixty thousandths between bare rock and
+    full snow. These cones stand 100-165 m out and the scene's exponential fog is tuned for the
+    hundred metres it can see, so they arrived about nine tenths fog, which flattens every value in
+    them into one. No amount of sculpting or snowline arithmetic is visible through a wash. They are
+    `fog:false` now and carry their atmospheric perspective in their own vertex colours, where it
+    can be measured against a plate. Retuning the scene fog was the other option and is a P2
+    constant governing the whole frame — not mine to take.
+  - **THE SNOWLINE WAS A FRACTION OF EACH PEAK**, so with h from 20 to 64 the lines landed between
+    14.6 m and 35.8 m. It is a world ALTITUDE now (16 m, band 5), with jitter and aspect that only
+    ever push it DOWN — signed both ways they lifted the ceiling to 20.8 m, above the shortest peak
+    in the game, which recreated the bare-peak defect on a sunny face.
+  - **18 MOUNTAINS, 2 COLOURS.** Every far mountain was identical to every other to four decimals.
+    Per-massif value and ridge/gully shading now, both DERIVED from the sculpt's own phases because
+    a single extra `rnd()` would reshuffle every later seeded draw in the map (TODO 47).
+WHAT IS STILL OWED:
+  - **THE LEVEL IS ERIC'S CALL AND THERE IS A STRIP FOR IT.** `MTN_a_darker`, `MTN_b_shipped`,
+    `MTN_c_paler` in gauntlet/capture, on the two value levers (`MTN.rockVal` / `MTN.snowVal`).
+    Measured inside one massif, the game now reads near-peak 0.542 / far-peak 0.794 against the
+    plate's near-ridge 0.382 / far-massif 0.595 — the same ~0.21 spread, about 0.16 brighter
+    overall, which is a midday-versus-sunrise difference and defensible. Eric should pick.
+  - **THEY ARE STILL CONES.** Sculpted, skirted and shaded cones, but the silhouette is a cone: no
+    subsidiary spurs, no cirques, no rock faces. A real range is jagged and this is smooth. That is
+    silhouette work and a piece of its own.
+  - **NO SNOW GULLIES.** Snow above the line is continuous; real snow fingers down gullies well
+    below it and bare rock stands out of it above. The sculpt's `NZ` noise is already per-vertex and
+    already drives the shading, so feeding it into the snowline would cost nothing but a decision
+    about how much.
+  - **`MTN.seg` WENT (22,7) -> (30,12)**, which is +412 triangles a mountain and about +3% on a
+    map's total. Nothing measured a frame cost; perf.mjs is not in the gate.

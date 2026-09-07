@@ -6327,6 +6327,232 @@ C.section('REPLAT P5b: the rig adapter');
    written. The fix derives the drawn panels from the collider, and the claim asserted is the one
    that matters to a player: THE ROOF YOU CAN SEE IS THE ROOF YOU STAND ON. Nothing here restates a
    pitch or a height — every number is read off the collider or off a raycast into the built world. */
+/* ---- MOUNTAINS: ONE RING, A WORLD SNOWLINE, AND A RANGE THAT HAS A RANGE ----
+
+   Eric's item 9: "Mountains as grey slabs with hard bases, one in 38 with no snow at all." Three
+   complaints, and all three were measurable before anything was changed:
+
+     SIX COPIES. The ring was written once and pasted into all six biome builders, differing only in
+     the count and the size ranges. Same shape of problem the water had.
+     EIGHTEEN MOUNTAINS, TWO COLOURS. In the river, every far mountain was identical to every other
+     far mountain and every near one to every near one, to four decimal places — far rock luma
+     0.3258 / snow 0.8587, near 0.1075 / 0.9236. Nothing varied per massif, nothing varied across a
+     face. That is what makes a range read as cardboard.
+     THE SNOWLINE WAS A FRACTION OF EACH PEAK. `(y/h+0.5-0.72)` puts snow at 72% of each mountain's
+     OWN height, so with h from 20 to 64 the lines landed anywhere from 14.6 m to 35.8 m. A real
+     range has ONE snowline, because it is set by the freezing level and not by how tall each hill
+     happens to be — and the consequence of getting it backwards is a modest peak whose top barely
+     clears its own line showing a cap too small to see. Which is Eric's "no snow at all": the peak
+     dominating frame 38 is a near one at 22.2 m.
+
+   THESE ASSERTIONS HOLD THE OBJECTIVE PROPERTIES AND NOT THE TASTE. How dark a distant alpine range
+   should read at midday is Eric's call and there is a variant strip for it (MTN_a/b/c). What is
+   asserted is what cannot be a matter of opinion: one ring, one altitude, every mountain carrying
+   snow, no two massifs the same value, rock reading darker than snow by a measured margin, and the
+   feet not meeting the plain in a clean cone. */
+C.section('mountains: one ring, one snowline');
+{
+  const THREE=H.THREE||require('three');
+  const lum=c=>0.2126*c.r+0.7152*c.g+0.0722*c.b;
+  const M=X.MTN;
+  ok(typeof X.mountainRing==='function','the mountain ring is ONE function, not six copies');
+  /* AND EVERY MAP USES IT. Six pasted copies is six places for a defect to survive a fix, so the
+     claim is that no biome builds a cone any other way: every ConeGeometry in every map must be a
+     registered mountain. */
+  { const per={}; let unregistered=0;
+    for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
+      const reg=new Set(G.mountains||[]); let cones=0;
+      /* DISCRIMINATED STRUCTURALLY, NOT BY SIZE. A cone is not necessarily a mountain — the maps
+         also build tree and bush canopies as cones, and some of those are 23 m across, so a size
+         filter reported "19 built some other way" about geometry that has nothing to do with the
+         horizon. What a mountain has is the RING'S OWN segment count, and what a resurrected pasted
+         copy would have is the old (22, 7) signature. Both are checked: every registered mountain
+         carries M.seg, and nothing anywhere carries the old one. */
+      G.scene.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='ConeGeometry')return;
+        const q=o.geometry.parameters;
+        if(q.radialSegments===22&&q.heightSegments===7)unregistered++;
+        if(!reg.has(o))return;
+        cones++;
+        if(q.radialSegments!==M.seg.r||q.heightSegments!==M.seg.h)unregistered++; });
+      per[b]=cones; }
+    ok(Object.keys(per).every(b=>per[b]>=16),'every map in the tour has a horizon ('+
+       Object.keys(per).map(b=>b+' '+per[b]).join(', ')+')');
+    ok(unregistered===0,'every mountain carries the ring\'s own segment count and nothing anywhere '+
+       'carries the old pasted-copy signature of (22, 7) ('+unregistered+' offenders)'); }
+
+  /* THE SNOWLINE IS AN ALTITUDE, AND EVERY MOUNTAIN CARRIES SOME. The second half is the one that
+     answers Eric directly, and it has to hold in EVERY map — a snowline that clears the shortest
+     peak in the river can still leave a campground foothill bare. */
+  X.setSeed(20260828); X.boot({biome:'river'});
+  { let minFrac=1e9, minPeak=1e9, worst=null, vals=[];
+    const c=new THREE.Color();
+    for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
+      for(const o of (G.mountains||[])){
+        const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
+        g.computeBoundingBox();
+        const peak=o.position.y+g.boundingBox.max.y;
+        if(peak<minPeak)minPeak=peak;
+        /* MEASURED RELATIVE TO EACH MOUNTAIN'S OWN ROCK, not against an absolute brightness.
+           An absolute threshold ("luma > 0.55") is a threshold on the TASTE levers — move rockVal
+           or snowVal and it changes meaning — and it reported 0% snow on a peak that genuinely had
+           a 53% blend, because the blend never reached near-white. What matters is that the top of
+           every mountain is conspicuously brighter than its own flanks. */
+        /* THE ROCK WINDOW IS BELOW THE SNOWLINE, not below a fraction of the summit. Sampled at
+           35% of each peak's height it worked for foothills and lied about the big ones: 35% of a
+           53.7 m peak is 18.8 m, which is ABOVE the 16 m snowline, so "rock" was sampling snow and
+           the ratio came out 2.1x on the most heavily capped mountain in the map. Everything below
+           line minus band is bare by construction. */
+        const bare=M.snowline.y-M.snowline.band-1;
+        let rockL=[], topL=0;
+        for(let v=0;v<col.count;v++){ c.fromBufferAttribute(col,v);
+          const L=lum(c), wy=pos.getY(v)+o.position.y;
+          if(wy>peak*0.97&&L>topL)topL=L;
+          if(wy<bare)rockL.push(L); }
+        const rockAvg=rockL.length?rockL.reduce((x,y)=>x+y,0)/rockL.length:1;
+        const f=topL/rockAvg;
+        if(f<minFrac){ minFrac=f; worst=b+', a '+peak.toFixed(1)+' m peak'; }
+        if(rockL.length)vals.push(rockAvg); } }
+    /* 2.0x IS THE FLOOR AND THE DISTRIBUTION IS WHY. Measured across all 104 mountains in the six
+       maps, the ratio is cleanly bimodal: the FAR ring runs 2.28-2.86 and the NEAR ring 5.60-7.02.
+       The far ring is lower BY DESIGN — its rock is hazed toward the sky, so there is less range
+       left between rock and snow, which is what atmospheric perspective is. So the floor sits under
+       the far ring, and the near/far difference gets an assertion of its own below rather than
+       being averaged away into one number that means neither. */
+    ok(minFrac>2.0,'EVERY MOUNTAIN IN EVERY MAP CARRIES SNOW — the least capped has a summit '+
+       minFrac.toFixed(1)+'x brighter than its own rock ('+worst+'). Eric\'s "one in 38 with no '+
+       'snow at all" was a peak that never reached its own proportional line');
+    ok(M.snowline.y<minPeak-1.5,'and the line at '+M.snowline.y+
+       ' m clears the SHORTEST peak anywhere ('+minPeak.toFixed(1)+
+       ' m) — an altitude, not a fraction of each summit');
+    /* THE SNOWLINE IS AN ALTITUDE, AND THIS IS THE ASSERTION THAT SAYS SO. Everything above it
+       passes perfectly well on the OLD proportional formula — sabotage put `(y/h+0.5-0.72)*8`
+       back and not one finding appeared, because a proportional line still caps every summit; what
+       it does not do is put the caps at the same HEIGHT. So the measurement is the world y at which
+       snow first appears on each mountain, across peaks from 19.7 m to 53.7 m. Under one altitude
+       those onsets cluster inside the deliberate variation (jitter plus aspect plus the band);
+       under a fraction of each summit they spread with peak height, which is the defect.
+       AND IT IS CHECKED AS A CORRELATION TOO, because a spread bound alone could be satisfied by
+       accident on a set of similar peaks: onset must not track peak height. */
+    { X.setSeed(20260828); X.boot({biome:'river'});
+      const c3=new THREE.Color(), onset=[], peaks=[];
+      for(const o of (G.mountains||[])){
+        const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
+        g.computeBoundingBox();
+        const peak=o.position.y+g.boundingBox.max.y;
+        let rl=[], top=0;
+        for(let v=0;v<col.count;v++){ c3.fromBufferAttribute(col,v);
+          const L=lum(c3), wy=pos.getY(v)+o.position.y;
+          if(wy>peak*0.97&&L>top)top=L;
+          if(wy<M.snowline.y-M.snowline.band-1)rl.push(L); }
+        if(!rl.length||!top)continue;
+        const rock=rl.reduce((x,y)=>x+y,0)/rl.length, half=rock+(top-rock)*0.5;
+        let lowest=1e9;
+        for(let v=0;v<col.count;v++){ c3.fromBufferAttribute(col,v);
+          if(lum(c3)>=half){ const wy=pos.getY(v)+o.position.y; if(wy<lowest)lowest=wy; } }
+        if(lowest<1e9){ onset.push(lowest); peaks.push(peak); } }
+      const lo=Math.min(...onset), hi=Math.max(...onset);
+      const allow=M.snowline.jitter+M.snowline.aspect+M.snowline.band;
+      ok(onset.length>10,'snow onset is measurable on the range ('+onset.length+' mountains)');
+      ok(hi-lo<allow,'THE SNOWLINE IS AN ALTITUDE, NOT A FRACTION OF EACH SUMMIT — snow starts '+
+         'between '+lo.toFixed(1)+' m and '+hi.toFixed(1)+' m across peaks of '+
+         Math.min(...peaks).toFixed(0)+'-'+Math.max(...peaks).toFixed(0)+' m, inside the '+
+         allow.toFixed(1)+' m this recipe deliberately allows (jitter + aspect + band)');
+      /* Pearson r between onset and peak height. A proportional line makes this ~1. */
+      { const n=onset.length;
+        const mo=onset.reduce((x,y)=>x+y,0)/n, mp=peaks.reduce((x,y)=>x+y,0)/n;
+        let num=0, do2=0, dp2=0;
+        for(let i=0;i<n;i++){ const a2=onset[i]-mo, b2=peaks[i]-mp;
+          num+=a2*b2; do2+=a2*a2; dp2+=b2*b2; }
+        const r=num/Math.sqrt(do2*dp2||1);
+        ok(Math.abs(r)<0.55,'and it does not track how tall each mountain is (r='+r.toFixed(2)+
+           '); a snowline set as a fraction of each summit measures about +1'); } }
+
+    /* NO TWO MASSIFS THE SAME VALUE. This is the assertion that would have caught the original
+       defect: eighteen mountains and two numbers between them. */
+    const uniq=new Set(vals.map(v=>v.toFixed(4)));
+    ok(uniq.size>vals.length*0.6,'and no two massifs share a rock value ('+uniq.size+
+       ' distinct of '+vals.length+' mountains; it used to be 2)');
+    const lo=Math.min(...vals), hi=Math.max(...vals);
+    ok(hi/lo>2,'with a real spread of rock value across the range ('+lo.toFixed(3)+' to '+
+       hi.toFixed(3)+', '+(hi/lo).toFixed(1)+'x)');
+    /* ATMOSPHERIC PERSPECTIVE, MEASURED. The far ring must hold LESS contrast than the near one —
+       that is the whole content of "distance hazes", and it is the thing that was missing when the
+       mountains were rendering at nine tenths fog with rock and snow within 0.06 of each other. */
+    { X.setSeed(20260828); X.boot({biome:'river'});
+      const bare2=M.snowline.y-M.snowline.band-1, c2=new THREE.Color();
+      const ring=[[],[]];
+      (G.mountains||[]).forEach((o,i)=>{
+        const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
+        g.computeBoundingBox();
+        const peak=o.position.y+g.boundingBox.max.y;
+        let rl=[], top=0;
+        for(let v=0;v<col.count;v++){ c2.fromBufferAttribute(col,v);
+          const L=lum(c2), wy=pos.getY(v)+o.position.y;
+          if(wy>peak*0.97&&L>top)top=L;
+          if(wy<bare2)rl.push(L); }
+        if(rl.length)ring[i%2].push(top/(rl.reduce((x,y)=>x+y,0)/rl.length)); });
+      const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+      const fr=mean(ring[0]), nr=mean(ring[1]);
+      ok(fr<nr*0.7,'and the FAR ring holds less contrast than the NEAR one, which is what '+
+         'distance hazing means — far '+fr.toFixed(2)+'x against near '+nr.toFixed(2)+'x'); } }
+
+  /* ROCK READS DARKER THAN SNOW. The fog was flattening this to sixty thousandths of a frame value
+     and the mountains came off it — so the claim now belongs on the ALBEDO, where this battery can
+     see it, and the frame measurement lives in the commit and the variant strip. */
+  { X.setSeed(20260828); X.boot({biome:'river'});
+    const c=new THREE.Color(); let rock=[], snow=[];
+    for(const o of (G.mountains||[])){
+      const g=o.geometry, col=g.attributes.color, pos=g.attributes.position;
+      g.computeBoundingBox();
+      const peak=o.position.y+g.boundingBox.max.y;
+      for(let v=0;v<col.count;v++){ c.fromBufferAttribute(col,v);
+        const wy=pos.getY(v)+o.position.y;
+        if(wy<peak*0.3)rock.push(lum(c)); else if(wy>peak*0.97)snow.push(lum(c)); } }
+    const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    ok(avg(snow)/avg(rock)>2.5,'SNOW READS AS SNOW AND ROCK AS ROCK — '+avg(snow).toFixed(3)+
+       ' against '+avg(rock).toFixed(3)+' ('+(avg(snow)/avg(rock)).toFixed(1)+'x)');
+    ok(!!X.mountainRing&&(G.mountains||[]).length>0&&
+       G.mountains[0].material.fog===false,'and the mountains are OFF the scene fog, which was '+
+       'washing bare rock and full snow to within 0.06 of each other in the frame — they carry '+
+       'their atmospheric perspective in their own vertex colours now, where it can be measured'); }
+
+  /* THE FEET DO NOT MEET THE PLAIN IN A CLEAN CONE — Eric's "hard bases". A cone's base is a
+     circle; the skirt flares it and the foot dips unevenly, so the assertion is that the radius at
+     the bottom VARIES round the mountain rather than being one number. */
+  { X.setSeed(20260828); X.boot({biome:'river'});
+    const o=(G.mountains||[])[1];
+    if(ok(!!o,'a mountain to measure')){
+      const g=o.geometry, pos=g.attributes.position, h=g.parameters.height;
+      let rr=[], yy=[];
+      for(let v=0;v<pos.count;v++){
+        const y=pos.getY(v);
+        if(y>-h/2+h*0.10)continue;                       // the bottom tenth only
+        rr.push(Math.hypot(pos.getX(v),pos.getZ(v))); yy.push(y); }
+      const lo=Math.min(...rr), hi=Math.max(...rr);
+      ok(rr.length>10,'its foot has vertices to measure ('+rr.length+')');
+      ok(hi/lo>1.25,'and the foot radius VARIES round it — '+lo.toFixed(1)+' to '+hi.toFixed(1)+
+         ' m ('+(hi/lo).toFixed(2)+'x), so it does not meet the plain in a circle');
+      ok(Math.max(...yy)-Math.min(...yy)>h*0.02,'and the foot DIPS rather than sitting level ('+
+         (Math.max(...yy)-Math.min(...yy)).toFixed(2)+' m of relief), which is what buries the '+
+         'cone-meets-plain intersection'); }
+    ok(M.skirt>0&&M.foot>0,'the skirt and the dipping foot are both switched on ('+M.skirt+
+       ', '+M.foot+')'); }
+
+  /* AND IT DID NOT DISTURB ANYTHING ELSE. Six pasted blocks became one function, and each made
+     SEVEN rnd() draws per mountain in a fixed order that every later seeded draw depends on
+     (TODO 47). Measured on the carpark: 1005 meshes before and after, and exactly 18 digest lines
+     differed, all of them ConeGeometry. The count is what this can check cheaply. */
+  { X.setSeed(20260828); X.boot({biome:'carpark'});
+    ok((G.mountains||[]).length===18,'the carpark still has its eighteen mountains ('+
+       (G.mountains||[]).length+')');
+    ok(X.WORLDREGS.indexOf('mountains')>=0,'and `mountains` is in WORLDREGS, so a second boot '+
+       'does not stack a second range on the first');
+    X.boot({biome:'river'});
+    ok((G.mountains||[]).length===18,'and a trip to the river replaces the range rather than '+
+       'adding to it ('+(G.mountains||[]).length+')'); }
+  X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
+}
+
 C.section('TODO 79: the hut roof');
 {
   const THREE=H.THREE||require('three');
@@ -6508,16 +6734,38 @@ C.section('REPLAT P6A: the model-swap seam');
 
      WHAT THIS BLOCK IS NOW. It was written as a one-off proof that the P6A seam changed nothing,
      and it has become the world's general mesh digest — which is more useful and needs saying out
-     loud, because "the pre-seam readings" is no longer strictly what these numbers are. Two
-     deliberate updates in one session, each with its own diff recorded above. A third update with
-     no explanation attached would be the point at which this stopped being evidence. */
+     loud, because "the pre-seam readings" is no longer strictly what these numbers are.
+
+     AND THE THIRD UPDATE OF THE DAY, WITH ITS EXPLANATION, because the paragraph above said a
+     third one without one would be where this stopped being evidence. The mountain ring became one
+     shared function and its cones went from ConeGeometry(w,h,22,7) to (30,12), so the sculpt has
+     geometry to shape with. That is +412 triangles per mountain, and the same figure falls out of
+     both maps independently, which is the check worth having:
+         carpark   18 mountains   tris 223112 -> 230528   (+7416 = 18 x 412)
+         skifield  16 mountains   tris  43014 ->  49606   (+6592 = 16 x 412)
+         mesh hash carpark  16596980bc1a2066 -> 45f8362c7377ca36
+         mesh hash skifield e0fed85dba572881 -> 8fb85fd8f327b91f
+     MESH COUNTS DID NOT MOVE and neither did either collider hash. Six pasted copies of the ring
+     became one function making the SAME seven rnd() draws per mountain in the SAME order, and that
+     was verified line by line before this number was touched: on the carpark, 1005 digest lines
+     before and 1005 after, with exactly 18 differing, all of them ConeGeometry. If the draw order
+     had shifted, half the world would have moved and the diff would have said so.
+
+     nightMats 6 -> 7, IN THE SAME PIECE, and it is a REGRESSION FIX rather than an addition.
+     Taking the mountains off the scene fog took away their only night dimming: 21_night_camp came
+     back with a noon-bright white range against a dark blue sky while the ground, the trees and the
+     hut were all correctly dark. The fog had been doing that job by accident. So the mountain
+     material joins the night register, which works because its own colour is white and all its
+     value lives in the vertex attribute — lerping white toward 0.30 white scales rock and snow
+     together, the same curve foliage and bark already use. One material, shared across all six
+     maps by the mat() cache, hence one new entry and not six. */
   const PRESEAM={
-    carpark :{mesh:'16596980bc1a2066', col:'1b025c57715cb017', meshes:1005, tris:223112,
+    carpark :{mesh:'45f8362c7377ca36', col:'1b025c57715cb017', meshes:1005, tris:230528,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
-              foodSrc:2, gravel:26, stones:26, wear:6, nightMats:6},
-    skifield:{mesh:'e0fed85dba572881', col:'fc06ef03250ea1ed', meshes:364, tris:43014,
+              foodSrc:2, gravel:26, stones:26, wear:6, nightMats:7},
+    skifield:{mesh:'8fb85fd8f327b91f', col:'fc06ef03250ea1ed', meshes:364, tris:49606,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
-              foodSrc:0, gravel:0, stones:0, wear:0, nightMats:6},
+              foodSrc:0, gravel:0, stones:0, wear:0, nightMats:7},
   };
   const worldRead=(biome)=>{
     X.setSeed(20260828);

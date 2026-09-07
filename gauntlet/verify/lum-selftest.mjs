@@ -105,7 +105,23 @@ console.log('LUM SELFTEST');
   ok(near(all.clipPct,44,1),'and including them reads 44% — so the exclusion is the default, not '+
     'a hardcoded blindness ('+all.clipPct.toFixed(2)+'%)'); }
 
-/* 7. IT REFUSES AN EMPTY BOX rather than dividing by zero and reporting NaN as a pass. */
+/* 7. AN ODD-SIZED CROP OF A SUBSAMPLED SOURCE. This is the case that broke the first cut on a real
+      reference plate: a JPEG decodes to chroma-subsampled YUV, and cropping in that space rounds an
+      odd width down to a legal one, so asking for 335 px returned 332 and lumStats threw "short
+      decode". Every fixture above is even in both axes, which is why nothing caught it — and so is
+      every frame the capture rig produces. An odd box on an odd JPEG is the fixture that bites. */
+{ const p=path.join(T,'odd.jpg');
+  execSync(`ffmpeg -v error -y -f lavfi -i "color=c=0x808080:s=101x77,format=rgb24" `+
+    `-frames:v 1 -q:v 1 "${p}"`);
+  let threw=null, s2=null;
+  try{ s2=lumStats(p,{x0:0,y0:0,x1:101,y1:77}); }catch(e){ threw=e.message; }
+  ok(!threw,'an ODD 101x77 crop of a subsampled JPEG decodes'+(threw?' — '+threw:''));
+  ok(s2&&s2.n===101*77,'and it measures every one of its pixels ('+(s2?s2.n:0)+' of '+(101*77)+')');
+  /* a 33x19 window offset to an odd origin, which is the shape a hand-picked band actually is */
+  const w2=lumStats(p,{x0:7,y0:11,x1:40,y1:30});
+  ok(w2.n===33*19,'and an odd window at an odd origin too ('+w2.n+' of '+(33*19)+')'); }
+
+/* 8. IT REFUSES AN EMPTY BOX rather than dividing by zero and reporting NaN as a pass. */
 { let threw=null;
   try{ lumStats(solid('tiny.png',10,10,'gray'),{x0:5,y0:5,x1:5,y1:9}); }catch(e){ threw=e.message; }
   ok(threw&&/empty box/.test(threw),'an empty box throws rather than returning NaN ('+threw+')'); }

@@ -1612,6 +1612,179 @@ function matGround(fam,rough){
   { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF,fam==='grass'); }
   matFam(fam).mats.push(m); matDress(m); return m;
 }
+/* ---------- MOUNTAINS — ONE RING FOR EVERY MAP THAT HAS A HORIZON ----------
+
+   Eric's river audit, item 9: "Mountains as grey slabs with hard bases, one in 38 with no snow at
+   all." Same shape of problem the water had: this was written once and then COPIED SIX TIMES, one
+   per biome, differing only in the count and the size ranges. Six copies of a defect is six places
+   to fix it, so it is one function now and the per-biome numbers are a table.
+
+   WHAT "GREY SLABS" IS, MEASURED. Eighteen mountains in the river, and exactly TWO colour schemes
+   between them — every far mountain identical to every other far mountain, every near one identical
+   to every near one, to four decimal places:
+       far   rock luma 0.3258   snow 0.8587   contrast 2.64
+       near  rock luma 0.1075   snow 0.9236   contrast 8.59
+   Nothing varied per mountain, nothing varied across a face. No ridge catching light, no gully
+   holding shade, no difference between one peak and the next. That is what makes a range read as
+   cardboard, and it is why this fix is mostly about COLOUR rather than about silhouette.
+
+   AND THE SNOWLINE WAS A FRACTION OF EACH PEAK, WHICH IS THE CONVENTION ERROR UNDER "no snow at
+   all". `clamp((y/h+0.5-0.72)*8,0,1)` puts the snow at 72% of each mountain's OWN height, so with h
+   running 20 to 64 the snowlines land anywhere between 14.6 m and 35.8 m. A real range has ONE
+   snowline — an altitude, set by the freezing level, the same for every peak in the frame — and the
+   consequence of getting it backwards is that short mountains wear snow low, tall ones wear it high,
+   and a modest peak whose top is only just above its own line shows a cap so small it reads as
+   bare rock. The snowline is a WORLD ALTITUDE now, with two deliberate departures from dead level:
+   a small per-massif jitter, and an ASPECT term, because a shady face genuinely holds snow lower
+   than a sunny one and that is the thing that stops one altitude looking like a ruled line.
+
+   THE DRAW ORDER IS PRESERVED EXACTLY, WHICH IS NOT OPTIONAL (TODO 47). Each iteration made seven
+   rnd() calls in a fixed order — angle jitter, r, h, w, ph, ph2, rotation — and every seeded draw
+   later in that biome's build depends on the sequence. So this function makes the SAME seven draws
+   in the SAME order with the SAME ranges, and every new piece of detail below is DERIVED from ph,
+   ph2, the angle and the height rather than drawn. One extra rnd() here would reshuffle the world. */
+const MTN={
+  /* ONE ALTITUDE FOR THE WHOLE RANGE. band is how many metres it takes to go bare-to-white;
+     jitter moves each massif's line a little; aspect drops it on the shady side. */
+  /* 14 m, AND THE NUMBER WAS CHOSEN BY MEASUREMENT, NOT BY EYE. Set at 24 the altitude convention
+     worked and the picture did not: peak heights across the six maps run 16.8 m to 54 m (0.84h,
+     the cone's apex above its own base), so a 24 m line left three of the river's eighteen peaks
+     bare — correct for a foothill, and precisely Eric's "one in 38 with no snow at all", because
+     the one that dominates that frame is a near peak at 22.2 m. 14 m clears the SHORTEST peak in
+     any map by 2.8 m, so nothing is ever wholly bare, while the 54 m far peaks come out about
+     three-quarters white — which is what nz_river_01 actually shows: Mt Cook white from a third of
+     its height, the nearer ridges dark rock with patches.
+     THE FLOOR MATTERS TOO. The lowest the line can fall is y − jitter − aspect = 9.2 m, and the
+     terrain under the mountain ring has risen to 2.7-7.4 m by then, so snow never reaches grass. */
+  /* THE BAND IS 5 m, NOT 7, and the reason is the shortest peak again: at 7 m a 19.7 m summit
+     clearing a 16 m line by 3.7 m only ever reaches 53% of the way to snow, so it wears a grey
+     dusting rather than a cap. Five metres bare-to-white lets even the shortest peak in the game
+     get properly white at the top, which is what "every mountain carries snow" has to mean. */
+  snowline:{y:16.0, band:5.0, jitter:2.6, aspect:2.2, shady:2.2},
+  /* ATMOSPHERE, AND IT IS THE LARGEST OF ALL THE FIXES HERE. Measured inside a single massif with
+     gauntlet/verify/lum.mjs, against nz_river_01:
+         the plate's snowy Mt Cook massif   luma 0.595   RGB 145,153,160
+         the plate's nearer rock ridge      luma 0.382   RGB  98, 97,100
+         the game's central peak            luma 0.891   RGB 223,228,231
+         the game's right-hand peak         luma 0.918   RGB 231,235,236
+     Three tenths too bright: they were rendering as near-white cones, which is most of what "grey
+     slabs" is complaining about — a shape with no value range in it is a slab whatever its outline.
+     THE REASON IS SCALE. These cones stand 100-165 m from the camera and REPRESENT a range ten to
+     forty kilometres off; the scene's fog is tuned for the hundred metres it can actually see, so
+     the mountains never received the atmospheric perspective that makes distant snow read as pale
+     grey rather than as white. snowVal takes the value out of the snow before anything else does,
+     and the haze now reaches the NEAR ring too — a foothill twelve kilometres away is still twelve
+     kilometres away. */
+  haze:0x9FB8CC, hazeRock:0.20, hazeSnow:0.30, hazeNear:0.09,
+  /* THE TWO VALUE LEVERS, and they are separate on purpose: rock and snow are the two ends of the
+     range, and the thing Eric is judging is the DISTANCE between them. One number each means the
+     level and the contrast can be moved independently, and means a variant strip is two numbers
+     rather than a rewrite. */
+  rockVal:0.62, snowVal:0.72,
+  seg:{r:30, h:12},
+  /* THE SKIRT is what stops a cone meeting a flat plain in a clean ellipse. It widens the foot
+     sharply and only the foot, so the silhouette above is untouched. */
+  skirt:0.62, skirtPow:2.8, foot:0.055,
+  ridge:0.17,        // ridges catch light, gullies hold shade — driven by the sculpt's own noise
+  vary:0.11,         // and no two massifs are the same value
+};
+/* mountainRing({n, far:{r,h,w}, near:{r,h,w}}) — each of r/h/w a [min,max] pair, as the six
+   copied blocks had them. Alternates far and near exactly as before (even i is far). */
+function mountainRing(o){
+  const M=MTN;
+  for(let i=0;i<o.n;i++){
+    const far=i%2===0;
+    /* --- the seven draws, in the original order. Do not add to these. --- */
+    const a=i/o.n*Math.PI*2+rnd(-0.1,0.1);
+    const S=far?o.far:o.near;
+    const r=rnd(S.r[0],S.r[1]);
+    const h=rnd(S.h[0],S.h[1]);
+    const w=rnd(S.w[0],S.w[1]);
+    const geo=new THREE.ConeGeometry(w,h,M.seg.r,M.seg.h);
+    const pos=geo.attributes.position;
+    const ph=rnd(0,6.3), ph2=rnd(0,6.3);
+    const baseY=h*0.34;
+    /* --- SCULPT: multi-octave radial noise carves a ridgeline, and the noise is KEPT so the
+           colour pass can shade the ridges it just made. --- */
+    const NZ=new Float32Array(pos.count);
+    for(let v=0;v<pos.count;v++){
+      const x=pos.getX(v), y=pos.getY(v), z=pos.getZ(v);
+      const rr=Math.hypot(x,z); if(rr<0.001)continue;
+      const ang=Math.atan2(z,x), t01=y/h+0.5;
+      const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
+      NZ[v]=nz;
+      /* the skirt: a sharp flare in the bottom fifth and nowhere else */
+      const skirt=1+M.skirt*Math.pow(Math.max(0,1-t01*1.35),M.skirtPow);
+      const kR=(1+nz*0.28*(1-t01*0.55))*skirt;
+      pos.setX(v,x*kR); pos.setZ(v,z*kR);
+      /* THE FOOT DIPS, NEVER RISES. Pushing the base vertices DOWN in places buries the
+         cone-meets-plain intersection unevenly, which is the hard line Eric is seeing; pushing
+         them up would lift the flat base disc into view instead. */
+      pos.setY(v, y + h*0.05*Math.sin(ang*5+ph2)*t01
+                    - h*M.foot*Math.abs(Math.sin(ang*9+ph))*Math.pow(Math.max(0,1-t01*1.6),2));
+    }
+    geo.computeVertexNormals();
+    /* --- COLOUR: a world snowline, ridge-and-gully shading, and a value of its own per massif --- */
+    { const cols=[];
+      const cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear().multiplyScalar(M.snowVal);
+      const cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear()
+                                                       .multiplyScalar(M.rockVal);
+      { const hz=new THREE.Color(M.haze).convertSRGBToLinear();
+        const k=far?1:M.hazeNear/M.hazeRock;         // the near ring hazes too, by less
+        cR.lerp(hz,M.hazeRock*k); cS.lerp(hz,M.hazeSnow*k); }
+      /* THIS MASSIF'S OWN VALUE, derived from its phase and not drawn */
+      const vary=1+M.vary*Math.sin(ph*1.7+ph2);
+      /* JITTER AND ASPECT ONLY EVER GO DOWN, which is both the physics and the fix for a real
+         failure. Signed both ways, the line's ceiling was y + jitter + aspect = 20.8 m, ABOVE the
+         shortest peak in the game (19.7 m) — so a short peak on a sunny face came out bare again,
+         which is the very defect this piece is here to remove. And it was wrong anyway: a shady
+         face holds snow LOWER than the regional line; a sunny one does not push it higher than the
+         freezing level. One-sided, the line can never exceed M.snowline.y. */
+      const snowY=M.snowline.y-M.snowline.jitter*Math.abs(Math.sin(ph2*1.3+ph));
+      const c=new THREE.Color();
+      for(let v=0;v<pos.count;v++){
+        const x=pos.getX(v), z=pos.getZ(v);
+        const ang=Math.atan2(z,x);
+        /* THE LINE IS AN ALTITUDE, and the shady side of every massif holds it lower */
+        const line=snowY-M.snowline.aspect*Math.max(0,Math.cos(ang-M.snowline.shady));
+        const t=clamp((pos.getY(v)+baseY-line)/M.snowline.band,0,1);
+        /* ridges catch the light, gullies hold the shade — the sculpt's own noise, reused */
+        const shade=1+M.ridge*NZ[v];
+        c.copy(cR).multiplyScalar(vary*shade).lerp(cS,t);
+        cols.push(c.r,c.g,c.b); }
+      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
+    /* fog:false, AND THIS IS THE FIX THAT MATTERED MOST. Measured by shooting the same 40x100 px
+       box through one peak with the snowline forced off the top and then off the bottom:
+           all rock   luma 0.834      all snow   luma 0.894
+       Sixty thousandths between bare rock and full snow. The scene's exponential fog is tuned to
+       the hundred metres it can actually see, and these cones stand at 100-165 m, so they were
+       arriving something like nine tenths fog — which flattens every value in them into one. THAT
+       is "grey slabs": a shape with no range left in it reads as cardboard whatever its outline,
+       and no amount of ridge sculpting or snowline arithmetic can be seen through a wash.
+       So the mountains come off the global fog and carry their atmospheric perspective in their own
+       vertex colours instead, where MTN.haze is a number this file can measure against a plate.
+       Retuning the scene's fog was the other option and is not mine to take: it is a P2 constant
+       tuned to the sky and it governs everything else in the frame. The precedent for opting out is
+       already here — the moon is `fog:false` for the same reason, being further away than fog has
+       any opinion about. */
+    /* AND nightTint, BECAUSE TAKING THEM OFF THE FOG TOOK AWAY THEIR ONLY NIGHT DIMMING. Found by
+       looking at 21_night_camp after the fog change: the range came back noon-bright white against
+       a dark blue sky while the ground, the trees and the hut were all correctly dark — daytime
+       mountains pasted into a night frame. The fog had been doing that job by accident.
+       IT WORKS BECAUSE THE MATERIAL'S OWN COLOUR IS WHITE and every actual value lives in the
+       vertex attribute: three multiplies material.color by the vertex colour, so lerping white
+       toward 0.30 white scales the entire range — rock and snow together — which is exactly the
+       curve foliage and bark already use. Moonlit caps that read BRIGHTER than the rest of a night
+       frame are a real thing and a deliberate piece (Eric's sky-and-cohesion item, with TODO 76);
+       dimming consistently is the honest default until someone chooses otherwise. */
+    const m=new THREE.Mesh(geo,nightTint(mat(0xFFFFFF,{vertexColors:true,fog:false})));
+    m.position.set(Math.cos(a)*r,baseY,Math.sin(a)*r);
+    m.rotation.y=rnd(0,3);
+    G.scene.add(m);
+    (G.mountains=G.mountains||[]).push(m);
+  }
+}
+
 /* ---------- WATER — ONE MATERIAL FOR EVERY BODY OF WATER IN THE GAME ----------
 
    Eric's river audit: "WATER is an unsigned system, and three of six new frames contain it." It
@@ -3456,7 +3629,7 @@ const WORLDREGS=['props','inter','colliders','cars','sheep','strips','foodSrc','
                  /* EVERY BODY OF WATER, so the ripple loop does not carry a drowned lake from a
                     previous map. rivFloes was added to this list for exactly the same reason after
                     a carpark boot was found with three floes still registered. */
-                 'water','rivBars'];
+                 'water','rivBars','mountains'];
 /* AND THE SINGLE THINGS A BUILD HANGS ON G (TODO 62, found in session 11 by the piece 39 sabotage
    sweep). WORLDREGS covers every LIST a build fills. It did not cover the handles - one object per
    thing a map has exactly one of - so after a carpark boot they all still pointed at meshes in a
@@ -3764,30 +3937,8 @@ function buildCarpark(){
   buildGrass('carpark'); buildTrees();
 
   // mountain ring: two depth layers, vertex snowline blend
-  for(let i=0;i<18;i++){ const far=i%2===0, a=i/18*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(135,165):rnd(102,128);
-    const h=far?rnd(34,60):rnd(24,46), w=far?rnd(45,70):rnd(28,50);
-    const geo=new THREE.ConeGeometry(w,h,22,7);
-    { // sculpt: multi-octave radial noise carves a ridgeline out of the cone
-      const pos=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
-      for(let v=0;v<pos.count;v++){
-        const x=pos.getX(v), y=pos.getY(v), z=pos.getZ(v);
-        const rr=Math.hypot(x,z); if(rr<0.001)continue;
-        const ang=Math.atan2(z,x), t01=y/h+0.5;
-        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
-        const kR=1+nz*0.28*(1-t01*0.55);
-        pos.setX(v,x*kR); pos.setZ(v,z*kR);
-        pos.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01);
-      }
-      geo.computeVertexNormals();
-    }
-    { const cols=[],pos=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(), cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
-      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
-      for(let v=0;v<pos.count;v++){ const t=clamp((pos.getY(v)/h+0.5-0.72)*8,0,1);
-        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
-      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-    const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
-    m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m);
-  }
+  mountainRing({n:18, far:{r:[135,165],h:[34,60],w:[45,70]},
+                      near:{r:[102,128],h:[24,46],w:[28,50]}});
   /* ---- ROLLING TUSSOCK HILLS: the depth band between the flats and the peaks ----
      TODO 80, FIXED IN REPLAT P4e. These were SphereGeometry(rad,18,10) squashed to scale.y 0.2-0.3
      with a sculpt loop that only ever touched x and z. Ten height bands means the two nearest the
@@ -4312,27 +4463,8 @@ function buildSkifield(){
   /* THE COUNTRY. This is the carpark own mountain construction with ski field radii and a snowline
      dropped to where a club field actually sits - deliberately NOT a new silhouette language, which
      is on the blocked art list and belongs to a wave with eyes on it. */
-  for(let i=0;i<16;i++){ const far=i%2===0, a=i/16*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(120,150):rnd(88,112);
-    const h=far?rnd(38,64):rnd(26,48), w=far?rnd(42,66):rnd(26,48);
-    const geo=new THREE.ConeGeometry(w,h,22,7);
-    { const pos=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
-      for(let v=0;v<pos.count;v++){
-        const x=pos.getX(v), y=pos.getY(v), z=pos.getZ(v);
-        const rr=Math.hypot(x,z); if(rr<0.001)continue;
-        const ang=Math.atan2(z,x), t01=y/h+0.5;
-        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
-        const kR=1+nz*0.28*(1-t01*0.55);
-        pos.setX(v,x*kR); pos.setZ(v,z*kR);
-        pos.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
-      geo.computeVertexNormals(); }
-    { const cols=[],pos=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
-        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
-      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
-      for(let v=0;v<pos.count;v++){ const t=clamp((pos.getY(v)/h+0.5-0.42)*7,0,1);
-        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
-      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-    const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
-    m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m); }
+  mountainRing({n:16, far:{r:[120,150],h:[38,64],w:[42,66]},
+                      near:{r:[88,112],h:[26,48],w:[26,48]}});
   // rock through the snow, everywhere the groomer does not sweep
   for(let i=0;i<14;i++){ const a=rnd(0,6.3), r=rnd(26,50), rx=Math.cos(a)*r, rz=Math.sin(a)*r;
     if(rx>SKIPISTE.x0-2&&rx<SKIPISTE.x1+2&&rz>SKIPISTE.z0&&rz<SKIPISTE.z1)continue;
@@ -4754,29 +4886,8 @@ function buildCampground(){
   /* ---- THE COUNTRY: the carpark's own mountain construction at river-flat radii, and the beech
      scrub the nest sits in. Deliberately NOT a new silhouette language, which is on the blocked art
      list and belongs to a wave with eyes on it. */
-  for(let i=0;i<18;i++){ const far=i%2===0, a=i/18*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(140,172):rnd(108,134);
-    const h=far?rnd(30,54):rnd(20,40), w=far?rnd(46,72):rnd(30,52);
-    const geo=new THREE.ConeGeometry(w,h,22,7);
-    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
-      for(let v=0;v<pos2.count;v++){
-        const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
-        const rr=Math.hypot(x,z); if(rr<0.001)continue;
-        const ang=Math.atan2(z,x), t01=y/h+0.5;
-        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
-        const kR=1+nz*0.28*(1-t01*0.55);
-        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
-        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01);
-      }
-      geo.computeVertexNormals(); }
-    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
-        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
-      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
-      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.78)*8,0,1);
-        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
-      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-    const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
-    m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m);
-  }
+  mountainRing({n:18, far:{r:[140,172],h:[30,54],w:[46,72]},
+                      near:{r:[108,134],h:[20,40],w:[30,52]}});
 }
 
 function castCampground(){
@@ -5255,28 +5366,8 @@ function buildVillage(){
   addHint('v_lamp',VILLLAMP.x,4.2,VILLLAMP.z,6,'the lamp post sees the whole street');
 
   /* ---- THE COUNTRY: the carpark's own construction at valley radii. ---- */
-  for(let i=0;i<18;i++){ const far=i%2===0, a=i/18*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(132,164):rnd(100,126);
-    const h=far?rnd(34,58):rnd(24,44), w=far?rnd(44,68):rnd(28,50);
-    const geo=new THREE.ConeGeometry(w,h,22,7);
-    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
-      for(let v=0;v<pos2.count;v++){
-        const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
-        const rr=Math.hypot(x,z); if(rr<0.001)continue;
-        const ang=Math.atan2(z,x), t01=y/h+0.5;
-        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
-        const kR=1+nz*0.28*(1-t01*0.55);
-        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
-        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
-      geo.computeVertexNormals(); }
-    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
-        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
-      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
-      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.76)*8,0,1);
-        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
-      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-    const m=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
-    m.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m.rotation.y=rnd(0,3); G.scene.add(m);
-  }
+  mountainRing({n:18, far:{r:[132,164],h:[34,58],w:[44,68]},
+                      near:{r:[100,126],h:[24,44],w:[28,50]}});
 }
 
 function castVillage(){
@@ -5810,27 +5901,8 @@ function buildRiver(){
   addHint('r_tower',RIVBRIDGE.x,5.2,RIVBRIDGE.z1,7,'the far tower: you have to cross to get it');
 
   /* ---- THE COUNTRY ---- */
-  for(let i=0;i<18;i++){ const far=i%2===0, a=i/18*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(128,158):rnd(96,122);
-    const h=far?rnd(38,64):rnd(26,48), w=far?rnd(44,68):rnd(28,50);
-    const geo=new THREE.ConeGeometry(w,h,22,7);
-    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
-      for(let v=0;v<pos2.count;v++){
-        const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
-        const rr=Math.hypot(x,z); if(rr<0.001)continue;
-        const ang=Math.atan2(z,x), t01=y/h+0.5;
-        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
-        const kR=1+nz*0.28*(1-t01*0.55);
-        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
-        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
-      geo.computeVertexNormals(); }
-    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
-        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
-      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
-      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.70)*8,0,1);
-        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
-      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-    const m2=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
-    m2.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m2.rotation.y=rnd(0,3); G.scene.add(m2); }
+  mountainRing({n:18, far:{r:[128,158],h:[38,64],w:[44,68]},
+                      near:{r:[96,122],h:[26,48],w:[28,50]}});
 }
 
 /* THE FLOES DRIFT, AND THE COLLIDER GOES WITH THEM. This is the map's only new mechanic and it is
@@ -6193,26 +6265,8 @@ function buildStation(){
   addHint('t_smoko',SHED.anchor('step').x,1.2,SHED.anchor('step').z,5,'somebody smoko, unattended');
   addHint('t_ridge',STANSHED.x,STANSHED.h+1.6,STANSHED.z,8,'the shed ridge is the top of the station');
 
-  for(let i=0;i<16;i++){ const far=i%2===0, a=i/16*Math.PI*2+rnd(-0.1,0.1), r=far?rnd(120,152):rnd(92,116);
-    const h=far?rnd(36,62):rnd(26,46), w=far?rnd(42,66):rnd(28,48);
-    const geo=new THREE.ConeGeometry(w,h,22,7);
-    { const pos2=geo.attributes.position, ph=rnd(0,6.3), ph2=rnd(0,6.3);
-      for(let v=0;v<pos2.count;v++){ const x=pos2.getX(v), y=pos2.getY(v), z=pos2.getZ(v);
-        const rr=Math.hypot(x,z); if(rr<0.001)continue;
-        const ang=Math.atan2(z,x), t01=y/h+0.5;
-        const nz=0.55*Math.sin(ang*3+ph)+0.3*Math.sin(ang*7+ph2)+0.15*Math.sin(ang*13+ph*2);
-        const kR=1+nz*0.28*(1-t01*0.55);
-        pos2.setX(v,x*kR); pos2.setZ(v,z*kR);
-        pos2.setY(v,y+h*0.05*Math.sin(ang*5+ph2)*t01); }
-      geo.computeVertexNormals(); }
-    { const cols=[],pos2=geo.attributes.position, cS=new THREE.Color(PAL.mtnSnow).convertSRGBToLinear(),
-        cR=new THREE.Color(far?PAL.mtnFar:PAL.mtn).convertSRGBToLinear();
-      if(far){ const hz=new THREE.Color(0x9FB8CC).convertSRGBToLinear(); cR.lerp(hz,0.2); cS.lerp(hz,0.14); }
-      for(let v=0;v<pos2.count;v++){ const t=clamp((pos2.getY(v)/h+0.5-0.74)*8,0,1);
-        const c=cR.clone().lerp(cS,t); cols.push(c.r,c.g,c.b); }
-      geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3)); }
-    const m2=new THREE.Mesh(geo,mat(0xFFFFFF,{vertexColors:true}));
-    m2.position.set(Math.cos(a)*r,h*0.34,Math.sin(a)*r); m2.rotation.y=rnd(0,3); G.scene.add(m2); }
+  mountainRing({n:16, far:{r:[120,152],h:[36,62],w:[42,66]},
+                      near:{r:[92,116],h:[26,46],w:[28,48]}});
 }
 
 /* ---- THE CASCADE. One act changing the state of another object, which is what makes it a
@@ -9882,7 +9936,7 @@ if(typeof globalThis!=='undefined'){
     VILL:{NEST:VILLNEST,ST:VILLST,PATH:VILLPATH,VER:VILLVER,SHOP:VILLSHOP,UNITS:VILLUNITS,
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
-    WATER,waterMat,waterTint,updateWater,
+    WATER,waterMat,waterTint,updateWater, MTN,mountainRing,
     RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,BARS:RIVBARS,
       STEP:RIVSTEP,STEPN:RIVSTEPN,STEPTOP:RIVSTEPTOP,FAR:RIVFAR,FARN:RIVFARN,
       STAIR:RIVSTAIR,FARSTAIR:RIVFARSTAIR,
