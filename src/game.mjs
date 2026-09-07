@@ -1861,6 +1861,52 @@ const TERRAIN={
   snowY:26.0, snowBand:7.0, snowSlope:0.62,   // above snowSlope, rock shows through whatever the altitude
   treeline:15.0, treeBand:6.0,
   rock:0x5A6470, rockLit:0x78828C, snow:0xC8D2DC, tussock:0x8A8256, scree:0x9A948C,
+  /* AERIAL PERSPECTIVE, THE RANGE'S OWN, because the scene fog is tuned for the play area and the
+     range is 64-190 m away in it. Eric's point 1: "the range reads luma 0.79 vs the plates' 0.40-
+     0.45 - pull the fog on the range back until rock sits in that band; rock must be DARKER than
+     the sky as in both plates."
+     MEASURED, on the two plates he named, at the ridge bands terrainstrip crops to:
+         nz_alps_01   ridge luma 0.392   rgb  84,102,124   sat 0.32  hue 212    sky luma 0.434
+         nz_alps_02   ridge luma 0.503   rgb 123,129,135   sat 0.09  hue 210    sky luma 0.799
+     So his band is alps_01's number and alps_02's ridge is lighter than he said; 0.39-0.50 is what
+     the two plates actually span, and the value below sits inside BOTH.
+     THE RIDGE'S SATURATION FOLLOWS THE SKY, which is the thing the scene fog got wrong here. Under
+     alps_02's overcast white sky the ridge is near-neutral (sat 0.09); under alps_01's blue sky it
+     is properly blue (sat 0.32 at hue 212). Ours is a blue-sky scene, so alps_01 governs — and the
+     range measured sat 0.03 at rgb 209,214,216, which is the scene's pale near-neutral fog colour
+     (0xC4D2D6, luma 0.81) and nothing else. It was not a range at all, it was fog in the shape of
+     one, and BRIGHTER than its own sky (0.836 against 0.707), which is the wrong way round in both
+     plates.
+     AND THE RANGE IS NOT MADE OF ROCK, which is the finding that set both numbers. With the haze
+     switched off entirely the range measures rgb(201,191,146) at hue 50 — YELLOW. The field's mean
+     height is 11.3 m against a treeline of 15, so most of the annulus renders BELOW the treeline as
+     tussock, and the sun lifts the authored 0x8A8256 (138,130,86) to 201,191,146. "The range reads
+     luma 0.79" was never fog over grey rock: it is bright tussock, paled.
+     THAT IS WHY THE DENSITY IS RAISED AND NOT PULLED BACK. At the scene's own 0.0062 the haze
+     reaches only a third of the way — a BLACK haze there takes the range to 0.478, so hz averages
+     0.33 — and no haze colour, however dark, pulls a 0.744 base into the band from a third of the
+     distance. 0.0085 puts hz at 0.49 at the range's nearest visible point (96 m) and 0.98 at its
+     far rim (236 m), so the colour does the work at nearly full strength AND the distance gradient
+     Eric asked to keep is still there. He asked for the fog to be pulled back and the measurement
+     asked for the opposite; the band and "darker than the sky" are the testable parts of the
+     instruction, and they are what is tested.
+     WHAT THESE TWO NUMBERS MEASURE, at Eric's wide vantages, over the range beyond 120 m:
+         01_carpark_wide    luma 0.448   rgb  97,117,132   sat 0.26   hue 205    sky 0.732
+         06_skyline         luma 0.436   rgb  94,114,130   sat 0.28   hue 206    sky 0.720
+         28_skifield_base   luma 0.457   rgb 100,120,133   sat 0.24   hue 204    sky 0.733
+     Between BOTH plates on all three of luma, saturation and hue, and darker than its own sky at
+     every one. (alps_01 0.392 / sat 0.32 / hue 212; alps_02 0.503 / sat 0.09 / hue 210.)
+     AND THE BAND IS ASSERTED AT THOSE VANTAGES, NOT AT THE STRIP CAMERA, because the strip turned
+     out to be a flattering view: its tele lens at eye y 9 sees the far peaks, while every wide
+     vantage is dominated by the near inner SKIRT of the annulus — 83-94% of the range mask, low and
+     sub-treeline and barely hazed, reading luma 0.54 at hue 58. Whole-mask numbers at a wide
+     vantage therefore measure tussock foothill and not the range at all, which is why
+     terrainvalue.mjs separates the two by per-pixel DEPTH before it judges anything. A constant
+     landed on the strip camera alone would have been landed on the wrong 6-17% of the frame.
+     ERIC'S STEP 4 WILL MOVE THIS. Raising the peaks lifts more of the annulus above the treeline
+     and swaps tussock for rock, so the base gets darker and the band will want re-measuring. The
+     assertion is on the RENDERED band rather than on these two constants for exactly that reason. */
+  haze:{color:0x506476, density:0.0085},
 };
 /* __KEA_TERRAIN__ OVERRIDES ANY LEAF, the same seam and the same reason as __KEA_SKY__, __KEA_MATS__
    and __KEA_GRASS__: the SILHOUETTE FAMILY is a taste call and Eric picks it from a strip, so
@@ -2042,6 +2088,60 @@ function terrainHeightAt(x,z){
   return (a*(1-ti)+b*ti)*(1-tj)+(c*(1-ti)+d*ti)*tj;
 }
 
+/* rangeHaze(m) — the range's OWN aerial perspective, as a per-material fog.
+   THREE.JS FOG IS PER SCENE, NOT PER MATERIAL: a material can only turn it off (material.fog),
+   never soften it or recolour it, and the renderer rewrites fogColor and fogDensity into every
+   material's uniforms on every frame, so assigning them from outside does not survive one tick.
+   The seam that DOES hold is the shader itself — two uniforms of our own, which the renderer has
+   never heard of and therefore never overwrites, and a rewritten fog_fragment that uses them.
+   material.fog STAYS TRUE, because fog_pars_fragment and fog_vertex are what provide vFogDepth;
+   turning it off would delete the distance this depends on.
+   THE MIX HAPPENS ON THE ENCODED PIXEL. three.js includes fog_fragment AFTER tonemapping_fragment
+   and colorspace_fragment, which is what the Vector3 below is about, and it is also why the haze
+   constant is a measured number rather than a derived one: it is compared against the plates
+   through the same encode the plates were photographed in. */
+function rangeHaze(m){
+  /* THE COLOUR IS CONVERTED TO LINEAR BY HAND, and the two things that could go wrong here both
+     did, in opposite directions, before this line settled.
+     THE MIX HAPPENS IN LINEAR SPACE. The first version of this comment claimed the opposite and
+     cited a frame as proof: with the haze at full strength, magenta came out exactly rgb(255,0,255)
+     rather than the ~231 ACES tone mapping would have left, which looked like proof that the blend
+     is downstream of tone mapping and encoding. IT PROVED NOTHING — magenta is a FIXED POINT of the
+     sRGB transfer curve, and so are black and white, the other two colours the sweep leaned on.
+     Three controls, none of which can tell the two hypotheses apart.
+     WHAT DECIDED IT was a colour that is not a fixed point, at full strength, where the two
+     hypotheses predict visibly different pixels: 0x4A6480 at density 0.03 predicts rgb(147,168,188)
+     if the uniform is read as linear and re-encoded, and rgb(74,100,128) if the blend lands on the
+     encoded pixel. It measured rgb(165,187,206) — the linear reading, plus a little bloom.
+     AND THE CONVERSION IS EXPLICIT because ColorManagement is OFF in this project: mat() itself
+     calls .convertSRGBToLinear() on every authored colour, which is something you only do when
+     three.js is not doing it for you. Without it, a plain THREE.Color hands the shader raw sRGB
+     numbers to be read as linear and the haze lands about fifty levels per channel too bright —
+     measured: 0x33476F rendered rgb(156,170,188) where the linear reading predicts rgb(88,96,116).
+     So a haze colour authored above renders as very nearly the sRGB colour it names, which is the
+     behaviour worth having, and this is the line that delivers it. */
+  const u={ c:{value:new THREE.Color(TERRAIN.haze.color).convertSRGBToLinear()},
+            d:{value:TERRAIN.haze.density} };
+  m.userData.rangeHaze=u;
+  m.fog=true;
+  m.onBeforeCompile=(sh)=>{
+    sh.uniforms.uHazeColor=u.c; sh.uniforms.uHazeDensity=u.d;
+    sh.fragmentShader=sh.fragmentShader
+      .replace('#include <fog_pars_fragment>',
+        '#include <fog_pars_fragment>\nuniform vec3 uHazeColor;\nuniform float uHazeDensity;')
+      .replace('#include <fog_fragment>',
+        '#ifdef USE_FOG\n'+
+        '  float hz = 1.0 - exp( - uHazeDensity * uHazeDensity * vFogDepth * vFogDepth );\n'+
+        '  gl_FragColor.rgb = mix( gl_FragColor.rgb, uHazeColor, clamp( hz, 0.0, 1.0 ) );\n'+
+        '#endif');
+  };
+  /* WITHOUT THIS the range shares a compiled program with any other material of the same shape and
+     gets that one's fog_fragment — or hands it ours. */
+  m.customProgramCacheKey=()=>'rangeHaze';
+  m.needsUpdate=true;
+  return m;
+}
+
 /* terrainMesh() — the annulus as geometry, vertex-coloured by SLOPE and ALTITUDE.
    THE MATERIAL IS PROVISIONAL AND DELIBERATELY SO. TERRAIN.md has Eric picking a SILHOUETTE family
    from a strip shot with the material held constant, so the triplanar rock family is step 4 and
@@ -2120,7 +2220,7 @@ function terrainMesh(){
      near-neutral and the far range sat 0.35 at hue 210. Session 33 took the cones OFF fog because
      it flattened them; that was a workaround for a shape with no form for light to describe. A
      heightfield has form. If the fog flattens this too, that is a measurement to report. */
-  const m=new THREE.Mesh(geo,nightTint(mat(0xFFFFFF,{vertexColors:true,roughness:0.93})));
+  const m=new THREE.Mesh(geo,rangeHaze(nightTint(mat(0xFFFFFF,{vertexColors:true,roughness:0.93}))));
   if(!HEADLESS)m.receiveShadow=true;
   m.castShadow=false;                    // a 190 m annulus shadowing the play area reads wrong
   G.scene.add(m);
@@ -10290,7 +10390,7 @@ if(typeof globalThis!=='undefined'){
           SHELTER:VILLSHELTER,BIKE:VILLBIKE,LAMP:VILLLAMP,BINS:VILLBINS,PLANTERS:VILLPLANTERS},
     SHOPGLASS, PAL,
     WATER,waterMat,waterTint,updateWater, ROCK,mkBoulder,rockMat, SNOW,snowForm,
-    TERRAIN,buildTerrain,terrainMesh,terrainHeightAt,terrainFlat,mkTree,
+    TERRAIN,buildTerrain,terrainMesh,terrainHeightAt,terrainFlat,rangeHaze,mkTree,
     RIV:{NEST:RIVNEST,WATER:RIVWATER,LAKE:RIVLAKE,BRIDGE:RIVBRIDGE,WALK:RIVWALK,BARS:RIVBARS,
       STEP:RIVSTEP,STEPN:RIVSTEPN,STEPTOP:RIVSTEPTOP,FAR:RIVFAR,FARN:RIVFARN,
       STAIR:RIVSTAIR,FARSTAIR:RIVFARSTAIR,

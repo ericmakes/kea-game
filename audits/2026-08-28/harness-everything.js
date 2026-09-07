@@ -6521,6 +6521,44 @@ C.section('the range: a heightfield, not a ring of cones');
        'vertices have N.L > 0 with the sun at ('+L.toArray().map(v=>v.toFixed(3)).join(', ')+
        '). It was 0.62% when the winding was inside out, which is what "flat and unlit" was.'); }
 
+  /* 6c. THE RANGE HAS ITS OWN AERIAL PERSPECTIVE, and this is the headless half of Eric's point 1
+        ("pull the fog on the range back until rock sits in that band; rock must be DARKER than the
+        sky"). The BAND ITSELF is a pixel measurement and lives in gauntlet/verify/terrainvalue.mjs,
+        which shoots three sweeps of the wide vantages and separates the range from its near tussock
+        skirt by per-pixel depth before judging anything; measured there, the range beyond 120 m
+        reads luma 0.436-0.457 at hue 204-206 against a sky of 0.72-0.73, between both plates on
+        luma, saturation and hue. What can be asserted HERE is the plumbing that makes it possible,
+        and the two ways it could silently stop working.
+        THE FIRST IS SHARING. terrainMesh takes its material from mat(), which MEMOISES on colour
+        plus extras, so the range's material is its own only because no other caller happens to ask
+        for 0xFFFFFF at roughness 0.93. If one ever does, it inherits a 190 m range's haze — or
+        hands the range its own fog back. That is a coincidence holding a look together, so it is
+        asserted rather than trusted.
+        THE SECOND IS material.fog. The custom fog_fragment is reached through the fog include, so
+        turning fog off on this material does not soften the haze, it DELETES it along with the
+        vFogDepth it needs. */
+  { const T3=G.terrainMesh, M3=T3.material;
+    ok(!!M3.userData.rangeHaze,'the range carries its own haze uniforms');
+    ok(M3.fog===true,'and material.fog stays TRUE — the custom fog_fragment is reached through the '+
+       'fog include, and vFogDepth comes with it');
+    ok(typeof M3.onBeforeCompile==='function'&&typeof M3.customProgramCacheKey==='function',
+       'and it has both the shader patch and its own program cache key, so it cannot share a '+
+       'compiled program with a material that has the scene fog');
+    let shared=0; G.scene.traverse(o=>{ if(o.isMesh&&o.material===M3&&o!==T3)shared++; });
+    ok(shared===0,'AND NO OTHER MESH SHARES THE RANGE\'S MATERIAL ('+shared+' do). mat() memoises '+
+       'on colour plus extras, so this is true by coincidence — 0xFFFFFF at roughness 0.93 has one '+
+       'caller — and a second caller would silently inherit a 190 m range\'s aerial perspective.');
+    /* THE HAZE MUST BE DARKER THAN THE SKY IT STANDS AGAINST, which is the half of Eric's sentence
+       that can be checked without a camera: the far range tends to the haze colour, so if the haze
+       is not darker than the fog colour the scene paints its sky with, no distance can make the
+       rock darker than the sky. It was 0xC4D2D6 at luma 0.81 and the range measured 0.804. */
+    const L=c=>{const r=(c>>16&255)/255,g=(c>>8&255)/255,b=(c&255)/255;
+      return 0.2126*r+0.7152*g+0.0722*b;};
+    const hz=L(T.haze.color), sky=L(X.SKY.fogDay);
+    ok(hz<sky*0.72,'and the haze is decisively darker than the sky the scene fogs to — haze luma '+
+       hz.toFixed(3)+' against fog colour '+sky.toFixed(3)+'. The far range tends to the haze '+
+       'colour, so a haze no darker than the sky can never put rock darker than sky.'); }
+
   /* 7. THE ROAD CORRIDOR IS FLAT, because the carpark's road runs to r 129 with 61 pieces of
         furniture on it and a rising heightfield would bury the lot. A road through foothills is a
         cutting; this asserts the cutting exists. */
