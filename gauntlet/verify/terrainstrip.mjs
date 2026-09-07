@@ -82,20 +82,44 @@ await srv.close();
 
 function TERRAINNAME(r){ return {a:'broad massifs',b:'serrated aretes',c:'glaciated troughs'}[r]||r; }
 
-/* the plates, scaled to the strip's width so the comparison is like for like */
-const plates=[];
-for(const n of ['nz_alps_01','nz_alps_02']){
-  const src=path.join(BOARD,n+'.jpg'), dst=path.join('/tmp',n+'_w.png');
-  execSync(`ffmpeg -v error -y -i "${src}" -vf "format=rgb24,scale=${W}:-2" "${dst}"`);
-  plates.push(dst);
-}
-/* one composite per recipe: the plate above, the recipe below, so the eye travels a short way */
+/* THE COMPARISON IS CROPPED TO THE RIDGE BANDS, and that is not cosmetic. Stacking the whole plate
+   over the whole game frame gave a 1920x1900 image in which the plate was 1281 px tall and the game
+   strip 620 — so fitting it to a window shrank the thing being judged to a third of the picture and
+   put the two skylines a long way apart. Cropping each to the band its mountains actually occupy
+   puts the two ridgelines adjacent at comparable scale, which is what a side-by-side is for.
+   The bands are read off the images rather than guessed: nz_alps_01's massif sits in the middle
+   third, nz_alps_02's ridge a little lower, and the game's range is the upper-middle of its
+   letterbox once the lens is narrowed to 26 degrees. */
+const BANDS={ nz_alps_01:[0.31,0.80], nz_alps_02:[0.44,0.76] };
+const GAMEBAND=[0.28,0.72];
+const bandCrop=(src,dst,lo,hi,w)=>{
+  const d=execSync(`ffprobe -v error -select_streams v -show_entries stream=width,height `+
+    `-of csv=p=0 "${src}"`,{encoding:'utf8'}).trim().split(',').map(Number);
+  const y0=Math.round(d[1]*lo), hh=Math.round(d[1]*(hi-lo));
+  execSync(`ffmpeg -v error -y -i "${src}" -vf `+
+    `"format=rgb24,crop=${d[0]}:${hh}:0:${y0},scale=${w}:-2" "${dst}"`);
+  return dst;
+};
 for(const s of shots){
-  for(let i=0;i<plates.length;i++){
-    const out=path.join(OUT,'STRIP_'+s.r+'_vs_alps_0'+(i+1)+'.png');
-    execSync(`ffmpeg -v error -y -i "${plates[i]}" -i "${s.f}" `+
-      `-filter_complex "[0:v][1:v]vstack=inputs=2,format=rgb24" "${out}"`);
+  const gband=bandCrop(s.f,path.join('/tmp','g_'+s.r+'.png'),GAMEBAND[0],GAMEBAND[1],1440);
+  for(const n of ['nz_alps_01','nz_alps_02']){
+    const pband=bandCrop(path.join(BOARD,n+'.jpg'),path.join('/tmp','p_'+n+'.png'),
+                         BANDS[n][0],BANDS[n][1],1440);
+    const out=path.join(OUT,'STRIP_'+s.r+'_vs_'+n.replace('nz_','')+'.png');
+    /* the PLATE on top, the recipe under it, with a hairline between so the join is unambiguous */
+    execSync(`ffmpeg -v error -y -i "${pband}" -i "${gband}" -filter_complex `+
+      `"[0:v]pad=1440:ih+3:0:0:color=0x202020[a];[a][1:v]vstack=inputs=2,format=rgb24" "${out}"`);
   }
 }
-console.log('\n  wrote STRIP_{a,b,c}.png and STRIP_<r>_vs_alps_0{1,2}.png to gauntlet/capture/');
+/* AND ONE SHEET WITH ALL THREE FAMILIES UNDER ONE PLATE, because the choice is between them and a
+   choice is easier made on one page than across three files. */
+{ const pb=bandCrop(path.join(BOARD,'nz_alps_02.jpg'),'/tmp/p2.png',
+                    BANDS.nz_alps_02[0],BANDS.nz_alps_02[1],1440);
+  const gs=shots.map(s=>path.join('/tmp','g_'+s.r+'.png'));
+  execSync(`ffmpeg -v error -y -i "${pb}" -i "${gs[0]}" -i "${gs[1]}" -i "${gs[2]}" `+
+    `-filter_complex "[0:v][1:v][2:v][3:v]vstack=inputs=4,format=rgb24" `+
+    `"${path.join(OUT,'STRIP_SHEET_plate_then_abc.png')}"`);
+}
+console.log('\n  wrote STRIP_{a,b,c}.png, STRIP_<r>_vs_alps_0{1,2}.png and');
+console.log('  STRIP_SHEET_plate_then_abc.png — the plate with all three families under it.');
 console.log('  the material is identical in all three — only the noise stack differs.');
