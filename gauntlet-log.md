@@ -5038,3 +5038,127 @@ found on the way.
   (3b83b706927a5b8bd3b8289b53fe21b6); fresh sixth sweep — diff 26 of 28 green, subjects the same two
   known-red from TODO 75 and no new regression, boxdiff 4 changed of which 3 are bimodal vantages in
   the other state; crossrun-selftest ALL PASS. All 28 pinned, nothing added to the set.
+
+---
+
+# SESSION 35 — 2026-09-08 — the terrain pass closed against the plates, and the sky briefed
+
+Branch `replat-b`. Ten commits. **CERTIFIED-SHIP** at `b7d4fc7993c2b0d6c718c398812fdec8`. Whole set
+re-pinned, 40 vantages, eleven-run consensus. Eric's five ordered terrain fixes all closed; the strip
+scores 7 of 7 against `nz_alps_01` and `nz_alps_02`; `SKY.md` written for the next pass.
+
+## THE ONE-LINE CAUSE OF THE FIRST TWO FAULTS
+
+`terrainMesh` emitted its quads as `(a,c,b)` and `(b,c,d)`. Worked on the flat patch at i=0, that
+puts the face normal at `(c-a) x (b-a) = (0,-dR·r·dθ,0)` — straight DOWN. Every one of the 27648
+vertex normals pointed down, mean n.y -0.9239, and with the sun at (-0.696,0.636,0.333) only **0.62%**
+of vertices had N·L > 0. That single ordering was BOTH of Eric's first two complaints: "geometric
+gaps where sky shows through the ring" was **backface culling** (the material is FrontSide, so
+everything whose surface sat below the eye was culled), and "the terrain reads flat and unlit" was
+the range receiving no diffuse sun at all. There is nothing to tune in a surface with no lit side.
+
+**ELEVEN GREEN ASSERTIONS MISSED IT** because every one was a claim about the FIELD — heights,
+slopes, per-ring residual correlation, summit profiles — and none looked at the geometry the field
+becomes. **So did the PRESEAM mesh digest**, which is the strongest invariant the gauntlet has:
+it covers vertex data, not index ORDER. Filed as TODO 117 and it is a cheap fix worth taking.
+
+## FOUR SKY DETECTORS, THREE OF THEM WRONG, ALL WRONG THE SAME WAY
+
+Step 0 needed to answer "is that sky or is that the range". Each attempt was a colour threshold and
+each found the furniture instead:
+
+- blue-dominance walking down from the top: stopped at the white CLOUDS and called the real sky
+  beneath them a hole. 662 of 960 columns "failed".
+- the same test on the horizon row: horizon sky is desaturated pale blue-grey (b-r 19 against a
+  threshold of 26), so it reported ZERO sky on a row that was 82% sky.
+- fog invariance: right about clouds, haze and water, but it identifies "sky OR NEAR-FIELD
+  geometry" — at 10 m the FogExp2 factor is 0.38%. All 617 of its holes sat 5.8–7.5° below eye level
+  reading [94,110,47]: the grass at the camera's feet.
+- what shipped: a PHOTOGRAPH OF THE BARE SKY, every mesh hidden but the backdrop, where backdrop is
+  `material.fog === false` rather than a list of names. Its calibration caught the first version
+  photographing a BLACK frame, because this sky is itself a BackSide basic-material dome.
+
+Plus the 44 px HUD strips, which are DOM and therefore byte-identical in every frame — they matched
+a sky reference trivially and were the last 161 "holes". `lum.mjs` already excludes them.
+
+## TWO COLOUR-SPACE BUGS, AND THE SECOND COST HOURS
+
+`ColorManagement` is **OFF** in this project — `mat()` calls `convertSRGBToLinear()` by hand — and
+that fact is load-bearing twice over.
+
+1. The range's haze colour. three.js includes `fog_fragment` after tonemapping and colorspace, and
+   I "proved" the blend lands on the encoded pixel by observing magenta come out exactly
+   rgb(255,0,255). **It proved nothing**: magenta is a FIXED POINT of the sRGB transfer curve, and
+   so are the black and white the sweep also leaned on. Three controls, none able to tell the two
+   hypotheses apart. A colour that is not a fixed point settled it in one frame.
+2. The rock scan's mean. Measured on the canvas's ENCODED bytes (0.2002) while `texture2D` on an
+   `SRGBColorSpace` map returns LINEAR (≈0.033). The modulation became `1 - 0.83·amt`, hit its clamp
+   floor everywhere, and painted the range a uniform 0.40× darker. **It presented as a texture that
+   would not resolve**: edge density did not move for tile scales from 3.2 m to 28 m, nor for a
+   forced mip 0 against mip 6, because the sampled value was constant. That stretch went on mip and
+   anisotropy theory.
+
+## THE FILM CAMERA WAS EATING 60% OF THE MOUNTAINS
+
+`FILM.bokeh.maxblur 0.003` at focus 26 m. Measured with platescore: the range's edge density is
+**0.0675** with that pass and **0.1708** with the post stack off entirely, against a plate band that
+opens at 0.1575. Three attempts to fix "the range has no surface" were all upstream of that line and
+all failed against a blur. It is 0.0008 now — a trace of far softening kept — and it is the single
+change in this session that touches every pixel of every vantage, which is most of why the whole set
+re-pinned. Eric's own note, "fix the blurred yellow foreground band at the foothills", was the same
+fault seen from the other end of the frame.
+
+## SIX OF MY OWN ASSERTIONS WERE WRONG
+
+Roughly a third of this session's findings were in the instruments rather than the code, and the
+recurring shapes are the ones FLAKES already names:
+
+- **a check too blunt to fail.** The no-ditch assertion averaged rings; the seam feather's ditch is
+  0.065 m per ring in the mean, under a 0.20 m threshold I picked out of the air, so it went green
+  on the very defect it was written for. Per azimuth against the game's own 0.55 reach, the feather
+  trips it at 0.83 m.
+- **a route that was not the claim.** The walkability check ran a straight line from the origin and
+  went red in the village, campground and river with "50 surfaces out of reach" — every one a
+  BUILDING. It measures 96 azimuths inside the ±52 clamp now, and not past it, because the range's
+  upper faces stand at 74° and asserting you can walk up those would be asserting something false.
+- **a threshold that could not discriminate.** "p99 slope > 45°" would have PASSED the flat range
+  (carpark measured 1.20 at talus 0.50), because the erosion only relaxes toward the talus. Withdrawn
+  in favour of a geological claim about the angle of repose, with the percentiles reported beside it.
+- **a metric reading the wrong quantity.** Edge density used an absolute luma threshold, so adding
+  the rock scan RAISED detail and DROPPED the metric (0.058 → 0.038) because it also darkened the
+  band. Exposure is normalised inside the metric now.
+- **a metric including everything but the subject.** All the colour metrics were measured over the
+  whole ridge band, SKY INCLUDED: the strip scored hue 201 while `terrainvalue.mjs`, which masks the
+  range by DEPTH, put the same rock at hue 24 — warm. That turned a false 7-of-7 into an honest
+  5-of-7 and named the real defect. It was found by two instruments DISAGREEING, which is the only
+  reason it was found at all.
+- **a band wide enough to accept anything.** Hue derived from tile spread came out 199 DEGREES wide
+  on alps_02, and a warm yellow-tan at hue 57 was called IN BAND. Hue is an angle; fixed 30° now,
+  which makes the test harder.
+
+And `terrainvalue.mjs` was contradicting platescore about the same range because its plate numbers
+were hand-typed from the whole ridge band. It imports `plateSubject()` now — one measurement of the
+references, and two tools that cannot disagree.
+
+## SIX SYSTEMS FINDINGS THAT WERE NOT THE GAME
+
+Building the foothill skirt cost "grab shiny ute keys" and five knock-ons. The audit rig's staging
+helpers dump loose props at (-48,-45) and park the bird at (-49,-49) — spots flat for the life of
+the project and now 0.18 m and 1.17 m of hillside. **A teleport is not a walk**: `stage()` sets y
+through `groundHeightAt`, which applies the 0.55 reach, so a bird dropped at y 0 lands UNDER the
+hill and the prop it was sent for was buried below its grab range. Moved to (-46,-46), verified at
+`terrainHeightAt` 0.0000, and a new assertion says nothing the world places stands on risen ground.
+
+## WHERE THE MEASUREMENT AND THE PICTURE DISAGREED, AND WHO WON
+
+I closed step 4 with "the target is already met, no change needed" on a frame-fill number that was
+true. Then I shot the strip, looked at it, and it was a pale monotone snowfield — because step 2 had
+bought its form floor by dropping the snowline to 39% of peak height, where both plates carry snow
+on roughly the upper 40%. **Eric's original instruction — raise the peaks — was right and my
+measurement was answering the wrong question.** peakH 56 → 70, snowline back to proportion, and the
+commit says so in its title. That is the second time this session the strip overruled a green table,
+and it is why `SKY.md` puts the instrument first and still ends with a strip.
+
+## THE LOCK
+
+Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
