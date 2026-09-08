@@ -923,6 +923,11 @@ The four mildly unstable vantages were NOT touched, per the brief. 17 is flagged
 (restore verbs) -> 23-25. Rationale: instruments first, then the maps
 foundation, then the stage before the actors.
 
+RUN ORDER (2026-09-08, after the terrain pass): after TODO 100, 112, 82 -> SKY.md.
+The sky is the last surface in the game that is not lit (TODO 76) and it is now
+the largest remaining gap against the reference wall; SKY.md holds the brief and
+runs the same automated loop the mountains did.
+
 ### 54. THE flapDrive PIN ON 17 IS INERT, AND THAT FRAME IS A GLIDE, NOT A FLAP
 Found in session 8 by piece 53, while probing what actually varies on 17. The PIN chain is registered
 AFTER the game loop, so it runs after update() and render(); the game zeroes flapDrive every frame
