@@ -792,3 +792,41 @@ a neutral event — it poisons the next sweep. Both kills were cleaned up (`--he
 safe discriminator, since puppeteer drives Eric's INSTALLED Chrome rather than a bundled Chromium,
 so the executable path cannot tell my instances from his) and all 42 numbered frames were checked
 for truncation — size, PNG signature and a trailing IEND chunk — with none suspect. See TODO 115.
+
+---
+
+## 2026-09-08 — WHOLE-SET RE-PIN, all 40 vantages, eleven-run consensus (TERRAIN steps 0-4 + step 4b)
+
+Eric's instruction closing the terrain work: "Then whole-set re-pin per TODO 73, commit, push."
+
+**ELEVEN SWEEPS, not four, because TODO 73's own rule demanded it.** A five-run dry run came back
+with bare majorities — `41_station_shed` split 3 against 2 and `42_station_ute` 3 against 2 — and
+the rule is N=11 on any bare majority. At eleven the same two frames are still split, 6 against 5,
+which is TODO 116's bimodality rather than a settling machine: `41_station_shed` has six runs at
+33732-33832 and five at 40362, `42_station_ute` six at 24742-24793 and five at 29611-29677. The
+medoid takes the larger cluster in both, which is what a medoid is for.
+
+    PIN PROVENANCE  run1 18, run2 6, run3 5, run4 2, run5 2, run6 2, run7 1, run8 2, run9 2
+    40 vantages pinned.  26_tour_brochure and 27_travel_card are still NOT pinned — adding a
+    vantage is Eric's call and they have been waiting on it since session 15b.
+
+**WHY EVERYTHING MOVED.** Every frame in the set changes, and most of it is not the terrain:
+
+- **The film camera.** `FILM.bokeh.maxblur` came down from 0.003 to 0.0008. This is the only change
+  in the set that touches every pixel of every vantage at every distance, and it is not cosmetic:
+  measured with platescore, the range's edge density is 0.0675 with the old blur and 0.1708 with the
+  post stack off entirely, against a plate band that opens at 0.1575. The film camera was destroying
+  60% of the mountains' surface and no amount of rock texture could get through it.
+- **The range is a different surface.** Baked sun occlusion marched on the heightfield, a triplanar
+  rock scan (dark_rock_02) for albedo AND relief, snow moved out of the vertex colour into its own
+  attribute and cut hard in the fragment shader, a cool grey-blue rock albedo at hue 208, and the
+  tile repeat broken by a rotating lookup.
+- **The foothill skirt** and the ground under it, from step 3: the field extends inward to r 43 and
+  `groundHeightAt` now reads it, so anything standing near the play area's edge sits differently.
+- **The tussock** came down out of gold (0x8A8256 to 0x6E6A4C), which shows in every wide frame.
+
+**THE RUN DIRECTORIES WERE NOT KEPT, and that is a departure worth recording.** repin.mjs's
+philosophy is that the frames a pin came from stay on disk so the pin can be audited after the fact.
+Eleven sweeps of 132 frames took the volume to 1.0 GiB free, so they were removed after the
+consensus was formed. The provenance line above is what survives; a future audit would have to
+re-shoot rather than re-read.
