@@ -4136,6 +4136,111 @@ C.section('SKY.md step 0: the visible sun sits where the light comes from');
        ') — buildSky is scene-level, so WORLDREGS would have emptied them'); }
 }
 
+C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture');
+{
+  /* THE SKY SCORED 6 OF 9 AT BASELINE and the three properties it failed were the three the brief
+     named: cloud boundary complexity, vertical extent and underside shading. What the pass found
+     while fixing them is that two of the three were defects of PLUMBING rather than of art, and
+     both are asserted here because both were invisible to every other battery. */
+  X.boot({biome:'carpark'});
+  const cl=G.clouds||[];
+  ok(cl.length===8,'eight cloud groups, still ('+cl.length+')');
+  const meshes=[]; for(const c of cl) c.traverse(o=>{ if(o.isMesh)meshes.push(o); });
+  /* ONE MERGED MESH PER CLOUD. It was 62 — a Mesh per sphere, two spheres per lobe — and a fringe
+     of 26 bumps per lobe would have made that 341 draw calls for the sky alone. */
+  ok(meshes.length===cl.length,'one merged mesh per cloud, not one per sphere ('+meshes.length+
+     ' meshes for '+cl.length+' clouds; it was 62)');
+  /* LIT, WHICH IS TODO 76's COMPLAINT IN MINIATURE. The clouds were MeshBasicMaterial with a
+     hand-painted grey belly sphere at opacity 0.5 — a painting of underside shading, which
+     measured 0.008 against the plate's 0.116 and could not respond to the sun moving at all. */
+  ok(meshes.every(m=>m.material&&m.material.type==='MeshLambertMaterial'),
+     'every cloud is lit by the scene rather than painted ('+
+     [...new Set(meshes.map(m=>m.material&&m.material.type))].join(', ')+')');
+  ok(meshes.every(m=>m.material&&m.material.emissive),
+     'and carries an emissive floor, so its shadowed side is a GREY cloud and not the hemisphere '+
+     'light\'s tussock-brown ground bounce — which at saturation 0.55 was not inside the '+
+     'scorer\'s neutrality mask at all');
+  /* fog:false, LIKE THE REST OF THE SKY. This is the defect that made the first two iterations
+     measure no shading with the sun plainly on the clouds. MeshBasicMaterial defaults fog to
+     TRUE and nobody had ever said otherwise, so the clouds were the ONLY part of the sky being
+     fogged — the dome and the horizon haze band are both fog:false — and at FogExp2 density Between a quarter and four
+     0.0062 that is a fog factor of 0.17 at the nearest cloud and 0.84 at the furthest. Between a
+     sixth and five sixths of every cloud in the frame was the fog colour. */
+  ok(meshes.every(m=>m.material&&m.material.fog===false),
+     'and is fog:false like the dome and the haze band — it was the only fogged part of the sky, '+
+     'at a fog factor of 0.17 to 0.84 across its own distance range');
+  { const f=G.scene.fog;
+    ok(!!f&&f.isFogExp2,'the scene fog is still FogExp2 (the range keeps its aerial perspective)');
+    const ff=d=>1-Math.exp(-(f.density*d)*(f.density*d));
+    ok(ff(70)>0.10&&ff(218)>0.75,'and it really was that strong at cloud distance: '+
+       (ff(70)*100).toFixed(0)+'% at the nearest cloud (70 m) and '+
+       (ff(218)*100).toFixed(0)+'% at the furthest (218 m)'); }
+  /* PLACED BY ELEVATION, so that whole clouds sit inside the picture. The altitudes were drawn
+     with no reference to distance, so a cloud 110 m away sat at 20.4 degrees while one 215 m away
+     sat at 9.2, and the strip's sky band spans 7.7 to 17.7. The near ones were above the frame
+     showing nothing but their undersides along its top edge, which is why the largest blob
+     measured -0.031 while every unclipped cloud beside it measured +0.055 to +0.182.
+     ASSERTED AS AN ANGLE rather than as a y, because the y that is right depends on how far away
+     the cloud is and that is the whole point. */
+  const elevs=cl.map(c=>Math.atan2(c.position.y,Math.hypot(c.position.x,c.position.z))*180/Math.PI);
+  const lo=Math.min(...elevs), hi=Math.max(...elevs);
+  ok(lo>X.SKY.cloudElev-X.SKY.cloudElevVary-0.5&&hi<X.SKY.cloudElev+X.SKY.cloudElevVary+0.5,
+     'every cloud sits within '+X.SKY.cloudElevVary+' degrees of '+X.SKY.cloudElev+
+     ' degrees of elevation (measured '+lo.toFixed(1)+' to '+hi.toFixed(1)+
+     '), so its top, body and base are all inside the strip\'s 7.7-to-17.7-degree sky band');
+  /* AND STILL INSIDE THE DOME. Lowering the near clouds shortened their distance from the origin,
+     which is the safe direction, but a cloud outside the 210 m BackSide dome fails the depth test
+     against it and vanishes — so it is checked rather than reasoned about. */
+  ok(cl.every(c=>c.position.length()<205),'and inside the 210 m dome (furthest '+
+     Math.max(...cl.map(c=>c.position.length())).toFixed(0)+' m)');
+  /* THE SKY'S OWN AERIAL PERSPECTIVE, at the sky's density and not the ground's — SKY.md 3.5.
+     Taking the terrain fog off was right; having no aerial perspective at all was not, because the
+     plate's cloud field darkens from 0.89 at the top of frame to 0.75 near the ridges and that
+     gradient IS the underside-shading number. A per-cloud tint toward a stated haze colour, on
+     FogExp2's own curve so the two agree in SHAPE where they meet at the horizon. */
+  ok(X.SKY.cloudHazeD>0&&X.SKY.cloudHazeD<G.scene.fog.density,
+     'the sky\'s haze density ('+X.SKY.cloudHazeD+') is lower than the ground\'s ('+
+     G.scene.fog.density+') — thinner air up there, and the number says so');
+  { const byDist=cl.map(c=>({d:c.position.length(),
+      l:(()=>{ let m=null; c.traverse(o=>{if(o.isMesh&&!m)m=o.material;});
+               return m?(0.2126*m.color.r+0.7152*m.color.g+0.0722*m.color.b):null; })()}))
+      .filter(o=>o.l!==null).sort((a,b)=>a.d-b.d);
+    ok(byDist.length>=4&&byDist[0].l>byDist[byDist.length-1].l,
+       'and the far clouds really are tinted further toward it than the near ones ('+
+       byDist[0].l.toFixed(3)+' at '+byDist[0].d.toFixed(0)+' m against '+
+       byDist[byDist.length-1].l.toFixed(3)+' at '+byDist[byDist.length-1].d.toFixed(0)+' m)'); }
+  /* NO NEW DRAWS. buildSky runs from initScene BEFORE any world is built, so one extra rnd() call
+     here relocates every seeded draw in every map after it (TODO 47). The world digests in item 1
+     are the real proof — the collider digest and every count are unchanged while the mesh digest
+     moved — and this is the direct statement of the rule the loop was written to obey. */
+  { const src=require('fs').readFileSync(require('path').join(__dirname,'../../src/game.mjs'),'utf8');
+    let sky=src.slice(src.indexOf('function buildSky()'),
+                      src.indexOf('/* ---------- collider helpers'));
+    /* THE COMMENTS COME OUT FIRST, and the first version of this line did not do that: buildSky's
+       new comments talk ABOUT rnd() — "they make no rnd() draws", "one extra or one fewer rnd()
+       call" — so a raw match counted 10 where there are 8 calls, and the assertion was reading my
+       own prose. Exactly the shape of fault this battery keeps finding in itself: a literal that
+       agrees with the wrong thing. */
+    sky=sky.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+    const draws=(sky.match(/\brnd\(/g)||[]).length;
+    ok(draws===8,'buildSky makes exactly '+draws+' rnd() calls, as it always did — every cloud '+
+       'detail added by this pass is driven by _thash, which takes nothing from the stream'); }
+  /* AND EVERY SKY CONSTANT IS REACHABLE THROUGH KEASKY. webrig keeps a hand-written SKY_KEYS
+     array and REFUSES any override not in it, which is the right guard against a typo and the
+     wrong thing to maintain by hand: its own comment records that it has drifted twice, once
+     costing a whole variant strip — every KEASKY in it refused, four dead shots, and four copies
+     of one stale frame compared as though they were four variants. A missing key does not look
+     like a broken seam, it looks like a tuning that did nothing. So the two are compared. */
+  { const wr=require('fs').readFileSync(
+      require('path').join(__dirname,'../../gauntlet/verify/webrig.mjs'),'utf8');
+    const m=wr.slice(wr.indexOf('const SKY_KEYS'),wr.indexOf('];',wr.indexOf('const SKY_KEYS')));
+    const listed=new Set([...m.matchAll(/'([A-Za-z0-9_]+)'/g)].map(x=>x[1]));
+    const missing=Object.keys(X.SKY).filter(k=>!listed.has(k));
+    ok(missing.length===0,'every one of the '+Object.keys(X.SKY).length+
+       ' SKY constants is reachable through KEASKY'+
+       (missing.length?' — webrig\'s SKY_KEYS is missing '+missing.join(', '):'')); }
+}
+
 C.section('REPLAT P2: sky and sun');
 {
   const SKY=X.SKY, PI=Math.PI;
@@ -7587,11 +7692,28 @@ C.section('REPLAT P6A: the model-swap seam');
      which is this set's own run-to-run variation — two runs of the SAME build move 02_hut_snow by
      66 px and its two deltas against the baseline were 118 and 62. Nothing re-pinned.
      change — only the heights. */
+  /* RE-PINNED FOR SKY.md STEP 2, 2026-09-10, AND ONLY THE SKY MOVED. The cloud recipe changed
+     from 62 meshes (a sphere and a belly sphere per lobe) to 8 (one merged mesh per cloud), so
+     both worlds lost 54 meshes and gained 35,608 triangles, IDENTICALLY — the clouds are
+     scene-level and the two biomes share them, which is itself a check: a change that touched a
+     world would not land equally on both.
+     WHAT DID NOT MOVE IS THE POINT. The COLLIDER digest is unchanged in both worlds and so is
+     every count — inter, props, colliders, cars, sheep, strips, hints, snow, foodSrc, gravel,
+     stones, wear, nightMats — which is the proof that buildSky still makes exactly the eight
+     rnd() draws it always made. buildSky runs from initScene BEFORE any world is built, so one
+     extra draw there would have relocated every seeded object in every map (TODO 47), and the
+     collider digest is where that would have shown first.
+     Frame cost measured three interleaved pairs against the same build with the cloud detail
+     switched off through KEASKY: +0.070, +0.250, -0.038 ms, a mean of +0.09 ms inside a 0.29 ms
+     spread. Draw calls for the whole sky went from 62 to 8.
+     Old pins, kept so the next re-pin can see what moved:
+       carpark  mesh 724e8f08b198323e, meshes 989, tris 278404
+       skifield mesh 376da6539031a7a4, meshes 374, tris 108770 */
   const PRESEAM={
-    carpark :{mesh:'724e8f08b198323e', col:'1b025c57715cb017', meshes:989, tris:278404,
+    carpark :{mesh:'2aaf24df957a1ecd', col:'1b025c57715cb017', meshes:935, tris:314012,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'376da6539031a7a4', col:'fc06ef03250ea1ed', meshes:374, tris:108770,
+    skifield:{mesh:'4f9ef26614da871e', col:'fc06ef03250ea1ed', meshes:320, tris:144378,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

@@ -2698,3 +2698,21 @@ the range were blind for the same reason from the other direction — every one 
 the heightfield, none about the geometry the heightfield becomes. Widen the digest to include
 index order, or add a per-mesh "normals point outward" census across every generated mesh in both
 maps rather than only the range. Cheap; catches a whole class.
+
+### 118. THE CLOUD MARGIN NEEDS AN ALPHA TIER, NOT MORE SPHERES
+SKY.md step 2 closed seven of eight properties and stopped at the cap with cloud boundary
+complexity at 4.76 against the plate's band of 7.11-17.25. A circle scores 3.545, so the game's
+cloud outline is 1.34 times a circle's where `nz_carpark_01`'s is 4.1 times. A fringe of 26 small
+spheres per lobe was the last honest gain available from geometry, and it is not enough: **opaque
+sphere unions cannot make a wispy edge.** The plate's cloud is feathered and semi-transparent at
+its margins, and that is what the metric is measuring.
+One reading in the loop went to 7.27 and was DISCARDED as flattered — the clouds were being cut by
+the frame edge and the ridgeline, and mask fragments carry a lot of boundary for no cloud. With
+whole, unclipped clouds the number is 4.76 and that is the one to beat.
+The technique: a baked cloud alpha atlas, the way `tools/bake_grass_cards.mjs` bakes the grass
+cards — a wisp tier of alpha-mapped quads round each mass's margin, lit or tinted to match the
+lobes underneath. Watch two things the pass already learned. The cloud mask is a NEUTRALITY test
+(saturation below 0.20), so a wisp tinted by the hemisphere light's tussock-brown ground bounce is
+not inside the cloud as far as the scorer is concerned. And transparency is what made iteration 1
+read as a bunch of grapes: every see-through overlap draws its own outline inside the mass. Alpha
+on the MARGIN only, over an opaque body, is the shape of the answer.

@@ -11,8 +11,11 @@
 import fs from 'fs'; import path from 'path'; import url from 'url';
 import { execSync } from 'child_process';
 import { bandNorm, loadRGB, lumPlane, edgeDensity, ridgeP10, snowPatch, lumaHue, silhouette,
-         measureAll, plateBand, PROPS, NORMW } from './platescore.mjs';
-import { BANDS, PLATESKY } from './stripcam.mjs';
+         measureAll, plateBand, PROPS, NORMW,
+         cloudMask, blobs, cloudForm, undersideShading, skyGradient, aerialPersp, skyColour,
+         skyMeasureAll, skyPlateBand, sunDisc, SKYPROPS, SKYCONTEXT, CLOUDSAT,
+         CLOUDFLOOR, CLOUDCEIL } from './platescore.mjs';
+import { BANDS, PLATESKY, SKYBANDS, SKYPLATES, BOWSKY } from './stripcam.mjs';
 
 const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..');
 const BOARD=path.join(ROOT,'gauntlet/reference/board');
@@ -34,6 +37,9 @@ function synth(w,h,fn){
   return {w,h,buf};
 }
 const grey=v=>[v,v,v];
+/* px is private to platescore.mjs; the selftest reads pixels the same way rather than widening
+   the module's surface for a test. */
+const px=(im,x,y)=>{const i=(y*im.w+x)*3;return [im.buf[i],im.buf[i+1],im.buf[i+2]];};
 
 /* ---- 1. EDGE DENSITY ---- */
 {
@@ -181,6 +187,309 @@ const grey=v=>[v,v,v];
   ok(calls===1&&/plateBand\(im,PLATESKY\[n\]\.test\)/.test(src),
      'plateBand is called exactly once in the scorer, on a PLATE — the target band cannot be '+
      'derived from our own frame');
+}
+
+/* ======================================================================================
+   THE SKY — SKY.md step 1. Same treatment: synthetic images with known answers, a case per
+   property, both controls, and a regression test for every fault this instrument made while
+   it was being built. Three of the five recurring shapes turned up again inside an hour.
+   ====================================================================================== */
+console.log('  --- sky ---');
+const blue=(l)=>[Math.round(l*0.62),Math.round(l*0.78),Math.round(l*1.0)];  // sat = 0.38
+
+/* ---- S1. THE CLOUD MASK IS ABSOLUTE, AND IT DOES NOT SPLIT A GRADIENT ---- */
+{
+  /* half neutral, half saturated: cover is exactly a half, by construction. */
+  const half=synth(200,100,(x)=>x<100?grey(200):blue(200));
+  const cm=cloudMask(half,null);
+  ok(cm.mask&&Math.abs(cm.cover-0.5)<0.01,
+     'cloud mask on half grey / half blue: cover '+(cm.cover*100).toFixed(1)+'% — a half is a half');
+  ok(cm.mask&&cm.mask[50*200+10]===1&&cm.mask[50*200+150]===0,
+     'the mask claims the NEUTRAL half and not the blue one — cloud is defined by neutrality, '+
+     'not by brightness');
+
+  /* THE REGRESSION TEST FOR THE OTSU BUG, and it is the whole reason this mask is absolute. A
+     pure blue vertical gradient with no cloud in it anywhere: Otsu reported 64% cover on exactly
+     this shape of picture (nz_tussock_03) with a separability of 0.729, because a gradient splits
+     into its top half and its bottom half beautifully. The answer must be NO CLOUD. */
+  const grad=synth(200,200,(x,y)=>blue(90+y*0.7));
+  const cg=cloudMask(grad,null);
+  ok(cg.mask===null&&/no cloud/.test(cg.note||''),
+     'a pure blue gradient reports NO CLOUD ('+(cg.cover*100).toFixed(1)+'% neutral) — the '+
+     'threshold cannot split a gradient into halves and call one of them cumulus');
+
+  /* both degenerate directions refuse, and say which. */
+  const clear=cloudMask(synth(100,100,()=>blue(180)),null);
+  ok(clear.mask===null&&/no cloud/.test(clear.note||''),
+     'a cloudless sky refuses the cloud properties rather than reporting a shape for 0% of a mask');
+  const soup=cloudMask(synth(100,100,()=>grey(180)),null);
+  ok(soup.mask===null&&/wall-to-wall/.test(soup.note||''),
+     'a wall-to-wall overcast refuses them too — no cloud EDGE in frame means nothing to measure');
+  ok(CLOUDFLOOR>0&&CLOUDCEIL<1&&CLOUDSAT>0.05&&CLOUDSAT<0.5,
+     'the mask\'s three constants are stated and named (sat<'+CLOUDSAT+', cover in '+
+     CLOUDFLOOR+'..'+CLOUDCEIL+') rather than buried as literals');
+}
+
+/* ---- S2. BLOBS: THE COUNT, THE AREA AND THE PERIMETER ARE ARITHMETIC ---- */
+{
+  /* two 20x20 squares, well separated. A solid WxH square has area W*H and a 4-connected
+     boundary of 2(W+H)-4 pixels. */
+  const two=synth(200,100,(x,y)=>{
+    const in1=x>=10&&x<30&&y>=10&&y<30, in2=x>=150&&x<170&&y>=60&&y<80;
+    return (in1||in2)?grey(220):blue(200); });
+  const cm=cloudMask(two,null); const bs=blobs(two,cm.mask,0);
+  ok(bs.length===2,'two separated squares give two blobs, not one and not three (got '+bs.length+')');
+  ok(bs.every(b=>b.area===400),'each blob\'s area is 400 px, which is what a 20x20 square has');
+  ok(bs.every(b=>b.per===2*(20+20)-4),
+     'each blob\'s perimeter is '+(2*(20+20)-4)+' px, which is what a 20x20 square\'s '+
+     '4-connected boundary has (got '+bs.map(b=>b.per).join(', ')+')');
+  /* THE SIZE FLOOR IS NOT TIDYING UP. A single-pixel speck has a perimeter-to-area ratio nothing
+     real can match, and JPEG chroma noise makes hundreds of them near any threshold. */
+  /* The square is 30x30 rather than 20x20 so the frame clears CLOUDFLOOR — a 20x20 blob in a
+     200x100 frame is 2% of it, and the mask rightly refuses to call 2% a cloud. */
+  const speck=synth(200,100,(x,y)=>((x===5&&y===5)||(x>=100&&x<130&&y>=35&&y<65))?grey(220):blue(200));
+  const cs=cloudMask(speck,null);
+  ok(cs.mask!==null,'a 30x30 blob in a 200x100 frame is '+(cs.cover*100).toFixed(1)+
+     '% cover and clears the floor');
+  ok(blobs(speck,cs.mask).length===1&&blobs(speck,cs.mask,0).length===2,
+     'the size floor drops a one-pixel speck and keeps a 30x30 square — without it the shape term '+
+     'would be measuring compression noise');
+}
+
+/* ---- S3. CLOUD FORM: SHAPE AND VERTICAL EXTENT ---- */
+{
+  const sq=synth(400,100,(x,y)=>(x>=100&&x<140&&y>=30&&y<70)?grey(220):blue(200));
+  const cm=cloudMask(sq,null); const cf=cloudForm(sq,cm);
+  const want=(2*(40+40)-4)/Math.sqrt(1600);
+  ok(Math.abs(cf.shape-want)<0.01,
+     'cloud shape on a 40x40 square is '+cf.shape.toFixed(3)+', and perimeter/sqrt(area) for that '+
+     'square is '+want.toFixed(3));
+  ok(Math.abs(cf.vext-40/100)<0.01,
+     'vertical extent is '+cf.vext.toFixed(3)+' — a 40 px blob in a 100 px band is 0.40 of it');
+  /* THE SHAPE TERM MUST NOTICE A RAGGED EDGE, which is the whole point of it: a comb with the same
+     area and the same bounding box has far more perimeter than a rectangle. */
+  const comb=synth(400,100,(x,y)=>{
+    const body=x>=100&&x<140&&y>=30&&y<50;
+    const teeth=x>=100&&x<140&&y>=50&&y<70&&((x-100)%4<2);
+    return (body||teeth)?grey(220):blue(200); });
+  const cc=cloudForm(comb,cloudMask(comb,null));
+  ok(cc.shape>cf.shape*1.4,
+     'a combed edge scores '+cc.shape.toFixed(2)+' against the rectangle\'s '+cf.shape.toFixed(2)+
+     ' — the shape term is about the BOUNDARY, which is what "hard-edged, noise-broken" means');
+}
+
+/* ---- S4. UNDERSIDE SHADING IS SIGNED, AND THE SIGN IS THE POINT ---- */
+{
+  const lit=synth(300,120,(x,y)=>{
+    if(!(x>=100&&x<200&&y>=30&&y<90))return blue(200);
+    return grey(y<50?230:(y<70?190:150)); });      // bright top, dark belly
+  const cm=cloudMask(lit,null); const L=lumPlane(lit);
+  const us=undersideShading(lit,L,cm);
+  ok(us.value>0.15,'a bright-topped, dark-bellied blob scores +'+us.value.toFixed(3)+
+     ' — positive means the top is lighter than the belly, which is what a lit cumulus does');
+  const flip=synth(300,120,(x,y)=>{
+    if(!(x>=100&&x<200&&y>=30&&y<90))return blue(200);
+    return grey(y<50?150:(y<70?190:230)); });
+  const uf=undersideShading(flip,lumPlane(flip),cloudMask(flip,null));
+  ok(uf.value<-0.15,'turning it upside down scores '+uf.value.toFixed(3)+
+     ' — the metric cannot be fooled by magnitude alone');
+  const flat=synth(300,120,(x,y)=>(x>=100&&x<200&&y>=30&&y<90)?grey(210):blue(200));
+  ok(Math.abs(undersideShading(flat,lumPlane(flat),cloudMask(flat,null)).value)<0.01,
+     'a flat white blob scores ~0 — no shading is not "some shading"');
+}
+
+/* ---- S5. THE GRADIENT: ABSOLUTES, THE EXPOSURE-FREE RATIO, AND THE BANDING STEP ---- */
+{
+  /* a linear luma ramp in a saturated blue, 200 rows: row 0 (top) is darkest. */
+  const ramp=synth(300,200,(x,y)=>blue(110+y*0.5));
+  const g=skyGradient(ramp,lumPlane(ramp),null,cloudMask(ramp,null));
+  ok(g.topLuma!==null&&g.horizLuma>g.topLuma,
+     'on a ramp that brightens downward, the horizon end ('+g.horizLuma.toFixed(3)+
+     ') is brighter than the zenith end ('+g.topLuma.toFixed(3)+')');
+  /* THE RATIO IS EXPOSURE-FREE, and this is the check that says so rather than the comment. The
+     same ramp at 70% exposure must give the SAME ratio and a different absolute. */
+  const dim=synth(300,200,(x,y)=>blue((110+y*0.5)*0.7));
+  const gd=skyGradient(dim,lumPlane(dim),null,cloudMask(dim,null));
+  ok(Math.abs(gd.lumaRatio-g.lumaRatio)<0.01 && Math.abs(gd.topLuma-g.topLuma)>0.05,
+     'the same sky at 70% exposure keeps its ratio ('+gd.lumaRatio.toFixed(3)+' vs '+
+     g.lumaRatio.toFixed(3)+') and loses its absolute ('+gd.topLuma.toFixed(3)+' vs '+
+     g.topLuma.toFixed(3)+') — which is exactly why the ratio is the judged row');
+  ok(Math.abs(g.satRatio-1)<0.02,
+     'a ramp of constant saturation has a saturation ratio of '+g.satRatio.toFixed(3)+', i.e. 1');
+  ok(g.maxStep!==null&&g.maxStep<=1,
+     'a smooth ramp\'s largest single-row 8-bit step is '+g.maxStep+' level');
+
+  /* CONTOURING: the same ramp quantised to steps of 8 levels must be caught. */
+  const step=synth(300,200,(x,y)=>blue(110+Math.floor(y/16)*8));
+  const gs=skyGradient(step,lumPlane(step),null,cloudMask(step,null));
+  ok(gs.maxStep>=4,'a ramp quantised into 8-level plateaux reports a step of '+gs.maxStep+
+     ' — contouring is a visible jump after a flat run, and that is what this measures');
+
+  /* THE ROW FLOOR: a row carrying a sliver of sky must not set the banding number. This is the
+     regression test for a real 15-level "step" reported in a photograph. */
+  const sliver=synth(400,200,(x,y)=>{
+    const open = (y%2===0) ? (x<400) : (x<8);          // odd rows hold 2% of the width
+    if(!open) return grey(215);                        // cloud
+    return blue(y%2===0 ? 150 : 250);                  // and the sliver is a wildly different blue
+  });
+  const gv=skyGradient(sliver,lumPlane(sliver),null,cloudMask(sliver,null));
+  ok(gv.maxStep===null||gv.maxStep<=2,
+     'a row holding 2% of the width cannot set the banding step (got '+gv.maxStep+
+     ') — a median taken from thirty pixels is noise, not a picture');
+
+  /* AND maxStep IS REFUSED UNDER HEAVY CLOUD, because there is no vertical slice of sky to look
+     for a step in. nz_carpark_01, at 76% cover, reported a 15-level step before this landed. */
+  const heavy=synth(300,200,(x,y)=>x<250?grey(215):blue(110+y*0.5));
+  const gh=skyGradient(heavy,lumPlane(heavy),null,cloudMask(heavy,null));
+  ok(gh.maxStep===null,'at '+(cloudMask(heavy,null).cover*100).toFixed(0)+
+     '% cloud cover the banding step is refused rather than estimated');
+}
+
+/* ---- S6. AERIAL PERSPECTIVE, AND THE SIGN CONVENTION ---- */
+{
+  /* saturation falls toward the bottom of the frame — a sky paling into its horizon. */
+  const pale=synth(300,200,(x,y)=>{ const l=200, s=0.45*(1-y/200)+0.05;
+    return [Math.round(l*(1-s)),Math.round(l*(1-s*0.4)),l]; });
+  const ap=aerialPersp(pale,lumPlane(pale),null,cloudMask(pale,null));
+  ok(ap.value>0.1,'a sky that pales downward scores +'+ap.value.toFixed(3)+
+     ' — positive is the direction all three plates go');
+  const even=synth(300,200,()=>blue(200));
+  ok(Math.abs(aerialPersp(even,lumPlane(even),null,cloudMask(even,null)).value)<0.01,
+     'a flat sky scores ~0 — no aerial perspective is not "some"');
+}
+
+/* ---- S7. THE BAND MACHINERY: FIXED HUE TOLERANCE AND THE SIGNED-PROPERTY FLOOR ---- */
+{
+  const im=bandNorm(path.join(BOARD,'nz_alps_01.jpg'),SKYBANDS.nz_alps_01[0],
+                    SKYBANDS.nz_alps_01[1],NORMW);
+  const pb=skyPlateBand(im,SKYPLATES.nz_alps_01.test);
+  const hb=pb.band.skyHue;
+  ok(hb&&hb.fixed&&Math.abs((hb.hi-hb.lo)-50)<0.01,
+     'the hue band is a FIXED 25 degrees either side of the plate ('+hb.lo.toFixed(0)+'..'+
+     hb.hi.toFixed(0)+'), not the tile spread — the terrain pass learned that one expensively, '+
+     'where a 199-degree band called a yellow-tan the same colour as slate');
+  /* THE FLOOR ON A SIGNED PROPERTY. underside is near zero on a cloudless plate, and +/-18% of
+     near-zero is a band that fails everything. */
+  const src=fs.readFileSync(path.join(ROOT,'gauntlet/verify/platescore.mjs'),'utf8');
+  ok(/FLOOR=\{underside:0\.01, maxStep:0\.5\}/.test(src),
+     'the signed properties carry an absolute band floor as well as a relative one, so a plate '+
+     'whose value is near zero cannot hand out a band of +/-0.002');
+  /* THE BANDS ARE NOT DERIVED FROM THE GAME. Same check as the terrain half, on the sky path. */
+  const calls=[...src.matchAll(/(?<!function\s)skyPlateBand\(/g)].length;
+  ok(calls===1&&/skyPlateBand\(im,SKYPLATES\[n\]\.test\|\|null\)/.test(src),
+     'skyPlateBand is called exactly once in the scorer, on a PLATE — our own sky cannot widen '+
+     'the target it is judged against');
+}
+
+/* ---- S8. BOTH CONTROLS, ON THE REAL PLATES ---- */
+{
+  const names=Object.keys(SKYBANDS);
+  const pb={}; for(const n of names)
+    pb[n]=skyPlateBand(bandNorm(path.join(BOARD,n+'.jpg'),SKYBANDS[n][0],SKYBANDS[n][1],NORMW),
+                       SKYPLATES[n].test||null);
+  /* POSITIVE CONTROL: every plate is in its own band on every property it carries. If a plate
+     falls outside a band derived from its own four tiles, the band is arithmetically wrong. */
+  for(const n of names){
+    let out=[]; let jud=0;
+    for(const k of SKYPROPS){ const b=pb[n].band[k], v=pb[n].whole[k];
+      if(!b||v===null||v===undefined||!isFinite(v))continue; jud++;
+      if(v<b.lo||v>b.hi)out.push(k); }
+    ok(out.length===0,n+' is inside its own band on all '+jud+' properties it carries'+
+       (out.length?' — except '+out.join(', '):''));
+  }
+  /* NEGATIVE CONTROL: the plates must not all agree, or the instrument is measuring nothing.
+     nz_alps_01 is a saturated deep blue that barely pales; nz_carpark_01 is a cumulus bank over a
+     hazy basin. They should part company. */
+  let differ=[], jud=0;
+  for(const k of SKYPROPS){
+    const b=pb.nz_carpark_01.band[k], v=pb.nz_alps_01.whole[k];
+    if(!b||v===null||v===undefined||!isFinite(v))continue; jud++;
+    if(v<b.lo||v>b.hi)differ.push(k); }
+  ok(differ.length>=1,'nz_alps_01 falls OUT of nz_carpark_01\'s band on '+differ.length+' of '+
+     jud+' shared properties ('+differ.join(', ')+') — two different skies measure differently');
+  /* AND THE PLATES THAT CANNOT SPEAK SAY SO. Only carpark_01 has cloud in its sky crop; the other
+     two must report the three cloud properties as absent rather than as a number. */
+  for(const n of ['nz_tussock_03','nz_alps_01'])
+    ok(['cloudShape','underside'].every(k=>pb[n].band[k]===null),
+       n+' carries no cloud in its sky crop and offers no band for the three cloud properties — '+
+       'an absent reference is stated, not averaged in');
+  ok(['cloudShape','underside'].every(k=>pb.nz_carpark_01.band[k]!==null),
+     'nz_carpark_01 does carry cloud, and is the plate the two cloud properties are judged '+
+     'against');
+  /* AND THE WITHDRAWAL IS ASSERTED, not just explained: cloudVext must not be in the judged set,
+     because on the only plate that carries cloud it is a measurement of cover. */
+  ok(!SKYPROPS.includes('cloudVext')&&SKYCONTEXT.includes('cloudVext'),
+     'cloud vertical extent is reported and NOT judged — the one plate with cloud has a bank '+
+     'larger than its own crop, so its extent is 1.0 whatever shape the clouds are');
+  ok(Math.abs(pb.nz_carpark_01.whole.cloudVext-1)<0.02,
+     'and that is checked rather than asserted from memory: nz_carpark_01\'s bank measures '+
+     pb.nz_carpark_01.whole.cloudVext.toFixed(3)+' of its own sky crop');
+}
+
+/* ---- S9. THE PLATE CHOICE ITSELF IS CHECKED, NOT REMEMBERED ---- */
+{
+  /* SKY.md names ref_bow_00, _04 and _06 as the sky references and they contain no sky. That
+     substitution is now load-bearing — the whole sky band comes off three different plates — so
+     the evidence for it is asserted here rather than left in a comment for someone to trust.
+     Smoothness over the top 22% of the frame: sky is smooth, a eucalypt canopy is not. */
+  const smooth=(n)=>{
+    const im=bandNorm(path.join(BOARD,n+'.jpg'),0,0.22,720);
+    const L=lumPlane(im); const {w,h}=im; let sm=0,tot=0;
+    for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+      const g=(a,b)=>L[a]-L[b];
+      const gx=g((y-1)*w+x+1,(y-1)*w+x-1)+2*g(y*w+x+1,y*w+x-1)+g((y+1)*w+x+1,(y+1)*w+x-1);
+      const gy=g((y+1)*w+x-1,(y-1)*w+x-1)+2*g((y+1)*w+x,(y-1)*w+x)+g((y+1)*w+x+1,(y-1)*w+x+1);
+      tot++; if(Math.hypot(gx,gy)/4<0.015)sm++; }
+    return sm/tot; };
+  for(const n of ['ref_bow_00','ref_bow_04','ref_bow_06']){
+    const f=smooth(n);
+    ok(f<0.30,n+' is '+(f*100).toFixed(1)+'% smooth over its top 22% — SKY.md names it as a sky '+
+       'reference and it is canopy and roofline. This is why the sky plates were substituted');
+  }
+  for(const n of Object.keys(SKYBANDS)){
+    const f=smooth(n);
+    ok(f>0.55,n+' is '+(f*100).toFixed(1)+'% smooth over its top 22% — it is a sky, which is the '+
+       'qualification for being in this set');
+  }
+  /* AND THE CROPS ARE PURE, which is the claim SKYBANDS makes about the two plates it gives no
+     mask. Per column, the topmost row that is definitely not sky must lie BELOW the band. */
+  for(const n of ['nz_carpark_01','nz_tussock_03']){
+    const im=bandNorm(path.join(BOARD,n+'.jpg'),0,1,720);
+    const {w,h}=im; let worst=1;
+    for(let x=0;x<w;x++){ let y=0;
+      for(;y<h;y++){ const p=px(im,x,y);
+        const L=(0.2126*p[0]+0.7152*p[1]+0.0722*p[2])/255;
+        if(p[1]-Math.max(p[0],p[2])>8||L<0.25)break; }
+      if(y/h<worst)worst=y/h; }
+    ok(worst>SKYBANDS[n][1],n+'\'s crop is pure sky: the nearest non-sky pixel in ANY column is '+
+       'at '+worst.toFixed(3)+' and the band ends at '+SKYBANDS[n][1]+
+       ', so it needs no per-pixel mask and is given none');
+  }
+  ok(SKYPLATES.nz_carpark_01.test===null&&SKYPLATES.nz_tussock_03.test===null&&
+     typeof SKYPLATES.nz_alps_01.test==='function',
+     'and the two pure crops carry no mask while alps_01 — whose highest peak reaches 0.099 — '+
+     'carries the one PLATESKY already states for it');
+}
+
+/* ---- S10. THE SUN DISC READS AN EMPTY FRAME AS EMPTY ---- */
+{
+  const dark=path.join(TMP,'sun_dark.png');
+  execSync('ffmpeg -v error -y -f lavfi -i color=c=0x203040:s=320x160 -frames:v 1 "'+dark+'"');
+  ok(sunDisc(dark).found===false,
+     'a frame with no bright pixel in it reports NO DISC rather than a centroid of nothing — the '+
+     'first version of the terrain sky detector photographed a black frame and measured it');
+  const spot=path.join(TMP,'sun_spot.png');
+  /* format=rgb24 BEFORE drawbox, or the white is not white. lavfi's color source is YUV, and a
+     box drawn as white@1 on it comes back out of the PNG at 253 — so the fixture for a clipping
+     test was not clipped, and the check that caught it was right to. */
+  execSync('ffmpeg -v error -y -f lavfi -i color=c=0x203040:s=320x160 -vf '+
+    '"format=rgb24,drawbox=x=150:y=70:w=20:h=20:color=white@1:t=fill" -frames:v 1 "'+spot+'"');
+  const sd=sunDisc(spot);
+  ok(sd.found&&Math.abs(sd.cx-160)<3&&Math.abs(sd.cy-80)<3,
+     'a 20x20 white box at (150,70) is found centred at ('+sd.cx.toFixed(1)+', '+sd.cy.toFixed(1)+
+     '), which is its middle');
+  ok(sd.clipped>0.9,'and it is reported as '+(sd.clipped*100).toFixed(0)+
+     '% clipped to white, which a solid white box is');
 }
 
 console.log(bad?('PLATESCORE SELFTEST: '+bad+' FINDINGS'):'PLATESCORE SELFTEST: ALL PASS');

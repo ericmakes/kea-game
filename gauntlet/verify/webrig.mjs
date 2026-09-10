@@ -99,10 +99,24 @@ export async function serve(dir = DIST) {
 const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay','sunNight',
   'sunIntensityDay','sunIntensityNight','sunPosDay','sunPosNight','shadowType','shadowMap',
   'shadowRadius','shadowBlur','shadowBias','shadowNormalBias','shadowExtent','shadowFar',
-  'hdri','envIntensityDay','envIntensityNight','envRotationY','hemiIntensityDay',
+  /* hdriSunAz and hdriSunEl WERE ALREADY MISSING when the new assertion below was written — the
+     THIRD drift of this list, found the moment anything checked it. They are the measured HDRI sun
+     angles that envRotationY is derived from, so an override on them is exactly the kind of thing
+     a session re-deriving the rotation would want. */
+  'hdri','hdriSunAz','hdriSunEl',
+  'envIntensityDay','envIntensityNight','envRotationY','hemiIntensityDay',
   'hemiIntensityNight','hemiSkyDay','hemiSkyNight','hemiGroundDay','hemiGroundNight',
   'fillIntensityDay','fillIntensityNight','rimIntensityDay','rimIntensityNight',
-  'hazeOpacityDay','hazeOpacityNight'];
+  'hazeOpacityDay','hazeOpacityNight',
+  /* SKY.md step 2's cloud recipe. Added here in the same commit as the constants themselves,
+     because this list has already drifted twice and the comment below records what it cost: a
+     whole variant strip shot with every override REFUSED, four dead shots and four copies of one
+     stale frame compared as though they were four variants. harness-everything now asserts that
+     every key of SKY appears in this array, so the third drift is a red battery rather than a
+     wasted strip. */
+  'cloudRMul','cloudBase','cloudTop','cloudPuffs','cloudRise','cloudFringe','cloudFringeR',
+  'cloudFringeAt','cloudLit','cloudEmissive','cloudNorm','cloudHaze','cloudHazeD',
+  'cloudElev','cloudElevVary'];
 
 /* REPLAT P3b added `breakup` and leaving it out of this list cost a whole variant strip: every
    KEAMATS in it was REFUSED, the four shots died, and four copies of one stale frame got compared

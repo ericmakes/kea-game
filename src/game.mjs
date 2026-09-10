@@ -186,6 +186,95 @@ const SKY={
 
   /* the painted dome keeps its own art; these are the two knobs nightApply already drove */
   hazeOpacityDay:0.45, hazeOpacityNight:0.14,
+
+  /* CLOUD FORM — SKY.md step 2, and the three properties the sky scored OUT on: boundary
+     complexity (perimeter over root area 5.26 against the plate's 7.11-17.25), vertical extent
+     (0.231 against 0.819-1.179) and underside shading (0.008 against 0.077-0.227). Eight flat
+     ellipsoids at scale.y 0.32 with a hand-painted grey belly sphere is a lozenge, and the strip
+     shows a lozenge.
+     FLAT KEYS, NOT A NESTED OBJECT, because SKY's override is a flat `if(k in SKY)` loop rather
+     than matMerge — a nested `cloud:{...}` passed through KEASKY would REPLACE the whole object
+     and silently drop every default it did not mention. */
+  /* SIZED TO SIT INSIDE THE VISIBLE SKY, WITH A TOP AND A BASE YOU CAN SEE. At 1.15 the masses
+     ran off both edges of the strip's sky band — 178 normalised rows of it, filled from row 0 to
+     row 177 — which is a badly composed sky as well as an unmeasurable one. The band is about 10
+     degrees and the clouds sit 70 to 218 m out, so a mass 16 m tall subtends about 6 degrees at
+     the middle of that range and leaves air above and below it. */
+  /* 0.90 AND NOT 0.80, AND THE DIFFERENCE IS THE FRINGE'S RESOLUTION. Dropping it to 0.80 while
+     the elevation fix landed took cloud cover from 23.9% to 11.9% and the boundary metric from
+     7.27 back to 5.36 — the rim bumps are 0.16 of a lobe radius, so at 0.80 they are only a few
+     pixels across in the frame and stop registering as boundary at all. The clipping was fixed by
+     placing the clouds at the right ELEVATION, not by making them smaller; both changes went in
+     together and only one of them was doing the work. */
+  cloudRMul:0.90,        // lobe radius multiplier: the old radii subtend about 2 degrees
+  cloudBase:0.60,        // vertical squash of the base lobe (was 0.32, which is a plate)
+  cloudTop:0.85,         // vertical squash of the puffs stacked on it — nearly round
+  cloudPuffs:3,          // puffs per lobe, hash-driven, ADDED (they make no rnd() draws)
+  cloudRise:0.42,        // how far up each puff sits, in units of the lobe's own radius
+  /* THE FRINGE IS WHAT THE BOUNDARY METRIC IS ABOUT. perimeter/sqrt(area) is 3.545 for a circle
+     and the plate reads 14.6, so its cloud's outline is four times longer than a smooth mass of
+     the same area — wisps, scallops and blue gaps punched through the middle. Small spheres round
+     the rim buy a great deal of perimeter for very little area, which is exactly the trade the
+     metric measures. */
+  /* MANY SMALL BUMPS, SITTING PROUD OF THE RIM, rather than a few big ones sunk into it. Seven
+     at 0.40R and 0.95R out were absorbed into the mass and moved the boundary metric from 4.70 to
+     4.99 against a target of 7.11 — they bulged the outline instead of breaking it. */
+  cloudFringe:26,        // small puffs scattered round each lobe's rim
+  cloudFringeR:0.16,     // their radius, in units of the lobe's
+  cloudFringeAt:1.10,    // how far out they sit, in units of the lobe's radius
+  cloudLit:1,            // shade the cloud with the scene's sun instead of painting a belly grey
+  /* WHAT THE SHADOWED SIDE IS MADE OF, AND WHY IT IS A NEUTRAL. With the sun off it, a cloud's
+     dark side is lit by the hemisphere light's GROUND colour, which is 0x8a7c42 — tussock brown,
+     correct for a hillside and wrong for a cumulus, and it comes out at saturation 0.55. The cloud
+     mask is a NEUTRALITY test (saturation below 0.20), so a brown-shadowed underside is not
+     inside the cloud at all as far as the scorer is concerned, and the underside-shading number
+     would be measuring only the lit half however dark the other half got. A neutral emissive at
+     this level dominates that bounce and brings the shadowed side back to saturation 0.15, which
+     is a grey cloud rather than a brown one — the same reading the plate's undersides give. */
+  cloudEmissive:0.20,
+  /* ONE MASS, NOT A BUNCH OF GRAPES. Per-sphere normals shade every sphere in the cluster
+     separately, so each one draws its own outline INSIDE the cloud and the eye counts balloons —
+     which is what the first two iterations' strips came back reading as. Blending each vertex
+     normal toward the direction from the whole cloud's own centre makes the cluster shade as a
+     single lumpy body while keeping its lumpy SILHOUETTE, which is the half that the boundary
+     metric is about. 0 is per-sphere, 1 is one smooth ellipsoid. */
+  cloudNorm:0.68,
+  /* THE SKY'S OWN AERIAL PERSPECTIVE, WHICH IS SKY.md 3.5 AND NOT A RETREAT FROM 3. Taking the
+     terrain fog off the clouds was right: at density 0.0062 over 70 to 218 m it was replacing a
+     quarter to four fifths of every cloud with the fog colour, which is not aerial perspective,
+     it is erasure. But "no fog" is not right either, and the plate says why. nz_carpark_01's cloud
+     field gets steadily DARKER down the frame — its row means run 0.89 at the top to 0.75 near the
+     ridges — because the cloud low in the frame is far away and seen through a lot more air, while
+     the bright cumulus is overhead. That vertical gradient IS the underside-shading number the
+     table judges (+0.117), and a sky whose clouds are all equally white cannot have it.
+     SO: a per-cloud tint toward a stated sky-haze colour, at the SKY's density rather than the
+     ground's. Applied once per cloud at build time from the world origin, which is an
+     approximation — the play area is 52 m across against cloud distances of 70 to 218 m, so a
+     player at the far edge sees the tint that belongs about 35% nearer or further — and it is the
+     same approximation the static dome and the static haze band already make. */
+  cloudHaze:0x9FB0BC, cloudHazeD:0.0035,
+  /* PLACED BY ELEVATION, NOT BY ALTITUDE, and that is an art decision about a 210 m dome rather
+     than a physical one about an atmosphere. The altitudes were drawn as rnd(36,62) with no
+     reference to how far away the cloud was, so a cloud at 110 m sat at 20.4 degrees of elevation
+     while one at 215 m sat at 9.2 — and the strip's sky band spans 7.7 to 17.7 degrees. The near
+     ones were therefore ABOVE the picture, showing nothing but their own undersides along the top
+     edge of it, which is why the largest blob in the frame measured -0.031 for underside shading
+     while every unclipped cloud beside it measured between +0.055 and +0.182.
+     A real deck is at constant altitude and recedes; on a dome 210 m across there is no room for
+     that, and choosing elevation is what puts whole clouds — top, body and base — inside the
+     frame. The drawn altitude is kept and re-used as the VARIATION about that elevation, so the
+     stream is untouched and the clouds still differ from one another.
+     GROUND LEVEL, NOT EYE LEVEL, is the reference: the strip camera sits at y 9 and the player's
+     eye between 1 and 9, which is under 5% of these distances, and baking one vantage's height
+     into the world would be exactly the kind of constant that reads correctly from one place.
+     14.6 DEGREES, AND THE FIRST TRY AT 12.4 WAS TOO LOW. The band runs 7.7 to 17.7 degrees, so
+     12.4 put the clouds two thirds of the way down it — behind the peaks, which reach 16.9
+     degrees at the highest and 7.7 in the median column. They were duly occluded and cut by the
+     ridgeline: cover fell from 23.9% to 14.5% and the boundary metric from 7.27 to 5.13, with an
+     empty upper sky in the strip. The clouds measure about 3.4 degrees tall, so a centre at 14.6
+     with 1.4 of variation spans 11.5 to 17.7 degrees — the whole cloud inside the picture, sitting
+     in the upper half of it, clear of every peak. */
+  cloudElev:14.6, cloudElevVary:1.4,
 };
 for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_SKY__)||{})){
   if(k in SKY) SKY[k]=v;
@@ -3580,14 +3669,133 @@ function buildSky(){
      They used to be added to the scene anonymously: no handle, nothing in WORLDREGS, so nothing
      could animate them and no battery could see them. The comment said "drifting flat" and nothing
      drifted, because nothing could reach them. */
+  /* A CUMULUS INSTEAD OF A LOZENGE — SKY.md step 2.
+     THE rnd() SEQUENCE IS UNTOUCHED, and that is the constraint the whole shape of this loop is
+     built around. buildSky runs from initScene BEFORE any world is built, so one extra or one
+     fewer rnd() call here relocates every seeded draw in every map after it — TODO 47's law, and
+     the reason the ski field's snow loop was moved rather than rewritten. The four draws per lobe
+     (radius, x, y, z) and the three or four per group are made in the same order, for the same
+     things, and consume the same numbers. Everything ADDED is driven by _thash, which is a pure
+     function of its arguments and takes nothing from the stream — the same trick grassCards uses.
+     THE BELLY SPHERE IS GONE, and no draw goes with it: it never made one. It was a grey ellipsoid
+     at opacity 0.5 offset down by 0.14r, which is a painting of underside shading, and it measured
+     0.008 against the plate's 0.116. A lit cloud does not need it.
+
+     ONE MERGED MESH PER CLOUD, AND OPAQUE, AND BOTH OF THOSE ARE CORRECTIONS FROM LOOKING AT THE
+     FIRST ATTEMPT. Iteration 1 kept a Mesh per sphere at opacity 0.95 transparent, and the strip
+     came back reading as a BUNCH OF GRAPES: every sphere's own shading gradient and every
+     see-through overlap drew its own outline inside the mass, so the eye counted balloons instead
+     of reading one cloud. Opaque removes the internal overlaps; merging removes the draw calls
+     that would otherwise come with a fringe (31 lobes x 11 spheres is 341 of them, against 62
+     before — merged, it is 8, which is fewer than the sky has ever had). */
   G.clouds=[];
+  const cWhite=new THREE.Color(PAL.cloud).convertSRGBToLinear();
+  /* CONVERTED BY HAND, like the dome's vertex colours three blocks up and like mat() everywhere
+     else: THREE.ColorManagement is off in this project, so a raw hex handed to a material is
+     treated as LINEAR and comes out of the sRGB encode brighter than it was authored. The old
+     cloud material did not convert and its 0xFBFCFD was near enough to white for it not to show;
+     a shaded cloud has a dark end, where it would. */
+  const cEmis=cWhite.clone().multiplyScalar(SKY.cloudEmissive);
+  const cHaze=new THREE.Color(SKY.cloudHaze).convertSRGBToLinear();
+  /* MERGED BY HAND. BufferGeometryUtils would be a second static import and game.mjs is the
+     gauntlet's specimen: exactly one import, asserted. Sphere geometries are indexed, so each is
+     taken to non-indexed first and then the position and normal arrays are concatenated — and
+     applyMatrix4 (which .scale() and .translate() call) transforms the normals through the normal
+     matrix, so a y-squashed sphere still shades correctly. */
+  const mergeSpheres=(specs)=>{
+    const gs=[]; let n=0;
+    for(const sp of specs){
+      /* THE FRINGE GETS A CHEAPER SPHERE. 26 bumps per lobe at 10x8 segments added 113,400
+         triangles to every world, and a bump is about 26 px across in the frame — 6x4 segments is
+         more than that resolution can tell apart and costs a third as much. The lobes and the
+         vertical puffs keep the full 10x8, because they are the silhouette. */
+      const g=new THREE.SphereGeometry(sp.r,sp.seg?6:10,sp.seg?4:8).toNonIndexed();
+      g.scale(1,sp.sy,1); g.translate(sp.x,sp.y,sp.z);
+      gs.push(g); n+=g.attributes.position.count; }
+    const P=new Float32Array(n*3), N=new Float32Array(n*3);
+    let o=0;
+    for(const g of gs){
+      P.set(g.attributes.position.array,o*3);
+      N.set(g.attributes.normal.array,o*3);
+      o+=g.attributes.position.count; g.dispose(); }
+    /* THE BLEND TOWARD ONE BODY. The centre is the specs' radius-weighted centroid and the extent
+       is their own bounding half-size, so the "body normal" points outward from the mass's real
+       shape rather than from a sphere — a cloud 40 m wide and 12 m tall shaded as if it were
+       spherical would light its ends like its top. */
+    const k=Math.max(0,Math.min(1,SKY.cloudNorm));
+    if(k>0){
+      let cw=0,cx=0,cy=0,cz=0;
+      for(const sp of specs){ const w=sp.r*sp.r; cw+=w; cx+=sp.x*w; cy+=sp.y*w; cz+=sp.z*w; }
+      cx/=cw; cy/=cw; cz/=cw;
+      let ex=1e-3,ey=1e-3,ez=1e-3;
+      for(const sp of specs){
+        ex=Math.max(ex,Math.abs(sp.x-cx)+sp.r); ey=Math.max(ey,Math.abs(sp.y-cy)+sp.r*sp.sy);
+        ez=Math.max(ez,Math.abs(sp.z-cz)+sp.r); }
+      for(let i=0;i<n;i++){
+        const bx=(P[i*3]-cx)/ex, by=(P[i*3+1]-cy)/ey, bz=(P[i*3+2]-cz)/ez;
+        const bl=Math.hypot(bx,by,bz)||1;
+        let nx=N[i*3]*(1-k)+bx/bl*k, ny=N[i*3+1]*(1-k)+by/bl*k, nz=N[i*3+2]*(1-k)+bz/bl*k;
+        const l=Math.hypot(nx,ny,nz)||1;
+        N[i*3]=nx/l; N[i*3+1]=ny/l; N[i*3+2]=nz/l; } }
+    const out=new THREE.BufferGeometry();
+    out.setAttribute('position',new THREE.BufferAttribute(P,3));
+    out.setAttribute('normal',new THREE.BufferAttribute(N,3));
+    return out; };
   for(let i=0;i<8;i++){ const cg=new THREE.Group(); const n=3+((i*7)%3);
+    const specs=[];
     for(let j=0;j<n;j++){ const r=rnd(6,12);
-      const top=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),new THREE.MeshBasicMaterial({color:PAL.cloud,transparent:true,opacity:0.95}));
-      top.position.set(j*rnd(5,8)-n*3,rnd(-0.5,1.5),rnd(-2,2)); top.scale.y=0.32; cg.add(top);
-      const belly=new THREE.Mesh(new THREE.SphereGeometry(r*0.85,10,8),new THREE.MeshBasicMaterial({color:0xAEBBC6,transparent:true,opacity:0.5}));
-      belly.position.copy(top.position); belly.position.y-=r*0.14; belly.scale.y=0.2; cg.add(belly); }
+      const R=r*SKY.cloudRMul;
+      const bx=j*rnd(5,8)-n*3, by=rnd(-0.5,1.5), bz=rnd(-2,2);
+      specs.push({r:R,x:bx,y:by,z:bz,sy:SKY.cloudBase});
+      /* THE PUFFS ARE THE VERTICAL BUILD. Each sits higher and smaller than the last, offset
+         sideways by a hash so the mass leans rather than stacking like a snowman. */
+      for(let k=1;k<=SKY.cloudPuffs;k++){
+        const h1=_thash(i*97+j*13+k,k*31+7), h2=_thash(j*53+k*11,i*29+k*17), h3=_thash(k*41+i,j*67+k);
+        const pr=R*(0.86-0.17*k+h1*0.22);
+        if(pr<1.2)continue;
+        specs.push({r:pr, x:bx+(h2-0.5)*R*0.85,
+                    y:by+R*SKY.cloudRise*k*(0.75+h1*0.5),
+                    z:bz+(h3-0.5)*R*0.6, sy:SKY.cloudTop}); }
+      /* AND THE FRINGE IS THE RAGGED EDGE. Round the lobe's rim, at hash angles, so the outline
+         scallops instead of describing an ellipse. */
+      for(let k=0;k<SKY.cloudFringe;k++){
+        const a=_thash(i*131+j*17+k,k*53+3)*Math.PI*2;
+        const rad=R*SKY.cloudFringeAt*(0.8+_thash(k*23+j,i*19+k)*0.4);
+        const fr=R*SKY.cloudFringeR*(0.7+_thash(k*7+i*3,j*11+k*5)*0.6);
+        if(fr<0.9)continue;
+        specs.push({r:fr, x:bx+Math.cos(a)*rad, y:by+Math.sin(a)*rad*SKY.cloudBase*1.6,
+                    z:bz+(_thash(k*61+i,j*43+k)-0.5)*R*0.5, sy:SKY.cloudTop, seg:1}); }
+    }
+    /* fog:false, LIKE THE REST OF THE SKY, AND THIS IS THE THIRD DEFECT THE PASS FOUND. The dome
+       and the horizon haze band are both fog:false; the clouds never were, and MeshBasicMaterial
+       defaults fog to TRUE. They sit 70 to 218 m from the strip camera in FogExp2 at density
+       0.0062, which is a fog factor of 0.17 at the nearest cloud and 0.84 at the furthest — so
+       between a sixth and five sixths of every cloud in the frame was the fog colour 0xc4d2d6,
+       and that is why the first two
+       iterations measured an underside difference of -0.004 with the sun plainly on them. The
+       sky's aerial perspective belongs to the dome's gradient and the haze band, which is what
+       SKY.md 3.5 is about; a cloud painted out by terrain fog is not aerial perspective, it is a
+       cloud that has been erased. */
+    const mesh=new THREE.Mesh(mergeSpheres(specs), SKY.cloudLit
+      ? new THREE.MeshLambertMaterial({color:cWhite.clone(),emissive:cEmis.clone(),fog:false})
+      : new THREE.MeshBasicMaterial({color:PAL.cloud,fog:false}));
+    cg.add(mesh);
     cg.position.set(rnd(-140,140),rnd(36,62),rnd(-160,-70)); if(i%2)cg.position.z=rnd(90,160);
+    /* AND THEN THE ALTITUDE IS RE-DERIVED FROM THE ELEVATION IT SHOULD SUBTEND — see cloudElev.
+       The drawn value (36..62, centre 49, half-range 13) becomes the variation about it, so no
+       draw is added, none is dropped, and the order is unchanged. */
+    { const hd=Math.hypot(cg.position.x,cg.position.z);
+      const e=(SKY.cloudElev+(cg.position.y-49)/13*SKY.cloudElevVary)*Math.PI/180;
+      cg.position.y=hd*Math.tan(e); }
+    /* THE TINT, AFTER THE POSITION, because it is a function of the distance. FogExp2's own
+       curve — 1 - exp(-(density*d)^2) — so that the sky's aerial perspective and the ground's are
+       the same SHAPE of falloff at different densities, which is what makes them agree at the
+       horizon where they meet. */
+    { const d=cg.position.length(), t=cg.position;
+      const fd=SKY.cloudHazeD*Math.hypot(t.x,t.y,t.z);
+      const f=Math.max(0,Math.min(1,1-Math.exp(-fd*fd)));
+      mesh.material.color.lerp(cHaze,f);
+      mesh.material.emissive.lerp(cHaze.clone().multiplyScalar(SKY.cloudEmissive),f); }
     cg.name='cloud'; G.scene.add(cg); G.clouds.push(cg); }
 }
 
