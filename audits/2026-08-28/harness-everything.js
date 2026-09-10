@@ -8534,6 +8534,50 @@ C.section('THE BRAIDED RIVER - the fifth map, the swing bridge, and a floor that
    STATION.md. Two new mechanics, and both are held to being MECHANICS rather than presence. */
 C.section('THE HIGH STATION - the last map, the drafting cascade, and riding a sheep');
 {
+  /* TODO 100 — THE WOOLSHED WAS LEVITATING, and Eric's eyeball item 11 named three causes. There
+     was a fourth.
+     At play distance in 40_station_yards the shed read as a big red box HOVERING over a shadow. The
+     piles were 15 boxes 0.34 m square, INSET A FULL METRE from the floor edge, painted 0xA9A7A2 —
+     the same pale concrete as the wool bales, luma 0.655 — and carrying `noshadow:true`, so they
+     cast nothing at all. Every one of those four is a levitation cue and the inset is the worst of
+     them: a metre of floor overhang with nothing beneath it is exactly what a hovering box looks
+     like.
+     WHAT IS ASSERTED HERE IS WHAT NODE CAN SEE. castShadow is set inside `if(!HEADLESS)` in box(),
+     so a headless battery cannot observe it and this section does not pretend to — the shadow half
+     is checked in the browser at the vantage. What node can prove is the count, the reach to the
+     edge, and that the piles are no longer wearing the bales' concrete. */
+  { X.setSeed(20260828); X.boot({biome:'station'});
+    const p=(G.propReg||[]).find(q=>q.id==='stan_woolshed');
+    ok(!!p,'the woolshed is placed');
+    const S={w:16.0,d:9.0};
+    const piles=[];
+    p.group.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='BoxGeometry')return;
+      const q=o.geometry.parameters;
+      if(Math.abs(q.width-q.depth)<1e-6&&q.width<0.6&&q.height<0.8)piles.push(o); });
+    ok(piles.length>=24,'THE WOOLSHED STANDS ON ENOUGH PILES TO READ — '+piles.length+
+       ' of them (was 15, which is too few to count at 20 m)');
+    const xs=piles.map(o=>Math.abs(o.position.x)), zs=piles.map(o=>Math.abs(o.position.z));
+    const half=piles[0].geometry.parameters.width/2;
+    const gapX=S.w/2-(Math.max(...xs)+half), gapZ=S.d/2-(Math.max(...zs)+half);
+    ok(Math.abs(gapX)<0.08&&Math.abs(gapZ)<0.08,
+       'AND THE OUTER ROW REACHES THE FLOOR EDGE — gap '+gapX.toFixed(3)+' m in x and '+
+       gapZ.toFixed(3)+' m in z, against 0.830 m before. A metre of unsupported overhang is the '+
+       'levitation cue itself.');
+    /* THE COMPARISON IS AGAINST THE COLOUR THEY USED TO WEAR, which is a real number in this file
+       rather than a threshold invented for the test: 0xA9A7A2 is the ski tow's concrete and the
+       wool bales', and it measures luma 0.655. */
+    const THREEx=H.THREE||require('three');
+    const c=new THREEx.Color().copy(piles[0].material.color).convertLinearToSRGB();
+    const lum=0.2126*c.r+0.7152*c.g+0.0722*c.b;
+    const was=(()=>{const q=new THREEx.Color(0xA9A7A2);
+      return 0.2126*q.r+0.7152*q.g+0.0722*q.b;})();
+    ok(lum<was*0.55,'AND THEY ARE NO LONGER THE BALES\' CONCRETE — pile luma '+lum.toFixed(3)+
+       ' against 0xA9A7A2\'s '+was.toFixed(3)+', a factor of '+(was/lum).toFixed(2)+
+       '. A woolshed stands on creosoted timber stumps, not on clean pale concrete.');
+    ok(piles[0].material.userData.matFamily==='timber',
+       'and they are in the TIMBER family ('+piles[0].material.userData.matFamily+
+       '), so they wear the scanned planks rather than a flat colour'); }
+
   const B=X.BIOME, T=X.TOUR, P=X.PROPS, ST=X.STAN;
   const stan=()=>B.ALL.station||{};
   const boot=()=>{ X.setSeed(20260828); X.boot({biome:'station'}); X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe(); };

@@ -6898,10 +6898,29 @@ defineProp('stan_woolshed',{
   material:{family:'corrugate',nightTint:false},
   build(g,p){
     const S=STANSHED;
-    /* ON PILES, which is what a woolshed is: the floor is up so a truck can back to it */
-    for(let ix=0;ix<5;ix++)for(let iz=0;iz<3;iz++)
-      box(0.34,S.pile,0.34,0xA9A7A2,-S.w/2+1.0+ix*((S.w-2.0)/4),S.pile/2,
-          -S.d/2+1.0+iz*((S.d-2.0)/2),g,{noshadow:true});
+    /* ON PILES, which is what a woolshed is: the floor is up so a truck can back to it.
+       TODO 100 — ERIC'S EYEBALL ITEM 11. At play distance in 40_station_yards the shed read as a
+       big red box HOVERING over a shadow. Four causes, and the fourth was not in the brief:
+         1. FIFTEEN piles at 0.34 m square is too few and too thin to read at 20 m. Now 7 x 4 = 28
+            at 0.42 m, which puts a pile every 2.6 m along the front and every 2.9 m deep — a
+            spacing an eye can count, which is what makes it read as a structure rather than as a
+            gap under a box.
+         2. THEY WERE INSET A FULL METRE from the floor edge, so the eye saw a metre of floor
+            overhang with nothing at all beneath it. That is the levitation cue itself, and it is
+            the one that mattered most. The outer rows now sit 0.20 m in, so a 0.42 m pile's outer
+            face is essentially flush with the floor above it.
+         3. THEY WERE 0xA9A7A2 — the same pale concrete as the wool bales, luma 0.655 — so what
+            little was visible dissolved into its own shadow. PAL.woodD is luma 0.30, less than
+            half, and it is already registered to the TIMBER family: a creosoted timber stump is
+            what a woolshed actually stands on, and it costs no new palette entry and no new
+            MATFAM row to say so.
+         4. AND THEY CAST NO SHADOW. `noshadow:true` on all fifteen, which is the opposite of what
+            piles are for here — the brief's own suggestion was "a skirt of shadow-catching rubbish
+            along the base", and the piles themselves are that skirt once they are allowed to cast.
+            Removed, so the ground beneath the shed is darkened by the things holding it up. */
+    for(let ix=0;ix<7;ix++)for(let iz=0;iz<4;iz++)
+      box(0.42,S.pile,0.42,PAL.woodD,-S.w/2+0.20+ix*((S.w-0.40)/6),S.pile/2,
+          -S.d/2+0.20+iz*((S.d-0.40)/3),g);
     box(S.w,0.22,S.d,PAL.woodD,0,S.pile,0,g);                            // the floor
     /* three walls and an OPEN BAY on the yard side, which is where the wool comes out.
        OXIDE RED, NOT THE ALPINE HUT'S. PAL.hut is a saturated red cut for a small hut in snow, and
