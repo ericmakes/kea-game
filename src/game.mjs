@@ -206,8 +206,54 @@ const SKY={
      pixels across in the frame and stop registering as boundary at all. The clipping was fixed by
      placing the clouds at the right ELEVATION, not by making them smaller; both changes went in
      together and only one of them was doing the work. */
+  /* CLOUD FORM — ERIC'S BRIEF, 2026-09-11, in his words: the clouds "read as stacked balloons -
+     blinding white, perfectly round, no flat base, no shaded underside", where real alpine cumulus
+     is "flat-bottomed, horizontally stretched, soft-topped, greyer and shadowed underneath, and
+     varied from wisps to towers". The reference he named is nz_alps_02, and looked at, that is
+     exactly what it is: a layered stratocumulus deck with flat bases, horizontal stretch, grey
+     undersides, thin wisps at the top right and thicker banks below.
+     A BASE PLANE IS THE ONE CHANGE THAT DOES TWO OF THOSE AT ONCE. Real cumulus condenses at an
+     altitude and is CUT OFF below it, which is why its base is flat — and a flat base faces
+     DOWNWARD, away from the sun, so it shades itself. Clipping every lobe's vertices to a shared
+     plane and pointing their normals at the ground gives the flat bottom and the shaded underside
+     in a single move, with no new material and no painted grey. */
+  cloudFlatBase:1,       // clip lobe vertices to a shared base plane and face them down
+  cloudBaseCut:0.26,     // how much of each lobe's height the plane cuts off, as a fraction
+  /* THE BASE IS TINTED, AND THE TINT IS THE ONLY WAY TO SHAPE IT. A downward-facing face gets no
+     sun, so what lights it is the hemisphere light's GROUND colour (0x8a7c42, tussock brown) and
+     the HDRI's lower half (alpine rock and grass) — both warm, both bright, and neither adjustable
+     for clouds alone: they are the terrain's fill, and neither a Lambert nor a Standard material
+     can opt out of scene.environment in this three (reflectivity 0 and envMapIntensity 0 were both
+     tried and neither worked). Measured on the bare base plane: rgb 182,174,157 at saturation
+     0.137, where the cloud tops sit near 0.95 luma — a bright tan saucer, which is the opposite of
+     Eric's brief. Four wrong guesses were paid for on the way to that: the hemisphere light alone,
+     the environment via reflectivity, the environment via envMapIntensity, and the material type.
+     What settled it was turning the base plane OFF — the same pixel went from 182,174,157 at
+     saturation 0.14 to 194,195,195 at 0.01, which is the base and nothing else.
+     So the base carries its own VERTEX COLOUR, multiplied into the diffuse: a cool grey that
+     darkens it and pulls the warmth out. The DIRECTION is still derived — a vertex is tinted
+     because the base plane clipped it, not because anybody painted a cloud — and the normals stay
+     pointing down, so the base still responds to the sun moving. */
+  cloudBaseTint:0x6E7A88,
+  /* AND THE TINT RAMPS RATHER THAN STEPS. Applied only to the clipped vertices it made the base a
+     hard-edged grey slab with a visible seam where it met the white top — right in structure and
+     wrong in feel, reading like a stone shelf rather than a cloud. nz_alps_02's bases are darker
+     than their tops and the transition is SOFT. So the tint fades in over a band above the plane,
+     in units of the cloud's own mean lobe half-height, which keeps it proportional to the cloud
+     rather than absolute. */
+  cloudBaseSoft:0.55,
+  /* HOST SPHERES GET MORE SEGMENTS, for two reasons that arrived together. The horizontal stretch
+     made every lobe half again as wide, so a 10x8 sphere's facets became visible as straight edges
+     across the top of the mass. And the base tint's fade had almost nothing to work with: it ramps
+     across VERTICES, and 8 height segments on a lobe flattened to 0.42 leaves one or two vertex
+     rows inside the fade band, so a ramp meant to be soft was still very nearly a step.
+     16x12 on the hosts, 6x4 still on the fringe — a rim bump is 26 px across and cannot show a
+     facet. Costs about 28,000 triangles across both worlds, against a range of 300,000. */
+  cloudSegW:16, cloudSegH:12,
+  cloudStretch:1.8,      // horizontal scale on a lobe: an oblate ellipsoid, not a ball
+  cloudVary:0.85,        // per-cloud size spread, hash-driven — wisps at one end, towers at the other
   cloudRMul:0.90,        // lobe radius multiplier: the old radii subtend about 2 degrees
-  cloudBase:0.60,        // vertical squash of the base lobe (was 0.32, which is a plate)
+  cloudBase:0.42,        // vertical squash of the base lobe (was 0.32, which is a plate)
   cloudTop:0.85,         // vertical squash of the puffs stacked on it — nearly round
   /* SPREAD IS WHAT THE BOUNDARY METRIC ACTUALLY RESPONDS TO, and the arithmetic says so. For N
      round lobes joined in a chain, perimeter over root area is about 2.84*sqrt(N); the cloud
@@ -3866,7 +3912,17 @@ function buildSky(){
      treated as LINEAR and comes out of the sRGB encode brighter than it was authored. The old
      cloud material did not convert and its 0xFBFCFD was near enough to white for it not to show;
      a shaded cloud has a dark end, where it would. */
-  const cEmis=cWhite.clone().multiplyScalar(SKY.cloudEmissive);
+  /* THE EMISSIVE FLOOR IS THE SKY'''S OWN PALE HORIZON COLOUR, NOT WHITE, and the base plane is
+     what forced the change. A downward-facing face sees no sun at all, so it falls to the
+     hemisphere light'''s GROUND colour — 0x8a7c42, tussock brown — and the first flat-based clouds
+     came back with BEIGE undersides, like saucers. A real cloud base is lit by the sky above and
+     around it and reads cool grey.
+     skyLow AND NOT skyMid, and the reason is the scorer as well as the eye: skyMid is a saturated
+     blue (linear 0.113/0.317/0.585) and a base tinted with it lands near saturation 0.45, outside
+     the cloud mask'''s 0.20 neutrality test, so the underside property could not see it. skyLow is
+     the dome'''s pale horizon stop at saturation 0.11 — nearly neutral, which is what a cloud base
+     is. It also follows the tone knobs for free: change the sky and the bases follow it. */
+  const cEmis=cLow.clone().multiplyScalar(SKY.cloudEmissive);
   const cHaze=new THREE.Color(SKY.cloudHaze).convertSRGBToLinear();
   /* MERGED BY HAND. BufferGeometryUtils would be a second static import and game.mjs is the
      gauntlet's specimen: exactly one import, asserted. Sphere geometries are indexed, so each is
@@ -3887,16 +3943,18 @@ function buildSky(){
       ez=Math.max(ez,Math.abs(sp.z-cz)+sp.r); }
     return {cx,cy,cz,ex,ey,ez}; };
   const mergeSpheres=(specs)=>{
-    const gs=[]; let n=0;
+    const gs=[], own=[]; let n=0;
     for(const sp of specs){
       /* THE FRINGE GETS A CHEAPER SPHERE. 26 bumps per lobe at 10x8 segments added 113,400
          triangles to every world, and a bump is about 26 px across in the frame — 6x4 segments is
          more than that resolution can tell apart and costs a third as much. The lobes and the
          vertical puffs keep the full 10x8, because they are the silhouette. */
-      const g=new THREE.SphereGeometry(sp.r,sp.seg?6:10,sp.seg?4:8).toNonIndexed();
-      g.scale(1,sp.sy,1); g.translate(sp.x,sp.y,sp.z);
+      const g=new THREE.SphereGeometry(sp.r,sp.seg?6:SKY.cloudSegW,
+                                            sp.seg?4:SKY.cloudSegH).toNonIndexed();
+      g.scale(sp.sx||1,sp.sy,sp.sx||1); g.translate(sp.x,sp.y,sp.z);
+      own.push({from:n,to:n+g.attributes.position.count,sp});
       gs.push(g); n+=g.attributes.position.count; }
-    const P=new Float32Array(n*3), N=new Float32Array(n*3);
+    const P=new Float32Array(n*3), N=new Float32Array(n*3), CO=new Float32Array(n*3).fill(1);
     let o=0;
     for(const g of gs){
       P.set(g.attributes.position.array,o*3);
@@ -3915,9 +3973,51 @@ function buildSky(){
         let nx=N[i*3]*(1-k)+bx/bl*k, ny=N[i*3+1]*(1-k)+by/bl*k, nz=N[i*3+2]*(1-k)+bz/bl*k;
         const l=Math.hypot(nx,ny,nz)||1;
         N[i*3]=nx/l; N[i*3+1]=ny/l; N[i*3+2]=nz/l; } }
+    /* THE BASE PLANE, APPLIED AFTER THE BODY-NORMAL BLEND AND DELIBERATELY OVERRIDING IT. Every
+       vertex below the plane is pulled up onto it and its normal is forced to straight down. The
+       blend above is what makes the mass read as one body rather than a bunch of grapes, and it is
+       wrong for the base: a base is not part of a smooth blob, it is a cut, and a cut wants the
+       normal of the surface it cuts along. Pointing them down is what makes the underside shade —
+       the sun is 39.5 degrees up, so a downward face sees none of it and falls to the hemisphere
+       bounce plus the neutral emissive floor, which is a grey cloud base. */
+    let _clipped=0, _baseY=null;
+    if(SKY.cloudFlatBase&&specs.length){
+      let sy=0,sh=0;
+      for(const sp of specs){ sy+=sp.y; sh+=sp.r*sp.sy; }
+      const baseY=sy/specs.length-(sh/specs.length)*(1-SKY.cloudBaseCut);
+      /* THE FRINGE IS NOT CLIPPED, and the first version clipped everything. A rim puff is small
+         and sits out at the silhouette, so flattening its underside onto the plane turned it into a
+         thin wafer sticking out sideways — the clouds came back looking like saucers, with a hard
+         disc extending past the mass on both sides. Only the hosts, the lobes and the vertical
+         puffs that make up the body, meet the plane. */
+      const bt=new THREE.Color(SKY.cloudBaseTint).convertSRGBToLinear();
+      const soft=Math.max(1e-4,(sh/specs.length)*SKY.cloudBaseSoft);
+      for(const o of own){ if(!o.sp.host)continue;
+        for(let i=o.from;i<o.to;i++){
+          const y=P[i*3+1];
+          if(y<baseY){
+            P[i*3+1]=baseY; N[i*3]=0; N[i*3+1]=-1; N[i*3+2]=0; _clipped++;
+            CO[i*3]=bt.r; CO[i*3+1]=bt.g; CO[i*3+2]=bt.b;
+          } else if(y<baseY+soft){
+            /* THE FADE. 1 at the plane, 0 a soft-band above it, smoothstepped so the shading has
+               no edge of its own — the geometry's silhouette is the only edge a cloud should have. */
+            const t=_tsm(1-(y-baseY)/soft);
+            CO[i*3]=1+(bt.r-1)*t; CO[i*3+1]=1+(bt.g-1)*t; CO[i*3+2]=1+(bt.b-1)*t; } } }
+      _baseY=baseY; }
     const out=new THREE.BufferGeometry();
     out.setAttribute('position',new THREE.BufferAttribute(P,3));
     out.setAttribute('normal',new THREE.BufferAttribute(N,3));
+    out.setAttribute('color',new THREE.BufferAttribute(CO,3));
+    /* WHAT THE MERGE DID, RECORDED ON THE GEOMETRY. A battery cannot tell from a merged buffer
+       which vertices came from a lobe and which from a rim puff, and the invariant that matters —
+       the base plane clips the HOSTS and never the fringe — is exactly about that distinction. A
+       geometric proxy was tried first and was measuring the wrong thing: a sphere's south pole also
+       has a straight-down normal, so "is there anything below the plane" answered yes or no
+       depending on where the rim puffs happened to fall, which is incidental rather than designed.
+       So the merge says what it did, and the assertion reads it. */
+    out.userData.cloud={verts:n, hostVerts:0, fringeVerts:0, clipped:_clipped, baseY:_baseY};
+    for(const o of own){ const c=o.to-o.from;
+      if(o.sp.host)out.userData.cloud.hostVerts+=c; else out.userData.cloud.fringeVerts+=c; }
     return out; };
   /* THE WISPS, BUILT AFTER THE CLOUD IS PLACED, because a billboard has to know where it is
      looking. They face the ORIGIN rather than the live camera: the dome is static, the play area is
@@ -3999,28 +4099,38 @@ function buildSky(){
   G.cloudWisps=[];
   for(let i=0;i<8;i++){ const cg=new THREE.Group(); const n=3+((i*7)%3);
     const specs=[];
+    /* SIZE VARIES ACROSS THE SKY — wisps at one end, towers at the other. Hash-driven off the
+       cloud's index, so it adds no rnd() draw (TODO 47) and the same cloud is the same size every
+       boot. A deck whose every mass is the same size reads as wallpaper. */
+    const cv=1+(_thash(i*211+13,i*97+41)-0.5)*2*SKY.cloudVary;
     for(let j=0;j<n;j++){ const r=rnd(6,12);
-      const R=r*SKY.cloudRMul;
+      const R=r*SKY.cloudRMul*Math.max(0.25,cv);
       const bx=(j*rnd(5,8)-n*3)*SKY.cloudSpread, by=rnd(-0.5,1.5), bz=rnd(-2,2);
-      specs.push({r:R,x:bx,y:by,z:bz,sy:SKY.cloudBase,host:1});
+      specs.push({r:R,x:bx,y:by,z:bz,sy:SKY.cloudBase,sx:SKY.cloudStretch,host:1});
       /* THE PUFFS ARE THE VERTICAL BUILD. Each sits higher and smaller than the last, offset
          sideways by a hash so the mass leans rather than stacking like a snowman. */
       for(let k=1;k<=SKY.cloudPuffs;k++){
         const h1=_thash(i*97+j*13+k,k*31+7), h2=_thash(j*53+k*11,i*29+k*17), h3=_thash(k*41+i,j*67+k);
         const pr=R*(0.86-0.17*k+h1*0.22);
         if(pr<1.2)continue;
-        specs.push({r:pr, x:bx+(h2-0.5)*R*0.85,
+        specs.push({r:pr, x:bx+(h2-0.5)*R*0.85*SKY.cloudStretch,
                     y:by+R*SKY.cloudRise*k*(0.75+h1*0.5),
-                    z:bz+(h3-0.5)*R*0.6, sy:SKY.cloudTop, host:1}); }
+                    z:bz+(h3-0.5)*R*0.6*SKY.cloudStretch,
+                    sy:SKY.cloudTop, sx:SKY.cloudStretch, host:1}); }
       /* AND THE FRINGE IS THE RAGGED EDGE. Round the lobe's rim, at hash angles, so the outline
          scallops instead of describing an ellipse. */
+      /* THE FRINGE GOES ON THE TOP HALF ONLY NOW. It used to ring the whole lobe, which put lumps
+         under the cloud — and a lump under a flat base is the thing the base plane exists to
+         remove. Angles are drawn in [0, pi) so sin(a) is never negative. */
       for(let k=0;k<SKY.cloudFringe;k++){
-        const a=_thash(i*131+j*17+k,k*53+3)*Math.PI*2;
+        const a=_thash(i*131+j*17+k,k*53+3)*Math.PI;
         const rad=R*SKY.cloudFringeAt*(0.8+_thash(k*23+j,i*19+k)*0.4);
         const fr=R*SKY.cloudFringeR*(0.7+_thash(k*7+i*3,j*11+k*5)*0.6);
         if(fr<0.9)continue;
-        specs.push({r:fr, x:bx+Math.cos(a)*rad, y:by+Math.sin(a)*rad*SKY.cloudBase*1.6,
-                    z:bz+(_thash(k*61+i,j*43+k)-0.5)*R*0.5, sy:SKY.cloudTop, seg:1}); }
+        specs.push({r:fr, x:bx+Math.cos(a)*rad*SKY.cloudStretch,
+                    y:by+Math.sin(a)*rad*SKY.cloudBase*1.6,
+                    z:bz+(_thash(k*61+i,j*43+k)-0.5)*R*0.5*SKY.cloudStretch,
+                    sy:SKY.cloudTop, sx:SKY.cloudStretch, seg:1}); }
     }
     /* fog:false, LIKE THE REST OF THE SKY, AND THIS IS THE THIRD DEFECT THE PASS FOUND. The dome
        and the horizon haze band are both fog:false; the clouds never were, and MeshBasicMaterial
@@ -4033,7 +4143,25 @@ function buildSky(){
        SKY.md 3.5 is about; a cloud painted out by terrain fog is not aerial perspective, it is a
        cloud that has been erased. */
     const mesh=new THREE.Mesh(mergeSpheres(specs), SKY.cloudLit
-      ? new THREE.MeshLambertMaterial({color:cWhite.clone(),emissive:cEmis.clone(),fog:false})
+      /* reflectivity 0 — THE HDRI'''S GROUND HALF WAS PAINTING THE CLOUD BASES TAN.
+         src/sky.mjs installs a real alpine HDRI as scene.environment, and three applies
+         scene.environment to MeshLambertMaterial as an envMap with the default MULTIPLY blend. A
+         downward-facing base samples the LOWER half of that environment, which is tussock and
+         rock — so the flat bases came out warm (rgb 183,173,157, saturation 0.14) and bright
+         instead of the cool grey a cloud base is, and at that saturation they were only just
+         inside the scorer'''s 0.20 neutrality mask.
+         ESTABLISHED BY ELIMINATION, again. The hemisphere light was the obvious suspect and was
+         cleared by setting its ground colour to neutral grey: the base moved from 183,173,157 to
+         only 172,164,158. Raising cloudEmissive to 1.60 turned the band near-white and neutral,
+         which proved it IS this material on the base plane and not something drawn over it. That
+         left the environment.
+         A CLOUD BASE IS LIT BY THE SKY, NOT BY THE PADDOCK. Ground bounce onto a cloud is real but
+         it is a small term at a kilometre, and the emissive floor above — the dome'''s own pale
+         horizon colour — is the sky term done deliberately. reflectivity 0 removes the env
+         multiply and leaves the sun, the hemisphere and that floor, all of which are ours. */
+      ? new THREE.MeshStandardMaterial({color:cWhite.clone(),emissive:cEmis.clone(),fog:false,
+                                        roughness:1, metalness:0, envMapIntensity:0,
+                                        vertexColors:true})
       : new THREE.MeshBasicMaterial({color:PAL.cloud,fog:false}));
     cg.add(mesh);
     cg.position.set(rnd(-140,140),rnd(36,62),rnd(-160,-70)); if(i%2)cg.position.z=rnd(90,160);
@@ -4085,9 +4213,10 @@ function buildSky(){
       const wg=mergeWisps(specs,cg.position,{x:bf.cx,y:bf.cy,z:bf.cz},
                                             {x:bf.ex,y:bf.ey,z:bf.ez});
       if(wg){
-        const wm=new THREE.MeshLambertMaterial({color:mesh.material.color.clone(),
+        const wm=new THREE.MeshStandardMaterial({color:mesh.material.color.clone(),
           emissive:mesh.material.color.clone().multiplyScalar(SKY.cloudWispEmis),
           transparent:true, depthWrite:false, side:THREE.DoubleSide, fog:false,
+          roughness:1, metalness:0, envMapIntensity:0,
           alphaTest:SKY.cloudWispAlpha});
         /* THE HAZE TINT IS INHERITED FROM THE BODY rather than recomputed, so a wisp can never be
            a different distance from the sky than the cloud it is attached to. */

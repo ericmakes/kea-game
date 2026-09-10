@@ -4297,6 +4297,75 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
     ok(spread>0.5,'and their normals come from the BODY rather than from the quad — the first '+
        'cloud\'s wisp normals span '+spread.toFixed(2)+' across the mass, where a billboard '+
        'normal would give every one of them the same direction'); }
+  /* CLOUD FORM — ERIC'S BRIEF OF 2026-09-11, asserted about the geometry. The pixel side is
+     platescore's (flatness, underside shading, boundary); these are the structural claims that
+     make those numbers possible, and each one is a thing that was wrong at some point today. */
+  { const bodies=[]; for(const c of cl) c.traverse(o=>{ if(o.isMesh&&o.name!=='cloudwisp')bodies.push(o); });
+    ok(bodies.length===cl.length,'one body mesh per cloud ('+bodies.length+')');
+    /* A FLAT BASE EXISTS, and it is flat: every base vertex of a cloud shares one y. */
+    /* THE PLANE IS FOUND AS THE MODE, NOT AS THE MINIMUM, and the first version of this check got
+       it wrong in a way worth recording: a SPHERE'S SOUTH POLE also has a straight-down normal. So
+       "every vertex whose normal points down" collects the base plane AND the bottom pole of every
+       unclipped fringe puff, which sit at all sorts of heights — the flatness check duly reported
+       4 of 8 and the fringe check 5 of 8, both measuring their own confusion. Bucketing the heights
+       and taking the most populated bucket finds the plane itself. */
+    let flatOK=0, downOK=0, tintOK=0, fringeBelow=0;
+    const bt=new THREE.Color(X.SKY.cloudBaseTint).convertSRGBToLinear();
+    for(const b of bodies){
+      const p=b.geometry.attributes.position, nr=b.geometry.attributes.normal,
+            co=b.geometry.attributes.color;
+      const bucket=new Map(); let nd=0;
+      for(let i=0;i<p.count;i++) if(nr.getY(i)<-0.98){ nd++;
+        const k=Math.round(p.getY(i)*1000);
+        bucket.set(k,(bucket.get(k)||0)+1); }
+      let planeK=null, planeN=0;
+      for(const [k,v] of bucket) if(v>planeN){planeN=v;planeK=k;}
+      if(nd<50||planeK===null)continue;
+      downOK++;
+      /* A PLANE, not a scatter: most of the downward-facing vertices share ONE height. */
+      if(planeN>nd*0.5)flatOK++;
+      const planeY=planeK/1000;
+      let nt=0, below=0;
+      for(let i=0;i<p.count;i++){
+        if(Math.abs(p.getY(i)-planeY)<1e-3&&nr.getY(i)<-0.98){
+          if(Math.abs(co.getX(i)-bt.r)<0.02&&Math.abs(co.getZ(i)-bt.b)<0.02)nt++; }
+        if(p.getY(i)<planeY-0.01)below++; }
+      if(nt>planeN*0.95)tintOK++;
+      /* THE FRINGE IS NEVER CLIPPED, read off what the merge recorded rather than guessed at from
+         the buffer. The geometric proxy tried first — "is there anything below the plane" — was
+         incidental: it depends on where the rim puffs happened to fall, and some clouds have no
+         fringe at all (the small ones drop it under the size guard, which showed up as fringeVerts
+         0 on cloud 2). clipped <= hostVerts is the actual invariant. */
+      const ud=b.geometry.userData.cloud;
+      if(ud&&ud.clipped>0&&ud.clipped<=ud.hostVerts)fringeBelow++;
+    }
+    ok(downOK===bodies.length,'every cloud has a base plane whose normals point straight DOWN ('+
+       downOK+' of '+bodies.length+') — which is what makes it shade itself, with no painted grey');
+    ok(flatOK===bodies.length,'and the base really is FLAT: all its vertices share one height in '+
+       flatOK+' of '+bodies.length+' clouds');
+    ok(tintOK===bodies.length,'and carries the base tint in its vertex colour ('+tintOK+' of '+
+       bodies.length+') — the hemisphere light\'s ground colour is tussock brown and the HDRI\'s '+
+       'lower half is rock, so an untinted downward face renders as a bright tan saucer');
+    ok(fringeBelow===bodies.length,'and the plane clips ONLY the hosts, never the rim fringe ('+
+       fringeBelow+' of '+bodies.length+' clouds) — clipping the fringe flattened it into wafers '+
+       'sticking out sideways, which is what made the first flat-based clouds look like saucers');
+    /* HORIZONTALLY STRETCHED. Measured as the body's own bounding box, which is the shape Eric
+       asked for: "horizontally stretched", not a ball. */
+    let wide=0;
+    for(const b of bodies){ b.geometry.computeBoundingBox();
+      const bb=b.geometry.boundingBox;
+      if((bb.max.x-bb.min.x)>(bb.max.y-bb.min.y)*1.6)wide++; }
+    ok(wide===bodies.length,'every cloud is at least 1.6x wider than tall ('+wide+' of '+
+       bodies.length+')');
+    /* VARIED FROM WISPS TO TOWERS. A deck whose every mass is the same size reads as wallpaper, so
+       the spread across the eight is asserted rather than assumed. */
+    const vol=bodies.map(b=>{ b.geometry.computeBoundingBox(); const bb=b.geometry.boundingBox;
+      return (bb.max.x-bb.min.x)*(bb.max.y-bb.min.y); });
+    const mn=Math.min(...vol), mx=Math.max(...vol);
+    ok(mx/mn>2.0,'and they vary in size across the sky by '+(mx/mn).toFixed(1)+
+       'x — hash-driven off the cloud index, so it costs no rnd() draw');
+  }
+
   /* AND THEY ARE HIDDEN FROM THE DEPTH-BASED POST PASSES. GTAOPass and BokehPass each render their
      own depth and normal prepass with an OVERRIDE material, and an override material does not care
      that a material is transparent or has depthWrite off — so a blended quad occludes as though it
@@ -4338,7 +4407,14 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
   /* LIT, WHICH IS TODO 76's COMPLAINT IN MINIATURE. The clouds were MeshBasicMaterial with a
      hand-painted grey belly sphere at opacity 0.5 — a painting of underside shading, which
      measured 0.008 against the plate's 0.116 and could not respond to the sun moving at all. */
-  ok(meshes.every(m=>m.material&&m.material.type==='MeshLambertMaterial'),
+  /* LIT BY THE SCENE, WHICHEVER LIT MATERIAL IT IS. This was pinned to MeshLambertMaterial until
+     the base plane arrived: a downward face is lit by scene.environment, whose lower half is an
+     alpine HDRI's rock and grass, and NEITHER reflectivity:0 NOR envMapIntensity:0 turns that off
+     on a Lambert in this three. Standard honours neither for the base either, as it turned out —
+     the fix in the end was the vertex tint — but Standard is the right material for geometry whose
+     shading is being reasoned about, and the assertion should name the PROPERTY (it is lit) rather
+     than the class. */
+  ok(meshes.every(m=>m.material&&/^Mesh(Lambert|Standard|Phong|Physical)Material$/.test(m.material.type)),
      'every cloud is lit by the scene rather than painted ('+
      [...new Set(meshes.map(m=>m.material&&m.material.type))].join(', ')+')');
   ok(meshes.every(m=>m.material&&m.material.emissive),
@@ -7927,12 +8003,20 @@ C.section('REPLAT P6A: the model-swap seam');
      cylinder going from one height segment to eight so its alpha can fade instead of ending in a
      rim. Collider digests and all fourteen counts unchanged.
        carpark  mesh 60f4198fd9a59be2, meshes 943, tris 314756
-       skifield mesh 3b312a09c0889a9d, meshes 328, tris 145122 */
+       skifield mesh 3b312a09c0889a9d, meshes 328, tris 145122
+
+     RE-PINNED FOR CLOUD FORM, 2026-09-11 — Eric's brief: flat-bottomed, horizontally stretched,
+     soft-topped, grey underneath, varied from wisps to towers. Mesh COUNT unchanged in both worlds;
+     triangles +9,536, which is the host lobes going from 10x8 segments to 16x12 so the horizontal
+     stretch stops showing facets and the base tint's fade has vertex rows to work with. Collider
+     digests and all fourteen counts unchanged, so buildSky still makes its eight rnd() draws.
+       carpark  mesh c24bbd4c94f84b9a, meshes 943, tris 315092
+       skifield mesh 011576537fad8366, meshes 328, tris 145458 */
   const PRESEAM={
-    carpark :{mesh:'c24bbd4c94f84b9a', col:'1b025c57715cb017', meshes:943, tris:315092,
+    carpark :{mesh:'72ff1bdc05788274', col:'1b025c57715cb017', meshes:943, tris:324628,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'011576537fad8366', col:'fc06ef03250ea1ed', meshes:328, tris:145458,
+    skifield:{mesh:'f135eff3fff40162', col:'fc06ef03250ea1ed', meshes:328, tris:154994,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

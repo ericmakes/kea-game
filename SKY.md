@@ -314,6 +314,52 @@ too saturated — which is precisely TODO 76's complaint, and it is §4's first 
 
 ---
 
+## 5c. CLOUD FORM — ERIC'S BRIEF, 2026-09-11
+
+His words: the clouds "read as stacked balloons - blinding white, perfectly round, no flat base, no
+shaded underside", against real alpine cumulus that is "flat-bottomed, horizontally stretched,
+soft-topped, greyer and shadowed underneath, and varied from wisps to towers". Reference:
+`nz_alps_02`. Six iterations, the cap. Page: `gauntlet/capture/CLOUDFORM_page.png`.
+
+| property | baseline | final | band | plate |
+|---|---|---|---|---|
+| cloud flatness (layered vs round) | 2.060 | **4.173** IN | [2.062 … 4.493] | 2.708 |
+| underside shading | 0.125 | **0.126** IN | [0.077 … 0.227] | 0.117 |
+| boundary complexity | 4.88 | 5.38 OUT | [7.11 … 17.25] | 14.6 |
+
+**A BASE PLANE DOES TWO OF HIS FOUR AT ONCE.** Real cumulus condenses at an altitude and is cut off
+below it, which is why its base is flat — and a flat base faces DOWNWARD, away from the sun, so it
+shades itself. Clipping every host lobe's vertices to one shared plane and pointing their normals at
+the ground gives the flat bottom and the shaded underside in a single move, with no painted grey.
+
+**AND THEN IT CAME OUT TAN.** A downward face gets no sun, so what lights it is the hemisphere
+light's ground colour (`0x8a7c42`, tussock brown) and the HDRI's lower half (alpine rock and grass).
+Measured on the bare plane: rgb 182,174,157 at saturation 0.137 where the tops sit near 0.95 luma —
+a bright tan saucer. **Four wrong fixes were paid for**: the hemisphere light alone (neutralising its
+ground moved the pixel only 183,173,157 → 174,166,158), `reflectivity:0`, `envMapIntensity:0`, and
+switching Lambert → Standard. Neither material can opt out of `scene.environment` in this three.
+What settled the diagnosis was turning the base plane OFF: the same pixel went to 194,195,195 at
+saturation 0.01, which is the base and nothing else. The fix is a **vertex colour** on the clipped
+vertices — a cool grey multiplied into the diffuse, ramped over a band above the plane so the
+shading has no edge of its own. The direction is still derived: a vertex is tinted because the plane
+clipped it, not because anyone painted a cloud.
+
+**TWO MORE THINGS THE PICTURE DEMANDED.** The plane was clipping the rim fringe too, flattening each
+puff into a thin wafer sticking out sideways — the clouds read as saucers with a hard disc past the
+mass on both sides; only the hosts meet the plane now. And the horizontal stretch made 10x8 lobes
+show facets across the top while leaving the tint's fade one or two vertex rows to work with, so
+hosts are 16x12 and the fringe stays 6x4. +9,536 triangles, +0.10 ms as a mean of three interleaved
+pairs.
+
+**BOUNDARY IS UNCHANGED AND THAT IS EXPECTED** — TODO 118 recorded it as a ceiling rather than a
+tuning, and Eric left coverage as-is ("a clear alpine morning is the right weather").
+
+**THE BANDING ROW IS NOW UNJUDGED**, because cloud cover rose to 28.9% and the scorer refuses that
+metric above a quarter cover — there is no clear vertical slice of sky left to look for contouring
+in. The gate is working; the row is honest about being unmeasurable rather than green.
+
+---
+
 ## 6. OUT OF SCOPE
 
 - **The bird stays parked.** No bird face, tail, underwing, trees, vehicles, humans or hero props.
