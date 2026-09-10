@@ -830,3 +830,32 @@ philosophy is that the frames a pin came from stay on disk so the pin can be aud
 Eleven sweeps of 132 frames took the volume to 1.0 GiB free, so they were removed after the
 consensus was formed. The provenance line above is what survives; a future audit would have to
 re-shoot rather than re-read.
+
+## RE-PIN 2026-09-10 — SKY.md steps 1 and 2 (the cloud recipe)
+
+40 vantages, 4 independent sweeps, per-vantage medoid via `gauntlet/verify/repin.mjs`.
+Provenance: run1 22, run2 8, run3 7, run4 3 — a run is disqualified per frame, never wholesale.
+
+WHY: the sky is in every frame, so a cloud change moves the whole set. The clouds went from 62
+meshes (a sphere and a painted grey belly sphere per lobe, MeshBasicMaterial, silently fogged) to 8
+merged lit masses placed by elevation, with the sky's own aerial perspective. See SKY.md 5b.
+
+THE CONSENSUS WAS WORTH TAKING, and the frames say why. On nine vantages three runs agreed at
+EXACTLY the same total pixel distance while the fourth sat at exactly three times it — 02_hut_snow
+7541/7541/7541 against 22623, 05_tussock_ground 11024 x3 against 33072, 13_idle_preen, 14_player_view,
+18_rear_close, 19_roof_follow, 29_lodge_deck, 31_camp_shelter, 41_station_shed, 42_station_ute the
+same shape. That is one run differing on that one frame and the other three identical, which is
+precisely the state a single sweep would have pinned without knowing. The outlier is not the same
+run each time: run1 carries it on 02 and 05, run3 on 18 and 41, run4 on 07 and 12.
+
+Five vantages came back byte-identical across all four sweeps (spread 0): 15_sign,
+24_verge_paddle, 34_village_street, 37_river_bridge, 38_river_floes, 39_river_walk.
+
+NOT PINNED, still: 26_tour_brochure and 27_travel_card have no baseline and adding one is a new
+vantage decision for Eric, not a side effect of a re-pin. The tool refuses them by design and has
+now done so for four sessions.
+
+FLAGGED FOR ERIC, unresolved by this re-pin: the sky's saturation is green only against
+nz_alps_01's near-zenith slice and above both plates that carry a whole sky (TODO 76), and cloud
+boundary complexity is still out of band at 4.76 against 7.11 (TODO 118). Both are visible in every
+one of these forty frames.
