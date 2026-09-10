@@ -170,3 +170,17 @@ export const SKYFLAG=`(()=>{ const G=KEAGAME.G;
    magenta), which means the NUMBERS were right and the PICTURE I was judging by eye had a button
    in it. Both have to be clean. */
 export const SKYQUIET=`document.querySelectorAll('.hud,#mutebtn').forEach(e=>{e.style.display='none';});`;
+
+/* THE CLOUD-FORM PLATE, WHICH IS A DIFFERENT PLATE FROM THE SKY ONES AND DELIBERATELY SO.
+   nz_alps_02 is out of the scored SKY set above because it is overcast and a blue sky judged
+   against it gets a luma band it can only reach by turning white. But Eric named it for cloud FORM
+   — "flat-bottomed, horizontally stretched, soft-topped, greyer and shadowed underneath, and varied
+   from wisps to towers" — and looked at, that is exactly what it is: a layered stratocumulus deck
+   with visible flat bases, thin wisps at the top right and thicker banks below.
+   ITS WHOLE CROP IS CLOUD, which is the property that makes it usable here and unusable for tone.
+   The cloud mask refuses it as wall-to-wall, correctly; for a FORM measurement that refusal is the
+   point, because there is no cloud/sky boundary to find and none is needed.
+   THE CROP IS DERIVED THE SAME WAY EVERY OTHER ONE IS: the topmost row that is definitely not sky,
+   in any column, sits at 0.217, so a 0.21 band is pure cloud in every column. */
+export const SKYFORM={ plate:'nz_alps_02', band:[0.00,0.21],
+  what:'a layered deck: flat bases, horizontal stretch, grey undersides, wisps through to banks' };

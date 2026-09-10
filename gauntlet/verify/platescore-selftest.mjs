@@ -14,8 +14,9 @@ import { bandNorm, loadRGB, lumPlane, edgeDensity, ridgeP10, snowPatch, lumaHue,
          measureAll, plateBand, PROPS, NORMW,
          cloudMask, blobs, cloudForm, undersideShading, skyGradient, aerialPersp, skyColour,
          skyMeasureAll, skyPlateBand, sunDisc, SKYPROPS, SKYCONTEXT, CLOUDSAT,
-         CLOUDFLOOR, CLOUDCEIL } from './platescore.mjs';
-import { BANDS, PLATESKY, SKYBANDS, SKYPLATES, BOWSKY } from './stripcam.mjs';
+         CLOUDFLOOR, CLOUDCEIL, cloudFlat, boxBlur, FLATSCALE,
+         SKYFORMPROPS } from './platescore.mjs';
+import { BANDS, PLATESKY, SKYBANDS, SKYPLATES, BOWSKY, SKYFORM } from './stripcam.mjs';
 
 const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..');
 const BOARD=path.join(ROOT,'gauntlet/reference/board');
@@ -375,10 +376,15 @@ const blue=(l)=>[Math.round(l*0.62),Math.round(l*0.78),Math.round(l*1.0)];  // s
      'the signed properties carry an absolute band floor as well as a relative one, so a plate '+
      'whose value is near zero cannot hand out a band of +/-0.002');
   /* THE BANDS ARE NOT DERIVED FROM THE GAME. Same check as the terrain half, on the sky path. */
-  const calls=[...src.matchAll(/(?<!function\s)skyPlateBand\(/g)].length;
-  ok(calls===1&&/skyPlateBand\(im,SKYPLATES\[n\]\.test\|\|null\)/.test(src),
-     'skyPlateBand is called exactly once in the scorer, on a PLATE — our own sky cannot widen '+
-     'the target it is judged against');
+  /* TWO CALL SITES NOW — the sky plates and the form plate — and the property being asserted is
+     not the COUNT but that every one of them is handed a PLATE. A third call site would be fine;
+     a call on our own frame would not, because a band derived from our own output is a band we
+     pass by construction. */
+  const sites=[...src.matchAll(/(?<!function\s)skyPlateBand\(([^)]*)\)/g)].map(m=>m[1]);
+  ok(sites.length===2,'skyPlateBand has '+sites.length+' call sites in the scorer');
+  ok(sites.every(a=>/^(im|formIm)\s*,/.test(a)),
+     'and every one of them is handed a PLATE image ('+sites.map(a=>a.split(',')[0].trim())
+     .join(', ')+') — our own sky cannot widen a target it is judged against');
 }
 
 /* ---- S8. BOTH CONTROLS, ON THE REAL PLATES ---- */
@@ -490,6 +496,103 @@ const blue=(l)=>[Math.round(l*0.62),Math.round(l*0.78),Math.round(l*1.0)];  // s
      '), which is its middle');
   ok(sd.clipped>0.9,'and it is reported as '+(sd.clipped*100).toFixed(0)+
      '% clipped to white, which a solid white box is');
+}
+
+/* ---- S11. FLATNESS: LAYERED DECK AGAINST A HEAP OF BALLS ---- */
+{
+  /* HORIZONTAL BANDS — a layered deck. Gradients cross the bands (vertical) and run along them
+     (horizontal), so the ratio must be well above 1. Bands 40 px tall, which is the scale the
+     property is measured at. */
+  /* EVERY FIXTURE VARIES ON BOTH AXES, and two earlier versions did not. A pure sin(y) image has
+     EXACTLY zero horizontal gradient, so the ratio divides by nothing: the vertical-band case came
+     out 0.00 and the fine-band case 12,084,033. Adding per-pixel noise did not fix it either — a
+     16 px box blur removes almost all of it, so the weak axis went back to the floor and the
+     horizontal-band case read 6064. What a real cloud field HAS, and what these fixtures need, is
+     LARGE-SCALE variation along both axes: a deck's bands undulate and brighten along their length.
+     The slow sin(x) term below is that, at a scale the blur keeps. Deterministic, so the numbers
+     are stable, and the metric is left alone — it is unbounded only on a perfectly one-dimensional
+     field, which no photograph is. */
+  const along=x=>Math.round(Math.sin(x/90*Math.PI)*12);
+  const bands=synth(600,400,(x,y)=>grey(150+Math.round(Math.sin(y/40*Math.PI)*45)+along(x)));
+  const fb=cloudFlat(bands,lumPlane(bands),null,null);
+  ok(fb.value>2.5,'horizontal bands score '+fb.value.toFixed(2)+' — a layered deck has strong '+
+     'gradients crossing it and weak ones along it');
+  /* VERTICAL BANDS — the same structure turned 90 degrees must score BELOW 1, or the metric is
+     measuring contrast rather than direction. */
+  const vert=synth(600,400,(x,y)=>grey(150+Math.round(Math.sin(x/40*Math.PI)*45)+along(y)));
+  const fv=cloudFlat(vert,lumPlane(vert),null,null);
+  ok(fv.value<0.4,'the same bands turned 90 degrees score '+fv.value.toFixed(2)+
+     ' — the metric is about DIRECTION, not about how much contrast there is');
+  /* A DIAGONAL PATTERN IS THE THIRD DIRECTION AND IT MUST LAND NEAR 1, which is a stronger check
+     than reciprocity: it says the metric is measuring the axis a structure prefers rather than
+     merely reacting to contrast. (Reciprocity was tried and is not a fair test — a 1-D fixture's
+     weak axis is noise-floored, so the product is not 1 and never could be.) */
+  const diag=synth(600,400,(x,y)=>grey(150+Math.round(Math.sin((x+y)/56*Math.PI)*45)));
+  const fd=cloudFlat(diag,lumPlane(diag),null,null);
+  ok(fd.value>0.7&&fd.value<1.4,'the same bands at 45 degrees score '+fd.value.toFixed(2)+
+     ' — near 1, because a diagonal prefers neither axis');
+  /* ROUND BLOBS — isotropic by construction, which is what a union of spheres is. */
+  const balls=synth(600,400,(x,y)=>{
+    let v=120;
+    for(const [cx,cy,r] of [[140,150,70],[300,190,90],[460,140,75],[220,280,60],[400,300,65]]){
+      const d=Math.hypot(x-cx,y-cy); if(d<r)v=Math.max(v,215-d/r*40); }
+    return grey(v); });
+  const fr=cloudFlat(balls,lumPlane(balls),null,null);
+  ok(fr.value>0.75&&fr.value<1.35,'round blobs score '+fr.value.toFixed(2)+
+     ' — near 1, because a ball has no preferred direction. THIS is what the game measures like');
+  ok(fb.value>fr.value*2,'and a deck is more than twice a heap of balls ('+fb.value.toFixed(2)+
+     ' against '+fr.value.toFixed(2)+'), which is the whole discrimination the property exists for');
+
+  /* THE SCALE IS LOAD-BEARING. Bands 3 px tall are layered structure the eye cannot see and the
+     16 px blur must wash away — otherwise the property would reward fine dithering. */
+  const fine=synth(600,400,(x,y)=>grey(150+Math.round(Math.sin(y/3*Math.PI)*45)+along(x)));
+  const ff=cloudFlat(fine,lumPlane(fine),null,null);
+  ok(ff.value<1.6,'3 px bands score '+ff.value.toFixed(2)+' — the '+FLATSCALE+
+     ' px blur washes out structure finer than the layering this property is about, so it cannot '+
+     'be satisfied by dither');
+  /* AND THE BLUR IS A BLUR: mean-preserving, and it really does remove fine detail. */
+  { const L=lumPlane(fine), B=boxBlur(L,600,400,FLATSCALE);
+    const mean=a=>{let s=0;for(let i=0;i<a.length;i++)s+=a[i];return s/a.length;};
+    ok(Math.abs(mean(L)-mean(B))<0.02,'boxBlur preserves the mean ('+mean(L).toFixed(3)+' vs '+
+       mean(B).toFixed(3)+')');
+    let vL=0,vB=0; const mL=mean(L),mB=mean(B);
+    for(let i=0;i<L.length;i++){vL+=(L[i]-mL)**2;vB+=(B[i]-mB)**2;}
+    ok(vB<vL*0.25,'and removes most of the variance of a 3 px pattern ('+
+       (vB/vL*100).toFixed(1)+'% left), which is what makes the scale choice meaningful'); }
+
+  /* IT REFUSES A REGION TOO SMALL TO SAY ANYTHING. A 33 px neighbourhood needs room. */
+  const tiny=synth(60,40,()=>grey(180));
+  ok(cloudFlat(tiny,lumPlane(tiny),null,null).value===null,
+     'a region with no room for a '+FLATSCALE+' px neighbourhood is refused rather than estimated');
+}
+
+/* ---- S12. THE FORM PLATE, AND WHY IT BANDS ALONE ---- */
+{
+  const im=bandNorm(path.join(BOARD,SKYFORM.plate+'.jpg'),SKYFORM.band[0],SKYFORM.band[1],NORMW);
+  const pb=skyPlateBand(im,null);
+  const b=pb.band.cloudFlat, v=pb.whole.cloudFlat;
+  ok(b&&v>=b.lo&&v<=b.hi,SKYFORM.plate+' is inside its own flatness band ('+v.toFixed(3)+
+     ' in ['+b.lo.toFixed(3)+' … '+b.hi.toFixed(3)+'])');
+  ok(v>2.2,'and it really is a layered deck: '+v.toFixed(3)+
+     ' against 1.0 for anything without a preferred direction');
+  /* THE NEGATIVE CONTROL IS THE OTHER CLOUD PLATE, and it is the reason this property bands from
+     one plate only. nz_carpark_01 has plenty of cloud and it is a DIFFERENT FORM — towering
+     cumulus. If its band were offered alongside, "in band if either plate" would hand a sky of
+     spheres a pass on the plate whose form nobody asked for. */
+  const cim=bandNorm(path.join(BOARD,'nz_carpark_01.jpg'),
+                     SKYBANDS.nz_carpark_01[0],SKYBANDS.nz_carpark_01[1],NORMW);
+  const cpb=skyPlateBand(cim,null);
+  const cv=cpb.whole.cloudFlat;
+  ok(cv!==null&&(cv<b.lo||cv>b.hi),
+     'nz_carpark_01 — towering cumulus — measures '+cv.toFixed(3)+' and falls OUTSIDE the deck\'s '+
+     'band, so the two forms are distinguishable and the band cannot be passed by the wrong one');
+  ok(SKYFORMPROPS.length===1&&SKYFORMPROPS[0]==='cloudFlat',
+     'and flatness is the only property banded this way, named in SKYFORMPROPS');
+  /* THE FORM PLATE IS NOT IN THE SKY SET, which is what keeps its overcast luma out of the tone
+     rows while letting its FORM govern here. */
+  ok(!Object.keys(SKYBANDS).includes(SKYFORM.plate),
+     SKYFORM.plate+' is deliberately NOT in the scored sky set — overcast, so its luma would hand '+
+     'a blue sky a band it can only reach by turning white');
 }
 
 console.log(bad?('PLATESCORE SELFTEST: '+bad+' FINDINGS'):'PLATESCORE SELFTEST: ALL PASS');

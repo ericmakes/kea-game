@@ -934,3 +934,23 @@ Six vantages are byte-identical across all four sweeps: 15_sign, 24_verge_paddle
 FLAGGED FOR ERIC, unresolved by this re-pin and visible in all forty-two frames: sky saturation is
 his pick (TODO 76, page at `gauntlet/capture/SKYTONE_page.png`), and cloud boundary complexity is
 still out of band at 4.88 against 7.11 — TODO 118 records why that is a ceiling rather than a tuning.
+
+## RE-PIN 2026-09-11 — Eric's SOFTER sky tone, and the two dome defects it uncovered
+
+42 vantages, 4 sweeps, per-vantage medoid. Provenance: run1 24, run2 7, run3 5, run4 6.
+
+WHY: the sky tone changed (satMul 0.70, hueRot +8), the horizon haze band's missing sRGB convert
+was fixed, the dome's three-stop ramp was made C1 continuous and its low stop widened from -0.15 to
+-0.45. All four move the sky, and three of them move the BOTTOM of the sky, which is in every frame.
+
+BATCHED AGAIN, by six, for the same reason as the last one — the machine still will not take a
+42-frame pass. All four sweeps came back 42 of 42 with zero single-frame failures.
+
+WHAT THE BANDING ROW EARNED. Shipping the tone took the largest single-row 8-bit step from 1 level
+to 2 against both clear-sky plates at exactly 1. Three wrong guesses were paid for before it was
+instrumented (the haze convert — innocent; the dome's stop junction — a real kink, fixed, but not
+this; the haze band's rim — at 2.7 degrees of elevation where the step is at 8.7), and then the row
+medians were dumped: 147 149 149 150 150 151 151 152 153 153 154 154 156 161 166 down the band, one
+jump at row 160 of 178, and hiding the haze, the wisps and the clouds in turn left it exactly there.
+It is the dome's own ramp: the visible band straddles the mid stop at 0.25, so its lower two thirds
+crossed 29% of a 0.40-wide low ramp while its upper third crossed 7% of a 0.75-wide top ramp.

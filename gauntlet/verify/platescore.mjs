@@ -411,7 +411,7 @@ export function compose(frame){
    from the paired plate, the band is never tighter than the plate's own internal spread,
    and the region is masked so that a number about the sky cannot be a number about a hill.
    ====================================================================================== */
-import { SKYBANDS, SKYPLATES, SKYGAMEBAND, SKYFLAG, SKYQUIET, BOWSKY } from './stripcam.mjs';
+import { SKYBANDS, SKYPLATES, SKYGAMEBAND, SKYFLAG, SKYQUIET, BOWSKY, SKYFORM } from './stripcam.mjs';
 
 /* THE CLOUD MASK IS AN ABSOLUTE NEUTRALITY THRESHOLD, AND OTSU WAS TRIED FIRST AND THROWN AWAY.
    The mask is derived the SAME WAY for the game and for the plates, and that sameness is the
@@ -553,6 +553,65 @@ export function undersideShading(im,L,cm){
     const d=st/nt-su/nu; acc+=b.area*d; A+=b.area; per.push(+d.toFixed(3));
   }
   return {value:A?acc/A:null, blobs:per.length, each:per.slice(0,10)};
+}
+
+/* 6. FLATNESS — is the cloud a layered deck or a heap of balls?
+      Eric's complaint, in his words: the clouds "read as stacked balloons - blinding white,
+      perfectly round, no flat base, no shaded underside", where real alpine cumulus is
+      "flat-bottomed, horizontally stretched, soft-topped".
+      MEASURED AS STRUCTURE ANISOTROPY: the mean absolute luma gradient ACROSS the frame's rows
+      over the mean absolute gradient ALONG them. A layered deck has strong gradients crossing its
+      bands and weak ones running along them; a union of spheres is isotropic by construction.
+      AT SIXTEEN PIXELS, AND THE SCALE IS THE WHOLE PROPERTY. At texel scale this measurement is
+      worthless and says so: the fine lumpiness of a real deck swamps its layering, and nz_alps_02
+      — the flattest plate on the board — read 1.084 against the game's balloons at 1.565, which is
+      backwards. Box-blur first and the two separate cleanly, and the separation grows with scale
+      for the deck and not for the spheres:
+
+                            r0     r4     r8    r16    r28
+          nz_alps_02      1.084  2.089  2.420  2.708  3.097     a layered deck
+          nz_carpark_01   1.720  1.994  2.022  1.982  1.742     towering cumulus
+          the game        1.714  1.885  2.026  2.060  1.901     spheres
+
+      r16 is taken because it is where the deck stands clearest of both the other two while its own
+      trend is still rising — a scale chosen off the references, not off our own output.
+      NOTE WHAT THAT TABLE SAYS ABOUT THE GAME: at 2.060 it sits with the TOWERING plate, not the
+      flat one. The two cloud forms are genuinely different and the measurement can tell them apart,
+      which is the only reason it is worth having.
+      MEASURED IN NORMALISED PIXELS. Every image reaches this function at 1440 wide with square
+      pixels, so a 16 px blur is the same angular scale on a plate and on a frame. */
+export function boxBlur(L,w,h,r){
+  if(r<1)return L;
+  const t=new Float32Array(L.length), o=new Float32Array(L.length);
+  for(let y=0;y<h;y++){ let s=0,n=0;
+    for(let x=0;x<w;x++){ s+=L[y*w+x]; n++;
+      if(x>=2*r+1){s-=L[y*w+x-2*r-1];n--;}
+      if(x>=r)t[y*w+x-r]=s/n; }
+    for(let x=Math.max(0,w-r);x<w;x++)t[y*w+x]=t[y*w+Math.max(0,w-r-1)]; }
+  for(let x=0;x<w;x++){ let s=0,n=0;
+    for(let y=0;y<h;y++){ s+=t[y*w+x]; n++;
+      if(y>=2*r+1){s-=t[(y-2*r-1)*w+x];n--;}
+      if(y>=r)o[(y-r)*w+x]=s/n; }
+    for(let y=Math.max(0,h-r);y<h;y++)o[y*w+x]=o[Math.max(0,h-r-1)*w+x]; }
+  return o;
+}
+export const FLATSCALE=16;
+export function cloudFlat(im,L,keep,cm){
+  L=L||lumPlane(im); const {w,h}=im;
+  /* THE REGION IS THE CLOUD, and where the mask was REFUSED as wall-to-wall the region is the
+     whole crop — because that refusal means the crop is nothing but cloud. That is the case for
+     the form plate and it is the reason it can carry this property at all. */
+  const m=(cm&&cm.mask)?cm.mask:keep;
+  const r=FLATSCALE, st=FLATSCALE;
+  const B=boxBlur(L,w,h,r);
+  let gy=0,gx=0,n=0;
+  for(let y=st;y<h-st;y++)for(let x=st;x<w-st;x++){
+    const i=y*w+x;
+    if(m&&!(m[i]&&m[i-st]&&m[i+st]&&m[i-st*w]&&m[i+st*w]))continue;
+    gy+=Math.abs(B[i+st*w]-B[i-st*w]); gx+=Math.abs(B[i+st]-B[i-st]); n++; }
+  if(n<500)return {value:null,note:'fewer than 500 samples with a '+st+' px neighbourhood inside '+
+    'the cloud — too little cloud to say whether it is layered'};
+  return {value:(gy/n)/((gx/n)||1e-9), gy:gy/n, gx:gx/n, n};
 }
 
 /* THE SKY'S OWN ROWS — every gradient property is a statement about height, so they all share one
@@ -697,9 +756,17 @@ export function skyColour(im,keep,cm){
   return {luma:l/n, sat:s/n, hue, px:n};
 }
 
-export const SKYPROPS=['cloudShape','underside',
+export const SKYPROPS=['cloudShape','underside','cloudFlat',
                        'lumaRatio','satRatio','maxStep',
                        'skyLuma','skyHue','skySat'];
+/* cloudFlat IS BANDED FROM ONE PLATE ONLY, AND NOT BY THE "EITHER PLATE" RULE.
+   nz_alps_02 is the plate that shows the form being asked for. nz_carpark_01 has cloud too, and
+   towering cumulus is a DIFFERENT form: it measures 1.982 where the deck measures 2.708, and the
+   game's spheres measure 2.060. Offering both bands under "in band if EITHER" would hand the
+   current sky a pass on the plate whose form nobody asked for, which is the loophole this file
+   already refuses twice over (cloud cover, and nz_alps_02's own luma for tone). One plate, named,
+   with the reason — and it makes the row harder rather than easier. */
+export const SKYFORMPROPS=['cloudFlat'];
 /* CLOUD VERTICAL EXTENT IS WITHDRAWN FROM THE JUDGED SET, and the direction of that change is
    the part worth stating: the game PASSES it (0.920, against a band of 0.819 to 1.179) and it is
    being withdrawn anyway, because it cannot mean what it is named and because it was blocking a
@@ -753,8 +820,9 @@ export function skyMeasureAll(im,inSky){
   const cm=cloudMask(im,keep);
   const cf=cloudForm(im,cm), us=undersideShading(im,L,cm);
   const gr=skyGradient(im,L,keep,cm), ap=aerialPersp(im,L,keep,cm), sc=skyColour(im,keep,cm);
+  const fl=cloudFlat(im,L,keep,cm);
   let skyPx=0; if(keep){for(let i=0;i<keep.length;i++)if(keep[i])skyPx++;} else skyPx=w*h;
-  return { cloudShape:cf.shape, cloudVext:cf.vext, underside:us.value,
+  return { cloudShape:cf.shape, cloudVext:cf.vext, underside:us.value, cloudFlat:fl.value,
            lumaRatio:gr.lumaRatio, satRatio:gr.satRatio, maxStep:gr.maxStep,
            skyTopLuma:gr.topLuma, skyHorizLuma:gr.horizLuma,
            skyTopSat:gr.topSat,   skyHorizSat:gr.horizSat, aerial:ap.value,
@@ -763,7 +831,7 @@ export function skyMeasureAll(im,inSky){
            bandWidth:gr.bandWidth, levels:gr.levels, skyPx,
            _extra:{cm:{thr:cm.thr,cover:cm.cover,note:cm.note,hist:cm.hist,
                        meanCloudSat:cm.meanCloudSat,meanSkySat:cm.meanSkySat},
-                   cf,us,gr,ap,sc} };
+                   cf,us,gr,ap,sc,fl} };
 }
 
 /* THE SKY'S BAND COMES FROM ITS PLATE'S OWN FOUR TILES, exactly as the terrain's does, and the
@@ -918,11 +986,16 @@ export async function skyScore({frames=null}={}){
     if(n>2000)bow={...skyColour(im,keep,null),px:n};
     else bow={note:'only '+n+' px of sky survive the mask'}; }
 
+  /* THE FORM PLATE, banded on its own — see SKYFORMPROPS. */
+  const formIm=bandNorm(path.join(BOARD,SKYFORM.plate+'.jpg'),SKYFORM.band[0],SKYFORM.band[1],NORMW);
+  const form=skyPlateBand(formIm,null);
+
   const rows=[]; let inCount=0, judged=0;
   for(const k of SKYPROPS){
     const gv=g[k];
-    const cells=Object.keys(plates).map(n=>{
-      const b=plates[n].band[k];
+    const src=SKYFORMPROPS.includes(k)?{[SKYFORM.plate]:form}:plates;
+    const cells=Object.keys(src).map(n=>{
+      const b=src[n].band[k];
       if(b===null||gv===null||gv===undefined||!isFinite(gv))return {n,b,ok:null};
       return {n,b,ok:gv>=b.lo&&gv<=b.hi};
     });
@@ -931,14 +1004,16 @@ export async function skyScore({frames=null}={}){
     rows.push({k,gv,cells,ok:none?null:any});
   }
   const sun=sunDisc(s.sun,s.sunState);
-  return {game:g,plates,rows,inCount,judged,bow,sun,frames:s,band,gb};
+  return {game:g,plates,form,rows,inCount,judged,bow,sun,frames:s,band,gb};
 }
 
 const SKYFMT={cloudShape:v=>v.toFixed(2), cloudVext:v=>v.toFixed(3), underside:v=>v.toFixed(3),
+  cloudFlat:v=>v.toFixed(3),
   lumaRatio:v=>v.toFixed(3), satRatio:v=>v.toFixed(3), maxStep:v=>v.toFixed(1),
   skyLuma:v=>v.toFixed(3), skyHue:v=>v.toFixed(0), skySat:v=>v.toFixed(3)};
 const SKYLABEL={cloudShape:'cloud form (perim/sqrt area)', cloudVext:'cloud vertical extent',
-  underside:'underside shading (top-belly)', lumaRatio:'gradient (horizon/zenith luma)',
+  underside:'underside shading (top-belly)', cloudFlat:'cloud flatness (layered vs round)',
+  lumaRatio:'gradient (horizon/zenith luma)',
   satRatio:'aerial perspective (sat ratio)', maxStep:'banding (max 8-bit step)',
   skyLuma:'sky luma', skyHue:'sky hue', skySat:'sky saturation'};
 
@@ -951,9 +1026,14 @@ export function skyTable(res){
     const f=SKYFMT[r.k]||(v=>String(v));
     const cell=c=>c.b===null?'         —              ':
       (('['+f(c.b.lo)+' … '+f(c.b.hi)+']').padEnd(24));
+    /* A FORM-PLATE ROW SAYS SO, because its band comes from a plate that is not in the sky set and
+       a reader who did not know that would think the other columns had simply gone missing. */
+    const isForm=SKYFORMPROPS.includes(r.k);
     L.push('  '+SKYLABEL[r.k].padEnd(32)+
       (r.gv===null||r.gv===undefined?'—':f(r.gv)).padEnd(9)+
-      r.cells.map(cell).join('')+
+      (isForm?(cell(r.cells[0])+'  <- '+SKYFORM.plate.replace('nz_','')+' only'+
+               ' '.repeat(Math.max(0,24*(Object.keys(res.plates).length-1)-17-SKYFORM.plate.length))
+              ):r.cells.map(cell).join(''))+
       (r.ok===null?'not judged':(r.ok?'IN BAND':'OUT'))+
       (r.ok===false?'  ('+r.cells.filter(c=>c.b).map(c=>
         (r.gv<c.b.lo?'below ':'above ')+c.n.replace('nz_','')).join(', ')+')':''));
