@@ -2,6 +2,10 @@
 // Usage: node gauntlet/verify/repin.mjs [ids]    env: RUNS (default 4), DRY=1, KEEP=1
 //        FIRSTPIN=<ids> ...      pin vantages that have NO baseline yet (Eric's call, see below)
 //        SHOOT=<dir> node gauntlet/verify/repin.mjs [ids]      one sweep into <dir>, then stop
+//        BATCH=6 SHOOT=<dir> ...                 shoot that sweep six frames at a time, each in
+//                                                its own process, retrying a dead batch one frame
+//                                                at a time. Needed on a machine that cannot hold a
+//                                                42-frame pass — see TODO 115.
 //        DIRS=<d1>,<d2>,<d3>[,...] node gauntlet/verify/repin.mjs [ids]   consensus from those
 //
 // WHY THIS FILE EXISTS (TODO 73). A re-pin used to mean "copy whatever is sitting in
@@ -38,6 +42,11 @@
 // doing that by hand three more times is how a consensus quietly becomes one sweep again.
 //     FIRSTPIN=31_camp_shelter,32_camp_sites,33_camp_gate DIRS=/a,/b,/c node repin.mjs
 import fs from 'fs'; import path from 'path'; import os from 'os';
+/* THE ORPHAN SWEEP LIVES IN ITS OWN MODULE so the part that decides what to KILL can be tested
+   without spawning a browser — see gauntlet/verify/orphans-selftest.mjs, which drives it on fixed
+   ps text and checks the safety property directly: a process that was already running before a
+   batch can never be swept, however well it matches. TODO 115. */
+import {headlessPids,sweepOrphans} from './orphans.mjs';
 import {shootRun} from './crossrun.mjs';
 import {pxdelta} from './pxdiff.mjs';
 
@@ -59,10 +68,48 @@ const DRY=!!process.env.DRY;
 const SHOOT=process.env.SHOOT||'';
 const DIRS=(process.env.DIRS||'').split(',').filter(Boolean);
 
-/* ONE SWEEP, INTO A NAMED DIRECTORY, AND NOTHING ELSE. This is the half that takes minutes. */
+/* ONE SWEEP, INTO A NAMED DIRECTORY, AND NOTHING ELSE. This is the half that takes minutes.
+   BATCH=n SHOOTS IT IN CHUNKS, WHICH IS THE DIFFERENCE BETWEEN A RE-PIN THAT RUNS ON THIS MACHINE
+   AND ONE THAT DOES NOT. TODO 115's first ask, and it was earned: four attempts at a 42-frame
+   sweep were killed for low memory and wrote ZERO frames, even cut to seven vantages, with swap at
+   7.6 GB of 8 and about 100 MB of physical memory free. A single vantage succeeded and a batch of
+   four succeeded. Six is what the whole set has been shot at since, four sweeps of 42 with no
+   failures at all.
+   EACH BATCH IS ITS OWN capture PROCESS, so nothing accumulates across them, and a batch that dies
+   costs six frames instead of a sweep. A DEAD BATCH IS RETRIED ONE FRAME AT A TIME, because a
+   batch dies as a unit while a frame usually does not.
+   THE RUN DIRECTORY ACCUMULATES CORRECTLY: crossrun's shootRun copies only the ids IT shot, so
+   batches add to the directory without carrying stale frames — which is the fault its own comment
+   records, and the reason batching is safe here at all. */
 if(SHOOT){
   fs.mkdirSync(SHOOT,{recursive:true});
-  shootRun(SHOOT,IDS);
+  const BATCH=+(process.env.BATCH||0);
+  const want=IDS.length?IDS:fs.readdirSync(BASE).filter(f=>/^\d\d_.*\.png$/.test(f))
+                                                .map(f=>f.replace(/\.png$/,''));
+  if(BATCH>0&&want.length>BATCH){
+    let fails=[];
+    for(let i=0;i<want.length;i+=BATCH){
+      const chunk=want.slice(i,i+BATCH);
+      const before=headlessPids();
+      try{ shootRun(SHOOT,chunk); }
+      catch(e){
+        console.log('  batch '+chunk[0]+'..'+chunk[chunk.length-1]+' died — retrying one at a time');
+        for(const id of chunk){
+          const b2=headlessPids();
+          try{ shootRun(SHOOT,[id]); }catch(e2){ fails.push(id); }
+          sweepOrphans(b2);
+        }
+      }
+      const k=sweepOrphans(before);
+      const got=fs.readdirSync(SHOOT).filter(f=>/^\d\d_.*\.png$/.test(f)).length;
+      console.log('  '+got+'/'+want.length+' frames'+(k?('   swept '+k+' orphan browser(s)'):''));
+    }
+    if(fails.length)console.log('COULD NOT SHOOT: '+fails.join(', '));
+  } else {
+    const before=headlessPids();
+    shootRun(SHOOT,IDS);
+    sweepOrphans(before);
+  }
   const n=fs.readdirSync(SHOOT).filter(f=>f.endsWith('.png')&&!f.startsWith('probe_')).length;
   console.log('SHOT '+n+' frames -> '+SHOOT);
   process.exit(0);

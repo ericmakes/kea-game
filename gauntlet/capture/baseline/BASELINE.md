@@ -954,3 +954,20 @@ medians were dumped: 147 149 149 150 150 151 151 152 153 153 154 154 156 161 166
 jump at row 160 of 178, and hiding the haze, the wisps and the clouds in turn left it exactly there.
 It is the dome's own ramp: the visible band straddles the mid stop at 0.25, so its lower two thirds
 crossed 29% of a 0.40-wide low ramp while its upper third crossed 7% of a 0.75-wide top ramp.
+
+## RE-PIN 2026-09-11b — CLOUD FORM, and the first re-pin shot by the tool itself
+
+42 vantages, 4 sweeps, per-vantage medoid. Provenance: run1 22, run2 15, run3 3, run4 2.
+
+WHY: the clouds were rebuilt to Eric's brief — flat-bottomed, horizontally stretched, soft-topped,
+grey underneath, varied from wisps to towers — so every frame with sky in it moved.
+
+**THE BATCHING IS IN `repin.mjs` NOW, not in a scratchpad script.** `BATCH=6 SHOOT=<dir>` shoots a
+sweep six frames at a time, each batch its own process, and retries a dead batch one frame at a
+time. This is the first re-pin taken with it: four sweeps, 42 of 42 each, no dead batches and no
+orphans to sweep. TODO 115's first ask, closed.
+The orphan sweep it also asks for is in `gauntlet/verify/orphans.mjs` with its own selftest. It
+snapshots the `--headless` PIDs before a batch and kills only those that appeared during it and
+outlived it, so it can reach neither the user's own browser (45 Chrome processes on this machine)
+nor a concurrent rig run. The selftest drives that decision on fixed `ps` text and checks the
+safety property directly, without spawning anything.

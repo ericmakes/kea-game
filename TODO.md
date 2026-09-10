@@ -2661,7 +2661,22 @@ structure per vantage — cluster sizes and the implied flag probability — int
 leaving the next session to infer it from the totals by eye. That would make the tripwire above
 automatic rather than a paragraph.
 
-### 115. THE CAPTURE RIG NEEDS MORE MEMORY THAN THE MACHINE HAS SPARE, AND A KILLED PASS POISONS THE NEXT SWEEP
+### 115. THE CAPTURE RIG NEEDS MORE MEMORY THAN THE MACHINE HAS SPARE — DONE 2026-09-11, all three
+**ALL THREE FIXES ARE IN.**
+1. **`BATCH=n` in `repin.mjs`** — a sweep shot n frames at a time, each batch its own process, a
+   dead batch retried one frame at a time. Two re-pins have now been taken with it, 42 of 42 on
+   every sweep, no dead batches.
+2. **`gauntlet/verify/orphans.mjs`**, with `orphans-selftest.mjs`. Snapshots the `--headless` PIDs
+   before a batch and kills only those that appeared during it and outlived it. The discriminator is
+   `--headless` and not the executable path, because puppeteer drives the INSTALLED Chrome here and
+   a path match would close the user's own browser. The set difference is the safety property and
+   the selftest checks it on fixed `ps` text: a process already running before the batch can never
+   be swept, however well it matches.
+3. **`diff.mjs` refuses stale frames** — anything older than `dist/kea.js` is reported and not
+   compared, because a targeted sweep leaves the rest of `gauntlet/capture` from an older build and
+   diffing those against a fresh baseline is the worst kind of false alarm.
+
+*Original entry, kept for the record:*
 **CONFIRMED HARD ON 2026-09-10, and one of the three fixes is now written.** The TODO 118 re-pin
 could not run: four attempts at a 42-frame sweep were killed for low memory and wrote ZERO frames,
 even when cut to seven vantages, with swap at 7.6 GB of 8 GB and about 100 MB of physical memory
