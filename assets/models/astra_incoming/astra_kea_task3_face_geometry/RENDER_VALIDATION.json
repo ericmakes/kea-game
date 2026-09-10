@@ -1,0 +1,161 @@
+{
+  "source_glb": "kea_bill_face_geometry.glb",
+  "source_glb_sha256": "d13929736452608cea930efc678cb5f010f41d089ba2da9c9e4d99a25f728331",
+  "texture_note": "1b embedded images unchanged; geometry-only delivery.",
+  "requested_views": [
+    {
+      "file": "01_head_closeup.png",
+      "png_sha256": "ddf0df43da32b0aedc8147112b2acaa7d9a1679245c7996012a38e8999fca1c9",
+      "camera": [
+        1,
+        0.04,
+        0.28
+      ],
+      "target": [
+        -1,
+        51,
+        7
+      ],
+      "span": 34,
+      "time": 3.5,
+      "yaw": -0.505827
+    },
+    {
+      "file": "02_full_body_side.png",
+      "png_sha256": "bbd9877b93fb6f6c969e21139ceea0e6cd53cb5fd208ad58550cc65b8a03c88c",
+      "camera": [
+        1,
+        0.17,
+        0.32
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "03_folded_wing_rear.png",
+      "png_sha256": "2febdaf8bdd8a0b455fc0fe6f88ab8e853a32abbaf69518c7653960db6bd2f0f",
+      "camera": [
+        0.6,
+        0.34,
+        -1
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "04_wings_open_underwing.png",
+      "png_sha256": "2e2163fb44c2ae92d41a4b3baab1da23e8ae9032fbf82181bc14da02fa8705c8",
+      "camera": [
+        0,
+        -0.55,
+        1
+      ],
+      "time": 0.2,
+      "yaw": 94.33494
+    },
+    {
+      "file": "05_three_quarter_front.png",
+      "png_sha256": "7235700a22adb546ce3b37d291a186792e745f1b3e2e33e080c2281a95159572",
+      "camera": [
+        0.72,
+        0.14,
+        0.7
+      ],
+      "target": [
+        -1,
+        51,
+        7
+      ],
+      "span": 34,
+      "time": 3.5,
+      "yaw": -0.505827
+    }
+  ],
+  "requested_view_count": 5,
+  "size": [
+    1600,
+    1600
+  ],
+  "supersample": 2,
+  "additional_rest_validation": {
+    "source_glb": "kea_bill_face_geometry.glb",
+    "source_glb_sha256": "d13929736452608cea930efc678cb5f010f41d089ba2da9c9e4d99a25f728331",
+    "file": "06_rest_head.png",
+    "png_sha256": "2b06b62ea6001d379bd8e1ee5b773b7ea6957dfecd7196da049f68c83ecbd2ee",
+    "output_size": [
+      1600,
+      1600
+    ],
+    "supersample": 2,
+    "purpose": "Additional validation image of initial frame of original Animation_01; inspect closed gape without changing any animation data.",
+    "camera": [
+      1,
+      0.04,
+      0.28
+    ],
+    "target": [
+      -1,
+      51,
+      7
+    ],
+    "span": 34,
+    "time": 0,
+    "yaw": -0.505827
+  },
+  "head_gape_qa": [
+    {
+      "file": "01_head_closeup.png",
+      "size": [
+        1600,
+        1600
+      ],
+      "red_gape_pixels": 0,
+      "threshold": "R > 1.8G; R > 1.8B; G < 80; R > 25",
+      "bbox_xyxy": null
+    },
+    {
+      "file": "05_three_quarter_front.png",
+      "size": [
+        1600,
+        1600
+      ],
+      "red_gape_pixels": 0,
+      "threshold": "R > 1.8G; R > 1.8B; G < 80; R > 25",
+      "bbox_xyxy": null
+    },
+    {
+      "file": "06_rest_head.png",
+      "size": [
+        1600,
+        1600
+      ],
+      "red_gape_pixels": 0,
+      "threshold": "R > 1.8G; R > 1.8B; G < 80; R > 25",
+      "bbox_xyxy": null
+    }
+  ],
+  "folded_wing_qa": [
+    {
+      "file": "02_full_body_side.png",
+      "roi": "Full width, y40\u2013100%, excluding face",
+      "scarlet_pixels": 0,
+      "threshold": "R > 1.3G; R > 95; G > 1.12B"
+    },
+    {
+      "file": "03_folded_wing_rear.png",
+      "roi": "Full width, y40\u2013100%, excluding face",
+      "scarlet_pixels": 0,
+      "threshold": "R > 1.3G; R > 95; G > 1.12B"
+    }
+  ],
+  "all_checked_red_counts_zero": true,
+  "physical_closure_visual_review": "No sky or throat plumage visible through the closed lip seam in side, three-quarter front or original animation initial frame. No exposed olive interior cards.",
+  "anatomy_visual_review": "Short deep upper bill with tucked lower wedge, larger forward eye and rounded brow. Fixed original UVs carry the unchanged 1b images across moved vertices.",
+  "reference_comparison": "Compared side by side with supplied kea_head_01.jpg and kea_posture_01.jpg. Reference photos retained only in private working comparison, not output.",
+  "render_scope": "Actual GLB POSITION, NORMAL, UV, indices, embedded maps, inverse-bind skinning and original animation poses. Review renders reproduce the requested view types; gameplay environment and procedural animation were not supplied. Render-only pose and heading are never written to the GLB.",
+  "pixel_qa_scope": "Pixel-colour QA plus manual visual review. Red-gape threshold isolates the supplied maroon mouth pigment from ochre eye/cere; zero count does not prove geometric manifoldness.",
+  "preview": "kea_face_preview.png",
+  "before_after": "kea_face_before_after.png"
+}

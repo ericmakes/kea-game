@@ -1,0 +1,126 @@
+{
+  "revision": "Task 1b texture-only colour and detail correction",
+  "source_artwork": [
+    {
+      "path": "/workspace/scratch/a5bdfdc49c8a/bird_task1b/paint_work/body_feather_source.png",
+      "luma_percentiles": [
+        0.12791922688484192,
+        0.5215396285057068
+      ]
+    },
+    {
+      "path": "/workspace/scratch/a5bdfdc49c8a/bird_task1b/paint_work/head_streak_source.png",
+      "luma_percentiles": [
+        0.11615921556949615,
+        0.5558266639709473
+      ]
+    }
+  ],
+  "configuration": {
+    "body_source": "/workspace/scratch/a5bdfdc49c8a/bird_task1b/paint_work/body_feather_source.png",
+    "head_source": "/workspace/scratch/a5bdfdc49c8a/bird_task1b/paint_work/head_streak_source.png",
+    "body_large_u": 0.225,
+    "body_large_v": 0.33,
+    "body_fine_u": 0.16,
+    "body_fine_v": 0.235,
+    "head_u": 0.075,
+    "head_v": 0.11,
+    "body_light": [
+      154,
+      141,
+      100
+    ],
+    "chest_light": [
+      165,
+      143,
+      107
+    ],
+    "body_dark": [
+      44,
+      36,
+      23
+    ],
+    "body_gamma": 0.7,
+    "head_light": [
+      165,
+      143,
+      111
+    ],
+    "head_dark": [
+      65,
+      51,
+      35
+    ],
+    "head_gamma": 0.63,
+    "eye_radius_u": 0.008,
+    "eye_radius_v": 0.0087,
+    "bar_period": 1.85,
+    "normal_strength": 2.0
+  },
+  "uv_mapping": "Task1 barycentric maps from original unchanged UV accessor; no mesh or UV edits",
+  "alpha_exact_task1": true,
+  "feet_exact_task1_albedo": true,
+  "feet_exact_task1_normal": true,
+  "preserved_feet_and_shin_texels": 584904,
+  "fold_guard": "Task1 four-view folded visibility mask, plus two 2048-map texels of sampling padding; applied only within underwing chart",
+  "fold_guard_source_sha256": "fd658850bce8585c3863573832bca79b03e4e7d12c596bca1624c4fa7e424e8d",
+  "underwing_texels": 2709580,
+  "guarded_underwing_fraction": 0.5397618819152784,
+  "intended_red_coverts_texels": 1594163,
+  "unguarded_red_coverts_texels": 882917,
+  "guard_conflict_fraction_of_intended_red": 0.4381615932624205,
+  "eye_outer_diameter_pixels": [
+    65.536,
+    71.2704
+  ],
+  "eye_inner_dark_diameter_pixels": [
+    42.76224,
+    46.503935999999996
+  ],
+  "palette_samples": {
+    "body_before": {
+      "median_rgb": [
+        139.0,
+        148.0,
+        97.0
+      ],
+      "median_srgb_luma": 0.5584533333333334
+    },
+    "body_after": {
+      "median_rgb": [
+        114.0,
+        101.0,
+        72.0
+      ],
+      "median_srgb_luma": 0.39675529411764704
+    },
+    "head_before": {
+      "median_rgb": [
+        140.0,
+        144.0,
+        113.0
+      ],
+      "median_srgb_luma": 0.5525937254901961
+    },
+    "head_after": {
+      "median_rgb": [
+        119.0,
+        99.0,
+        74.0
+      ],
+      "median_srgb_luma": 0.3990964705882352
+    }
+  },
+  "normal_encoding": "glTF tangent-space RGB, +Y convention as Task1; colour boundaries excluded from height",
+  "limitations": [
+    "Mirrored UV overlaps force bilateral shared paint.",
+    "Same underwing surface is visible open and folded: guard-covered coverts must remain bronze/green to guarantee folded views have no red.",
+    "Eye/cere/bill share a distorted chart; eye can enlarge within existing socket but cannot move its geometry.",
+    "No nostril cavity geometry; depth is painted/baked.",
+    "18 degenerate tail-endcap UV triangles cannot carry a detailed feature.",
+    "Source alpha silhouette and coarse original flight shafts are retained."
+  ],
+  "original_task1_guard_underwing_fraction": 0.5213796972224478,
+  "guard_padding_texels_at_2048": 2,
+  "guard_padding_unconstrained_by_chart": true
+}

@@ -1,0 +1,80 @@
+{
+  "source_glb": "kea_bill_skin.glb",
+  "source_glb_sha256": "261456d14da733109487c47540346c453aaeba2d5c6682052c9afc72c0051014",
+  "joints": 101,
+  "triangles": 4927,
+  "animation": "Animation_01",
+  "animation_duration_seconds": 22.45833396911621,
+  "output_size": [
+    1600,
+    1600
+  ],
+  "supersample": 2,
+  "camera_type": "orthographic",
+  "lighting": "neutral daylight studio, linear-light shading and original glTF tangent-space normal map",
+  "scene_note": "Actual GLB mesh, UVs, embedded maps, inverse-bind skinning, and original animation poses. These are model review renders; the provided in-game environment and procedural animation were not available in this handoff. Render-only heading adjustments do not affect GLB.",
+  "views": [
+    {
+      "file": "01_head_closeup.png",
+      "camera": [
+        1,
+        0.04,
+        0.28
+      ],
+      "target": [
+        -1,
+        51,
+        7
+      ],
+      "span": 34,
+      "time": 3.5,
+      "yaw": -0.505827
+    },
+    {
+      "file": "02_full_body_side.png",
+      "camera": [
+        1,
+        0.17,
+        0.32
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "03_folded_wing_rear.png",
+      "camera": [
+        0.6,
+        0.34,
+        -1
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "04_wings_open_underwing.png",
+      "camera": [
+        0,
+        -0.55,
+        1
+      ],
+      "time": 0.2,
+      "yaw": 94.33494
+    }
+  ],
+  "original_source_glb_sha256": "a83f9af2c7f853f1212dadc2263faa452750da5fa48c9d4dfc711448b169c32b",
+  "png_sha256": {
+    "01_head_closeup.png": "9363dd3796a50b83d59fa3e66f9833f99d1297913896342f922760692b8af445",
+    "02_full_body_side.png": "016f28c31d85d5d6de048aaf276784f77fc0ca0664a9cc3b2ad547b79ad75148",
+    "03_folded_wing_rear.png": "e49d9e0ad74c32404973ba67e742111fa94506f887169e903550bdcf9be799fa",
+    "04_wings_open_underwing.png": "15fa37dc7f9701989d5d8fc6a4daa4ee8e44e4b7065e9df4c431dc95aa71a8a8",
+    "render_contact_sheet.png": "99b2b6bf57ecc157b43a08daf06348dc1255c010de74fa49e7250867cd8b6b59"
+  },
+  "textures_used": "Embedded images only; no overrides",
+  "embedded_png_sha256": {
+    "normal": "7f38ec6622334c6039308428937146b18e76bfbeeabe427a92fc36cca4a9cc44",
+    "albedo": "44ae12c440dd3037af1d421138ab3b90c17848d4077de904c9c6eced77ca4252"
+  },
+  "normal_map_convention": "Tangent-space derivative frame for existing glTF TEXCOORD_0 (no TANGENT accessor); increasing V follows PNG rows. Synthesized raised relief uses negative dH/du and negative dH/dv."
+}

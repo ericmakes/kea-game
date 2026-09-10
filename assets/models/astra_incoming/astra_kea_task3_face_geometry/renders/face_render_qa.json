@@ -1,0 +1,39 @@
+{
+  "head_gape_qa": [
+    {
+      "file": "01_head_closeup.png",
+      "size": [
+        1600,
+        1600
+      ],
+      "red_gape_pixels": 0,
+      "threshold": "R > 1.8G; R > 1.8B; G < 80; R > 25",
+      "bbox_xyxy": null
+    },
+    {
+      "file": "05_three_quarter_front.png",
+      "size": [
+        1600,
+        1600
+      ],
+      "red_gape_pixels": 0,
+      "threshold": "R > 1.8G; R > 1.8B; G < 80; R > 25",
+      "bbox_xyxy": null
+    }
+  ],
+  "folded_wing_qa": [
+    {
+      "file": "02_full_body_side.png",
+      "roi": "Full width, y40\u2013100%, excluding face",
+      "scarlet_pixels": 0,
+      "threshold": "R > 1.3G; R > 95; G > 1.12B"
+    },
+    {
+      "file": "03_folded_wing_rear.png",
+      "roi": "Full width, y40\u2013100%, excluding face",
+      "scarlet_pixels": 0,
+      "threshold": "R > 1.3G; R > 95; G > 1.12B"
+    }
+  ],
+  "scope": "Pixel-colour QA plus manual visual review. Red-gape threshold isolates the supplied maroon mouth pigment from ochre eye/cere; zero count does not prove geometric manifoldness."
+}

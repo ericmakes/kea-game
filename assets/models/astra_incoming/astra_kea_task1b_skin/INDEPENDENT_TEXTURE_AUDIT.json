@@ -1,0 +1,84 @@
+{
+  "auditor": "Independent read-only verifier; no packer or painter code imported",
+  "status": "PASS",
+  "albedo": {
+    "size": [
+      4096,
+      4096
+    ],
+    "mode": "RGBA",
+    "colour_space": "sRGB"
+  },
+  "normal": {
+    "size": [
+      4096,
+      4096
+    ],
+    "mode": "RGB",
+    "colour_space": "linear tangent-space RGB",
+    "length_range": [
+      0.9952057003974915,
+      1.005108118057251
+    ],
+    "positive_z": true,
+    "orientation": {
+      "check": "Stored tangent-space vectors have positive Z and unit length. Body XY signs checked against final baked relief in original PNG UV frame.",
+      "body_relief_sign_results": {
+        "x": {
+          "tested_texels": 1504410,
+          "negative_gradient_sign_match_fraction": 1.0
+        },
+        "y": {
+          "tested_texels": 820550,
+          "negative_gradient_sign_match_fraction": 1.0
+        }
+      },
+      "note": "Technical sign/length validation does not substitute for rendered relief review."
+    }
+  },
+  "alpha_exact_task1_at_every_texel": true,
+  "feet_and_grey_shins": {
+    "source_anatomy_mask_independently_reconstructed": true,
+    "albedo_rgba_exact_task1": true,
+    "normal_rgb_exact_task1": true,
+    "preserved_texel_count": 584904,
+    "mask_sha256": "a55cf029d8e5db0736bc583044d4ccac7e1d96bb0cec1b87143dc6c0f411776e",
+    "albedo_masked_pixel_sha256": "d80c8b82537d4ea28373380c1e64bbde4cf92fece5def97739f43ca43b4f1629",
+    "normal_masked_pixel_sha256": "10e16ba21886be6801415e01dd828f50bfa5c3f44d1046ae7dcab9d702f9ddd5"
+  },
+  "scarlet_test": "R>110 and R>1.5G and R>1.8B; alpha>128; source UV categories",
+  "scarlet_pixels_by_uv_category": {
+    "0": 145481,
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 910382,
+    "6": 0,
+    "7": 0,
+    "8": 0,
+    "9": 0,
+    "10": 0,
+    "11": 0
+  },
+  "upperwing_contains_no_scarlet": true,
+  "body_chart_colour_statistics_excluding_feet": {
+    "before": {
+      "median_rgb": [
+        139.0,
+        147.0,
+        99.0
+      ],
+      "mean_srgb_luma": 0.5389349836138895
+    },
+    "after": {
+      "median_rgb": [
+        114.0,
+        100.0,
+        72.0
+      ],
+      "mean_srgb_luma": 0.384172001843837
+    }
+  },
+  "scope": "Pose-specific folded-red checks and artistic plate comparison are separate render validations."
+}

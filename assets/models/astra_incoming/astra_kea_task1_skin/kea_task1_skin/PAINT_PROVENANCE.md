@@ -1,0 +1,11 @@
+# Paint provenance
+
+The new feather paint was generated with the built-in imagegen tool using the supplied `kea_posture_01.jpg`, `kea_underwing_01.jpg`, and `kea_head_01.jpg` as visual references. It was then mapped by anatomical region into the existing GLB UV islands. The delivered normal map is a technical tangent-space relief bake, not a generated illustration of a normal map.
+
+## Feather source prompt
+
+Create one production texture source for a 3D kea (Nestor notabilis) skin: a perfectly flat, front-on, seamless square ALBEDO swatch of densely overlapping real kea BODY FEATHERS. The supplied real kea photos govern the feather morphology and colour; extract their feather appearance, do not depict a bird. Match the pale warm olive-green/buff breast and dark-rimmed scalloped feather outlines. Each feather has a rounded slightly irregular U-shaped tip pointing DOWN, a fine central rachis, hundreds of soft fine angled feather barbs, pale olive/buff centres and clearly defined narrow dark brown-charcoal rims. Approximately 10 feather columns across and 14 staggered overlapping rows vertically. Feathers are NOT reptile scales or flat graphic fish scales: retain photoreal fine fibrous barbs, subtle variation in length and stagger, and a delicate natural texture. Colour must photograph PALE warm olive in diffuse daylight: mid-light olive-buff centers, nuanced moss-olive greens, dark feather rims. No blue, no red, no eyes or feet. This will be deterministically baked to an existing exact UV layout later, so fill the entire image edge to edge with the consistent material, no silhouettes or cutout edges. Flat evenly illuminated diffuse material only, no directional shadows, ambient occlusion, highlights, vignette, perspective, depth of field, background, text, border, or labels. High resolution 2048x2048, square tile, seamless at opposite edges.
+
+## Output resolution
+
+The generated source material is a reusable feather swatch; it is not the final UV atlas. The final albedo and normal are each baked at 4096 × 4096 pixels onto the supplied UV layout. Regional colour, feather flow/scale and the eye-ring, cere, nostril and bill are registered to the actual UV islands. The original opacity mask is resampled from its existing 512 × 512 image, so that silhouette edge detail retains the source resolution.

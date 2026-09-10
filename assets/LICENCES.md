@@ -584,3 +584,103 @@ this session's network access back:
 
     KEAMATS='{"families":{"rock":{"asset":"rock_face","tileM":2.38}}}'
 
+
+---
+
+## THE ASTRA REVISION DROPS — `models/astra_incoming/`  (2026-09-10)
+
+**THESE ROWS EXIST BECAUSE THE BYTES LANDED, and every one of them is a source artifact rather than
+a thing the game loads.** Nothing in `astra_incoming/` is referenced by `src/`; the game keeps
+loading `models/kea_bill.glb`, and the model tier stays off by default. They are recorded here for
+the same reason `kea_astra.glb` was: a file cannot sit in `assets/` while its provenance is a to-do.
+
+**THE WHOLE DROP IS A DERIVATIVE OF THE CC-BY ROCKATOO CHAIN.** `rockatoo.glb` (Macauley.B,
+CC-BY 4.0) → `kea_base.glb` (our crest removal) → `kea_bill.glb` (our bill warp) → these. Same
+101-joint skin, same `Animation_01`, same topology and UVs. A derivative of a CC-BY work carries the
+same terms, so **all three carry CC-BY 4.0 and Macauley.B's credit**, exactly as the three files
+above them do.
+
+**AND THE PAINT AND THE VERTEX EDITS ARE AI-GENERATED, SAID PLAINLY.** The albedo and normal maps,
+and the Task 3 head vertex positions, were produced by **OpenAI GPT-6 Astra** working from
+`docs/ASTRA_BRIEF.md`, `P5E.md` and the kea plates in `gauntlet/reference/board/`, at Eric's
+direction. No human painted them and no photograph was traced into them. There is no publisher to
+re-request them from and no upstream checksum to check them against: the hashes below are of the
+bytes as they arrived on 2026-09-10 and detect any later alteration, nothing more. That is a weaker
+chain than Poly Haven's publisher-API md5 and weaker again than Sketchfab's, and it is recorded
+rather than papered over — the same weakness `kea_astra.glb`'s row already names.
+
+**WHAT WAS VERIFIED BEFORE THESE ROWS WERE WRITTEN**, by `gauntlet/verify/glbdiff.mjs` (which has
+its own selftest with controls in both directions):
+
+- their own `SHA256SUMS.txt` manifests: **72 of 72 files OK** across the three drops;
+- their declared source hash for `kea_bill.glb` — `a83f9af2c7f8…` — **matches ours exactly**;
+- Task 3's declared baseline — `a119267fab2b…` — **matches Task 1b's actual file exactly**;
+- Task 1 and Task 1b against `kea_bill.glb`: **0 of 293 accessors moved**, 5 JSON changes and all
+  five container bookkeeping (image bufferView offsets/lengths, buffer byteLength), 2 of 3 image
+  payloads replaced. Topology, UVs, skin weights, inverse bind matrices, joint names, hierarchy,
+  animation and the metallicRoughness image are provably untouched;
+- Task 3 against Task 1b: **zero JSON changes at all**, identical file size, images byte-identical,
+  and exactly two accessors moved — POSITION and NORMAL. 443 of 3,013 vertices, confined to 15% of
+  the model's x span, 7% of z and the upper 38% of y. A head, verified rather than taken on trust.
+
+### Task 1 — first skin  (`astra_incoming/astra_kea_task1_skin/`)
+
+| field | value |
+|---|---|
+| what | `kea_bill.glb` with only the two embedded image payloads replaced |
+| licence | **CC-BY 4.0, unchanged** |
+| produced by | **OpenAI GPT-6 Astra**, at Eric's direction |
+| status | **superseded** by Task 1b, kept as the first pass |
+| file | `models/astra_incoming/astra_kea_task1_skin/kea_task1_skin/kea_bill_skin.glb`, 22061472 bytes |
+| md5 | `e708f7ffe5024282984e9a379ad1a08d` |
+| sha256 | `261456d14da733109487c47540346c453aaeba2d5c6682052c9afc72c0051014` |
+| albedo | `kea_albedo_4096.png`, 4096×4096 RGBA sRGB, 14658126 bytes, md5 `0b99d2a0c77f2ed004637ba1e9737a9d` |
+| normal | `kea_normal_4096.png`, 4096×4096 RGB linear, 5193076 bytes, md5 `532d72857f3c4599358e476f14c68ecb` |
+
+<!-- ASSET file=models/astra_incoming/astra_kea_task1_skin/kea_task1_skin/kea_bill_skin.glb md5=e708f7ffe5024282984e9a379ad1a08d attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+### Task 1b — colour and detail correction  (`astra_incoming/astra_kea_task1b_skin/`)
+
+| field | value |
+|---|---|
+| what | `kea_bill.glb` with only the two embedded image payloads replaced; original BIN preserved byte-for-byte, new PNGs appended |
+| licence | **CC-BY 4.0, unchanged** |
+| produced by | **OpenAI GPT-6 Astra**, at Eric's direction |
+| status | **the baseline Task 3 was built on.** Not the approved paint — see `BIRD_STATE.md` |
+| file | `models/astra_incoming/astra_kea_task1b_skin/kea_bill_skin.glb`, 28703752 bytes |
+| md5 | `61cf9977df6bd41e1cba4be1613f5982` |
+| sha256 | `a119267fab2b64e691b0c11a3df14ad8f6767ad84cd028008da02e1a7820ecdc` |
+| albedo | `kea_albedo_4096.png`, 4096×4096 RGBA sRGB, 18613757 bytes, md5 `49663ceeadf9717b9e6c2eafe138250f` |
+| normal | `kea_normal_4096.png`, 4096×4096 RGB linear, 7879721 bytes, md5 `a04ab59d96e8bd5644ade96382824e67` |
+
+<!-- ASSET file=models/astra_incoming/astra_kea_task1b_skin/kea_bill_skin.glb md5=61cf9977df6bd41e1cba4be1613f5982 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+### Task 3 — face geometry  (`astra_incoming/astra_kea_task3_face_geometry/`)
+
+| field | value |
+|---|---|
+| what | Task 1b's GLB with **only** POSITION and NORMAL float values patched. No re-export, no re-unwrap, no scale, no origin change, no repaint |
+| licence | **CC-BY 4.0, unchanged** |
+| produced by | **OpenAI GPT-6 Astra**, at Eric's direction — these are AI-generated vertex positions |
+| geometry | unchanged counts: 101 bones, 3,013 vertices, 4,927 triangles. 443 vertices moved, head only |
+| changes | bill shorter and continuously hooked, lower mandible a shallow tucked wedge, forehead rounded, both eyes larger and further forward, gape closed |
+| textures | **Task 1b's images, byte-identical.** The eye ring, cere and bill textures were NOT repainted — they stretch with the surface, which is a known consequence recorded in `BIRD_STATE.md` |
+| file | `models/astra_incoming/astra_kea_task3_face_geometry/kea_bill_face_geometry.glb`, 28703752 bytes |
+| md5 | `142525466f5f6852034975ea2620dd9b` |
+| sha256 | `d13929736452608cea930efc678cb5f010f41d089ba2da9c9e4d99a25f728331` |
+| also ships | `head_patch/` — a guarded sparse POSITION+NORMAL patch that can be applied to a *different* GLB carrying the approved 1c images, verifying the head's original values, UVs, weights and topology before it writes |
+
+<!-- ASSET file=models/astra_incoming/astra_kea_task3_face_geometry/kea_bill_face_geometry.glb md5=142525466f5f6852034975ea2620dd9b attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+**TWO DUPLICATES WERE REMOVED RATHER THAN COMMITTED, and the second one was already in the tree.**
+
+`astra_incoming/kea_bill_face_geometry.glb` sat at the top level of the drop, byte-identical to the
+Task 3 copy (md5 `142525466f5f6852034975ea2620dd9b`). Deleting it saved 27.4 MB.
+
+And `models/kea_bill_skin.glb` — with `models/kea_bill_skin_CHANGES.md` beside it — was sitting
+LOOSE in `assets/models/` dated 2026-09-09, never committed, byte-identical to the Task 1 GLB
+(md5 `e708f7ffe5024282984e9a379ad1a08d`) with a byte-identical CHANGES.md. It was found by this
+ledger's own law rather than by looking: adding the rows above turned the battery red with
+`UNLICENSED IN TREE: kea_bill_skin.glb`, because that check reads `assets/models/` off the DISK and
+does not care what git knows. A file dropped between sessions cannot hide from it. Both copies
+removed; the licensed one lives in `astra_incoming/astra_kea_task1_skin/`.

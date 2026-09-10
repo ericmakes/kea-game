@@ -1,0 +1,86 @@
+{
+  "candidate_sha256": "d13929736452608cea930efc678cb5f010f41d089ba2da9c9e4d99a25f728331",
+  "changed_component": "Original detached lower-jaw interior UV component15",
+  "component_vertex_count": 37,
+  "component_vertex_ids": [
+    434,
+    435,
+    436,
+    437,
+    444,
+    445,
+    446,
+    452,
+    453,
+    454,
+    455,
+    456,
+    457,
+    458,
+    459,
+    460,
+    466,
+    918,
+    919,
+    920,
+    921,
+    928,
+    932,
+    933,
+    934,
+    935,
+    936,
+    937,
+    938,
+    939,
+    940,
+    1914,
+    2126,
+    2134,
+    2137,
+    2138,
+    2575
+  ],
+  "changed_position_count_from_v7": 37,
+  "all_other_positions_byte_identical_to_v7": true,
+  "all_other_normals_byte_identical_to_v7": true,
+  "minimum_component15_triangle_cross_product_area": 1.00699453469133e-05,
+  "component15_degenerate_triangle_count": 0,
+  "recess_center_source_units": [
+    -7,
+    66,
+    -24.3
+  ],
+  "recess_scale_from_positions_closed": 0.2,
+  "sampled_visual_checks": [
+    {
+      "time_seconds": null,
+      "maroon_pixels": 0,
+      "visible_lower_jaw_interior_pixels": 0,
+      "label": "Bind pose"
+    },
+    {
+      "time_seconds": 3.5,
+      "maroon_pixels": 0,
+      "visible_lower_jaw_interior_pixels": 0,
+      "label": "Animation_01 \u00b7 3.500 s"
+    },
+    {
+      "time_seconds": 11.916667,
+      "maroon_pixels": 0,
+      "visible_lower_jaw_interior_pixels": 0,
+      "label": "Animation_01 \u00b7 11.917 s"
+    },
+    {
+      "time_seconds": 18.375,
+      "maroon_pixels": 0,
+      "visible_lower_jaw_interior_pixels": 0,
+      "label": "Animation_01 \u00b7 18.375 s"
+    }
+  ],
+  "scope": "Actual GLB 600x600 head-aligned review at bind pose and three unchanged Animation_01 poses. Checks the known protrusion; not exhaustive animation certification.",
+  "source_glb": "kea_bill_face_geometry.glb",
+  "visual_summary": "The detached lower-jaw interior remains hidden in the four inspected poses; the previously exposed strips are resolved.",
+  "visual_limitation": "The lower wedge has an angular silhouette at the wide-open jaw rotations in the unchanged original animation.",
+  "contact_sheet": "mouth_animation_check.png"
+}

@@ -1,0 +1,12 @@
+{
+  "source_sha256": "a119267fab2b64e691b0c11a3df14ad8f6767ad84cd028008da02e1a7820ecdc",
+  "review_glb_sha256": "d13929736452608cea930efc678cb5f010f41d089ba2da9c9e4d99a25f728331",
+  "changed_vertices": {
+    "POSITION": 443,
+    "NORMAL": 443
+  },
+  "scope": "Sparse POSITION/NORMAL rows only; immutable topology/UV/weight and affected-head-value guards.",
+  "requires": "Python 3 with numpy",
+  "command": "python apply_head_patch.py INPUT.glb head_patch.npz OUTPUT.glb",
+  "note": "Input may contain different embedded images or untouched body geometry. The script stops if the affected head values, UVs, indices or skin weights differ. It preserves every other input byte."
+}

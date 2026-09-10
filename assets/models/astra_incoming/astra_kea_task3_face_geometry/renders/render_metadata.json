@@ -1,0 +1,87 @@
+{
+  "source_glb": "kea_bill_face_geometry.glb",
+  "source_glb_sha256": "d13929736452608cea930efc678cb5f010f41d089ba2da9c9e4d99a25f728331",
+  "joints": 101,
+  "triangles": 4927,
+  "animation": "Animation_01",
+  "output_size": [
+    1600,
+    1600
+  ],
+  "supersample": 2,
+  "camera_type": "orthographic",
+  "lighting": "Neutral daylight studio, linear-light shading and embedded glTF tangent-space normal map. Identical to Task 1b review lighting.",
+  "texture_note": "Task 1b embedded images unchanged; geometry-only review.",
+  "scene_note": "Actual GLB POSITION, NORMAL, UV, indices, embedded maps, inverse-bind skinning and original animation poses. Review renders reproduce the requested view types; gameplay environment and procedural animation were not supplied. Render-only pose and heading are never written to the GLB.",
+  "views": [
+    {
+      "file": "01_head_closeup.png",
+      "png_sha256": "ddf0df43da32b0aedc8147112b2acaa7d9a1679245c7996012a38e8999fca1c9",
+      "camera": [
+        1,
+        0.04,
+        0.28
+      ],
+      "target": [
+        -1,
+        51,
+        7
+      ],
+      "span": 34,
+      "time": 3.5,
+      "yaw": -0.505827
+    },
+    {
+      "file": "02_full_body_side.png",
+      "png_sha256": "bbd9877b93fb6f6c969e21139ceea0e6cd53cb5fd208ad58550cc65b8a03c88c",
+      "camera": [
+        1,
+        0.17,
+        0.32
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "03_folded_wing_rear.png",
+      "png_sha256": "2febdaf8bdd8a0b455fc0fe6f88ab8e853a32abbaf69518c7653960db6bd2f0f",
+      "camera": [
+        0.6,
+        0.34,
+        -1
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "04_wings_open_underwing.png",
+      "png_sha256": "2e2163fb44c2ae92d41a4b3baab1da23e8ae9032fbf82181bc14da02fa8705c8",
+      "camera": [
+        0,
+        -0.55,
+        1
+      ],
+      "time": 0.2,
+      "yaw": 94.33494
+    },
+    {
+      "file": "05_three_quarter_front.png",
+      "png_sha256": "7235700a22adb546ce3b37d291a186792e745f1b3e2e33e080c2281a95159572",
+      "camera": [
+        0.72,
+        0.14,
+        0.7
+      ],
+      "target": [
+        -1,
+        51,
+        7
+      ],
+      "span": 34,
+      "time": 3.5,
+      "yaw": -0.505827
+    }
+  ]
+}

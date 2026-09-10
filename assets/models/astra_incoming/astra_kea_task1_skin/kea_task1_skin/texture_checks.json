@@ -1,0 +1,78 @@
+{
+  "albedo": {
+    "size": [
+      4096,
+      4096
+    ],
+    "mode": "RGBA"
+  },
+  "normal": {
+    "size": [
+      4096,
+      4096
+    ],
+    "mode": "RGB",
+    "derivative_sign": "nx=-2*dH/dPNGx; ny=-2*dH/dPNGy; nz=1; normalize, matching glTF UV tangent derivative frame",
+    "height_source": "independent generated-feather relief before regional colour, with subtle inherited flight shafts/foot scales",
+    "encoded_length_error_p99": 0.0028409957885742188
+  },
+  "alpha": {
+    "source_resolution": [
+      512,
+      512
+    ],
+    "filter": "Pillow Lanczos 8x resampling",
+    "exact_resampling_match": true,
+    "zero_fraction": 0.09305256605148315,
+    "partial_fraction": 0.04701244831085205
+  },
+  "eye": {
+    "uv_center": [
+      0.2073,
+      0.873
+    ],
+    "outer_uv_radii": [
+      0.0053,
+      0.0058
+    ],
+    "inner_radius_factor": 0.65
+  },
+  "nostril_uv": [
+    0.246,
+    0.889
+  ],
+  "red_pixels_by_category": {
+    "0": 0,
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 493888,
+    "6": 0,
+    "7": 0,
+    "8": 0,
+    "9": 0,
+    "10": 0,
+    "11": 0
+  },
+  "coverage_pixels_by_category": {
+    "0": 4860947,
+    "1": 2987696,
+    "2": 337696,
+    "3": 147912,
+    "4": 3012621,
+    "5": 2267833,
+    "6": 395786,
+    "7": 418140,
+    "8": 93472,
+    "9": 133699,
+    "10": 133092,
+    "11": 9360
+  },
+  "folded_red_guard": {
+    "method": "UV visibility union from exact unchanged folded animation at3.5s, side/rear/opposite side/opposite rear; alpha>=0.995 occlusion;7px dilation at2048; only exposed underside covert colours changed",
+    "scarlet_pixels_in_folded_visibility_mask": 0,
+    "alpha_edited_for_guard": false
+  },
+  "regional_notes": "Head feathers made ~2\u20132.5x narrower/denser than initial; grey-olive crown/cheek, grey lower shins; upper covert green shifted slightly olive; underwing scarlet tapered toward tips. All UVs unchanged."
+}

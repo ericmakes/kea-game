@@ -1,0 +1,17 @@
+[
+  {
+    "file": "02_full_body_side.png",
+    "roi": "entire width; y40\u2013100% (wing/body/tail)",
+    "scarlet_pixel_count": 0,
+    "threshold": "R>1.3G, R>95, G>1.12B"
+  },
+  {
+    "file": "03_folded_wing_rear.png",
+    "roi": "entire width; y40\u2013100% (wing/body/tail)",
+    "scarlet_pixel_count": 0,
+    "threshold": "R>1.3G, R>95, G>1.12B"
+  },
+  {
+    "folded_visible_underwing_texture_scarlet_texel_count": 0
+  }
+]

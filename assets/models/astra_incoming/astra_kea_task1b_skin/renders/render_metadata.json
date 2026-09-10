@@ -1,0 +1,66 @@
+{
+  "source_glb": "kea_bill_skin.glb",
+  "source_glb_sha256": "a119267fab2b64e691b0c11a3df14ad8f6767ad84cd028008da02e1a7820ecdc",
+  "joints": 101,
+  "triangles": 4927,
+  "animation": "Animation_01",
+  "animation_duration_seconds": 22.45833396911621,
+  "output_size": [
+    1600,
+    1600
+  ],
+  "supersample": 2,
+  "camera_type": "orthographic",
+  "lighting": "neutral daylight studio, linear-light shading and original glTF tangent-space normal map",
+  "scene_note": "Actual GLB mesh, UVs, embedded maps, inverse-bind skinning, and original animation poses. These are model review renders; the provided in-game environment and procedural animation were not available in this handoff. Render-only heading adjustments do not affect GLB.",
+  "views": [
+    {
+      "file": "01_head_closeup.png",
+      "camera": [
+        1,
+        0.04,
+        0.28
+      ],
+      "target": [
+        -1,
+        51,
+        7
+      ],
+      "span": 34,
+      "time": 3.5,
+      "yaw": -0.505827
+    },
+    {
+      "file": "02_full_body_side.png",
+      "camera": [
+        1,
+        0.17,
+        0.32
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "03_folded_wing_rear.png",
+      "camera": [
+        0.6,
+        0.34,
+        -1
+      ],
+      "time": 3.5,
+      "yaw": -0.505827,
+      "shadow": true
+    },
+    {
+      "file": "04_wings_open_underwing.png",
+      "camera": [
+        0,
+        -0.55,
+        1
+      ],
+      "time": 0.2,
+      "yaw": 94.33494
+    }
+  ]
+}

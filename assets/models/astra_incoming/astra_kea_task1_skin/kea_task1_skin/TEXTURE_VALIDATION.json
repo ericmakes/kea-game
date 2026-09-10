@@ -1,0 +1,41 @@
+{
+  "albedo": {
+    "size": [
+      4096,
+      4096
+    ],
+    "mode": "RGBA",
+    "interpretation": "sRGB base colour; alpha is original opacity Lanczos-resampled 8x"
+  },
+  "normal": {
+    "size": [
+      4096,
+      4096
+    ],
+    "mode": "RGB",
+    "interpretation": "linear tangent-space XYZ for the original glTF UV derivative frame",
+    "unit_vector_length_range": [
+      0.9950202703475952,
+      1.005108118057251
+    ],
+    "median_z": 1.0
+  },
+  "alpha_exactly_matches_original_Lanczos_8x": true,
+  "scarlet_pixel_test": "R>110 and R>1.5G and R>1.8B; opacity>128; categories from source UV map",
+  "scarlet_pixels_by_uv_category": {
+    "0": 145766,
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 474024,
+    "6": 0,
+    "7": 0,
+    "8": 0,
+    "9": 0,
+    "10": 0,
+    "11": 0
+  },
+  "upperwing_contains_no_scarlet": true,
+  "note": "UV-region checks do not prove pose occlusion. Folded render checks are recorded separately."
+}

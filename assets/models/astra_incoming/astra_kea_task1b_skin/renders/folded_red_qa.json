@@ -1,0 +1,56 @@
+{
+  "legacy_rgb_threshold": "R>1.3G, R>95, G>1.12B",
+  "render_checks": [
+    {
+      "file": "02_full_body_side.png",
+      "sha256": "4545953530c3c817290e065c51e6f6dd75e476629c6350f95501f0c5b92d8d9b",
+      "roi": "entire width, y40\u2013100%; excludes head eye ring/cere",
+      "scarlet_pixel_count": 0
+    },
+    {
+      "file": "03_folded_wing_rear.png",
+      "sha256": "fbcc15e2107ee1696c441230aad49ac1606d28d2530be599bde264c7081c6bf0",
+      "roi": "entire width, y40\u2013100%; excludes head eye ring/cere",
+      "scarlet_pixel_count": 0
+    }
+  ],
+  "atlas_checks": [
+    {
+      "view": "side",
+      "visibility_mask_sha256": "1e9be014ffe7c031dd369f596d887582123c55f9eb378ad768fc64532598642a",
+      "visible_underwing_texels": 140627,
+      "scarlet_texel_count": 0
+    },
+    {
+      "view": "rear",
+      "visibility_mask_sha256": "9ecd6c8559e1e0adca9c84597580f4701db6c6403923b0bd66143f9b02260281",
+      "visible_underwing_texels": 166672,
+      "scarlet_texel_count": 0
+    },
+    {
+      "view": "opposite_side",
+      "visibility_mask_sha256": "d4ad5852bb81ed622b943a155e59d421c5332da1089d9ab96a00dd2b5969e77d",
+      "visible_underwing_texels": 142795,
+      "scarlet_texel_count": 0
+    },
+    {
+      "view": "opposite_rear",
+      "visibility_mask_sha256": "9ef261498860793a88c261f4097ca8fb8078578dc200785f5ee8da25d9c18855",
+      "visible_underwing_texels": 170216,
+      "scarlet_texel_count": 0
+    }
+  ],
+  "visibility_basis": {
+    "animation": "Animation_01",
+    "seconds": 3.5,
+    "yaw_degrees": -0.505827,
+    "note": "Task1 masks reused on byte-identical geometry, UVs, skin and animations; four supplied validation viewpoints."
+  },
+  "underwing_scarlet_coverage": {
+    "geometry_chart_texels": 677395,
+    "task1_scarlet_texels": 133655,
+    "task1b_scarlet_texels": 240687,
+    "note": "Counts from a fixed 2048 atlas audit; folded protection and shared UV topology constrain continuous red coverage."
+  },
+  "passed": true
+}

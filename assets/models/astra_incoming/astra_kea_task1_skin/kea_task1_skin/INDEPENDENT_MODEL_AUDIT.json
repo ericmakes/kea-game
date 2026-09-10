@@ -1,0 +1,73 @@
+{
+  "status": "PASS",
+  "auditor": "Independent read-only model comparison; audit JSON is sole write",
+  "source": "/workspace/scratch/a5bdfdc49c8a/bird_task1/input/kea_astra_handoff/kea_bill.glb",
+  "final": "/workspace/scratch/a5bdfdc49c8a/bird_task1/output/kea_bill_skin.glb",
+  "source_sha256": "a83f9af2c7f853f1212dadc2263faa452750da5fa48c9d4dfc711448b169c32b",
+  "final_sha256": "261456d14da733109487c47540346c453aaeba2d5c6682052c9afc72c0051014",
+  "source_bytes": 2210260,
+  "final_bytes": 22061472,
+  "joints": 101,
+  "triangles": 4927,
+  "json_changes": [
+    {
+      "path": "/bufferViews/6/byteLength",
+      "before": 304562,
+      "after": 5193076
+    },
+    {
+      "path": "/bufferViews/6/byteOffset",
+      "before": 186240,
+      "after": 16775328
+    },
+    {
+      "path": "/bufferViews/7/byteLength",
+      "before": 333939,
+      "after": 14658126
+    },
+    {
+      "path": "/bufferViews/7/byteOffset",
+      "before": 490804,
+      "after": 2117200
+    },
+    {
+      "path": "/buffers/0/byteLength",
+      "before": 2117200,
+      "after": 21968404
+    }
+  ],
+  "all_other_json_tokens_and_internal_whitespace_exact": true,
+  "complete_original_bin_is_exact_prefix": true,
+  "appended_bin_contains_only_two_png_payloads_and_alignment_padding": true,
+  "rig_mesh_uv_weights_ibms_animation_materials_and_image_metadata_unchanged": true,
+  "metallic_roughness_payload_unchanged": true,
+  "images": [
+    {
+      "role": "albedo",
+      "file": "kea_albedo_4096.png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "mode": "RGBA",
+      "sha256": "44ae12c440dd3037af1d421138ab3b90c17848d4077de904c9c6eced77ca4252",
+      "embedded_matches_standalone": true
+    },
+    {
+      "role": "normal",
+      "file": "kea_normal_4096.png",
+      "dimensions": [
+        4096,
+        4096
+      ],
+      "mode": "RGB",
+      "sha256": "7f38ec6622334c6039308428937146b18e76bfbeeabe427a92fc36cca4a9cc44",
+      "embedded_matches_standalone": true
+    }
+  ],
+  "extensions_used": [],
+  "extensions_required": [],
+  "plain_glb_embedded_png_no_compression": true,
+  "unchanged_buffer_views_verified": 294,
+  "nonimage_buffer_views_verified": 293
+}

@@ -1,0 +1,16 @@
+{
+  "head_gape_qa": [
+    {
+      "file": "06_rest_head.png",
+      "size": [
+        1600,
+        1600
+      ],
+      "red_gape_pixels": 0,
+      "threshold": "R > 1.8G; R > 1.8B; G < 80; R > 25",
+      "bbox_xyxy": null
+    }
+  ],
+  "folded_wing_qa": [],
+  "scope": "Pixel-colour QA plus manual visual review. Red-gape threshold isolates the supplied maroon mouth pigment from ochre eye/cere; zero count does not prove geometric manifoldness."
+}

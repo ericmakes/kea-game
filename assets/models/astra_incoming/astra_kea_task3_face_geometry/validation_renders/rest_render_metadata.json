@@ -1,0 +1,25 @@
+{
+  "source_glb": "kea_bill_face_geometry.glb",
+  "source_glb_sha256": "d13929736452608cea930efc678cb5f010f41d089ba2da9c9e4d99a25f728331",
+  "file": "06_rest_head.png",
+  "png_sha256": "2b06b62ea6001d379bd8e1ee5b773b7ea6957dfecd7196da049f68c83ecbd2ee",
+  "output_size": [
+    1600,
+    1600
+  ],
+  "supersample": 2,
+  "purpose": "Additional validation image of initial frame of original Animation_01; inspect closed gape without changing any animation data.",
+  "camera": [
+    1,
+    0.04,
+    0.28
+  ],
+  "target": [
+    -1,
+    51,
+    7
+  ],
+  "span": 34,
+  "time": 0,
+  "yaw": -0.505827
+}
