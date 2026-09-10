@@ -114,10 +114,11 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
      stale frame compared as though they were four variants. harness-everything now asserts that
      every key of SKY appears in this array, so the third drift is a red battery rather than a
      wasted strip. */
-  'cloudRMul','cloudBase','cloudTop','cloudPuffs','cloudRise','cloudFringe','cloudFringeR',
+  'cloudRMul','cloudBase','cloudTop','cloudPuffs','cloudRise','cloudSpread','cloudFringe','cloudFringeR',
   'cloudFringeAt','cloudLit','cloudEmissive','cloudNorm','cloudHaze','cloudHazeD',
   'cloudElev','cloudElevVary',
-  'skySatMul','skyHueRot','hazeColor'];
+  'skySatMul','skyHueRot','hazeColor',
+  'cloudWisp','cloudWispR','cloudWispAt','cloudWispEmis','cloudWispAlpha'];
 
 /* REPLAT P3b added `breakup` and leaving it out of this list cost a whole variant strip: every
    KEAMATS in it was REFUSED, the four shots died, and four copies of one stale frame got compared

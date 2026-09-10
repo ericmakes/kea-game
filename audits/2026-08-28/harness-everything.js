@@ -4193,10 +4193,81 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
   const cl=G.clouds||[];
   ok(cl.length===8,'eight cloud groups, still ('+cl.length+')');
   const meshes=[]; for(const c of cl) c.traverse(o=>{ if(o.isMesh)meshes.push(o); });
-  /* ONE MERGED MESH PER CLOUD. It was 62 — a Mesh per sphere, two spheres per lobe — and a fringe
-     of 26 bumps per lobe would have made that 341 draw calls for the sky alone. */
-  ok(meshes.length===cl.length,'one merged mesh per cloud, not one per sphere ('+meshes.length+
-     ' meshes for '+cl.length+' clouds; it was 62)');
+  /* TWO MERGED MESHES PER CLOUD — the opaque body and TODO 118's wisp margin. It was 62: a Mesh
+     per sphere, two spheres per lobe. A fringe of 26 bumps per lobe plus a wisp per rim would have
+     made that well over 400 draw calls for the sky alone. */
+  const wisps=G.cloudWisps||[];
+  ok(meshes.length===cl.length*2,'two merged meshes per cloud — an opaque body and an alpha '+
+     'margin ('+meshes.length+' meshes for '+cl.length+' clouds; it was 62)');
+  ok(wisps.length===cl.length,'and every cloud has a wisp mesh on G.cloudWisps ('+wisps.length+')');
+  /* HIDDEN UNTIL TEXTURED, exactly like the grass card tier. An alpha-mapped quad with no alpha
+     map is an opaque white rectangle stuck to the side of a cloud, and the atlas is an asset
+     fetched at runtime — so headless, and on any failed fetch, this tier is simply off and the sky
+     is the one SKY.md step 2 shipped. */
+  ok(wisps.every(w=>w.visible===false),
+     'the wisps ship hidden — src/materials.mjs turns them on when the atlas arrives, and an '+
+     'untextured alpha quad is an opaque white rectangle');
+  ok(wisps.every(w=>w.material.transparent&&w.material.depthWrite===false&&
+                    w.material.fog===false&&w.material.side===THREE.DoubleSide),
+     'and they blend without writing depth, double-sided, unfogged — a margin tier that wrote '+
+     'depth would sort against the body it sits on');
+  /* THE MARGIN INHERITS THE BODY'S COLOUR, so a wisp can never be a different distance from the
+     sky than the cloud it is attached to. Checked per cloud, not in aggregate. */
+  ok(cl.every(c=>{ let body=null,wisp=null;
+      c.traverse(o=>{ if(!o.isMesh)return; if(o.name==='cloudwisp')wisp=o; else body=o; });
+      return body&&wisp&&body.material.color.getHex()===wisp.material.color.getHex(); }),
+     'each wisp mesh carries its own body\'s haze-tinted colour, not a recomputed one');
+  /* AND ITS NORMALS COME FROM THE BODY, NOT FROM THE QUAD. A billboard normal points at the
+     viewer, so lighting it that way makes every wisp equally bright and the seam between wisp and
+     body a visible line. The check is that the normals are NOT all equal to the view direction:
+     a spread of directions is the signature of the body-normal formula. */
+  { const w=wisps[0], nr=w&&w.geometry.attributes.normal;
+    let spread=0;
+    if(nr){ let mnx=9,mxx=-9,mny=9,mxy=-9;
+      for(let i=0;i<nr.count;i++){ const x=nr.getX(i), y=nr.getY(i);
+        if(x<mnx)mnx=x; if(x>mxx)mxx=x; if(y<mny)mny=y; if(y>mxy)mxy=y; }
+      spread=Math.max(mxx-mnx,mxy-mny); }
+    ok(spread>0.5,'and their normals come from the BODY rather than from the quad — the first '+
+       'cloud\'s wisp normals span '+spread.toFixed(2)+' across the mass, where a billboard '+
+       'normal would give every one of them the same direction'); }
+  /* AND THEY ARE HIDDEN FROM THE DEPTH-BASED POST PASSES. GTAOPass and BokehPass each render their
+     own depth and normal prepass with an OVERRIDE material, and an override material does not care
+     that a material is transparent or has depthWrite off — so a blended quad occludes as though it
+     were a solid plate and the ambient occlusion comes back in the shape of the QUAD. Measured as
+     faint dark rectangles over the sky beside every cloud, and established by elimination after
+     three wrong guesses: the atlas's cell borders were made provably zero and they stayed, mipmaps
+     were turned off and they stayed, an alphaTest was added and they stayed, and then the wisp
+     emissive was raised to 3.0 and the wisps lit up like magnesium while the rectangles did not
+     move at all. That rules out the material and leaves the passes. */
+  ok((G.postExclude||[]).length===wisps.length&&
+     wisps.every(w=>(G.postExclude||[]).includes(w)),
+     'every wisp mesh is on G.postExclude, which src/post.mjs hides for the AO and depth-of-field '+
+     'passes — a transparent quad in a depth prepass occludes like a solid plate');
+  /* AND THE LIST DOES NOT LEAK ACROSS TRAVELS. boot() replaces the scene, so buildSky runs again
+     and a list that is only appended to accumulates every thrown-away sky. The first version used
+     `|| []` and this check found it: G.cloudWisps stayed 8 while G.postExclude went 8, 16, 24. */
+  { X.boot({biome:'skifield'}); X.boot({biome:'carpark'}); X.boot({biome:'skifield'});
+    ok((G.postExclude||[]).length===(G.cloudWisps||[]).length,
+       'and after three more boots it is still '+(G.postExclude||[]).length+' entries for '+
+       (G.cloudWisps||[]).length+' wisps — post.mjs iterates it every frame, so a leak here is a '+
+       'growing walk over detached objects');
+    X.boot({biome:'carpark'}); }
+  { const src=require('fs').readFileSync(
+      require('path').join(__dirname,'../../src/post.mjs'),'utf8');
+    ok(/noDepth\(ao\)/.test(src)&&/noDepth\(bokeh\)/.test(src)&&/postExclude/.test(src),
+       'and post.mjs really wraps BOTH of them — the AO pass and the depth-of-field pass each '+
+       'render their own prepass, so excluding one and not the other would leave half the fault'); }
+  /* THE ATLAS IS A FIRST-PARTY ASSET WITH A LEDGER ROW, checked the way every other asset is: no
+     asset lands without its licence line. */
+  { const led=require('fs').readFileSync(
+      require('path').join(__dirname,'../../assets/LICENCES.md'),'utf8');
+    const png=require('path').join(__dirname,'../../assets/tex/cloud_wisps.png');
+    ok(require('fs').existsSync(png),'the cloud wisp atlas is on disk');
+    const md5=require('crypto').createHash('md5')
+      .update(require('fs').readFileSync(png)).digest('hex');
+    ok(led.includes('cloud_wisps.png')&&led.includes(md5),
+       'and assets/LICENCES.md carries its row and its md5 ('+md5.slice(0,12)+
+       '...) — the ledger and the file agree'); }
   /* LIT, WHICH IS TODO 76's COMPLAINT IN MINIATURE. The clouds were MeshBasicMaterial with a
      hand-painted grey belly sphere at opacity 0.5 — a painting of underside shading, which
      measured 0.008 against the plate's 0.116 and could not respond to the sun moving at all. */
@@ -7772,12 +7843,21 @@ C.section('REPLAT P6A: the model-swap seam');
      spread. Draw calls for the whole sky went from 62 to 8.
      Old pins, kept so the next re-pin can see what moved:
        carpark  mesh 724e8f08b198323e, meshes 989, tris 278404
-       skifield mesh 376da6539031a7a4, meshes 374, tris 108770 */
+       skifield mesh 376da6539031a7a4, meshes 374, tris 108770
+
+     RE-PINNED AGAIN FOR TODO 118, 2026-09-10 — the cloud wisp tier. One alpha-mapped merged mesh
+     per cloud on top of the body, so both worlds gained 8 meshes and 744 triangles, identically
+     again. Collider digests and all fourteen counts unchanged, so buildSky still makes its eight
+     rnd() draws and the wisps are hash-driven. The wisps ship visible:false — src/materials.mjs
+     turns them on when the atlas arrives — and the digest records visibility, which is why it
+     moved for them as well as for the new geometry.
+       carpark  mesh 2aaf24df957a1ecd, meshes 935, tris 314012
+       skifield mesh 4f9ef26614da871e, meshes 320, tris 144378 */
   const PRESEAM={
-    carpark :{mesh:'2aaf24df957a1ecd', col:'1b025c57715cb017', meshes:935, tris:314012,
+    carpark :{mesh:'60f4198fd9a59be2', col:'1b025c57715cb017', meshes:943, tris:314756,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'4f9ef26614da871e', col:'fc06ef03250ea1ed', meshes:320, tris:144378,
+    skifield:{mesh:'3b312a09c0889a9d', col:'fc06ef03250ea1ed', meshes:328, tris:145122,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

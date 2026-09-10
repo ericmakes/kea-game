@@ -260,6 +260,43 @@ export async function installMaterials(KEAGAME) {
     console.error('materials: the grass card tier stays off —', e);
   }
 
+  /* TODO 118 — THE CLOUD WISP ATLAS, on the same seam as the grass cards and for the same reason:
+     game.mjs builds the geometry and keeps its single import, and an asset that has to be fetched
+     cannot be fetched from there. The wisps ship visible:false, so a failed fetch leaves the sky
+     exactly as SKY.md step 2 shipped it and says so in G.cloudWispTex.
+     alphaMap AND NOT map. The atlas is pure alpha — the body material does all the colour and all
+     the shading — and three samples alphaMap's GREEN channel, not its alpha channel, which is why
+     the baker writes the value into both. THE COLOUR SPACE IS LINEAR, deliberately, and it is the
+     opposite of the grass atlas's SRGBColorSpace: this texture is a MASK, not a colour, so an sRGB
+     decode would bend its gradient and thin the very margin the tier exists to add. */
+  try {
+    const wisps = G.cloudWisps || [];
+    if (wisps.length) {
+      const tex = await loadTex(loader,
+        new URL(KEAGAME.MATS.dir + 'cloud_wisps.png', document.baseURI).href);
+      tex.colorSpace = THREE.NoColorSpace;      // a mask, not a colour
+      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;   // an atlas must never wrap between cells
+      tex.generateMipmaps = true;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.anisotropy = 8;
+      tex.needsUpdate = true;
+      for (const w of wisps) {
+        w.material.alphaMap = tex;
+        w.material.needsUpdate = true;
+        w.visible = true;
+      }
+      G.cloudWispTex = { mode: 'atlas', asset: 'cloud_wisps', meshes: wisps.length,
+                         tris: wisps.reduce((a, w) =>
+                           a + w.geometry.attributes.position.count / 3, 0) };
+    } else {
+      G.cloudWispTex = { mode: 'none', why: 'no wisp meshes on G — SKY.cloudWisp is 0' };
+    }
+  } catch (e) {
+    G.cloudWispTex = { mode: 'none', why: String(e && e.message || e) };
+    console.error('materials: the cloud wisp tier stays off —', e);
+  }
+
   G.mats = KEAGAME.matState();
   G.mats.report = report;
   return G.mats;

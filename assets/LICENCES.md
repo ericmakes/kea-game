@@ -725,3 +725,52 @@ either shimmer at the threshold or need blending and the sorting that implies �
 as one of the reasons the tier is a piece and not a tuning. Every texel is opaque or absent. The
 mips are generated at load (`LinearMipmapLinearFilter`) with a low test of 0.42, so a mip-softened
 blade at 100 m dissolves gently instead of popping.
+
+---
+
+### cloud wisps — `tex/cloud_wisps.png`  (TODO 118, 2026-09-10)
+
+**OURS TOO, and for a sharper reason than the grass cards.** That atlas was baked from the game's own
+blade recipe so the two grass tiers would match by construction. This one is baked because **a
+third-party cloud alpha carries its own lighting baked into its greys**, and lighting is the one
+thing that cannot be re-lit. The shipped cloud is a white cumulus mass lit by the scene's own
+directional sun with a neutral emissive floor, and its wisps have to hand over to that body
+invisibly at the seam — a downloaded cloud sprite would either read as a sticker on the side of our
+cloud or force the body to match IT. Baked here, the atlas is **pure alpha**: the body's material
+does every bit of the colour and every bit of the shading, and the wisps inherit both.
+
+| field | value |
+|---|---|
+| what | 1024x1024 RGBA, a 4x4 grid of 256 px wisps, soft graded alpha for a blended margin |
+| coverage | 20.7% non-zero, 11.7% of the sheet GRADED (neither clear nor solid), and 9.9% above the a=0.57 contour that platescore's neutrality mask can actually see |
+| produced by | `tools/bake_cloud_wisps.mjs`, in this repo, from hashed value noise with its own seeded generator |
+| licence | **none needed — first-party.** Same terms as the rest of the source |
+| file | `tex/cloud_wisps.png`, 173496 bytes |
+| md5 | `741924010eb21e81468626980560d7f0` |
+
+**SOFT ALPHA, WHICH IS THE OPPOSITE OF THE GRASS ATLAS.** Those cards are a hard `alphaTest` cutout —
+every texel opaque or absent, because a soft edge at a test threshold shimmers. Here the graded edge
+IS the deliverable: a torn, feathered margin is what `nz_carpark_01` has and what
+perimeter-over-root-area measures. So this atlas blends, and the tier pays for that with
+`depthWrite:false` and a margin-only placement. The sky pass's first cloud iteration rendered every
+sphere transparent and came back reading as a bunch of grapes, because every see-through overlap drew
+its own outline inside the mass; alpha goes on the silhouette, over an opaque body, and nowhere else.
+
+**THE VALUE IS WRITTEN INTO RGB AS WELL AS A,** because three samples `alphaMap`'s GREEN channel and
+not its alpha channel. A texture that looks right in a viewer while reading zero in the shader is a
+long afternoon, so both are written and it cannot matter which is sampled. It is loaded with
+`NoColorSpace` — the opposite of the grass atlas's `SRGBColorSpace` — because a mask is not a colour
+and an sRGB decode would bend its gradient and thin the margin the tier exists to add.
+
+**AND ITS GAIN IS CALIBRATED AGAINST THE SCORER, not chosen by eye.** platescore's cloud mask is a
+neutrality test — a pixel counts as cloud when its saturation falls below 0.20 — and a white wisp at
+alpha *a* over the game's sky (RGB about 0.32/0.48/0.68, saturation 0.53) blends to saturation 0.228
+at *a* = 0.5 and 0.177 at *a* = 0.6. So the boundary the metric sees is this atlas's **a = 0.57
+iso-contour**, and everything fainter is feathering the eye can see and the number cannot. Ungained,
+6-8% of a cell cleared that contour, in a small round patch near the core; the gain lifts the field
+so the contour sits out in the nibbled zone where it is ragged.
+
+**NO NETWORK SEARCH IS RECORDED FOR THIS ONE, and that is deliberate rather than lazy.** The grass
+row records a search because a CC0 grass atlas would have been usable if one had existed. Here the
+requirement rules out the whole category before any publisher is consulted: a usable cloud alpha
+would have to be unlit, and cloud photography is lit by definition.

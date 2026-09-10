@@ -78,6 +78,32 @@ function build(renderer, scene, camera, w, h) {
   c.setSize(w, h);
   c.addPass(new RenderPass(scene, camera));
 
+  /* HIDE G.postExclude FOR THE DEPTH-BASED PASSES, AND ONLY FOR THEM.
+     GTAOPass and BokehPass each render their own depth and normal prepass of the whole scene with
+     an OVERRIDE material, and an override material does not care that a material is transparent or
+     that it has depthWrite off. So a blended quad occludes as though it were a solid plate, and the
+     occlusion comes back in the shape of the quad — measured on the cloud wisp tier as faint dark
+     rectangles over the sky beside every cloud, which survived making the atlas's borders zero,
+     turning mipmaps off and adding an alphaTest, and did not budge when the wisp material was made
+     to glow. It is the passes, not the material.
+     WRAPPED RATHER THAN PATCHED. Neither pass offers an exclusion list and both are library code,
+     so their render is wrapped: hide, delegate, restore in a finally. The RenderPass has already
+     drawn the real frame by the time these run, so the wisps are in the picture and merely absent
+     from the occlusion estimate — which is what a semi-transparent margin should contribute to it.
+     THE LIST IS READ FRESH EVERY FRAME, not captured: buildSky runs once but a future tier might
+     add to it on a world build, and a stale array would silently stop excluding. */
+  const noDepth = (pass) => {
+    const inner = pass.render.bind(pass);
+    pass.render = (renderer, writeBuffer, readBuffer, deltaTime, maskActive) => {
+      const ex = (KEAGAME.G && KEAGAME.G.postExclude) || [];
+      const was = [];
+      for (let i = 0; i < ex.length; i++) { was.push(ex[i].visible); ex[i].visible = false; }
+      try { return inner(renderer, writeBuffer, readBuffer, deltaTime, maskActive); }
+      finally { for (let i = 0; i < ex.length; i++) ex[i].visible = was[i]; }
+    };
+    return pass;
+  };
+
   const ao = new GTAOPass(scene, camera, w, h);
   ao.output = GTAOPass.OUTPUT.Default;
   if (ao.updateGtaoMaterial) {
@@ -85,7 +111,7 @@ function build(renderer, scene, camera, w, h) {
       thickness: FILM.ao.thickness, scale: FILM.ao.scale });
   }
   ao.blendIntensity = FILM.ao.blend;
-  c.addPass(ao);
+  c.addPass(noDepth(ao));
 
   c.addPass(new UnrealBloomPass(new THREE.Vector2(w, h),
     FILM.bloom.strength, FILM.bloom.radius, FILM.bloom.threshold));
@@ -97,7 +123,7 @@ function build(renderer, scene, camera, w, h) {
   if (FILM.bokeh.maxblur > 0 && FILM.bokeh.aperture > 0) {
     bokeh = new BokehPass(scene, camera, {
       focus: FILM.bokeh.focus, aperture: FILM.bokeh.aperture, maxblur: FILM.bokeh.maxblur });
-    c.addPass(bokeh);
+    c.addPass(noDepth(bokeh));
   }
 
   // OutputPass owns tone mapping and the sRGB encode once the chain is composited, so the

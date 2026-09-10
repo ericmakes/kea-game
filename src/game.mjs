@@ -209,6 +209,14 @@ const SKY={
   cloudRMul:0.90,        // lobe radius multiplier: the old radii subtend about 2 degrees
   cloudBase:0.60,        // vertical squash of the base lobe (was 0.32, which is a plate)
   cloudTop:0.85,         // vertical squash of the puffs stacked on it — nearly round
+  /* SPREAD IS WHAT THE BOUNDARY METRIC ACTUALLY RESPONDS TO, and the arithmetic says so. For N
+     round lobes joined in a chain, perimeter over root area is about 2.84*sqrt(N); the cloud
+     measures 4.82, which is N of 2.9 — it behaves like three lobes fused into one fat mass. The
+     target of 7.11 is N of 6.3. Spreading the same lobes apart lengthens the outline without
+     adding a single sphere, and the fringe and the wisps keep the mass connected across the gaps
+     (separate round blobs would each score 3.5 and the metric is area-weighted, so breaking the
+     cloud up would make it WORSE, not better). */
+  cloudSpread:1.0,       // stretches the lobe chain along its own axis
   cloudPuffs:3,          // puffs per lobe, hash-driven, ADDED (they make no rnd() draws)
   cloudRise:0.42,        // how far up each puff sits, in units of the lobe's own radius
   /* THE FRINGE IS WHAT THE BOUNDARY METRIC IS ABOUT. perimeter/sqrt(area) is 3.545 for a circle
@@ -297,6 +305,39 @@ const SKY={
      and the strip means something. HUE IS SEPARATE FROM SATURATION because the plates AGREE on the
      hue — 212, 214, 216, 217 against the game's 205 — and disagree wildly on the saturation. One
      of those is a correctable bias and the other is Eric's. */
+  /* TODO 118 — THE WISP TIER, the same card technique as the grass horizon. SKY.md step 2 left
+     cloud boundary complexity at 4.76 against the plate's 7.11-17.25, and stopped there because
+     opaque sphere unions cannot make a wispy edge however many spheres they use. These are
+     alpha-mapped quads on the MASS'S SILHOUETTE ONLY, over the opaque body — margin, not volume,
+     which is the trap TODO 118 names: the sky pass's first iteration made every sphere
+     transparent and the strip came back reading as a bunch of grapes. */
+  cloudWisp:3,           // wisps per lobe or puff, placed on its projected rim
+  /* 1.60 AND NOT 0.90, and the factor is the atlas's own SPAN. The bake scales each wisp's field
+     to 56% of its cell so the margin always closes inside it — without that the cell clipped the
+     noise and presented a hard square edge, which showed in the frame as faint rectangles beside
+     every cloud. So the visible wisp is a little over half the quad, and the quad has to be
+     correspondingly larger to put the same amount of cloud on the silhouette. */
+  cloudWispR:1.60,       // their QUAD size, in units of the host sphere's radius
+  cloudWispAt:0.95,      // how far out on the rim they sit
+  /* A THIN CLOUD EDGE IS BRIGHT, NOT DARK, and the first wisps were dark. They take their normals
+     from the body so they shade with it, which is right for the seam — but a wisp sits on the
+     SILHOUETTE, with sky behind it rather than more cloud, and one on the shadowed flank rendered
+     as a dark plate over a bright sky, which reads as dirt. A real cloud margin is thin enough to
+     be lit THROUGH: it forward-scatters and comes out brighter than the mass behind it. So the
+     wisps get their own emissive floor, well above the body's 0.20. */
+  cloudWispEmis:0.55,
+  /* AN alphaTest ON A BLENDED TIER, WHICH SOUNDS LIKE A CONTRADICTION AND IS NOT THE FIX FOR THE
+     RECTANGLES — it trims the mip tail, and it is kept for that alone. A wisp quad is a few tens
+     of pixels on screen while its atlas cell is 256 texels, so it samples high mip levels where
+     the sheet has averaged toward its own mean of 0.077; discarding below this threshold keeps a
+     distant wisp from becoming a uniform haze. The surviving edge is an ISO-CONTOUR of a noisy
+     alpha field, which is ragged, which is what the boundary metric is for.
+     THE RECTANGLES WERE THE AMBIENT OCCLUSION PASS, and three wrong guesses were paid for before
+     that was established — the atlas's cell borders (they were zero), mipmap bleed (turning mips
+     off changed nothing), and this threshold (it changed nothing either). What settled it was
+     raising cloudWispEmis to 3.0: the wisps lit up like magnesium and the rectangles did not move
+     at all, which rules out the wisp material entirely. See G.postExclude below. */
+  cloudWispAlpha:0.12,
   skySatMul:1.0,         // scales each dome stop's HSL saturation, and the haze band's
   skyHueRot:0.0,         // degrees, added to each stop's hue
   hazeColor:0xC3D2DC,    // was a bare literal in buildSky; named so the knobs can reach it
@@ -3717,7 +3758,14 @@ function buildSky(){
   /* clouds: bright tops, grey bellies. SKY.md STEP 0 — THEY ARE REGISTERED NOW.
      They used to be added to the scene anonymously: no handle, nothing in WORLDREGS, so nothing
      could animate them and no battery could see them. The comment said "drifting flat" and nothing
-     drifted, because nothing could reach them. */
+     drifted, because nothing could reach them.
+     AND STILL NOT IN WORLDREGS — same conclusion as step 0, but the reason step 0 gave was wrong
+     and is corrected here. buildSky does NOT run once: boot() calls initScene, which replaces the
+     scene, so it runs on every travel. What makes WORLDREGS the wrong home is the ORDER — boot
+     runs initScene (and buildSky inside it) and THEN buildWorld, whose dispatcher empties the
+     registries per TODO 48. A cloud registered there would be filled by buildSky and cleared by
+     buildWorld moments later, every time. Registered on G, which is what makes them assertable;
+     kept out of the per-build lists, which is what keeps them alive. */
   /* A CUMULUS INSTEAD OF A LOZENGE — SKY.md step 2.
      THE rnd() SEQUENCE IS UNTOUCHED, and that is the constraint the whole shape of this loop is
      built around. buildSky runs from initScene BEFORE any world is built, so one extra or one
@@ -3751,6 +3799,19 @@ function buildSky(){
      taken to non-indexed first and then the position and normal arrays are concatenated — and
      applyMatrix4 (which .scale() and .translate() call) transforms the normals through the normal
      matrix, so a y-squashed sphere still shades correctly. */
+  /* THE BODY FRAME — the radius-weighted centroid and the half-extents of a cloud's own specs.
+     Pulled out of mergeSpheres because the WISPS need the identical frame: their normals come from
+     the body, and two copies of this arithmetic drifting apart would put a lit wisp on a shadowed
+     flank. One function, both callers. */
+  const bodyFrame=(specs)=>{
+    let cw=0,cx=0,cy=0,cz=0;
+    for(const sp of specs){ const w=sp.r*sp.r; cw+=w; cx+=sp.x*w; cy+=sp.y*w; cz+=sp.z*w; }
+    cx/=cw||1; cy/=cw||1; cz/=cw||1;
+    let ex=1e-3,ey=1e-3,ez=1e-3;
+    for(const sp of specs){
+      ex=Math.max(ex,Math.abs(sp.x-cx)+sp.r); ey=Math.max(ey,Math.abs(sp.y-cy)+sp.r*sp.sy);
+      ez=Math.max(ez,Math.abs(sp.z-cz)+sp.r); }
+    return {cx,cy,cz,ex,ey,ez}; };
   const mergeSpheres=(specs)=>{
     const gs=[]; let n=0;
     for(const sp of specs){
@@ -3772,14 +3833,8 @@ function buildSky(){
        shape rather than from a sphere — a cloud 40 m wide and 12 m tall shaded as if it were
        spherical would light its ends like its top. */
     const k=Math.max(0,Math.min(1,SKY.cloudNorm));
+    const {cx,cy,cz,ex,ey,ez}=bodyFrame(specs);
     if(k>0){
-      let cw=0,cx=0,cy=0,cz=0;
-      for(const sp of specs){ const w=sp.r*sp.r; cw+=w; cx+=sp.x*w; cy+=sp.y*w; cz+=sp.z*w; }
-      cx/=cw; cy/=cw; cz/=cw;
-      let ex=1e-3,ey=1e-3,ez=1e-3;
-      for(const sp of specs){
-        ex=Math.max(ex,Math.abs(sp.x-cx)+sp.r); ey=Math.max(ey,Math.abs(sp.y-cy)+sp.r*sp.sy);
-        ez=Math.max(ez,Math.abs(sp.z-cz)+sp.r); }
       for(let i=0;i<n;i++){
         const bx=(P[i*3]-cx)/ex, by=(P[i*3+1]-cy)/ey, bz=(P[i*3+2]-cz)/ez;
         const bl=Math.hypot(bx,by,bz)||1;
@@ -3790,12 +3845,90 @@ function buildSky(){
     out.setAttribute('position',new THREE.BufferAttribute(P,3));
     out.setAttribute('normal',new THREE.BufferAttribute(N,3));
     return out; };
+  /* THE WISPS, BUILT AFTER THE CLOUD IS PLACED, because a billboard has to know where it is
+     looking. They face the ORIGIN rather than the live camera: the dome is static, the play area is
+     52 m across against cloud distances of 70 to 200 m, and the sun sprite already takes exactly
+     this approximation with lookAt(0,14,0). A per-frame billboard update would be a per-frame cost
+     for a parallax nobody can see.
+     ON THE PROJECTED RIM, WHICH IS THE WHOLE POINT. perimeter/sqrt(area) measures the SILHOUETTE,
+     so a wisp buried in the middle of the mass buys nothing and a wisp on the outline buys a great
+     deal. Each host sphere's rim is computed in the plane perpendicular to the view direction, so
+     the wisps sit exactly where the boundary is.
+     AND THEIR NORMALS COME FROM THE BODY, not from the quad. A billboard's own normal points at
+     the viewer, so lighting it that way would make every wisp equally bright and the seam between
+     wisp and body would be a visible line. Using the same body-normal formula the merged spheres
+     use means a wisp on the sunward side is bright and one underneath is dark, exactly like the
+     mass it extends. */
+  const mergeWisps=(specs,pos,centre,ext)=>{
+    const P=[],NR=[],UV=[];
+    const G4=4, cell=1/G4;
+    let idx=0;
+    for(const sp of specs){
+      if(!sp.host)continue;
+      for(let q=0;q<SKY.cloudWisp;q++){
+        const wx=pos.x+sp.x, wy=pos.y+sp.y*sp.sy, wz=pos.z+sp.z;
+        const dl=Math.hypot(wx,wy,wz)||1;
+        const dx=-wx/dl, dy=-wy/dl, dz=-wz/dl;            // toward the origin
+        /* right = up x d = (dz, 0, -dx) with up = (0,1,0), then u2 = d x right. Degenerate only
+           for a cloud directly overhead, where d is parallel to up; these sit at 14.6 degrees of
+           elevation, so |right| is cos(elev) = 0.97 and the normalise below is a formality. */
+        let rx=dz, ry=0, rz=-dx;
+        const rl=Math.hypot(rx,ry,rz)||1; rx/=rl; ry/=rl; rz/=rl;
+        const ux=dy*rz-dz*ry, uy=dz*rx-dx*rz, uz=dx*ry-dy*rx;
+        const a=_thash(idx*37+7,idx*13+3)*Math.PI*2;
+        const rr=sp.r*SKY.cloudWispAt;
+        const ca=Math.cos(a), sa=Math.sin(a);
+        const px0=sp.x+(rx*ca+ux*sa)*rr, py0=sp.y*sp.sy+(ry*ca+uy*sa)*rr,
+              pz0=sp.z+(rz*ca+uz*sa)*rr;
+        const hs=sp.r*SKY.cloudWispR*(0.72+_thash(idx*53+11,idx*29+5)*0.56)*0.5;
+        /* the body normal at the wisp's own place, so it shades with the mass */
+        let nx=(px0-centre.x)/ext.x, ny=(py0-centre.y)/ext.y, nz2=(pz0-centre.z)/ext.z;
+        const nl=Math.hypot(nx,ny,nz2)||1; nx/=nl; ny/=nl; nz2/=nl;
+        const ci=Math.floor(_thash(idx*97+3,idx*71+9)*16)%16;
+        const u0=(ci%G4)*cell, v0=Math.floor(ci/G4)*cell;
+        const C=[[-1,-1,u0,v0],[1,-1,u0+cell,v0],[1,1,u0+cell,v0+cell],
+                 [-1,-1,u0,v0],[1,1,u0+cell,v0+cell],[-1,1,u0,v0+cell]];
+        for(const [sx,sy2,uu,vv] of C){
+          P.push(px0+(rx*sx+ux*sy2)*hs, py0+(ry*sx+uy*sy2)*hs, pz0+(rz*sx+uz*sy2)*hs);
+          NR.push(nx,ny,nz2); UV.push(uu,vv); }
+        idx++;
+      }
+    }
+    if(!P.length)return null;
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));
+    g.setAttribute('normal',new THREE.Float32BufferAttribute(NR,3));
+    g.setAttribute('uv',new THREE.Float32BufferAttribute(UV,2));
+    return g; };
+  /* G.postExclude — GEOMETRY THE DEPTH-BASED POST PASSES MUST NOT SEE.
+     GTAOPass and BokehPass each render their own depth and normal prepass of the whole scene with
+     an override material, and an override material does not care that a material is transparent or
+     that it has depthWrite off. So a blended quad occludes as though it were a solid plate, and the
+     ambient occlusion comes back in the shape of the QUAD: faint dark rectangles over the sky
+     beside every cloud, which is exactly what the wisp tier's first frames showed.
+     ESTABLISHED BY ELIMINATION, after three wrong guesses. The atlas's cell borders were made
+     provably zero and the rectangles stayed. Mipmaps were turned off and they stayed. An alphaTest
+     was added and they stayed. Then cloudWispEmis went to 3.0 — the wisps lit up and the rectangles
+     did not change at all, which rules out the wisp material and leaves the passes that draw the
+     geometry without it.
+     A LIST RATHER THAN A FLAG ON THE MESH, because src/post.mjs is a separate module that must not
+     have to know what a cloud is, and because the next transparent thing in the sky will want the
+     same treatment.
+     EMPTIED HERE, AND THE FIRST VERSION USED `|| []` AND LEAKED. TODO 48's law applies exactly:
+     boot() calls initScene, which throws the old THREE.Scene away, so buildSky runs again on every
+     travel with a fresh scene — and a list that is only ever appended to accumulates the meshes of
+     every sky that has been thrown away. Measured on three boots: G.cloudWisps stayed 8 while
+     G.postExclude went 8, 16, 24, so post.mjs would have been iterating detached objects every
+     frame, more of them the longer the session ran. The guarantee belongs to the function that
+     FILLS the list, which is the same place TODO 48 put it for the world registries. */
+  G.postExclude=[];
+  G.cloudWisps=[];
   for(let i=0;i<8;i++){ const cg=new THREE.Group(); const n=3+((i*7)%3);
     const specs=[];
     for(let j=0;j<n;j++){ const r=rnd(6,12);
       const R=r*SKY.cloudRMul;
-      const bx=j*rnd(5,8)-n*3, by=rnd(-0.5,1.5), bz=rnd(-2,2);
-      specs.push({r:R,x:bx,y:by,z:bz,sy:SKY.cloudBase});
+      const bx=(j*rnd(5,8)-n*3)*SKY.cloudSpread, by=rnd(-0.5,1.5), bz=rnd(-2,2);
+      specs.push({r:R,x:bx,y:by,z:bz,sy:SKY.cloudBase,host:1});
       /* THE PUFFS ARE THE VERTICAL BUILD. Each sits higher and smaller than the last, offset
          sideways by a hash so the mass leans rather than stacking like a snowman. */
       for(let k=1;k<=SKY.cloudPuffs;k++){
@@ -3804,7 +3937,7 @@ function buildSky(){
         if(pr<1.2)continue;
         specs.push({r:pr, x:bx+(h2-0.5)*R*0.85,
                     y:by+R*SKY.cloudRise*k*(0.75+h1*0.5),
-                    z:bz+(h3-0.5)*R*0.6, sy:SKY.cloudTop}); }
+                    z:bz+(h3-0.5)*R*0.6, sy:SKY.cloudTop, host:1}); }
       /* AND THE FRINGE IS THE RAGGED EDGE. Round the lobe's rim, at hash angles, so the outline
          scallops instead of describing an ellipse. */
       for(let k=0;k<SKY.cloudFringe;k++){
@@ -3861,6 +3994,32 @@ function buildSky(){
       const f=Math.max(0,Math.min(1,1-Math.exp(-fd*fd)));
       mesh.material.color.lerp(cHaze,f);
       mesh.material.emissive.lerp(cHaze.clone().multiplyScalar(SKY.cloudEmissive),f); }
+    /* THE WISP TIER — TODO 118. Built LAST, and after the haze tint, which is not merely tidy:
+       the wisp material clones the body's colour so a wisp can never be a different distance from
+       the sky than the cloud it is attached to, and the first version of this sat between the
+       clamp and the tint and duly cloned the UNTINTED white. A battery row comparing the two
+       colours per cloud caught it; nothing in the picture would have, at the distances where the
+       tint is small.
+       BUILT AFTER THE PLACEMENT TOO, because a billboard needs the cloud's final place.
+       INVISIBLE UNTIL TEXTURED, exactly like the grass card tier: the atlas is an asset fetched at
+       runtime by src/materials.mjs, and an untextured alpha-mapped quad is an opaque white
+       rectangle stuck to the side of a cloud. So it ships hidden and the material install turns it
+       on; a failed fetch leaves the sky precisely as SKY.md step 2 shipped it. G.cloudWisps is the
+       handle materials.mjs dresses and the batteries read. */
+    if(SKY.cloudWisp>0){
+      const bf=bodyFrame(specs);
+      const wg=mergeWisps(specs,cg.position,{x:bf.cx,y:bf.cy,z:bf.cz},
+                                            {x:bf.ex,y:bf.ey,z:bf.ez});
+      if(wg){
+        const wm=new THREE.MeshLambertMaterial({color:mesh.material.color.clone(),
+          emissive:mesh.material.color.clone().multiplyScalar(SKY.cloudWispEmis),
+          transparent:true, depthWrite:false, side:THREE.DoubleSide, fog:false,
+          alphaTest:SKY.cloudWispAlpha});
+        /* THE HAZE TINT IS INHERITED FROM THE BODY rather than recomputed, so a wisp can never be
+           a different distance from the sky than the cloud it is attached to. */
+        const wmesh=new THREE.Mesh(wg,wm);
+        wmesh.name='cloudwisp'; wmesh.visible=false;
+        cg.add(wmesh); G.cloudWisps.push(wmesh); G.postExclude.push(wmesh); } }
     cg.name='cloud'; G.scene.add(cg); G.clouds.push(cg); }
 }
 
