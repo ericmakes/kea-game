@@ -275,6 +275,31 @@ const SKY={
      with 1.4 of variation spans 11.5 to 17.7 degrees — the whole cloud inside the picture, sitting
      in the upper half of it, clear of every peak. */
   cloudElev:14.6, cloudElevVary:1.4,
+
+  /* TODO 76 — SKY TONE, AS TWO KNOBS SO THE VARIANT STRIP IS A ONE-VARIABLE COMPARISON.
+     The dome's three stops are a saturated blue tuned to the NZ tourism palette that ARTBIBLE's
+     vividness law names, and the plates are not that blue — measured on each plate's own sky
+     region, with the sky mask on:
+
+         nz_alps_01     luma 0.449  hue 212  sat 0.582   deep blue, and nearly UNIFORM: its
+                                                         saturation runs 0.581 at the top of the
+                                                         visible sky to 0.570 at the horizon
+         nz_alps_02     luma 0.807  hue 358  sat 0.009   overcast; the hue is meaningless there
+         nz_carpark_01  luma 0.665  hue 217  sat 0.374
+         nz_tussock_03  luma 0.707  hue 214  sat 0.356
+         ref_bow_20     luma 0.505  hue 216  sat 0.426   the Birds of War sky, for tone only
+         THE GAME       luma 0.633  hue 205  sat 0.527
+
+     So the references span 0.009 to 0.582 and the game sits inside that range but above every
+     plate with a wide elevation span. Which is a taste call and not a band, which is why this is a
+     strip and not a row in the table.
+     TWO KNOBS, NOT NINE HEX VALUES, so a variant differs from its neighbour in exactly one number
+     and the strip means something. HUE IS SEPARATE FROM SATURATION because the plates AGREE on the
+     hue — 212, 214, 216, 217 against the game's 205 — and disagree wildly on the saturation. One
+     of those is a correctable bias and the other is Eric's. */
+  skySatMul:1.0,         // scales each dome stop's HSL saturation, and the haze band's
+  skyHueRot:0.0,         // degrees, added to each stop's hue
+  hazeColor:0xC3D2DC,    // was a bare literal in buildSky; named so the knobs can reach it
 };
 for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_SKY__)||{})){
   if(k in SKY) SKY[k]=v;
@@ -3633,7 +3658,30 @@ function buildSky(){
   // gradient dome
   const DOMER=210;                       // named, because the cloud clamp below has to agree with it
   const sg=new THREE.SphereGeometry(DOMER,20,14);
-  const cols=[]; const pos=sg.attributes.position; const cTop=new THREE.Color(PAL.skyTop).convertSRGBToLinear(),cMid=new THREE.Color(PAL.skyMid).convertSRGBToLinear(),cLow=new THREE.Color(PAL.skyLow).convertSRGBToLinear();
+  /* THE TONE KNOBS ARE APPLIED IN sRGB, BEFORE THE LINEAR CONVERT, and that order is the whole
+     correctness of it. The authored constants ARE sRGB — that is the space a palette is picked in
+     — so HSL saturation and hue mean what a person means by them only there. Adjusting after
+     convertSRGBToLinear() would desaturate a curve rather than a colour, and this project has paid
+     for confusing those two spaces twice already (meanLuma read encoded bytes where the shader
+     read linear; the fog blend is linear while the include sits after the encode). */
+  /* AND THE SECOND ARGUMENT IS NOT A CONVENIENCE — IT PRESERVES A PRE-EXISTING INCONSISTENCY
+     ON PURPOSE. The dome's three stops go through convertSRGBToLinear(); the horizon haze band's
+     0xC3D2DC never has, so with ColorManagement off it is handed to the material as a LINEAR value
+     and comes out of the sRGB encode brighter than it was authored. Routing the haze band through
+     a converting tone() changed its colour, and the world mesh digest caught it inside a minute —
+     mesh and triangle counts unchanged, digest moved, which is exactly the signature of a material
+     colour changing under an identity knob.
+     THAT INCONSISTENCY IS A REAL DEFECT AND IT IS NOT BEING FIXED HERE. The haze band is the
+     horizon of the sky whose TONE Eric is about to pick, so quietly correcting its brightness in
+     the same commit that adds the knobs would move the thing being judged and hide it inside a
+     refactor. It is reported with the strip instead. */
+  const tone=(hex,lin)=>{ const c=new THREE.Color(hex);
+    if(SKY.skySatMul!==1||SKY.skyHueRot!==0){ const h={};
+      c.getHSL(h);
+      c.setHSL((h.h+SKY.skyHueRot/360+1)%1, Math.max(0,Math.min(1,h.s*SKY.skySatMul)), h.l); }
+    return lin?c.convertSRGBToLinear():c; };
+  const cols=[]; const pos=sg.attributes.position;
+  const cTop=tone(PAL.skyTop,1), cMid=tone(PAL.skyMid,1), cLow=tone(PAL.skyLow,1);
   for(let i=0;i<pos.count;i++){ const y=pos.getY(i)/210; const c=y>0.25?cTop.clone().lerp(cMid,1-(y-0.25)/0.75):cMid.clone().lerp(cLow,1-Math.max(0,(y+0.15)/0.4));
     cols.push(c.r,c.g,c.b); }
   sg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
@@ -3641,7 +3689,7 @@ function buildSky(){
   G.scene.add(sky); G.sky=sky; sky.material.color=new THREE.Color(0xFFFFFF);
   // horizon haze band
   const haze=new THREE.Mesh(new THREE.CylinderGeometry(206,206,26,24,1,true),
-    new THREE.MeshBasicMaterial({color:0xC3D2DC,transparent:true,opacity:0.45,side:THREE.BackSide,fog:false}));
+    new THREE.MeshBasicMaterial({color:tone(SKY.hazeColor,0),transparent:true,opacity:0.45,side:THREE.BackSide,fog:false}));
   G.haze=haze;
   haze.position.y=8; G.scene.add(haze);
   /* THE SUN'S PLACE IS COMPUTED IN BOTH WORLDS even though only the browser draws the glow, so a

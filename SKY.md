@@ -171,10 +171,34 @@ fifth.
 The score cannot judge these. They are Eric's, and they are why the pass ends with a strip and not
 with a table alone.
 
-- **TODO 76 — SKY TONE.** The dome is a saturated blue tuned to the NZ tourism palette that
-  ARTBIBLE's vividness law names. The plates are not that blue. This is a taste call about how far
-  the game's sky moves toward the reference, and it wants a variant strip: three tones, one page,
-  material held constant, the way the silhouette families were shot.
+- **TODO 76 — SKY TONE. SHOT 2026-09-10, WAITING ON ERIC'S PICK.** The dome is a saturated blue
+  tuned to the NZ tourism palette that ARTBIBLE's vividness law names. The plates are not that
+  blue. `gauntlet/verify/skytone.mjs` shoots the page: the two plates Eric named at the top, then
+  the shipped sky, then three tones, one variable per step, everything else identical. Page at
+  `gauntlet/capture/SKYTONE_page.png`.
+
+  | panel | luma | hue | sat | knobs |
+  |---|---|---|---|---|
+  | PLATE nz_alps_01 | 0.449 | 212 | 0.582 | — |
+  | PLATE nz_alps_02 | 0.807 | 358 | 0.009 | — (overcast; its hue is meaningless) |
+  | AS SHIPPED | 0.633 | 205 | 0.527 | satMul 1.00, hueRot +0 |
+  | HUE ONLY | 0.585 | 213 | 0.542 | satMul 1.00, hueRot +8 |
+  | SOFTER | 0.606 | 214 | 0.418 | satMul 0.70, hueRot +8 |
+  | THE PLATES | 0.623 | 214 | 0.293 | satMul 0.45, hueRot +8 |
+
+  **THE HUE IS NOT REALLY A TASTE CALL and it is broken out as its own panel for that reason.**
+  Every plate with a meaningful hue agrees — 212, 214, 216, 217 — against the game's 205. That is a
+  correctable bias, and panel 1 moves it alone so the two questions can be answered separately.
+  Saturation is the taste call: the references run 0.009 to 0.582 and there is no band in that.
+
+  **AND ONE DEFECT FOUND WHILE ADDING THE KNOBS, DELIBERATELY NOT FIXED IN THE SAME COMMIT.** The
+  dome's three stops go through `convertSRGBToLinear()`; the horizon haze band's `0xC3D2DC` never
+  has, so with ColorManagement off it is handed to its material as a LINEAR value and comes out of
+  the sRGB encode brighter than it was authored. Routing it through the tone function corrected it
+  by accident and the world mesh digest caught that inside a minute. The haze band is the HORIZON
+  of the sky whose tone Eric is picking, so correcting its brightness inside the same commit would
+  move the thing being judged and hide it in a refactor. It is reported here instead and belongs
+  with whichever tone is chosen.
 - **CLOUD VARIETY.** One recipe, eight instances, three to five spheres each. The plates carry
   cumulus, stratus and cirrus in one frame. Variety is a count of RECIPES, not of instances, and it
   should be asserted as such — the terrain pass's "every peak its own shape" measurement (mean

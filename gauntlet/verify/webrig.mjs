@@ -116,7 +116,8 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
      wasted strip. */
   'cloudRMul','cloudBase','cloudTop','cloudPuffs','cloudRise','cloudFringe','cloudFringeR',
   'cloudFringeAt','cloudLit','cloudEmissive','cloudNorm','cloudHaze','cloudHazeD',
-  'cloudElev','cloudElevVary'];
+  'cloudElev','cloudElevVary',
+  'skySatMul','skyHueRot','hazeColor'];
 
 /* REPLAT P3b added `breakup` and leaving it out of this list cost a whole variant strip: every
    KEAMATS in it was REFUSED, the four shots died, and four copies of one stale frame got compared
