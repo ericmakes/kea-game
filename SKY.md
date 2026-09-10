@@ -171,7 +171,35 @@ fifth.
 The score cannot judge these. They are Eric's, and they are why the pass ends with a strip and not
 with a table alone.
 
-- **TODO 76 — SKY TONE. SHOT 2026-09-10, WAITING ON ERIC'S PICK.** The dome is a saturated blue
+- **TODO 76 — SKY TONE. PICKED AND SHIPPED 2026-09-10: SOFTER, satMul 0.70, hueRot +8.**
+  Eric's reasoning, recorded because the numbers alone do not carry it: the whole-sky references
+  sit closest to that panel — `nz_carpark_01` 0.374, `nz_tussock_03` 0.356, `ref_bow_20` 0.426 —
+  and *"alps_01 was the wrong anchor"*. That plate reads 0.582, MORE saturated than what shipped,
+  and it is a narrow near-zenith slice on an exceptionally clear day with almost no gradient in it
+  (0.581 to 0.570 top to horizon). A whole frame with a horizon in it cannot be judged against a
+  crop that has none. The shipped sky now measures **luma 0.597, hue 213, saturation 0.441** — in
+  band against both whole-sky plates rather than only against alps_01.
+
+  **SHIPPING IT BROKE THE BANDING ROW, AND THAT UNCOVERED TWO REAL DEFECTS IN THE DOME.** The
+  largest single-row 8-bit step went from 1 level to 2 while both clear-sky plates sit at exactly 1.
+  Blame was placed wrongly three times before it was instrumented — the haze band's missing convert
+  (innocent: satMul 1.0 reads 1 at either hue, 0.70 reads 2 at either hue), the dome's stop junction
+  (a real kink, fixed, not this), and the haze band's top rim (at 2.7 degrees of elevation, where
+  the step is at 8.7). Hiding the haze, the wisps and the clouds in turn left the step exactly where
+  it was: it is the DOME's own ramp.
+  What it was: the visible sky spans y 0.134 to 0.304 on the dome, which STRADDLES the mid stop at
+  0.25 — so the band's lower two thirds crossed 29% of a 0.40-wide low ramp while its upper third
+  crossed 7% of a 0.75-wide top ramp. Four times the rate, hence 154 156 161 166 over the last
+  thirty-six rows against seven levels over the hundred and forty above. `skyLowAt` moves the low
+  stop from -0.15 to **-0.45**, chosen for margin off a sweep (-0.15 and -0.30 read 2; -0.35
+  onward read 1), at a cost of 1.110 to 1.067 in the horizon-over-zenith ratio against plate ratios
+  of 1.046, 1.100 and 1.179.
+  Both fixes are kept: the kink was real even though it was not the culprit, and the haze band now
+  fades with a per-vertex alpha instead of ending in a horizontal line drawn across the sky.
+
+  The page that produced the pick, for the record:
+
+- **TODO 76 — the page as shot.** The dome is a saturated blue
   tuned to the NZ tourism palette that ARTBIBLE's vividness law names. The plates are not that
   blue. `gauntlet/verify/skytone.mjs` shoots the page: the two plates Eric named at the top, then
   the shipped sky, then three tones, one variable per step, everything else identical. Page at

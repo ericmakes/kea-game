@@ -117,7 +117,7 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
   'cloudRMul','cloudBase','cloudTop','cloudPuffs','cloudRise','cloudSpread','cloudFringe','cloudFringeR',
   'cloudFringeAt','cloudLit','cloudEmissive','cloudNorm','cloudHaze','cloudHazeD',
   'cloudElev','cloudElevVary',
-  'skySatMul','skyHueRot','hazeColor',
+  'skySatMul','skyHueRot','hazeColor','skyMidAt','skyLowAt',
   'cloudWisp','cloudWispR','cloudWispAt','cloudWispEmis','cloudWispAlpha'];
 
 /* REPLAT P3b added `breakup` and leaving it out of this list cost a whole variant strip: every

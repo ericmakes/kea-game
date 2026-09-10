@@ -338,8 +338,33 @@ const SKY={
      raising cloudWispEmis to 3.0: the wisps lit up like magnesium and the rectangles did not move
      at all, which rules out the wisp material entirely. See G.postExclude below. */
   cloudWispAlpha:0.12,
-  skySatMul:1.0,         // scales each dome stop's HSL saturation, and the haze band's
-  skyHueRot:0.0,         // degrees, added to each stop's hue
+  /* SOFTER — ERIC'S PICK, 2026-09-10, off the four-panel page in gauntlet/capture/SKYTONE_page.png.
+     His reasoning, recorded because the numbers alone do not carry it: the whole-sky references
+     sit closest to this panel — nz_carpark_01 0.374, nz_tussock_03 0.356, ref_bow_20 0.426 — and
+     "alps_01 was the wrong anchor". That plate reads 0.582, MORE saturated than what shipped, and
+     it is a narrow near-zenith slice on an exceptionally clear day with almost no gradient in it
+     (0.581 at the top of its visible sky to 0.570 at the horizon). A whole frame with a horizon in
+     it cannot be judged against a crop that has none.
+     THE HUE IS NOT PART OF THE TASTE CALL and was shipped with it because every plate carrying a
+     meaningful hue agrees: 212, 214, 216, 217, against the dome's 205. */
+  /* WHERE THE DOME'S THREE STOPS SIT, NAMED, because the gradient's SHAPE turned out to be a
+     defect and a defect needs a knob. skyMidAt is the height skyMid is reached at and skyLowAt is
+     where skyLow bottoms out, both in units of the dome's radius.
+     THE OLD -0.15 COMPRESSED THE WHOLE LOW RAMP INTO THE HORIZON. The strip's visible sky spans
+     y 0.134 to 0.304 (elevations 7.7 to 17.7 degrees), which STRADDLES the 0.25 junction — so the
+     band's lower two thirds traversed 0.116 of a 0.40-wide low ramp, 29% of it, while its upper
+     third traversed 0.054 of a 0.75-wide top ramp, 7% of it. Four times the rate, which is why the
+     row medians ran 154 156 161 166 over the last thirty-six rows against seven levels over the
+     hundred and forty above them, and why a single row stepped 2 levels where both clear-sky
+     plates step 1. Widening the low ramp evens the traversal out.
+     -0.45 IS CHOSEN FOR MARGIN, off a sweep: -0.15 and -0.30 read a 2-level step, -0.35, -0.40,
+     -0.45, -0.55 and -0.85 read 1. The boundary is between -0.30 and -0.35, so -0.45 sits three
+     steps clear of it, and it costs almost nothing in gradient — the horizon-over-zenith luma
+     ratio goes 1.110 to 1.067, against plate ratios of 1.046, 1.100 and 1.179. Going further
+     (-0.85 reads 1.050) buys no margin the quantisation can use and flattens the sky for nothing. */
+  skyMidAt:0.25, skyLowAt:-0.45,
+  skySatMul:0.70,        // scales each dome stop's HSL saturation, and the haze band's
+  skyHueRot:8.0,         // degrees, added to each stop's hue
   hazeColor:0xC3D2DC,    // was a bare literal in buildSky; named so the knobs can reach it
 };
 for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_SKY__)||{})){
@@ -3705,17 +3730,21 @@ function buildSky(){
      convertSRGBToLinear() would desaturate a curve rather than a colour, and this project has paid
      for confusing those two spaces twice already (meanLuma read encoded bytes where the shader
      read linear; the fog blend is linear while the include sits after the encode). */
-  /* AND THE SECOND ARGUMENT IS NOT A CONVENIENCE — IT PRESERVES A PRE-EXISTING INCONSISTENCY
-     ON PURPOSE. The dome's three stops go through convertSRGBToLinear(); the horizon haze band's
-     0xC3D2DC never has, so with ColorManagement off it is handed to the material as a LINEAR value
-     and comes out of the sRGB encode brighter than it was authored. Routing the haze band through
-     a converting tone() changed its colour, and the world mesh digest caught it inside a minute —
-     mesh and triangle counts unchanged, digest moved, which is exactly the signature of a material
-     colour changing under an identity knob.
-     THAT INCONSISTENCY IS A REAL DEFECT AND IT IS NOT BEING FIXED HERE. The haze band is the
-     horizon of the sky whose TONE Eric is about to pick, so quietly correcting its brightness in
-     the same commit that adds the knobs would move the thing being judged and hide it inside a
-     refactor. It is reported with the strip instead. */
+  /* EVERYTHING CONVERTS NOW, AND THE HORIZON HAZE BAND DID NOT USED TO.
+     THREE.ColorManagement is off in this project, so a raw hex handed to a material is treated as
+     a LINEAR value and comes out of the sRGB encode BRIGHTER than it was authored. The dome's three
+     stops have always gone through convertSRGBToLinear(); the haze band's 0xC3D2DC never had, so
+     the bottom of the sky has been rendering pale and washed in every frame the game has ever shot.
+     FOUND BY THE WORLD MESH DIGEST when the tone knobs landed. Routing the band through a
+     converting tone() corrected it by accident: mesh and triangle counts unchanged, digest moved —
+     which is precisely the signature of a material colour changing under an identity knob. It was
+     deliberately NOT fixed then, because the haze band is the horizon of the sky whose tone Eric
+     was about to pick and correcting its brightness inside that commit would have moved the thing
+     being judged and hidden it in a refactor. He picked SOFTER and called for the fix in the same
+     commit, which is the right place for it: both changes move the sky, so both move the baseline
+     once.
+     THE SECOND ARGUMENT SURVIVES so the seam is still visible at the call sites — every caller now
+     passes 1, and a future caller that wants the raw value has to say so out loud. */
   const tone=(hex,lin)=>{ const c=new THREE.Color(hex);
     if(SKY.skySatMul!==1||SKY.skyHueRot!==0){ const h={};
       c.getHSL(h);
@@ -3723,14 +3752,59 @@ function buildSky(){
     return lin?c.convertSRGBToLinear():c; };
   const cols=[]; const pos=sg.attributes.position;
   const cTop=tone(PAL.skyTop,1), cMid=tone(PAL.skyMid,1), cLow=tone(PAL.skyLow,1);
-  for(let i=0;i<pos.count;i++){ const y=pos.getY(i)/210; const c=y>0.25?cTop.clone().lerp(cMid,1-(y-0.25)/0.75):cMid.clone().lerp(cLow,1-Math.max(0,(y+0.15)/0.4));
+  /* THE RAMP IS C1 CONTINUOUS NOW, AND IT WAS NOT. The three stops were blended by two LINEAR
+     segments meeting at y = 0.25. They agree in VALUE there — both sides evaluate to skyMid — but
+     not in SLOPE: above the junction the gradient is (cTop-cMid)/0.75 per unit height and below it
+     is (cMid-cLow)/0.40, so the ramp has a KINK, and a kink in a gradient is what a visible line in
+     a sky is made of.
+     FOUND BY THE BANDING ROW WHEN THE TONE CHANGED. Shipping Eric's SOFTER pick took the largest
+     single-row 8-bit step from 1 level to 2 while both clear-sky plates sit at exactly 1 — measured
+     four ways to place the blame, and it is the desaturation and not the haze fix: satMul 1.0 reads
+     1 at either hue, satMul 0.70 reads 2 at either hue. Desaturating narrows the dome's colour
+     range, which moves where the quantisation boundaries fall, and the kink that had been
+     straddling one boundary began crossing two.
+     SMOOTHSTEP ON EACH SEGMENT'S OWN PARAMETER makes the slope zero at the junction from BOTH
+     sides, so the ramp is smooth there by construction rather than by luck about where 8-bit levels
+     land. _tsm is the smoothstep the terrain noise already uses; there is no second copy of it. */
+  for(let i=0;i<pos.count;i++){ const y=pos.getY(i)/210;
+    const M=SKY.skyMidAt, LO=SKY.skyLowAt;
+    const c=y>M
+      ? cMid.clone().lerp(cTop,_tsm(Math.min(1,(y-M)/Math.max(1e-4,1-M))))
+      : cLow.clone().lerp(cMid,_tsm(Math.max(0,Math.min(1,(y-LO)/Math.max(1e-4,M-LO)))));
     cols.push(c.r,c.g,c.b); }
   sg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
   const sky=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false}));
   G.scene.add(sky); G.sky=sky; sky.material.color=new THREE.Color(0xFFFFFF);
-  // horizon haze band
-  const haze=new THREE.Mesh(new THREE.CylinderGeometry(206,206,26,24,1,true),
-    new THREE.MeshBasicMaterial({color:tone(SKY.hazeColor,0),transparent:true,opacity:0.45,side:THREE.BackSide,fog:false}));
+  /* HORIZON HAZE BAND — AND IT USED TO END IN A HARD RIM.
+     The band is a 26 m tall open cylinder at y 8, so its top edge was a horizontal line at a fixed
+     elevation, drawn straight across the sky wherever the camera could see it. That edge is where
+     the 2-level banding step lives, and it was found by instrumenting rather than guessed at: the
+     clear-sky row medians run 147 149 149 150 150 151 151 152 153 153 154 154 156 161 166 down the
+     band, and the one jump the metric objects to sits at row 160 of 178 — ninety per cent of the
+     way down, exactly where the band's rim crosses. The ramp visibly STEEPENS over the last three
+     samples, which is the band fading in over no distance at all.
+     TWO WRONG GUESSES CAME FIRST and are worth recording because both were plausible. The haze
+     colour's missing sRGB convert was blamed and is innocent: at satMul 1.0 the step is 1 level at
+     either hue and at 0.70 it is 2 at either hue, so it is the desaturation that exposes it, not
+     the convert. Then the dome's three-stop ramp was made C1 continuous — it genuinely had a slope
+     discontinuity at y = 0.25, two linear segments meeting at a kink — and the step stayed at 2.
+     That fix is kept because the kink was real; it simply was not this.
+     NOW IT FADES. Eight height segments instead of one, with a smoothstep alpha that is 1 at the
+     bottom of the band and 0 at the top, so the haze arrives gradually and has no edge to see.
+     THE ALPHA IS PER-VERTEX AND THE COLOUR STAYS ON THE MATERIAL, which keeps nightApply's grip on
+     opacity: three multiplies vertex alpha by material.opacity, so the day/night knob still scales
+     the whole band and the vertex attribute only shapes it. */
+  const hg=new THREE.CylinderGeometry(206,206,26,24,8,true);
+  { const hp=hg.attributes.position, hc=[];
+    for(let i=0;i<hp.count;i++){
+      /* 0 at the top of the band, 1 at the bottom. The cylinder is centred on its own origin, so
+         its local y runs -13 to +13 over the 26 m height. */
+      const t=Math.max(0,Math.min(1,(13-hp.getY(i))/26));
+      hc.push(1,1,1,_tsm(t)); }
+    hg.setAttribute('color',new THREE.Float32BufferAttribute(hc,4)); }
+  const haze=new THREE.Mesh(hg,
+    new THREE.MeshBasicMaterial({color:tone(SKY.hazeColor,1),vertexColors:true,
+      transparent:true,opacity:0.45,side:THREE.BackSide,fog:false}));
   G.haze=haze;
   haze.position.y=8; G.scene.add(haze);
   /* THE SUN'S PLACE IS COMPUTED IN BOTH WORLDS even though only the browser draws the glow, so a

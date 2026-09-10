@@ -4183,6 +4183,73 @@ C.section('the three photographer hooks are inert in play');
   X.boot({biome:'carpark'});
 }
 
+C.section('the sky dome\'s gradient is smooth, and the haze band has no rim');
+{
+  /* BOTH OF THESE ARE SHAPE INVARIANTS OF A GRADIENT, and both were defects until Eric's SOFTER
+     tone shipped and the banding row went red. The pixel side is platescore's (largest single-row
+     8-bit step, 1 on both clear-sky plates); these are the headless statements of the same thing,
+     asserted about the geometry rather than about a frame. */
+  X.boot({biome:'carpark'}); tick(2);
+  const sky=G.sky, col=sky&&sky.geometry&&sky.geometry.attributes.color;
+  ok(!!col&&col.itemSize===3,'the dome carries per-vertex colour');
+  /* THE RAMP IS MONOTONE AND SMOOTH IN HEIGHT. Sampled by binning the vertices into height bands
+     and taking each band's mean luma: a gradient with a KINK in it shows up as a jump in the
+     FIRST difference, which is what the old two-linear-segment ramp had at y = 0.25 — both sides
+     agreed in value and disagreed in slope, (cTop-cMid)/0.75 above against (cMid-cLow)/0.40 below.
+     Smoothstep on each segment's own parameter makes the slope zero at the junction from both
+     sides, so the second difference is bounded rather than spiking there. */
+  { const pos=sky.geometry.attributes.position, N=24, sum=new Array(N).fill(0), cnt=new Array(N).fill(0);
+    for(let i=0;i<pos.count;i++){
+      const y=pos.getY(i)/210;                       // -1 .. 1
+      const b=Math.max(0,Math.min(N-1,Math.floor((y+1)/2*N)));
+      sum[b]+=0.2126*col.getX(i)+0.7152*col.getY(i)+0.0722*col.getZ(i); cnt[b]++; }
+    const prof=[]; for(let b=0;b<N;b++)if(cnt[b])prof.push(sum[b]/cnt[b]);
+    let mono=true; for(let i=1;i<prof.length;i++)if(prof[i]>prof[i-1]+1e-6)mono=false;
+    ok(mono,'and its luma falls monotonically from the horizon to the zenith across '+prof.length+
+       ' height bands — a sky that brightens upward anywhere has a fold in it');
+    let d1=[]; for(let i=1;i<prof.length;i++)d1.push(prof[i]-prof[i-1]);
+    let worst=0; for(let i=1;i<d1.length;i++)worst=Math.max(worst,Math.abs(d1[i]-d1[i-1]));
+    const span=Math.abs(prof[0]-prof[prof.length-1])||1;
+    ok(worst/span<0.30,'and the ramp has no kink: the largest change in its own slope is '+
+       (worst/span*100).toFixed(1)+'% of the whole ramp, where two linear segments meeting at a '+
+       'junction would show a step');
+  }
+  /* THE LOW RAMP IS WIDE ENOUGH THAT THE VISIBLE BAND DOES NOT CROSS IT FAST. Stated as the
+     geometric fact rather than as the constant, so it survives a change to either anchor: the
+     strip's sky spans elevations 7.7 to 17.7 degrees, which is y 0.134 to 0.304 on the dome, and
+     what went wrong was that the lower part of that traversed a 0.40-wide ramp while the upper
+     part traversed a 0.75-wide one. */
+  { const M=X.SKY.skyMidAt, LO=X.SKY.skyLowAt;
+    const yLo=Math.sin(7.7*Math.PI/180), yHi=Math.sin(17.7*Math.PI/180);
+    const lowFrac=(Math.min(yHi,M)-yLo)/(M-LO);        // of the low ramp, inside the band
+    const topFrac=(yHi-Math.max(yLo,M))/(1-M);         // of the top ramp, inside the band
+    ok(lowFrac/Math.max(1e-6,topFrac)<3.0,
+       'the visible band crosses the low ramp '+(lowFrac/Math.max(1e-6,topFrac)).toFixed(1)+
+       ' times as fast as the top ramp (it was 4.1, which quantised into a 2-level step)');
+  }
+  /* AND THE HAZE BAND FADES OUT INSTEAD OF ENDING. It is a 26 m open cylinder, so its top edge was
+     a horizontal line drawn across the sky at a fixed elevation. Per-vertex alpha, 1 at the bottom
+     and 0 at the top; the colour stays on the material so nightApply's opacity knob still scales
+     the whole band. */
+  { const hc=G.haze&&G.haze.geometry&&G.haze.geometry.attributes.color;
+    ok(!!hc&&hc.itemSize===4,'the haze band carries per-vertex ALPHA (itemSize '+
+       (hc?hc.itemSize:'none')+') — three reads vertexAlphas off a 4-component colour');
+    if(hc){ const pos=G.haze.geometry.attributes.position;
+      let top=1,bot=0;
+      for(let i=0;i<pos.count;i++){ const a=hc.getW(i);
+        if(pos.getY(i)>12.9)top=Math.min(top,a);
+        if(pos.getY(i)<-12.9)bot=Math.max(bot,a); }
+      ok(top<0.02&&bot>0.98,'and it fades from '+bot.toFixed(2)+' at its base to '+top.toFixed(2)+
+         ' at its top, so there is no rim to see'); }
+    ok(G.haze.material.vertexColors===true&&G.haze.material.transparent===true,
+       'with vertexColors on and the colour still on the material, so nightApply still owns opacity');
+  }
+  /* THE TONE KNOBS SHIPPED AT ERIC'S PICK, and the pick is asserted so a later edit has to argue
+     with it rather than drift past it. */
+  ok(Math.abs(X.SKY.skySatMul-0.70)<1e-9&&Math.abs(X.SKY.skyHueRot-8)<1e-9,
+     'the sky ships at Eric\'s SOFTER pick — satMul '+X.SKY.skySatMul+', hueRot +'+X.SKY.skyHueRot);
+}
+
 C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture');
 {
   /* THE SKY SCORED 6 OF 9 AT BASELINE and the three properties it failed were the three the brief
@@ -7852,12 +7919,20 @@ C.section('REPLAT P6A: the model-swap seam');
      turns them on when the atlas arrives — and the digest records visibility, which is why it
      moved for them as well as for the new geometry.
        carpark  mesh 2aaf24df957a1ecd, meshes 935, tris 314012
-       skifield mesh 4f9ef26614da871e, meshes 320, tris 144378 */
+       skifield mesh 4f9ef26614da871e, meshes 320, tris 144378
+
+     RE-PINNED FOR ERIC'S SOFTER SKY TONE, 2026-09-10 — satMul 0.70, hueRot +8, the horizon haze
+     band's missing sRGB convert, the dome's ramp made C1 continuous, and its low stop widened from
+     -0.15 to -0.45. Mesh COUNT unchanged in both worlds; triangles +336, which is the haze
+     cylinder going from one height segment to eight so its alpha can fade instead of ending in a
+     rim. Collider digests and all fourteen counts unchanged.
+       carpark  mesh 60f4198fd9a59be2, meshes 943, tris 314756
+       skifield mesh 3b312a09c0889a9d, meshes 328, tris 145122 */
   const PRESEAM={
-    carpark :{mesh:'60f4198fd9a59be2', col:'1b025c57715cb017', meshes:943, tris:314756,
+    carpark :{mesh:'c24bbd4c94f84b9a', col:'1b025c57715cb017', meshes:943, tris:315092,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'3b312a09c0889a9d', col:'fc06ef03250ea1ed', meshes:328, tris:145122,
+    skifield:{mesh:'011576537fad8366', col:'fc06ef03250ea1ed', meshes:328, tris:145458,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

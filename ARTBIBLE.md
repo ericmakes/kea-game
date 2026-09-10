@@ -11,6 +11,27 @@ an unfilled section means that wave has not run yet.
 - Vividness law: NZ tourism-campaign colour - saturated, never washed out.
 - Fidelity model: UGG simplicity, ASH atmosphere, SwaG density - stylized
   correctness, not photorealism.
+- **EVERY GAME FRAME CARRIES A CSS SATURATION BOOST AND THE PHOTOGRAPHS DO NOT.**
+  `index.html` renders the canvas under `filter:saturate(1.22) contrast(1.06)
+  brightness(1.03)`, so a captured frame is 22% more saturated than the
+  framebuffer it came from, and every plate on the reference board is an
+  unfiltered photograph. Anyone comparing the two is comparing a graded picture
+  with an ungraded one, in the game's favour, by construction.
+  It is NOT removed, and that is deliberate: the filter is what the player sees,
+  so it is what should be judged. But it means a game frame that MATCHES a plate's
+  saturation is really about a sixth less saturated than the plate underneath the
+  grade, and a frame that looks a little hot beside a photograph may be correct.
+  Recorded at Eric's instruction, 2026-09-10, while picking the sky tone - the
+  measurement it bears on is `platescore.mjs`'s saturation rows, which read the
+  shipped picture and say so.
+- **AND THE PROJECT RUNS WITH `THREE.ColorManagement` OFF.** A raw hex handed to
+  a material is therefore treated as a LINEAR value and comes out of the sRGB
+  encode brighter than it was authored; `mat()` and the sky dome call
+  `.convertSRGBToLinear()` by hand. Anything that does not is a latent brightness
+  bug - the horizon haze band was one for as long as it existed, found by the
+  world mesh digest and fixed on 2026-09-10. Two colours in this project have
+  been wrong for this reason and both took hours to find, so: convert at the
+  seam, every time, and say so at the call site.
 
 ## REPLAT P2 - SKY AND SUN   [LOCKED 2026-09-03, session 15]
 The phases below were cut for the STYLISED plan. REPLAT.md supersedes that plan for LIGHT,
