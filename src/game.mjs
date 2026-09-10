@@ -3554,6 +3554,11 @@ function buildSky(){
     new THREE.MeshBasicMaterial({color:0xC3D2DC,transparent:true,opacity:0.45,side:THREE.BackSide,fog:false}));
   G.haze=haze;
   haze.position.y=8; G.scene.add(haze);
+  /* THE SUN'S PLACE IS COMPUTED IN BOTH WORLDS even though only the browser draws the glow, so a
+     headless battery can check that the visible sun and the light agree. The sprite itself needs a
+     canvas and stays behind the guard; its POSITION is arithmetic and does not. */
+  { const SP=SKY.sunPosDay, sl=Math.hypot(SP[0],SP[1],SP[2]), D=168;
+    G.sunSpritePos=[SP[0]/sl*D,SP[1]/sl*D,SP[2]/sl*D]; }
   // one soft sun — a glow, not a circle
   if(!HEADLESS){ const sc2=document.createElement('canvas'); sc2.width=sc2.height=128; const sg2=sc2.getContext('2d');
     const gr=sg2.createRadialGradient(64,64,4,64,64,62);
@@ -3561,8 +3566,21 @@ function buildSky(){
     sg2.fillStyle=gr; sg2.fillRect(0,0,128,128);
     const spr=new THREE.Mesh(new THREE.PlaneGeometry(52,52),
       new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc2),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,fog:false}));
-    spr.position.set(-140,40,66); spr.lookAt(0,14,0); G.scene.add(spr); }
-  // clouds: bright tops, grey bellies, drifting flat
+    /* SKY.md STEP 0 — THE VISIBLE SUN NOW SITS WHERE THE LIGHT COMES FROM.
+       It was hard-coded at (-140,40,66), which is elevation 14.5 degrees and azimuth 154.8. The
+       directional light is at SKY.sunPosDay [-46,42,22] — elevation 39.5, azimuth 154.4. The
+       azimuths agree to half a degree, so somebody matched the compass bearing and not the height,
+       and every shadow in the game has been cast from a sun TWENTY-FIVE DEGREES above the one you
+       can see. Measured, not guessed: acos of the dot of the two unit vectors is 25.0 degrees.
+       DERIVED FROM THE LIGHT RATHER THAN REPEATED, which is the only fix that cannot drift: move
+       the sun and the sprite follows. SUNDIST keeps it inside the 210 m dome. */
+    spr.position.set(G.sunSpritePos[0],G.sunSpritePos[1],G.sunSpritePos[2]);
+    spr.lookAt(0,14,0); G.scene.add(spr); G.sunSprite=spr; }
+  /* clouds: bright tops, grey bellies. SKY.md STEP 0 — THEY ARE REGISTERED NOW.
+     They used to be added to the scene anonymously: no handle, nothing in WORLDREGS, so nothing
+     could animate them and no battery could see them. The comment said "drifting flat" and nothing
+     drifted, because nothing could reach them. */
+  G.clouds=[];
   for(let i=0;i<8;i++){ const cg=new THREE.Group(); const n=3+((i*7)%3);
     for(let j=0;j<n;j++){ const r=rnd(6,12);
       const top=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),new THREE.MeshBasicMaterial({color:PAL.cloud,transparent:true,opacity:0.95}));
@@ -3570,7 +3588,7 @@ function buildSky(){
       const belly=new THREE.Mesh(new THREE.SphereGeometry(r*0.85,10,8),new THREE.MeshBasicMaterial({color:0xAEBBC6,transparent:true,opacity:0.5}));
       belly.position.copy(top.position); belly.position.y-=r*0.14; belly.scale.y=0.2; cg.add(belly); }
     cg.position.set(rnd(-140,140),rnd(36,62),rnd(-160,-70)); if(i%2)cg.position.z=rnd(90,160);
-    G.scene.add(cg); }
+    cg.name='cloud'; G.scene.add(cg); G.clouds.push(cg); }
 }
 
 /* ---------- collider helpers ---------- */

@@ -4101,6 +4101,41 @@ X.startGame(2); tick(30);
    is asserted is that every light and the fog actually READ the constants — which is the claim
    worth making, because the failure mode this piece was written against is a literal left behind
    in initScene after the block above it was retuned. */
+C.section('SKY.md step 0: the visible sun sits where the light comes from');
+{
+  /* IT WAS TWENTY-FIVE DEGREES OUT. The sprite was hard-coded at (-140,40,66) — elevation 14.5,
+     azimuth 154.8 — while the directional light sits at SKY.sunPosDay [-46,42,22], elevation 39.5,
+     azimuth 154.4. The azimuths agreed to half a degree, so somebody matched the compass bearing
+     and not the height, and every shadow in the game was cast from a sun 25 degrees above the one
+     you could see. Derived from the light now, so it cannot drift again.
+     THE POSITION IS COMPUTED IN BOTH WORLDS and only the glow is browser-only, which is what makes
+     this assertable at all: the sprite needs a canvas, its place does not. */
+  const S=X.SKY.sunPosDay, P=G.sunSpritePos;
+  ok(!!P,'the sun sprite has a derived position on G, in both worlds');
+  const n=v=>{const l=Math.hypot(v[0],v[1],v[2]);return [v[0]/l,v[1]/l,v[2]/l];};
+  const a=n(S), b=n(P);
+  const dot=Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
+  const deg=Math.acos(dot)*180/Math.PI;
+  ok(deg<1.0,'AND THE VISIBLE SUN AGREES WITH THE LIGHT to '+deg.toFixed(3)+
+     ' degrees (it was 25.0). Elevation '+(Math.asin(b[1])*180/Math.PI).toFixed(1)+
+     ' against the light\'s '+(Math.asin(a[1])*180/Math.PI).toFixed(1)+'.');
+  /* AND IT IS INSIDE THE DOME, or it would be drawn behind the sky it is meant to sit in. */
+  const r=Math.hypot(P[0],P[1],P[2]);
+  ok(r<210,'and it is inside the 210 m sky dome (r '+r.toFixed(0)+')');
+  /* THE CLOUDS ARE REACHABLE NOW, which is the other half of step 0: they used to be added to the
+     scene anonymously, so nothing could animate them and no battery could see them.
+     NOT IN WORLDREGS, THOUGH, AND THE BRIEF ASKED FOR THAT. buildSky runs ONCE from initScene, not
+     per world build, so a WORLDREGS entry would clear the array on every travel and never refill
+     it — G.clouds would read 8, then 0 for the rest of the session. Checked rather than assumed:
+     travel to the ski field and back and the count holds. Registered on G, which is what makes
+     them assertable; kept out of the per-build lists, which is what keeps them alive. */
+  ok(Array.isArray(G.clouds)&&G.clouds.length===8,
+     'the eight cloud groups are registered on G ('+(G.clouds||[]).length+')');
+  { X.boot({biome:'skifield'}); X.boot({biome:'carpark'});
+    ok(G.clouds.length===8,'and they survive travel ('+G.clouds.length+
+       ') — buildSky is scene-level, so WORLDREGS would have emptied them'); }
+}
+
 C.section('REPLAT P2: sky and sun');
 {
   const SKY=X.SKY, PI=Math.PI;
