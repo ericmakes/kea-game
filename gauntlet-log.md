@@ -5277,3 +5277,97 @@ the cloud at all; and transparency is what made iteration 1 read as a bunch of g
 ## THE LOCK
 
 Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
+
+---
+
+# SESSION 36b — 2026-09-10 — TWO DECISIONS AND AN ATLAS
+
+Eric's two calls, then TODO 118. Four pieces, four commits, all CERTIFIED-SHIP and pushed.
+
+## THE TOUR'S UI MOMENTS: ONE WAS FREE, ONE COULD NOT BE PINNED AT ALL
+
+`26_tour_brochure` is as clean as the set gets — worst take-to-take SSIM **1.0000** over five takes,
+all four sweeps byte-identical. It is a full-screen overlay with its own background, so the running
+game never reaches the frame.
+
+`27_travel_card` scored **0.5616** against a 0.995 threshold, with four sweeps 17,431 to 96,294
+pixels apart and no two agreeing. Two causes, both needing a hook in the game rather than a change
+to the staging:
+
+- **The follow cam was photographed mid-ease.** It converges at `1 - 0.0018^dt` — frame-rate
+  independent in wall clock, 99.8% done inside a second — so in play it is always effectively
+  converged, but under the rig's pinned clock what decides how far it got is the number of TICKS
+  the machine managed. The travel blend lerps FROM that position, so pinning the blend's clock
+  pinned `e` and not what `e` was applied to.
+- **A clock cannot be pinned from outside the loop.** The staging set `G.travel.t` every
+  requestAnimationFrame while `travelUpdate` added `dt` to the same field inside the game's tick.
+  The camera came to rest at exactly THREE positions, evenly spaced along the line from the follow
+  cam to the arrival anchor: `t = 0.85 + n*dt` for n of 0, 1 and 2. `G.travelHold` pins **u**
+  instead. The `t` pin stays, for a different job — it stops `travelUpdate` reaching `dur` and
+  calling `travelEnd`, which replaces `G.travel` and drops its anchor and card, and the card is the
+  thing the vantage exists to photograph.
+
+After both: **0.9984**, sweep spread 179 px of 518,400.
+
+## FOUR WRONG GUESSES BEFORE THE RECTANGLES GAVE UP
+
+The wisp tier's first frames had faint hard-edged rectangles over the sky beside every cloud. In
+order: the atlas's cell borders were made **provably zero** and they stayed; **mipmaps** were turned
+off and they stayed; an **alphaTest** was added and they stayed. Then `cloudWispEmis` went to 3.0 —
+the wisps lit up like magnesium and **the rectangles did not move at all**, which rules out the wisp
+material entirely and leaves the passes that draw the geometry without it.
+
+`GTAOPass` and `BokehPass` each render their own depth and normal prepass with an OVERRIDE material,
+and an override material does not care that a material is transparent or has `depthWrite` off. A
+blended quad occludes like a solid plate and the occlusion comes back **in the shape of the quad**.
+`G.postExclude` is the seam now; `post.mjs` wraps both passes, and a battery asserts both because
+excluding one would leave half the fault.
+
+**Lesson worth keeping: the cheap discriminating experiment beat three plausible fixes.** Making the
+thing under suspicion behave EXTREMELY (emissive 3.0) settled in one shot what three targeted fixes
+could not.
+
+## THE METRIC HAS A CEILING, AND SAYING SO IS THE RESULT
+
+TODO 118's atlas ships and the margin is visibly feathered, but cloud boundary complexity moved only
+4.76 to 4.88 against a 7.11 floor. Two measurements explain it and neither is a tuning:
+
+- **The scorer can only see the top of the wisp.** The cloud mask is a neutrality test — saturation
+  under 0.20 — and a white wisp at alpha *a* over this sky blends to saturation 0.228 at *a* = 0.5
+  and 0.177 at *a* = 0.6. The boundary the number sees is the atlas's **a = 0.57 iso-contour**;
+  everything fainter is feathering the eye reads and the metric cannot.
+- **The target is partly about how much cloud is in frame.** For N lobes in a chain, perimeter over
+  root area is about `2.84*sqrt(N)`: 4.88 is three fused lobes, 7.11 is 6.3 of them, and
+  `nz_carpark_01` reaches 14.6 because its blob IS the whole crop with holes punched through it.
+  Sweeps confirm it — `cloudSpread` 1.0 to 3.0 buys 4.83 to 5.70 then falls back, `cloudWispR` peaks
+  at 6.12 then falls as blobs merge, and anything past a quarter cover costs the banding row.
+
+## THREE MORE FAULTS IN MY OWN ASSERTIONS, ONE HIDING A REAL DEFECT
+
+- **A cloud's CENTRE against a hard-coded 205.** Wrong quantity — the dome is BackSide, so it is
+  VERTICES beyond its radius that vanish — and a literal fitted to one seed, since cloud positions
+  come from `rnd()` and the same check read 178 m in one process and 207 m in another. Measuring
+  vertices against the dome's own reported radius found **a real clip at 212.7 m**: part of a cloud
+  was being eaten by the sky.
+- **`G.postExclude` used `|| []` and leaked.** `boot()` replaces the scene, so `buildSky` runs on
+  every travel: `G.cloudWisps` stayed 8 while `postExclude` went 8, 16, 24, and `post.mjs` walks it
+  every frame. TODO 48's law exactly — the reset belongs to the function that fills it.
+- **A comment of mine was wrong and is corrected.** SKY.md step 0 recorded that `buildSky` "runs
+  ONCE from initScene". It does not. The conclusion it supported still holds and now has the real
+  reason: `boot` runs `initScene` and THEN `buildWorld`, whose dispatcher empties the registries, so
+  a cloud in WORLDREGS would be filled and cleared moments later, every time.
+
+## THE MACHINE, AND A FALSE ALARM WORTH KILLING
+
+TODO 115 arrived in force: four attempts at a 42-frame sweep were killed for low memory and wrote
+ZERO frames, even cut to seven vantages, with swap at 7.6 GB of 8 GB. A single vantage worked and a
+batch of four worked, so the sweep was batched by six — each batch its own process, per-frame retry,
+orphan sweep between. All four sweeps then came back 42 of 42.
+And `diff.mjs` no longer reports STALE frames as drift. A targeted two-vantage sweep leaves the other
+forty in `gauntlet/capture` from an older build, and diffing those against a fresh baseline flagged
+`25_preen_follow` at 0.9605 when its frame was thirty minutes older than the bundle — the worst kind
+of false alarm, because it looks exactly like the thing the tool exists to catch.
+
+## THE LOCK
+
+Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
