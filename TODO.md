@@ -2699,7 +2699,7 @@ the heightfield, none about the geometry the heightfield becomes. Widen the dige
 index order, or add a per-mesh "normals point outward" census across every generated mesh in both
 maps rather than only the range. Cheap; catches a whole class.
 
-### 118. THE CLOUD MARGIN NEEDS AN ALPHA TIER, NOT MORE SPHERES
+### 118. THE CLOUD MARGIN NEEDS AN ALPHA TIER, NOT MORE SPHERES — TIER SHIPPED 2026-09-10, METRIC NOT CLOSED
 SKY.md step 2 closed seven of eight properties and stopped at the cap with cloud boundary
 complexity at 4.76 against the plate's band of 7.11-17.25. A circle scores 3.545, so the game's
 cloud outline is 1.34 times a circle's where `nz_carpark_01`'s is 4.1 times. A fringe of 26 small
@@ -2716,3 +2716,42 @@ lobes underneath. Watch two things the pass already learned. The cloud mask is a
 not inside the cloud as far as the scorer is concerned. And transparency is what made iteration 1
 read as a bunch of grapes: every see-through overlap draws its own outline inside the mass. Alpha
 on the MARGIN only, over an opaque body, is the shape of the answer.
+
+**WHAT SHIPPED, AND THE HONEST RESULT.** The tier is built: `tools/bake_cloud_wisps.mjs` bakes
+`assets/tex/cloud_wisps.png` (first-party, ledger row and md5), and each cloud carries one extra
+merged mesh of alpha-mapped quads on its projected silhouette, lit by the body's own normals and
+tinted with the body's haze. 8 meshes, 744 triangles, +0.14 ms as a mean of three interleaved pairs.
+The margin is visibly feathered and torn where it was a sphere union. **The boundary metric moved
+4.76 to 4.88.** That is not the band.
+
+**AND THE REASON IS A CEILING, NOT A TUNING.** Two things were measured on the way:
+
+1. **The scorer can only see the top of the wisp.** platescore's cloud mask is a neutrality test —
+   saturation below 0.20 — and a white wisp at alpha *a* over this sky blends to saturation 0.228 at
+   *a* = 0.5 and 0.177 at *a* = 0.6. So the boundary the number sees is the **a = 0.57 iso-contour**
+   of the atlas, and every fainter texel is feathering the eye reads and the metric cannot. The bake
+   now gains the field so that contour lands in the nibbled zone where it is ragged; that is what
+   took 4.82 to 4.88, and it is most of what gaining can buy.
+2. **The target is partly a statement about how much cloud is in frame.** For N round lobes joined
+   in a chain, perimeter over root area is about 2.84*sqrt(N). Ours measures 4.88, so it behaves
+   like three lobes fused into one mass; the 7.11 floor is N of 6.3. `nz_carpark_01` reaches 14.6
+   because its blob IS the whole crop, 1440x276, with blue holes punched through it — a boundary
+   2.3 times the crop's own perimeter. Sweeps confirm the ceiling: spreading the lobe chain
+   (`cloudSpread` 1.0 to 3.0) buys 4.83 to 5.70 and then falls back, enlarging the wisps
+   (`cloudWispR` 1.6 to 3.6) peaks at 6.12 and then falls as the blobs merge, and every setting past
+   a quarter cloud cover costs the BANDING row, which the scorer then refuses to measure.
+
+**SO WHAT IS LEFT IS A DECISION ABOUT WEATHER, NOT A BETTER MARGIN.** Reaching the band needs a
+cloud field that fills the sky and has holes in it — many more masses, larger, with gaps — which
+changes every frame in the game and is Eric's call, not a tuning. The knobs are all in `SKY` and
+reachable through `KEASKY`, so a variant page is cheap: `cloudSpread`, `cloudWisp`, `cloudWispR`,
+`cloudWispAt`, `cloudWispEmis`, `cloudWispAlpha`.
+
+**AND TWO DEFECTS FOUND WHILE BUILDING IT, BOTH FIXED, NEITHER ABOUT CLOUDS.** `GTAOPass` and
+`BokehPass` each render their own depth and normal prepass with an override material, which ignores
+`transparent` and `depthWrite:false` — so any blended quad occludes like a solid plate and the
+ambient occlusion comes back in the shape of the quad. It showed as faint dark rectangles over the
+sky and survived three wrong fixes before the wisp emissive was cranked to 3.0 and the wisps lit up
+while the rectangles did not move. `G.postExclude` is now the seam any transparent tier can use, and
+`src/post.mjs` wraps both passes. The first version of that list used `|| []` and leaked 8 stale
+meshes per travel — TODO 48's law again: the reset belongs to the function that fills it.
