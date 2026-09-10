@@ -5676,6 +5676,63 @@ C.section('REPLAT P4d: any pull at all earns a territory');
        painted on a flat plane reproduces that.
    So: a third instanced tier over an annulus, plus a ground term that carries the colour past it.
    This section is the pin on the parts of that a headless battery can reach. */
+C.section('TODO 82: the card tier — coverage to the horizon that geometry cannot afford');
+{
+  /* P4e measured the wall and wrote it down: the far blade tier costs +9 ms to cover 28 m and
+     +16 ms for 40 m on a map 240 m across, and seg 1 saves NOTHING while dropping the shadow
+     receive saves 2.4 ms — so the cost is FILL, not vertices, and real blades to the horizon are
+     unaffordable at any vertex budget. One quad carrying many blades buys the same coverage for a
+     fraction of the instances.
+     MEASURED, INTERLEAVED, ON THIS MACHINE: cards off 21.61/21.645/21.64 ms, cards on
+     21.79/21.827/21.792 — +0.17 ms for 86 metres of radius, against +9 ms for the blade tier's 28.
+     The first two readings were taken NON-interleaved and said the card tier made the frame FASTER,
+     which is machine drift; P4e's own method says interleaved and it is right.
+     AND IT DOES NOT PUT A SECOND RING IN THE FIELD, which is the thing TODO 82 warned about:
+     edgefind on 05_tussock_ground goes 10.75 -> 8.90 at the grass edge and 10.79 -> 8.13 on the
+     chroma line above it, with no new peak at the card tier's own boundary. */
+  const CD=X.GRASS.cards;
+  ok(!!CD,'the card tier has a recipe in GRASS');
+  { X.setSeed(20260828); X.boot({biome:'carpark'});
+    const c=G.grass.cards;
+    ok(!!c,'and buildGrass reports it the way it reports cover and far');
+    /* THE DENSITY IS DERIVED, NOT TYPED, and it is over the ANNULUS the cards occupy rather than
+       over a disc whose middle they deliberately leave to the blades — the same correction the far
+       tier's own density carries. */
+    const ringA=Math.PI*(CD.far*CD.far-CD.near*CD.near);
+    ok(Math.abs(c.density-CD.count/ringA)<1e-9,
+       'its density is over the ring it actually occupies ('+c.density.toFixed(4)+
+       ' cards/m2 over '+Math.round(ringA)+' m2), not over a disc');
+    ok(c.near>=X.GRASS.farLayer.near-3&&c.near<X.GRASS.farLayer.near,
+       'AND IT HANDS OVER FROM THE BLADE TIER RATHER THAN LEAVING A GAP — cards start at '+c.near+
+       ' m where the far blades reach '+X.GRASS.farLayer.near+' m, so the two overlap instead of '+
+       'meeting. A gap between tiers is a ring by another name.');
+    ok(c.far>X.GRASS.farLayer.near*3,'and it reaches '+c.far+' m, '+
+       (c.far/X.GRASS.farLayer.near).toFixed(1)+'x further than geometry does');
+    ok(c.blades>=c.count*15,'and it carries at least the fifteen blades a card TODO 82 costed ('+
+       c.blades.toLocaleString('en-US')+' blades from '+c.count.toLocaleString('en-US')+' quads)');
+    /* THE ALPHA TEST IS THE WHOLE REASON THIS IS CHEAP, and it is also the reason the tier ships
+       INVISIBLE until textured: with the 1x1 white placeholder every card is fully opaque and the
+       field becomes a forest of solid rectangles. */
+    ok(c.alphaTest>0&&c.alphaTest<1,'it is an alphaTest cutout ('+c.alphaTest+
+       '), not blended — no sorting, no transparency pass');
+    ok(c.instances===0,'and NODE HONESTLY REPORTS ZERO INSTANCES ('+c.instances+
+       '), because the grass tiers are browser-only geometry — the same shape cover and far use. '+
+       'A register claiming positions this world does not have is the TODO 112 mistake.'); }
+  /* THE ATLAS IS IN THE TREE AND IS THE SIZE THE BAKER SAYS. Checked because the tier fails SAFE
+     but fails INVISIBLY: a missing atlas leaves the field exactly as P4e shipped it and says so
+     only in G.grassCardTex. */
+  { const fs2=require('fs'), path2=require('path');
+    const f=path2.join(__dirname,'../../assets/tex/grass_cards.png');
+    ok(fs2.existsSync(f),'the baked card atlas is in the tree at assets/tex/grass_cards.png');
+    if(fs2.existsSync(f)){
+      const b=fs2.readFileSync(f);
+      /* PNG IHDR: width and height are big-endian at bytes 16..23 */
+      const w=b.readUInt32BE(16), h=b.readUInt32BE(20);
+      ok(w===1024&&h===1024,'and it is '+w+'x'+h+', '+CD.grid+'x'+CD.grid+' cards of '+
+         (w/CD.grid)+' px');
+      ok(b.length>50000,'and it is not a stub ('+b.length.toLocaleString('en-US')+' bytes)'); } }
+}
+
 C.section('REPLAT P4e: the field stops being a disc');
 {
   const GR=X.GRASS, vs=X.GRASS_GLSL_V;

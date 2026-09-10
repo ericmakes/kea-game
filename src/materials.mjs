@@ -223,6 +223,43 @@ export async function installMaterials(KEAGAME) {
     console.error('materials: the range keeps its untextured look —', e);
   }
 
+  /* ---- THE GRASS CARD ATLAS (TODO 82) ----
+     The horizon tier is built with a 1x1 white placeholder and `visible=false`, because its
+     material carries an alphaTest: with a white map every card is fully OPAQUE and the field would
+     become a forest of solid rectangles. Nothing turns it on but this block, and only once the real
+     atlas is in hand. A failed fetch therefore leaves the field exactly as P4e shipped it.
+     NEAREST-NEIGHBOUR IS WRONG HERE and linear is right, but the MIPS are the thing that matters:
+     an alpha-cut atlas minified without mips shimmers viciously at 100 m, and with them the cut
+     edge softens toward the alphaTest threshold and blades dissolve. generateMipmaps stays on and
+     the test is low (0.42) so a mip-softened blade survives rather than popping. */
+  try {
+    const inst = G.grassCards;
+    if (!inst) { G.grassCardTex = { mode: 'none', why: 'no card tier in this build' }; }
+    else {
+      /* NOT matURL: that composes a family set's name (asset + _diff_ + res + .jpg) and this
+         atlas is a single PNG we bake ourselves. Same RELATIVE-URL discipline though, and for the
+         same reason skyURL gives — vite is base:'./', the rig serves dist/ from a loopback root,
+         and an absolute /tex/ path would work in the rig and 404 in a subdirectory deploy. */
+      const tex = await loadTex(loader,
+        new URL(KEAGAME.MATS.dir + 'grass_cards.png', document.baseURI).href);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;   // an atlas must never wrap between cells
+      tex.generateMipmaps = true;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.anisotropy = 8;
+      tex.needsUpdate = true;
+      inst.material.map = tex;
+      inst.material.needsUpdate = true;
+      inst.visible = true;
+      G.grassCardTex = { mode: 'atlas', asset: 'grass_cards',
+                         instances: inst.count, alphaTest: inst.material.alphaTest };
+    }
+  } catch (e) {
+    G.grassCardTex = { mode: 'none', why: String(e && e.message || e) };
+    console.error('materials: the grass card tier stays off —', e);
+  }
+
   G.mats = KEAGAME.matState();
   G.mats.report = report;
   return G.mats;

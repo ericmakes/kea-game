@@ -684,3 +684,44 @@ ledger's own law rather than by looking: adding the rows above turned the batter
 `UNLICENSED IN TREE: kea_bill_skin.glb`, because that check reads `assets/models/` off the DISK and
 does not care what git knows. A file dropped between sessions cannot hide from it. Both copies
 removed; the licensed one lives in `astra_incoming/astra_kea_task1_skin/`.
+
+---
+
+### grass cards — `tex/grass_cards.png`  (TODO 82, 2026-09-10)
+
+**THIS ONE IS OURS, and that is the whole point of the row.** Every other file in this ledger is a
+third party's work under a licence we have to honour. This atlas is baked from the game's own blade
+recipe by `tools/bake_grass_cards.mjs`, which evaluates `src/game.mjs` and reads
+`GRASS.biomes[biome]` and `GRASS.farLayer` — the same heights, widths, taper, lean and base/tip/tint
+colours the near tier draws. No third-party licence applies and none is claimed.
+
+| field | value |
+|---|---|
+| what | 1024×1024 RGBA, a 4×4 grid of 256 px cards, 48 blades each, hard alpha for an alphaTest cutout |
+| coverage | 37.9% opaque texels; the rest is cut away |
+| produced by | `tools/bake_grass_cards.mjs`, in this repo, from this repo's own constants |
+| licence | **none needed — first-party.** Same terms as the rest of the source |
+| file | `tex/grass_cards.png`, 348633 bytes |
+| md5 | `23df7fd1979aedf7c1817f5daeb97856` |
+
+**WHY IT WAS BAKED RATHER THAN DOWNLOADED, and the search is recorded so nobody repeats it.** TODO
+82 asks for "a CC0 grass alpha atlas (an asset and a licence line)", so both publishers this project
+already uses were queried:
+
+- **ambientCG** has 60 assets of type `Atlas` and **not one is grass** — eight `Foliage` sets and a
+  shelf of `LeafSet`s, all broadleaf. A filter for grass, tussock, reed, wheat, straw or meadow
+  returns zero.
+- **Poly Haven** has CC0 grass MODELS (`grass_medium_01`, `grass_medium_02`, `grass_bermuda_01`)
+  whose textures ARE alpha blade atlases. They are green European lawn and meadow species.
+
+The field is golden NZ tussock and Eric has already played and approved it (P4b, P4d). Dropping a
+green European atlas in at 26 m would replace a judged look with one he has not seen, at exactly the
+distance where the two tiers have to agree. Baking from our own recipe makes the handover a colour
+and species match by construction rather than by tuning — and re-baking is how a future change to
+the field's palette reaches the cards, rather than editing a second copy of the recipe.
+
+**HARD ALPHA, NO ANTIALIASING, ON PURPOSE.** The tier is an `alphaTest` cutout, so a soft edge would
+either shimmer at the threshold or need blending and the sorting that implies — which TODO 82 names
+as one of the reasons the tier is a piece and not a tuning. Every texel is opaque or absent. The
+mips are generated at load (`LinearMipmapLinearFilter`) with a low test of 0.42, so a mip-softened
+blade at 100 m dissolves gently instead of popping.

@@ -517,6 +517,21 @@ const GRASS={
      and 9-20 mm — enough to hold a pixel at range, not enough to change species — and the coverage
      is bought with COUNT instead. The sweep is in ARTBIBLE; 300k reads patchy at the road and 450k
      reads continuous. */
+  /* ---- THE CARD TIER (TODO 82) — coverage to the horizon that geometry cannot afford ----
+     P4e measured the wall and wrote it down: the far blade tier costs +9 ms to cover 28 m and
+     +16 ms to cover 40 m, on a map 240 m across, and seg 1 saves NOTHING while dropping the shadow
+     receive saves 2.4 ms — which says the cost is FILL, not vertices. Real blades to the horizon
+     are not affordable at any vertex budget.
+     ONE QUAD CARRYING FIFTEEN BLADES gets the same coverage for a fifteenth of the instances, which
+     is the ratio the fill measurement asks for. That is TODO 82's own answer and this is it.
+     THE ATLAS IS BAKED FROM THIS RECIPE, not downloaded: see tools/bake_grass_cards.mjs for why
+     (ambientCG has no grass atlas at all, Poly Haven's are green European species, and the golden
+     tussock field is already approved). So the cards are the near blades, rendered.
+     NO SHARED-STREAM DRAWS. Placement comes from a positional hash, like the terrain's, so the
+     tier can sit anywhere in the builder without relocating a single later seeded draw — TODO 47's
+     law is the reason this is not a rnd() loop. */
+  cards:{near:26.0, far:112.0, count:26000, w:1.15, hMul:1.35, yaw:true,
+         alphaTest:0.42, grid:4, tilt:0.06, sink:0.04},
   farLayer:{count:225000, near:28, rMin:0.24,
             h:[0.22,0.52], w:[0.012,0.028], lean:[0.10,0.36],
             bare:0.22, clumpM:1.60, clumpPull:0.44, clumpPullVar:0.28,
@@ -4356,6 +4371,13 @@ function buildGrass(biome){
   /* the annulus covers pi*(1-rMin^2) of its disc, so its density is over the ring it actually
      occupies and not over a disc a third of which it deliberately leaves empty */
   const ringA=Math.PI*far.near*far.near*(1-far.rMin*far.rMin);
+  /* THE CARD RING'S OWN AREA, so its density is over the annulus it occupies rather than over a
+     disc whose middle it deliberately leaves to the blades. */
+  const CD=GRASS.cards;
+  const cardA=Math.PI*(CD.far*CD.far-CD.near*CD.near);
+  const cardState=(inst)=>({count:CD.count,near:CD.near,far:CD.far,w:CD.w,
+    density:CD.count/cardA, alphaTest:CD.alphaTest, grid:CD.grid,
+    blades:CD.count*15, instances:inst});
   const farState=(inst)=>({count:far.count,near:far.near,rMin:far.rMin,bare:far.bare,
     density:far.count/ringA, hi:far.h[1], wide:far.w[1], instances:inst});
   if(HEADLESS){
@@ -4366,10 +4388,12 @@ function buildGrass(biome){
              cover:{count:cover.count,near:cover.near,bare:cover.bare,
                     density:cover.count/(Math.PI*cover.near*cover.near),
                     hi:cover.h[1],instances:0},
+             cards:cardState(0),
              far:farState(0)}; return; }
   /* THE COVER GOES DOWN FIRST so the clumps are drawn over it — not that depth testing cares, but
      the reading order of the code should match the reading order of the ground. The FAR tier goes
      down before both, for the same reason: it is behind them. */
+  const cd=grassCards(biome);
   const fr=grassLayer(biome,far,'far');
   const cv=grassLayer(biome,cover,'cover');
   const cl=grassLayer(biome,clump,'clump');
@@ -4382,7 +4406,84 @@ function buildGrass(biome){
            lodNear:T.lodNear, lodFar:T.lodFar, clumpM:B.clumpM, bare:B.bare, biome:biome,
            cover:{count:cv.count,near:cover.near,bare:cover.bare,density:cv.density,
                   hi:cover.h[1],instances:cv.count},
+           cards:cardState(cd.count),
            far:farState(fr.count)};
+}
+/* grassCards(biome) — the horizon tier: alpha-cut quads from GRASS.cards.near to .far.
+   INVISIBLE UNTIL IT IS TEXTURED, and that is a safety property rather than a nicety. The material
+   carries an alphaTest, so with the 1x1 white placeholder every card would be fully OPAQUE and the
+   field would become a forest of solid rectangles. It is built with visible=false and only
+   src/materials.mjs turns it on, once the real atlas is in hand — the same shape as the terrain's
+   triplanar seam, and for the same reason: a look feature must not be able to wreck the game when
+   its asset does not arrive. */
+function grassCards(biome){
+  const CD=GRASS.cards;
+  if(HEADLESS)return {count:0,mesh:null};
+  const B=GRASS.biomes[biome]||GRASS.biomes.carpark;
+  const hi=GRASS.farLayer.h[1]*CD.hMul;
+  const geo=new THREE.PlaneGeometry(CD.w,hi);
+  geo.translate(0,hi/2-CD.sink,0);               // stand on the ground rather than straddle it
+  const white=new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1); white.needsUpdate=true;
+  const m=new THREE.MeshStandardMaterial({map:white,alphaTest:CD.alphaTest,transparent:false,
+    side:THREE.DoubleSide,roughness:0.92,metalness:0,
+    /* WHITE, because the atlas already carries the blade colours — it is baked from this field's own
+       base, tip and tint. Multiplying GRASS.groundTint over it a second time was double-tinting and
+       came out dark against the pale skirt the cards stand on. */
+    color:new THREE.Color(0xFFFFFF)});
+  const inst=new THREE.InstancedMesh(geo,m,CD.count);
+  inst.castShadow=false; inst.receiveShadow=false;   // fill is the budget; see P4e's measurement
+  inst.frustumCulled=true;
+  inst.visible=false;
+  inst.name='grass_cards';
+  const uv=geo.attributes.uv, cell=1/CD.grid;
+  /* PER-INSTANCE ATLAS CELL, carried in an instanced attribute rather than by cloning geometry:
+     one draw call for the whole tier is the entire point of the tier. */
+  const off=new Float32Array(CD.count*2);
+  const mx=new THREE.Matrix4(), q=new THREE.Quaternion(), e=new THREE.Euler(),
+        pos=new THREE.Vector3(), sc=new THREE.Vector3(1,1,1);
+  let n=0;
+  for(let i=0;i<CD.count;i++){
+    /* A POSITIONAL HASH, not rnd(). Golden-angle spiral for even coverage without clumping, then
+       jittered off it so the spiral itself is not findable — a spiral IS a pattern and edgefind
+       would score it. */
+    const t=(i+0.5)/CD.count;
+    const r=Math.sqrt(CD.near*CD.near+t*(CD.far*CD.far-CD.near*CD.near));
+    const a=i*2.399963229728653;
+    const jr=(_thash(i,17)-0.5)*CD.w*2.2, ja=(_thash(i,71)-0.5)*0.06;
+    const x=Math.cos(a+ja)*(r+jr), z=Math.sin(a+ja)*(r+jr);
+    if(Math.hypot(x,z)<CD.near*0.96)continue;
+    /* AND IT KEEPS OFF THE ROAD AND THE PADS, by asking the same flatten masks the terrain asks —
+       a card standing in the middle of the carriageway is the kind of thing a ring hides. */
+    if(terrainFlatAt(biome,x,z)>0.35)continue;
+    const y=terrainHeightAt(x,z);
+    e.set((_thash(i,3)-0.5)*CD.tilt, CD.yaw?_thash(i,29)*Math.PI*2:0, (_thash(i,5)-0.5)*CD.tilt);
+    q.setFromEuler(e);
+    const s=0.82+_thash(i,11)*0.5;
+    sc.set(s,s*(0.8+_thash(i,13)*0.5),s);
+    mx.compose(pos.set(x,y,z),q,sc);
+    inst.setMatrixAt(n,mx);
+    off[n*2]=(_thash(i,41)*CD.grid|0)*cell;
+    off[n*2+1]=(_thash(i,43)*CD.grid|0)*cell;
+    n++;
+  }
+  inst.count=n;
+  geo.setAttribute('aCell',new THREE.InstancedBufferAttribute(off,2));
+  m.onBeforeCompile=(sh)=>{
+    sh.vertexShader=sh.vertexShader
+      .replace('#include <common>','#include <common>\nattribute vec2 aCell;\nvarying vec2 vCell;')
+      .replace('#include <uv_vertex>','#include <uv_vertex>\n  vCell=aCell;');
+    sh.fragmentShader=sh.fragmentShader
+      .replace('#include <common>','#include <common>\nvarying vec2 vCell;')
+      .replace('#include <map_fragment>',
+        '#ifdef USE_MAP\n'+
+        '  vec4 kc = texture2D(map, vCell + fract(vMapUv) * '+(1/CD.grid).toFixed(8)+');\n'+
+        '  diffuseColor *= kc;\n'+
+        '#endif');
+  };
+  m.customProgramCacheKey=()=>'grassCards';
+  G.scene.add(inst);
+  G.grassCards=inst;
+  return {count:n,mesh:inst};
 }
 function nightTint(m){ // foliage and bark go dark by construction: L_night is 0.30 x L_day
   if(!m)return m; G.nightMats=G.nightMats||[];
