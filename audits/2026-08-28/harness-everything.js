@@ -1118,12 +1118,24 @@ C.section('SNOW LIES ON THE COUNTRY — the shed no longer stands in a white sau
      'the snow field envelope is named, not repeated ('+JSON.stringify(X.SNOWFIELD)+')');
   ok(!!X.snowBlocked(0,0,2).offmap,'a spot outside the envelope is refused as off-map');
 
-  // 7. THE REGISTER EXISTS IN BOTH PATHS, and is honestly empty headless. Said out loud because the
-  //    obvious "fix" — moving the generator out of the browser branch so G.snow fills here too —
-  //    would fill it with positions the browser does not have, since the tussock loop above it draws
-  //    from the same stream and only runs in the browser. An empty register beats a lying one.
+  /* 7. THE REGISTER IS FULL IN BOTH PATHS NOW — TODO 112, and the comment that used to live here
+        was wrong for a reason worth keeping.
+        It read: the obvious fix, moving the generator out of the browser branch so G.snow fills
+        here too, "would fill it with positions the browser does not have, since the tussock loop
+        above it draws from the same stream and only runs in the browser. An empty register beats a
+        lying one." The principle is right and the fact was stale: that tussock loop was DELETED
+        when the blade field superseded it, so nothing browser-only draws from the shared stream
+        ahead of the snow any more, and the snow block is the last seeded work in the builder.
+        SO IT WAS CHECKED RATHER THAN ASSUMED, in the only way that settles it: the browser's
+        G.snow was read out of a live page and compared against node's, record by record. TEN OF
+        TEN IDENTICAL to four decimal places. The register is not lying; it agrees. */
   ok(Array.isArray(G.snow),'G.snow is a register like G.wear and G.stones');
-  ok(G.snow.length===0,'and it is empty under node, because the discs are browser-only meshes ('+G.snow.length+')');
+  ok(G.snow.length===10,'and NODE BUILDS ALL TEN of the carpark\'s patches now ('+G.snow.length+
+     '), where it used to build none — so every assertion about snowBlocked, snowSpot and the '+
+     'peck-the-roof mission runs against a real list instead of an empty one');
+  ok(G.snow.every(s=>!!s.disc),'and every record carries the mound it made ('+
+     G.snow.filter(s=>!!s.disc).length+' of '+G.snow.length+'), so the register and the geometry '+
+     'cannot drift apart the way they did when one existed and the other did not');
 }
 
 C.section('THE STYLE STAR — par is what the page paid you, times a named ratio');
@@ -3511,12 +3523,22 @@ C.section('THE CLUB SKI FIELD - the second map boots, and it is a map and not a 
 
     /* 11. ONE BUILD, ONE WORLD - INCLUDING THE SNOW. G.snow was the last thing a build put on the
        board that the dispatcher never took back off it: invisible under node, where the carpark
-       patches are not built at all, and two maps worth of drifts in the browser. TODO 48 for snow. */
-    { const one=G.snow.length;
+       patches were not built at all, and two maps worth of drifts in the browser.
+       THE CLAIM CHANGED WITH TODO 112, AND THE OLD ONE WAS ONLY EVER TRUE BY ACCIDENT. This used to
+       assert the carpark ends up with ZERO — which was not a statement about the dispatcher at all,
+       it was the carpark's own snow being invisible to node. Now the carpark builds its ten in both
+       worlds, so the real question the dispatcher has to answer is finally askable: does travelling
+       leave ONE map's worth on the board, or two? */
+    { const ski=G.snow.length;
       X.boot({biome:'carpark'});
-      ok(G.snow.length===0,'the carpark takes the ski field drifts off the board on its way in ('+G.snow.length+')');
+      const park=G.snow.length;
+      ok(park>0&&park!==ski,'the carpark arrives with its OWN drifts rather than the ski field\'s ('+
+         park+' against the ski field\'s '+ski+')');
       X.boot({biome:'skifield'});
-      ok(G.snow.length===one,'and coming back leaves one map worth of them rather than two ('+G.snow.length+')'); }
+      ok(G.snow.length===ski,'and coming back leaves one map worth of them rather than two ('+
+         G.snow.length+', not '+(ski+park)+')');
+      X.boot({biome:'carpark'});
+      ok(G.snow.length===park,'and returning to the carpark is idempotent ('+G.snow.length+')'); }
 
     // 12. AND THE CARPARK IS EXACTLY WHERE IT WAS LEFT, which is the whole additive claim.
     X.boot({biome:'carpark'});
@@ -7453,10 +7475,29 @@ C.section('REPLAT P6A: the model-swap seam');
      and leave room for a snowline in the plates' proportion.
      Nine beech trees again, y only: moved 9 of 9, worst 0.847 m, x/z unchanged, counts unchanged.
      mesh ebdf8239533c571a -> 376da6539031a7a4; tris unchanged, because the ring count did not
+
+     --- TODO 112: THE CARPARK'S SNOW EXISTS IN NODE NOW ---
+
+     The ten patches used to sit inside `if(!HEADLESS)`, so `G.snow.length` was 0 here and 10 in a
+     browser, and every assertion about carpark snow ran against an empty list. Moving the loop onto
+     the SHARED stream in both worlds adds, in node only:
+         meshes 979 -> 989       (+10, one snowForm mound each)
+         tris 275804 -> 278404   (+2600, which is 260 a mound — the same figure the ski field's
+                                  mounds cost, so the two halves of the system agree)
+         snow 0 -> 10
+         mesh digest 4a6fc19b3a4ce578 -> 724e8f08b198323e
+     THE BROWSER IS BYTE-IDENTICAL, AND THAT WAS PROVED RATHER THAN ASSUMED. The block is the LAST
+     seeded work in buildCarpark — buildGrass runs at the top of the builder, buildWorld does nothing
+     seeded after b.build(), and the boulder loop that follows is browser-only — so the same draws
+     happen in the same order and nothing downstream can move. Checked from both ends: the browser's
+     G.snow was read out of a live page and matches node's TEN OF TEN to four decimal places, and
+     reshooting 01_carpark_wide, 02_hut_snow and 05_tussock_ground moved 15, 118 and 73 pixels,
+     which is this set's own run-to-run variation — two runs of the SAME build move 02_hut_snow by
+     66 px and its two deltas against the baseline were 118 and 62. Nothing re-pinned.
      change — only the heights. */
   const PRESEAM={
-    carpark :{mesh:'4a6fc19b3a4ce578', col:'1b025c57715cb017', meshes:979, tris:275804,
-              inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:0,
+    carpark :{mesh:'724e8f08b198323e', col:'1b025c57715cb017', meshes:989, tris:278404,
+              inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
     skifield:{mesh:'376da6539031a7a4', col:'fc06ef03250ea1ed', meshes:374, tris:108770,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,

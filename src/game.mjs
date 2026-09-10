@@ -5018,13 +5018,28 @@ function buildCarpark(){
      THE STREAM DOES NOT MOVE. This whole block was inside `if(!HEADLESS)`, so node never made
      these draws and no battery ever saw them — deleting it changes the browser world and nothing
      the gate reads. */
+  /* TODO 112 — THE SNOW PATCHES ARE BUILT IN NODE NOW, AND IT COST NOTHING.
+     They used to sit inside the `if(!HEADLESS)` block below, so `G.snow.length` was 0 in node and
+     10 in a browser, and every assertion this repo ever made about carpark snow — snowBlocked,
+     snowSpot, the peck-the-roof-snow mission against ground patches — ran against an empty list.
+     Not wrong: VACUOUS.
+     THE TODO PROPOSED A PRIVATE SEEDED GENERATOR and that was the wrong answer, for a reason the
+     TODO itself did not notice: this block is the LAST seeded work in buildCarpark. buildGrass runs
+     at the top of the builder, buildWorld does nothing seeded after b.build(), and the boulder loop
+     that follows is browser-only. So there is nothing downstream for these thirty draws to
+     displace, and they can simply be made on the SHARED stream in both worlds.
+     WHICH MEANS THE BROWSER IS BYTE-IDENTICAL. Same draws, same order, same positions, so no
+     pinned frame moves and the carpark does not re-pin — where a private generator would have
+     handed the patches different numbers and moved every one of them. What changes is NODE, which
+     gains the ten records and their meshes and becomes MORE like the browser rather than less.
+     THE BOULDERS STAY BROWSER-ONLY and stay where they are: they still draw immediately after these
+     thirty, in the same order, in the browser. */
+  for(let i=0;i<10;i++){ const x=rnd(SNOWFIELD.x0,SNOWFIELD.x1),z=rnd(SNOWFIELD.z0,SNOWFIELD.z1),r=rnd(1.5,3.6);
+    const q=snowSpot(x,z,r);
+    const sp=snowForm(q.x,0.04,q.z,r);
+    // registered the way G.wear and G.stones are, so what actually landed is inspectable
+    G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x,z},slid:q.slid,stuck:!!q.stuck,disc:sp}); }
   if(!HEADLESS){
-    // snow patches — the only ground decal that used to ignore what was already built there
-    for(let i=0;i<10;i++){ const x=rnd(SNOWFIELD.x0,SNOWFIELD.x1),z=rnd(SNOWFIELD.z0,SNOWFIELD.z1),r=rnd(1.5,3.6);
-      const q=snowSpot(x,z,r);
-      const sp=snowForm(q.x,0.04,q.z,r);
-      // registered the way G.wear and G.stones are, so what actually landed is inspectable
-      G.snow.push({x:q.x,z:q.z,r,y:0.05,want:{x,z},slid:q.slid,stuck:!!q.stuck,disc:sp}); }
     /* the boulders out on the country. NOTE FOR ANYONE WRITING AN ASSERTION ABOUT THESE: they are
        inside this `if(!HEADLESS)` block, so node never builds them and no battery can see them —
        the ski field's ring is the one that is testable. */
