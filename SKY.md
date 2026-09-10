@@ -231,7 +231,39 @@ with a table alone.
   cumulus, stratus and cirrus in one frame. Variety is a count of RECIPES, not of instances, and it
   should be asserted as such — the terrain pass's "every peak its own shape" measurement (mean
   correlation between normalised profiles, where identical cones score 1.00) transfers directly.
-- **THE NIGHT SKY: stars, moon, moonlit snowcaps.** There are no stars. The moon is one unlit mesh
+- **THE NIGHT SKY — BUILT 2026-09-11, FLAGGED FOR ERIC.** Page:
+  `gauntlet/capture/NIGHTSKY_page.png`. Nothing here is scored; it is his to judge.
+
+  **THE MOON WAS 10.6 DEGREES FROM THE MOONLIGHT**, the same defect step 0 found in the sun one
+  notch smaller. Hard-coded at (58,74,-52) — elevation 43.5, azimuth 318.1 — against
+  `SKY.sunPosNight` at elevation 34.0, azimuth 324.2. Derived from the light now: 0.000 degrees.
+
+  **420 STARS, ON `G.starfield` AND NOT ON `G.stars`.** That name was already taken by the game's
+  PROGRESSION LEDGER — three stars per page of the to-do list, keyed by area — so a Points object
+  written over it would have destroyed every player's earned stars silently. Placed on a
+  golden-angle spiral with `_thash` for per-star brightness, so the field costs the seeded stream
+  nothing (TODO 47); kept off the horizon, where the haze band and the ranges are; and ramped in
+  from `t` 0.55 rather than switched, because four hundred points appearing in one frame reads as a
+  bug and not as dusk. The moon still switches at 0.45, so it is out before the stars are.
+
+  **AND THE CLOUDS GLOWED AFTER DARK.** Their emissive floor stands in for sky light, and
+  `nightApply` was darkening the dome and the haze band around it while leaving that floor at its
+  daytime value: a cloud top measured rgb 229,231,235 over a deep blue sky. Worse, zeroing the
+  night ENVIRONMENT took it to 82,101,127 while zeroing the night DIRECTIONAL barely moved it (224
+  against 229) — so the clouds at night are lit almost entirely by the HDRI, whose night intensity
+  is **0.80 against the day's 0.55, higher after dark**. A material cannot opt out of
+  `scene.environment` in this three (`reflectivity:0`, `envMapIntensity:0` and a Lambert-to-Standard
+  swap were all tried), so what gets turned down is what the env has to work with: the emissive
+  floor to 10% and the albedo to 34% at midnight, both lerped from stored day values so the ramp
+  cannot compound.
+
+  **WHAT IS STILL OPEN.** SKY.md said `21_night_camp` and `22_torch_beam` were "already pinned to
+  judge it" and they are not: 21 sits at (38.2, 1.7, -3.2) looking DOWN at a campfire and carries
+  almost no sky, which is why this whole change moved it by 0.002 of SSIM. A night vantage that
+  frames the sky is a NEW PIN and Eric's call. And CLOUD VARIETY is still one recipe with size
+  variation — §4 asks for a count of RECIPES, which this pass did not do.
+
+- *(original brief)* **THE NIGHT SKY: stars, moon, moonlit snowcaps.** There are no stars. The moon is one unlit mesh
   that switches on at `G.time > 0.45`. And the snowcaps — which the terrain pass just gave real
   relief, a real snow mask and baked sun occlusion — are lit at night by `SKY.sunNight 0xB9CCEE` at
   intensity 0.24 from `sunPosNight [36,30,-26]`, which is a blue directional standing in for

@@ -217,6 +217,34 @@ const SKY={
      DOWNWARD, away from the sun, so it shades itself. Clipping every lobe's vertices to a shared
      plane and pointing their normals at the ground gives the flat bottom and the shaded underside
      in a single move, with no new material and no painted grey. */
+  /* THE NIGHT SKY — SKY.md 4. There were no stars at all: the sky above the snowline went from a
+     painted blue dome to a darker painted dome, with one unlit moon mesh switching on at t 0.45.
+     A COUNT, NOT A DENSITY, because the dome is a fixed size and a count is what an assertion can
+     hold. 420 reads as a real sky at this dome radius without becoming a sugar bowl.
+     THE HANDLE IS G.starfield AND NOT G.stars, WHICH IS ALREADY TAKEN — G.stars is the game's
+     progression ledger, three stars per page of the to-do list, keyed by area. Writing a Points
+     object over it would have silently destroyed every player's earned stars, and the name is
+     tempting enough that it is worth a sentence: the sky's stars are `starfield`. */
+  /* HOW MUCH OF THE CLOUD'S DAYTIME EMISSIVE FLOOR SURVIVES AT MIDNIGHT. The floor stands in for
+     sky light, and at night there is a great deal less of it — moonlit cloud is dim grey, not
+     white. 0.10 leaves enough that a cloud is still a shape against the stars rather than a hole
+     in them. */
+  cloudNightEmis:0.10,
+  /* AND THE CLOUD'S ALBEDO DROPS AT NIGHT, WHICH IS ODD PHYSICS AND THE ONLY LEVER THERE IS.
+     Measured: at night a cloud top reads rgb 229,231,235 — brilliant white over a deep blue sky —
+     and zeroing the night ENVIRONMENT takes it to 82,101,127, a dim blue-grey, while zeroing the
+     night directional barely moves it (224 against 229). So the clouds at night are lit almost
+     entirely by the HDRI, whose night intensity is 0.80 against the day's 0.55: HIGHER after dark,
+     which is deliberate for the terrain (night wants fill) and wrong for a cloud.
+     A material cannot opt out of scene.environment in this three — reflectivity 0, envMapIntensity
+     0 and a Lambert-to-Standard swap were all tried and none of them works — so the env cannot be
+     turned down for clouds alone. What CAN be turned down is what the env has to work with: the
+     diffuse IBL is envColour times albedo, so darkening the albedo darkens the contribution in
+     proportion. Physically a cloud does not become grey at midnight; but the alternative is a sky
+     full of glowing white lumps, and this is the knob the engine leaves. */
+  cloudNightTint:0.34,
+  stars:420, starR:203, starSize:1.9, starMinEl:0.05,
+  starDim:0.55,          // the faintest star's brightness, as a fraction of the brightest
   cloudFlatBase:1,       // clip lobe vertices to a shared base plane and face them down
   cloudBaseCut:0.26,     // how much of each lobe's height the plane cuts off, as a fraction
   /* THE BASE IS TINTED, AND THE TINT IS THE ONLY WAY TO SHAPE IT. A downward-facing face gets no
@@ -3762,8 +3790,19 @@ function initScene(){
   G.scene.add(sun); G.sun=sun;
   const fill=new THREE.DirectionalLight(0x9FB6C8,SKY.fillIntensityDay*LX_DIR); fill.position.set(30,20,-30); G.scene.add(fill); G.fill=fill;
   const rim=new THREE.DirectionalLight(0xFFE2B8,SKY.rimIntensityDay*LX_DIR); rim.position.set(20,10,44); G.scene.add(rim); G.rim=rim;
+  /* THE MOON SITS WHERE THE MOONLIGHT COMES FROM — SKY.md 4, and it is the same defect step 0
+     found in the sun, one notch smaller. It was hard-coded at (58,74,-52): elevation 43.5 degrees,
+     azimuth 318.1. The night directional is at SKY.sunPosNight [36,30,-26] — elevation 34.0,
+     azimuth 324.2 — so the moon you can see was TEN POINT SIX DEGREES from the light every shadow
+     at night is cast by. Measured as acos of the dot of the two unit vectors, not guessed.
+     DERIVED RATHER THAN REPEATED, exactly as the sun sprite is: move the night light and the moon
+     follows. MOONDIST keeps it inside the 210 m dome, and 148 is a little further out than the sun
+     sprite's 168 would put it — the moon should read as the most distant thing in the sky. */
   const moon=new THREE.Mesh(new THREE.SphereGeometry(4.5,12,10),new THREE.MeshBasicMaterial({color:0xEAF2FF,fog:false}));
-  moon.position.set(58,74,-52); moon.visible=false; G.scene.add(moon); G.moon=moon;
+  { const MP=SKY.sunPosNight, ml=Math.hypot(MP[0],MP[1],MP[2]), MOONDIST=148;
+    G.moonPos=[MP[0]/ml*MOONDIST,MP[1]/ml*MOONDIST,MP[2]/ml*MOONDIST];
+    moon.position.set(G.moonPos[0],G.moonPos[1],G.moonPos[2]); }
+  moon.visible=false; G.scene.add(moon); G.moon=moon;
   buildSky();
 }
 function buildSky(){
@@ -3905,6 +3944,40 @@ function buildSky(){
      of reading one cloud. Opaque removes the internal overlaps; merging removes the draw calls
      that would otherwise come with a fringe (31 lobes x 11 spheres is 341 of them, against 62
      before — merged, it is 8, which is fewer than the sky has ever had). */
+  /* THE STARS. A single Points object on the inside of the dome, invisible by day.
+     PLACED ON A GOLDEN-ANGLE SPIRAL, NOT BY rnd(). buildSky runs before every world build, so a
+     draw taken here relocates every seeded object in every map (TODO 47) — the same law the cloud
+     recipe obeys. A Fibonacci spiral over the sphere gives an even scatter with no draws at all,
+     and _thash supplies the per-star brightness jitter, so the sky is identical every boot.
+     THE LOWER SKY IS LEFT EMPTY. starMinEl keeps stars off the horizon, where the dome's own haze
+     band and the ranges are, and where a star would sit visibly on top of a mountain.
+     sizeAttenuation OFF so a star is a fixed number of pixels rather than shrinking with distance,
+     which is what a point light-year away does. */
+  { const N=Math.max(0,SKY.stars|0);
+    if(N>0){
+      const pos=new Float32Array(N*3), col=new Float32Array(N*3);
+      const GA=Math.PI*(3-Math.sqrt(5));
+      let k=0;
+      for(let i=0;i<N;i++){
+        /* y from 1 down to starMinEl, so the spiral covers the sky and stops above the horizon */
+        const t=(i+0.5)/N;
+        const y=1-(1-SKY.starMinEl)*t;
+        const r=Math.sqrt(Math.max(0,1-y*y));
+        const a=GA*i;
+        pos[k]=Math.cos(a)*r*SKY.starR; pos[k+1]=y*SKY.starR; pos[k+2]=Math.sin(a)*r*SKY.starR;
+        /* brightness varies; a sky of identical stars reads as a texture rather than as stars */
+        const b=SKY.starDim+(1-SKY.starDim)*_thash(i*131+7,i*57+3);
+        const c=new THREE.Color(0xEAF2FF).convertSRGBToLinear().multiplyScalar(b);
+        col[k]=c.r; col[k+1]=c.g; col[k+2]=c.b;
+        k+=3; }
+      const sg2=new THREE.BufferGeometry();
+      sg2.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+      sg2.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+      const sf=new THREE.Points(sg2,new THREE.PointsMaterial({size:SKY.starSize,
+        vertexColors:true, sizeAttenuation:false, transparent:true, opacity:0,
+        depthWrite:false, fog:false}));
+      sf.name='starfield'; sf.visible=false;
+      G.scene.add(sf); G.starfield=sf; } }
   G.clouds=[];
   const cWhite=new THREE.Color(PAL.cloud).convertSRGBToLinear();
   /* CONVERTED BY HAND, like the dome's vertex colours three blocks up and like mat() everywhere
@@ -4224,6 +4297,21 @@ function buildSky(){
         wmesh.name='cloudwisp'; wmesh.visible=false;
         cg.add(wmesh); G.cloudWisps.push(wmesh); G.postExclude.push(wmesh); } }
     cg.name='cloud'; G.scene.add(cg); G.clouds.push(cg); }
+  /* THE CLOUDS DIM AT NIGHT, AND THEY DID NOT. Their emissive floor is the dome's PALE HORIZON
+     colour — the sky term, which is right by day — and nightApply darkens the dome and the haze
+     band around them while leaving that floor alone. So the night frames came back with brilliant
+     white clouds glowing over a deep blue sky: Eric's "blinding white" complaint about the daytime
+     clouds, reappearing after dark for a different reason.
+     REGISTERED THE WAY nightMats ALREADY DOES IT — a list of materials with their day and night
+     values, lerped by nightApply — rather than recomputed there, so the night value cannot drift
+     from whatever the tone knobs did to the day one. */
+  G.cloudNight=[];
+  for(const c of G.clouds) c.traverse(o=>{ if(!o.isMesh||!o.material.emissive)return;
+    G.cloudNight.push({m:o.material,
+      dayE:o.material.emissive.clone(),
+      nightE:o.material.emissive.clone().multiplyScalar(SKY.cloudNightEmis),
+      dayC:o.material.color.clone(),
+      nightC:o.material.color.clone().multiplyScalar(SKY.cloudNightTint)}); });
 }
 
 /* ---------- collider helpers ---------- */
@@ -11398,6 +11486,18 @@ function nightApply(t){
   if(G.sky)G.sky.material.color.setRGB(L(1,0.16),L(1,0.20),L(1,0.34));
   if(G.haze)G.haze.material.opacity=L(SKY.hazeOpacityDay,SKY.hazeOpacityNight);
   if(G.moon)G.moon.visible=t>0.45;
+  /* THE STARS COME OUT LATER THAN THE MOON AND FADE IN, WHICH IS BOTH TRUER AND SAFER.
+     The moon is a hard switch at t 0.45 and has always been; stars ramp instead, because a
+     four-hundred-point field appearing in one frame reads as a bug rather than as dusk. They start
+     at 0.55 — after the moon, since the moon is visible in a sky still too bright for stars — and
+     reach full at t 1.
+     visible IS SET FROM THE OPACITY, not from t, so an invisible starfield is not submitted for
+     drawing at all: PointsMaterial with opacity 0 still costs a draw call and a depth test. */
+  if(G.cloudNight)for(const e of G.cloudNight){
+    e.m.emissive.copy(e.dayE).lerp(e.nightE,t);
+    e.m.color.copy(e.dayC).lerp(e.nightC,t); }
+  if(G.starfield){ const so=Math.max(0,Math.min(1,(t-0.55)/0.45));
+    G.starfield.material.opacity=so; G.starfield.visible=so>0.001; }
   if(G.warmMats)for(const m of G.warmMats)m.emissiveIntensity=t*(m===G.warmMats[0]?0.95:0.6);
   if(G.nightMats)for(const e of G.nightMats)e.m.color.copy(e.day).lerp(e.night,t);
   if(G.fire){ G.fire.flame.visible=t>0.2; if(G.fire.inner)G.fire.inner.visible=t>0.2; }

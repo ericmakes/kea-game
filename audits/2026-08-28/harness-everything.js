@@ -4136,6 +4136,106 @@ C.section('SKY.md step 0: the visible sun sits where the light comes from');
        ') — buildSky is scene-level, so WORLDREGS would have emptied them'); }
 }
 
+C.section('SKY.md 4: the night sky — the moon, the stars, and a name that was already taken');
+{
+  X.boot({biome:'carpark'}); tick(2);
+  /* THE MOON SITS WHERE THE MOONLIGHT COMES FROM. Step 0 found the SUN sprite 25 degrees from the
+     directional that casts every daytime shadow; the moon was the same defect one notch smaller,
+     at 10.6 degrees. Both are now derived from the light rather than repeated beside it. */
+  const n=v=>{const l=Math.hypot(v[0],v[1],v[2]);return [v[0]/l,v[1]/l,v[2]/l];};
+  ok(!!G.moonPos,'the moon has a derived position on G, in both worlds');
+  { const a=n(X.SKY.sunPosNight), b=n(G.moonPos);
+    const deg=Math.acos(Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2])))*180/Math.PI;
+    ok(deg<1.0,'AND THE VISIBLE MOON AGREES WITH THE MOONLIGHT to '+deg.toFixed(3)+
+       ' degrees (it was 10.6). Elevation '+(Math.asin(b[1])*180/Math.PI).toFixed(1)+
+       ' against the light\'s '+(Math.asin(a[1])*180/Math.PI).toFixed(1)+'.');
+    const r=Math.hypot(...G.moonPos);
+    const domeR=(G.sky&&G.sky.geometry&&G.sky.geometry.parameters&&
+                 G.sky.geometry.parameters.radius)||210;
+    ok(r<domeR,'and it is inside the '+domeR+' m dome (r '+r.toFixed(0)+')');
+    ok(G.moon&&Math.abs(G.moon.position.x-G.moonPos[0])<1e-6,
+       'and the mesh is actually AT the derived place, not merely near it'); }
+
+  /* THE STAR FIELD, AND ITS HANDLE. G.stars was already the game's PROGRESSION LEDGER — three
+     stars per page of the to-do list, keyed by area — so a Points object written over it would
+     have destroyed every player's earned stars silently. The sky's stars are G.starfield, and this
+     row exists to keep them apart. */
+  ok(G.stars&&!G.stars.isObject3D&&typeof G.stars==='object',
+     'G.stars is still the progression ledger, not a sky object');
+  ok(!!(G.starfield&&G.starfield.isPoints),'and the sky\'s stars are G.starfield, a Points object');
+  { const p=G.starfield.geometry.attributes.position;
+    ok(p.count===X.SKY.stars,'with SKY.stars of them ('+p.count+')');
+    let rlo=Infinity,rhi=0,ylo=Infinity;
+    for(let i=0;i<p.count;i++){ const y=p.getY(i), r=Math.hypot(p.getX(i),y,p.getZ(i));
+      rlo=Math.min(rlo,r); rhi=Math.max(rhi,r); ylo=Math.min(ylo,y); }
+    ok(Math.abs(rhi-rlo)<0.01,'all on one shell (radius '+rlo.toFixed(1)+')');
+    const domeR=(G.sky.geometry.parameters&&G.sky.geometry.parameters.radius)||210;
+    ok(rhi<domeR,'inside the dome ('+rhi.toFixed(0)+' of '+domeR+
+       ') — a star beyond it is behind the sky and is not drawn');
+    ok(Math.asin(ylo/rhi)*180/Math.PI>1.0,'and none of them sits on the horizon (lowest '+
+       (Math.asin(ylo/rhi)*180/Math.PI).toFixed(1)+' degrees), where the haze band and the '+
+       'ranges are');
+    /* NO NEW DRAWS. Same law as the cloud recipe: buildSky runs before every world build, so a
+       rnd() call here would relocate every seeded object in every map. */
+    const src=require('fs').readFileSync(
+      require('path').join(__dirname,'../../src/game.mjs'),'utf8');
+    let sky=src.slice(src.indexOf('function buildSky()'),
+                      src.indexOf('/* ---------- collider helpers'));
+    sky=sky.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+    ok((sky.match(/\brnd\(/g)||[]).length===8,
+       'and buildSky still makes exactly 8 rnd() calls — the field is a golden-angle spiral with '+
+       '_thash for brightness, so it costs the seeded stream nothing'); }
+
+  /* THE RAMP. The moon is a hard switch and always has been; the stars fade, because four hundred
+     points appearing in one frame reads as a bug rather than as dusk. */
+  { const rows=[];
+    for(const t of [0,0.45,0.5,0.55,0.7,1.0]){ G.nightManual=true; G.nightT=t; X.nightApply(t);
+      rows.push({t,moon:G.moon.visible,stars:G.starfield.visible,
+                 op:G.starfield.material.opacity}); }
+    ok(rows[0].op===0&&!rows[0].stars,'no stars by day, and the object is not even submitted');
+    ok(rows[5].op>0.99,'full at midnight ('+rows[5].op.toFixed(2)+')');
+    ok(rows.every((r,i)=>i===0||r.op>=rows[i-1].op),'and the ramp only ever rises');
+    ok(rows[2].moon&&!rows[2].stars,'the moon is out before the stars are (t 0.50) — the sky is '+
+       'still too bright for them');
+    /* AND THE DAY IS PUT BACK, which is not tidiness. Leaving nightManual set with nightT at 1
+       hands every later section a NIGHT scene: the P2 rows immediately below read fog density
+       0.0133 against 0.0062, the sun at 1.61 against 5.81 and its colour cool rather than warm,
+       and reported four failures that were this section's doing. The same fault as the terrain
+       pass's item 6d, which left the world booted as the ski field and broke item 7. */
+    G.nightManual=false; G.nightT=0; X.nightApply(0); X.boot({biome:'carpark'}); tick(2); }
+
+  /* AND THE CLOUDS DIM AFTER DARK, WHICH THEY DID NOT. Their emissive floor stands in for sky
+     light and nightApply was darkening the dome and the haze band around it while leaving that
+     floor at its daytime value — so the first night frames came back with brilliant white clouds
+     glowing over a deep blue sky. Measured: a cloud top at rgb 229,231,235.
+     AND THE ALBEDO DROPS TOO, which is odd physics and the only lever available. Zeroing the night
+     ENVIRONMENT took that top to 82,101,127 while zeroing the night directional barely moved it
+     (224 against 229), so the clouds at night are lit almost entirely by the HDRI — whose night
+     intensity is 0.80 against the day's 0.55, HIGHER after dark. A material cannot opt out of
+     scene.environment in this three (reflectivity 0, envMapIntensity 0 and a Lambert-to-Standard
+     swap were all tried), so what gets turned down is what the env has to work with. */
+  { ok(Array.isArray(G.cloudNight)&&G.cloudNight.length>0,
+       'the cloud materials are registered for the night ramp ('+
+       (G.cloudNight||[]).length+' of them)');
+    ok(X.SKY.envIntensityNight>X.SKY.envIntensityDay,
+       'and the night environment really is stronger than the day one ('+
+       X.SKY.envIntensityNight+' against '+X.SKY.envIntensityDay+
+       ') — which is why an undimmed cloud glows after dark rather than before it');
+    const e0=G.cloudNight[0];
+    const dayE=e0.dayE.clone(), dayC=e0.dayC.clone();
+    G.nightManual=true; G.nightT=1; X.nightApply(1);
+    const nE=e0.m.emissive.clone(), nC=e0.m.color.clone();
+    G.nightManual=false; G.nightT=0; X.nightApply(0);
+    const bE=e0.m.emissive.clone(), bC=e0.m.color.clone();
+    ok(nE.r<dayE.r*0.5&&nC.r<dayC.r*0.6,
+       'at midnight a cloud keeps '+(nE.r/dayE.r*100).toFixed(0)+'% of its emissive floor and '+
+       (nC.r/dayC.r*100).toFixed(0)+'% of its albedo');
+    ok(Math.abs(bE.r-dayE.r)<1e-6&&Math.abs(bC.r-dayC.r)<1e-6,
+       'and both come all the way back at dawn — the ramp is a lerp between stored values, not a '+
+       'multiply that compounds every time nightApply runs');
+    X.boot({biome:'carpark'}); tick(2); }
+}
+
 C.section('the three photographer hooks are inert in play');
 {
   /* camLock, camSnap and travelHold. Each exists because a vantage had to photograph something
@@ -8011,12 +8111,22 @@ C.section('REPLAT P6A: the model-swap seam');
      stretch stops showing facets and the base tint's fade has vertex rows to work with. Collider
      digests and all fourteen counts unchanged, so buildSky still makes its eight rnd() draws.
        carpark  mesh c24bbd4c94f84b9a, meshes 943, tris 315092
-       skifield mesh 011576537fad8366, meshes 328, tris 145458 */
+       skifield mesh 011576537fad8366, meshes 328, tris 145458
+
+     RE-PINNED FOR THE NIGHT SKY, 2026-09-11 — the moon derived from SKY.sunPosNight instead of
+     hard-coded 10.6 degrees away from it. Mesh COUNT and triangle count unchanged in both worlds;
+     only the moon's transform moved, which is the whole of the delta.
+     AND THE 420-STAR FIELD IS INVISIBLE TO THIS DIGEST, which is worth knowing: it is a Points
+     object and the traversal takes `o.isMesh`. Same shape of gap as TODO 117's winding blindness —
+     the strongest invariant the gauntlet has cannot see a whole tier of sky geometry. The night
+     section's own rows cover it instead (count, shell radius, elevation floor, the ramp).
+       carpark  mesh 72ff1bdc05788274, meshes 943, tris 324628
+       skifield mesh f135eff3fff40162, meshes 328, tris 154994 */
   const PRESEAM={
-    carpark :{mesh:'72ff1bdc05788274', col:'1b025c57715cb017', meshes:943, tris:324628,
+    carpark :{mesh:'9492aed10902f79a', col:'1b025c57715cb017', meshes:943, tris:324628,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'f135eff3fff40162', col:'fc06ef03250ea1ed', meshes:328, tris:154994,
+    skifield:{mesh:'bb7cbd3ac74a9df5', col:'fc06ef03250ea1ed', meshes:328, tris:154994,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

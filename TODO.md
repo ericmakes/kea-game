@@ -2720,7 +2720,17 @@ whatever is in gauntlet/capture, which may be a mix of two builds. A frame's mti
 bundle's is enough to catch that. All 42 frames were checked for truncation this time (size, PNG
 signature, trailing IEND) and none was suspect, but that check was done by hand.
 
-### 117. THE MESH DIGEST DOES NOT COVER TRIANGLE WINDING
+### 117. THE MESH DIGEST DOES NOT COVER TRIANGLE WINDING — OR ANYTHING THAT IS NOT A Mesh
+**A SECOND BLIND SPOT, found 2026-09-11 while adding the night sky.** The digest traverses
+`o.isMesh`, so the 420-point star field is entirely invisible to it: a whole tier of sky geometry
+could be moved, resized, recoloured or deleted and the strongest invariant the gauntlet has would
+report no change. `THREE.Points`, `Line`, `Sprite` and `InstancedMesh`-as-Points are all in the same
+position. The grass card tier is an InstancedMesh, which IS a Mesh, so it is covered — but its
+420,000 instance transforms live in an instanceMatrix the digest never reads either.
+Widen the traversal to `o.isObject3D && o.geometry`, and fold `instanceMatrix` and the index buffer
+in while there. Until then, a tier that is not a plain Mesh needs its own battery rows, which is
+what the night section has.
+
 The terrain's winding was inside out and the PRESEAM mesh digest went green across the fix —
 so the digest is computed over vertex data and not over the index buffer's ORDER. That is the
 strongest invariant the gauntlet has, and a reversed winding is invisible to it: it costs a

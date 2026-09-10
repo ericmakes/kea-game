@@ -971,3 +971,12 @@ snapshots the `--headless` PIDs before a batch and kills only those that appeare
 outlived it, so it can reach neither the user's own browser (45 Chrome processes on this machine)
 nor a concurrent rig run. The selftest drives that decision on fixed `ps` text and checks the
 safety property directly, without spawning anything.
+
+## TARGETED RE-PIN 2026-09-11c — the two night vantages only
+
+`21_night_camp` and `22_torch_beam`, 4 sweeps each, per-vantage medoid. ONLY these two, because
+only these two moved: the moon is invisible above `t` 0.45 and the star field and the cloud night
+ramp are night-only, so no daytime frame is touched. Verified rather than reasoned — day controls
+`01_carpark_wide` and `10_skifield` reshot at 0.9994 and 0.9997 against their existing pins.
+Both night frames were also INSIDE the 0.965 threshold (0.9977 and 0.9966), so nothing was flagged;
+they are re-pinned anyway so the baseline describes the shipped tree rather than the one before it.
