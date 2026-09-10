@@ -5371,3 +5371,93 @@ of false alarm, because it looks exactly like the thing the tool exists to catch
 ## THE LOCK
 
 Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
+
+---
+
+# SESSION 36c — 2026-09-11 — THE TONE, THE CLOUDS, AND THE NIGHT
+
+Eric picked SOFTER off the tone page. Five pieces after it, all CERTIFIED-SHIP and pushed.
+
+## SHIPPING A TASTE PICK BROKE A METRIC, AND THAT FOUND TWO DEFECTS IN THE DOME
+
+The sky's saturation came to 0.441 — in band against both whole-sky plates instead of only against
+alps_01, which was Eric's whole point. And the banding row went from 1 level to 2 against both
+clear-sky plates at exactly 1. **Three wrong guesses before it was instrumented**, all plausible:
+
+- the haze band's missing sRGB convert. **Innocent**, and measured four ways: satMul 1.0 reads 1 at
+  either hue, satMul 0.70 reads 2 at either hue. The desaturation exposes it; the convert does not
+  cause it.
+- the dome's stop junction. A **genuine kink** — two linear segments meeting at y 0.25, agreeing in
+  value and disagreeing in slope, `(cTop-cMid)/0.75` above against `(cMid-cLow)/0.40` below. Made C1
+  continuous. **The step stayed at 2.** The fix is kept because the kink was real.
+- the haze band's top rim. It sits at 2.7 degrees of elevation. The step is at 8.7.
+
+Then the row medians were dumped: 147 149 149 150 150 151 151 152 153 153 154 154 **156 161 166**,
+one jump at row 160 of 178, and hiding the haze, the wisps and the clouds in turn left it exactly
+there. It is the dome's own ramp. The visible band spans y 0.134 to 0.304, which **straddles** the
+mid stop at 0.25 — so its lower two thirds crossed 29% of a 0.40-wide low ramp while its upper third
+crossed 7% of a 0.75-wide one. Four times the rate. `skyLowAt` -0.15 → -0.45, chosen for margin off
+a sweep (-0.15 and -0.30 read 2; -0.35 onward read 1).
+
+**The lesson is the order.** Three targeted fixes cost more than one instrumented dump would have.
+
+## A BASE PLANE DOES TWO THINGS AT ONCE, AND THEN COMES OUT TAN
+
+Cumulus condenses at an altitude and is cut off below it, so its base is flat — and a flat base
+faces DOWN, away from the sun, so it shades itself. Clipping each lobe to a shared plane with
+downward normals gave Eric's flat bottom and shaded underside in one move. Flatness 2.060 → 4.173,
+underside 0.125 → 0.126 against the plate's own 0.117.
+
+**Then it rendered as a bright tan saucer**, rgb 182,174,157 where the tops sit near 0.95 luma. FOUR
+wrong fixes: the hemisphere light alone (neutralising its ground moved the pixel 183,173,157 →
+174,166,158, so it is a contributor and not the story), `reflectivity:0`, `envMapIntensity:0`, and
+Lambert → Standard. **Neither material can opt out of `scene.environment` in this three.** What
+settled the diagnosis was turning the base plane OFF: the same pixel went to 194,195,195 at
+saturation 0.01. The fix is a vertex colour on the clipped vertices, ramped so the shading has no
+edge of its own.
+
+**And the same trap came back after dark.** At night the clouds glowed — and the cause was not the
+moonlight. Zeroing the night ENVIRONMENT took a cloud top from 229,231,235 to 82,101,127 while
+zeroing the night DIRECTIONAL barely moved it. `envIntensityNight` is **0.80 against the day's
+0.55**: higher after dark. Since the env cannot be excluded per material, what gets turned down is
+what it has to work with — the emissive floor to 10% and the albedo to 34%.
+
+## `G.stars` WAS ALREADY THE PROGRESSION LEDGER
+
+Three stars per page of the to-do list, keyed by area. A `THREE.Points` object written over it would
+have destroyed every player's earned stars **silently**. The sky's stars are `G.starfield`, and a
+battery row now keeps the two apart, because the name is tempting.
+
+## SIX MORE FAULTS IN MY OWN INSTRUMENTS
+
+- **A sphere's south pole also has a straight-down normal.** So "every downward-facing vertex"
+  collected the base plane AND the bottom of every unclipped rim puff; the flatness check read 4 of
+  8 and the fringe check 5 of 8, both measuring their own confusion. The plane is found as the MODE
+  of those heights now, and the clip invariant is read off what the merge records on the geometry.
+- **A pure sin(y) fixture has EXACTLY zero gradient on one axis**, so the flatness ratio divided by
+  nothing: 0.00 and 12,084,033. Per-pixel noise did not fix it either, because a 16 px blur removes
+  almost all of it. What a real cloud field has, and what a fixture needs, is large-scale variation
+  along BOTH axes.
+- **The flatness metric read backwards at texel scale.** nz_alps_02, the flattest plate on the
+  board, scored 1.084 against the game's balloons at 1.565. Blurred to 16 px they separate, and the
+  separation grows with scale for the deck and not for the spheres.
+- **A cloud's CENTRE against a hard-coded 205** — wrong quantity (the dome is BackSide, so it is
+  VERTICES that vanish) and a literal fitted to one seed. Measuring vertices against the dome's own
+  radius found a real clip at 212.7 m.
+- **`G.postExclude` used `|| []` and leaked** 8 stale meshes per travel, because `boot()` replaces
+  the scene. TODO 48's law: the reset belongs to the function that fills it.
+- **My night-ramp test left the world at midnight**, so the P2 section below it read fog density
+  0.0133 against 0.0062 and the sun cool rather than warm — four failures that were mine. Same fault
+  as the terrain pass's item 6d.
+
+## THE MACHINE, AND A TOOL THAT NOW SURVIVES IT
+
+Four attempts at a 42-frame sweep were killed for low memory, writing ZERO frames even cut to seven
+vantages, with swap at 7.6 GB of 8. `BATCH=n` is in `repin.mjs` now, with the orphan sweep in
+`orphans.mjs` and its own selftest — the discriminator is `--headless` and not the executable path,
+because puppeteer drives the INSTALLED Chrome here and a path match would close Eric's own 45
+processes. Three re-pins have been taken with it since, 42 of 42 on every sweep. TODO 115 closed.
+
+## THE LOCK
+
+Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
