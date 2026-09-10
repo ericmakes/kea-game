@@ -5162,3 +5162,118 @@ and it is why `SKY.md` puts the instrument first and still ends with a strip.
 ## THE LOCK
 
 Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
+
+---
+
+# SESSION 36 — 2026-09-10 — THE SKY, MEASURED
+
+The bird was parked with its state on disk, the Astra deliverables were verified and licensed as
+source artifacts, TODO 100, 112 and 82 shipped, and then SKY.md ran the way TERRAIN.md ran:
+instrument first, six iterations, one strip at the end. **6 of 9 properties at baseline, 7 of 8 at
+the cap.** Two commits, both CERTIFIED-SHIP, both pushed. Whole-set re-pin, 4 sweeps, per-vantage
+medoid.
+
+## THE BRIEF'S OWN REFERENCES WERE WRONG, AND MEASURING THEM FIRST IS WHY THAT WAS CHEAP
+
+SKY.md named `ref_bow_00`, `_04` and `_06` as the sky plates. They contain no sky. Over the top 22%
+of each frame, the fraction of pixels whose Sobel magnitude is under 0.015 — sky is smooth, a
+eucalypt canopy is not — reads 26.8%, 5.8% and 11.3% against `nz_alps_01`'s 98.4%. Looked at as
+well: a brick house under gums, a gum-framed street, a driveway in tree shade. REF_BOW.md always
+called them the LIGHT, DENSITY and SHADOW targets. The whole 24-frame trailer wall measures the
+same way: **Birds of War has no frame that can govern cloud form.**
+
+Substituted `nz_carpark_01` — broken cumulus over an alpine basin, and the carpark map's own
+reference photo — plus `nz_tussock_03` and `nz_alps_01`. `nz_alps_02` is deliberately OUT: it is
+overcast at saturation 0.005, and under "in band if either plate" that hands a blue sky a luma band
+it can only reach by turning white. That is a loophole, not a reference. The plate choice is now
+asserted in the selftest rather than remembered in a comment.
+
+## THREE DEFECTS OF PLUMBING WEARING THE COSTUME OF ART
+
+1. **The clouds were the only fogged part of the sky.** The dome and the horizon haze band are both
+   `fog:false`. `MeshBasicMaterial` defaults fog to TRUE and nobody had ever said otherwise, so at
+   `FogExp2` density 0.0062 over 70 to 218 m — a fog factor of 0.17 to 0.84 — between a sixth and
+   five sixths of every cloud in frame was the fog colour. Two whole iterations measured no
+   underside shading with the sun plainly on them before this was found.
+2. **The shadowed side was tussock brown.** With the sun off it, a cloud is lit by the hemisphere
+   light's ground colour `0x8a7c42` at saturation 0.55 — so it was not inside the scorer's
+   neutrality mask at all, and the number could only ever see the lit half however dark the other
+   half got.
+3. **The altitudes were drawn with no reference to distance.** `rnd(36,62)` put a cloud 110 m away
+   at 20.4° of elevation and one 215 m away at 9.2°, in a band spanning 7.7° to 17.7°. The near
+   ones were ABOVE the picture, showing nothing but their undersides along its top edge: the
+   largest blob measured -0.031 while every unclipped cloud beside it measured +0.055 to +0.182.
+
+## TWO PROPERTIES BUILT, MEASURED AND WITHDRAWN — BOTH IN THE HARDER DIRECTION
+
+**Cloud vertical extent, which the game PASSED at 0.920.** The only plate with cloud has a bank
+larger than its own sky crop in both directions — one blob, bounding box 1440x276 in a 1440x276
+image — so its extent is 1.0 whatever shape its clouds are. That is cloud COVER, already excluded
+from judging for exactly that reason, wearing the name of cloud FORM. It also conflicted directly
+with underside shading: a cloud that fills the visible sky has neither a visible top nor a visible
+base. Withdrawing a green row that blocks a red one makes the table harder.
+
+**Hue rotation, which the brief asserts.** "Their hue ROTATES with height." Measured across each
+plate's own sky crop: -1.9°, 0.0°, +2.4°. They do not agree on the SIGN. What they DO agree on is
+desaturating toward the horizon while holding hue, which is the aerial-perspective row.
+
+And the gradient is judged as a RATIO. The three plates' zenith luma reads 0.637, 0.653 and 0.428 —
+a band from 0.35 to 0.80 that passes anything — while their horizon-over-zenith ratio reads 1.046,
+1.179 and 1.100. How much a sky pales toward the horizon belongs to the atmosphere; how bright it
+is belongs to the shutter.
+
+## OTSU AGREED WITH WHATEVER IT WAS POINTED AT
+
+The cloud mask's first version was Otsu on blue-minus-red. Run on `nz_tussock_03` — 122 rows of
+cloudless deep blue — it reported **64% cloud cover with a separability of 0.729**, and did the
+same on every signal offered it (saturation 66.9%, saturation minus row median 64.1%). A smooth
+vertical gradient splits beautifully into its top half and its bottom half. Replaced by an absolute
+neutrality threshold at saturation 0.20, chosen from a sweep printed in the code: it is the only
+value in that sweep that agrees with all three pictures at once, and `carpark_01` has a PLATEAU
+either side of it while `tussock_03` has none — the signature of a picture with no cloud to find.
+
+**That is the sixth time this session a threshold derived from the data under test agreed with it.**
+
+## THE INSTRUMENT'S OWN FAULTS, CAUGHT BY ITS OWN CHECKS
+
+- **A row median taken from 2% of the width is noise.** On `carpark_01` at 76% cloud, that floor
+  admitted rows carrying thirty pixels of blue seen between cumulus, whose median jumped 36 eight-bit
+  levels row to row — so the banding metric reported a 15-level step in a photograph. 15% now, plus
+  a contiguity requirement, plus outright refusal above a quarter cloud cover.
+- **A boundary reading of 7.27 was reached and discarded as flattered.** The clouds were being cut by
+  the frame edge and the ridgeline, and mask fragments carry a lot of perimeter for no cloud. With
+  whole, unclipped clouds the honest number is 4.76.
+- **An assertion that counted my own comments.** `buildSky makes exactly 8 rnd() calls` matched 10,
+  because the new comments talk ABOUT `rnd()`. Comments stripped first.
+- **A clipping test whose fixture was not clipped.** lavfi's colour source is YUV, so `white@1`
+  drawn on it comes out of the PNG at 253. `format=rgb24` before `drawbox`.
+- **`Math.max(9, 0)` is 9,** so `blobs(im, mask, 0)` asked for no size floor and got a nine-pixel one.
+
+## AND ONE IN THE RIG, FOUND THE MOMENT ANYTHING CHECKED IT
+
+`webrig.mjs` keeps a hand-written `SKY_KEYS` and refuses any `KEASKY` override not in it. Its own
+comment records two past drifts, one costing a whole variant strip — every override refused, four
+dead shots, four copies of one stale frame compared as though they were four variants. A new
+assertion comparing that list against `SKY` found the third drift immediately: `hdriSunAz` and
+`hdriSunEl` were already unreachable. The comparison is a battery row now.
+
+## THE MUTE BUTTON WAS IN THE SKY
+
+`#mutebtn` is `class="muted"`, not `.hud`, so hiding the HUD left a rounded grey button reading
+"sound" in the top right of the strip — inside the region being measured. The flag frame excluded
+it from the mask correctly, so the NUMBERS were right and the PICTURE I was judging by eye had a
+button in it. It was also setting the derived sky band's "highest peak" to 2.9% of the frame; with
+it hidden that reads 18.7%.
+
+## WHAT IS STILL OUT, AND WHY IT IS NOT A SEVENTH ITERATION
+
+Cloud boundary complexity: 4.76 against 7.11. A circle scores 3.545, so the game's outline is 1.34
+times a circle's and the plate's is 4.1 times. **Opaque sphere unions cannot make a wispy edge** —
+the plate's cloud is feathered and semi-transparent at its margins, which is what the metric reads.
+TODO 118 carries the alpha-wisp tier, baked the way the grass cards are baked, with the two traps
+this pass already paid for: the cloud mask is a neutrality test, so a brown-tinted wisp is not in
+the cloud at all; and transparency is what made iteration 1 read as a bunch of grapes.
+
+## THE LOCK
+
+Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
