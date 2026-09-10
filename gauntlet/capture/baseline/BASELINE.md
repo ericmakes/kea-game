@@ -898,3 +898,39 @@ named: a targeted two-vantage sweep leaves the other forty frames in `gauntlet/c
 older build, and diffing those against a fresh baseline flagged `25_preen_follow` at 0.9605 when
 its frame was thirty minutes older than `dist/kea.js`. Frames older than the bundle are now
 reported and not compared.
+
+## RE-PIN 2026-09-10b — TODO 118, the cloud wisp tier
+
+**42 vantages** (the first two full-set pins since 26_tour_brochure and 27_travel_card joined),
+4 sweeps, per-vantage medoid. Provenance: run1 24, run2 10, run3 5, run4 3.
+
+WHY: the wisp tier puts an alpha-mapped margin on every cloud, so every frame with sky in it moved.
+
+**THE SWEEPS WERE BATCHED, AND THAT IS A DEPARTURE WORTH STATING.** A 42-frame sweep could not run
+on this machine: four attempts were killed for low memory, writing ZERO frames even at seven
+vantages, with swap at 7.6 GB of 8 GB and about 100 MB of physical memory free. A single vantage
+succeeded, and a batch of four succeeded, so each sweep was shot in batches of six — each batch its
+own node process, with a per-frame retry if a batch died, and an orphan sweep between them. All four
+sweeps came back 42 of 42 with zero single-frame failures.
+This makes a "run" seven processes rather than one, which if anything DECORRELATES the within-sweep
+machine state that session 15b's analysis was worried about — its outlier run was one shot while the
+machine was still settling from a kill. It is recorded because the provenance line no longer means
+quite what it did.
+TODO 115 predicted this exactly ("the capture rig needs more memory than the machine has spare, and
+a killed pass poisons the next sweep"). The orphan cleanup it also asks for was done by hand twice:
+`pkill -f -- "--headless"`, which is the discriminator that matters — puppeteer drives the INSTALLED
+Chrome here, so an executable-path match would have taken Eric's own 45 Chrome processes with it.
+
+**THE HELD-OUT CHECK, AND WHY IT FLAGGED TWO FRAMES.** Diffing run4 against the new pins flagged
+13_idle_preen at 0.9485 and 25_preen_follow at 0.9605. Both are the bird's preen animation, and on
+both of them **run4 is the outlier the medoid rejected** — 13_idle_preen scored 63,481 against about
+22,000 for the other three, and 25_preen_follow 55,440 against 18,480 three times over. Comparing
+any single sweep against a per-vantage medoid will differ wherever that sweep was the outlier; that
+is the whole point of taking the medoid per vantage rather than per run.
+
+Six vantages are byte-identical across all four sweeps: 15_sign, 24_verge_paddle, 34_village_street,
+37_river_bridge, 39_river_walk, and 33_camp_gate.
+
+FLAGGED FOR ERIC, unresolved by this re-pin and visible in all forty-two frames: sky saturation is
+his pick (TODO 76, page at `gauntlet/capture/SKYTONE_page.png`), and cloud boundary complexity is
+still out of band at 4.88 against 7.11 — TODO 118 records why that is a ceiling rather than a tuning.

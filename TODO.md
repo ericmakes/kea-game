@@ -2662,6 +2662,22 @@ leaving the next session to infer it from the totals by eye. That would make the
 automatic rather than a paragraph.
 
 ### 115. THE CAPTURE RIG NEEDS MORE MEMORY THAN THE MACHINE HAS SPARE, AND A KILLED PASS POISONS THE NEXT SWEEP
+**CONFIRMED HARD ON 2026-09-10, and one of the three fixes is now written.** The TODO 118 re-pin
+could not run: four attempts at a 42-frame sweep were killed for low memory and wrote ZERO frames,
+even when cut to seven vantages, with swap at 7.6 GB of 8 GB and about 100 MB of physical memory
+free. A single vantage succeeded and a batch of four succeeded, so the sweep was driven in batches
+of six — each batch its own node process, with a per-frame retry if a batch dies and an orphan sweep
+between batches. All four sweeps then came back 42 of 42 with zero failures. **That batch driver
+belongs in `repin.mjs` as a BATCH= option rather than living in a scratchpad shell script**; it is
+the difference between a re-pin that runs on this machine and one that does not.
+The orphan cleanup asked for below was done by hand twice in the same session. `pkill -f --
+"--headless"` is the right discriminator and it was verified both ways: two orphaned rig browsers
+died and Eric's own 45 Chrome processes survived.
+The third fix — a frame's mtime against the bundle's — **IS NOW DONE**, in `diff.mjs`: frames older
+than `dist/kea.js` are reported and not compared. It was written after a targeted two-vantage sweep
+left the other forty frames stale and diff flagged `25_preen_follow` at 0.9605 against a fresh
+baseline, which is the worst kind of false alarm because it looks exactly like a real regression.
+
 Filed 2026-09-07, session 34, after two consecutive kills during a re-pin verification.
 WHAT HAPPENED: the eleven-run consensus re-pin completed and its verification sweep was killed twice
 by the system for low memory — first as a forty-frame pass chained with diff/pxdiff/lum, then as
