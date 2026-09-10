@@ -859,3 +859,42 @@ FLAGGED FOR ERIC, unresolved by this re-pin: the sky's saturation is green only 
 nz_alps_01's near-zenith slice and above both plates that carry a whole sky (TODO 76), and cloud
 boundary complexity is still out of band at 4.76 against 7.11 (TODO 118). Both are visible in every
 one of these forty frames.
+
+## FIRST PINS 2026-09-10 — 26_tour_brochure and 27_travel_card, on Eric's call
+
+The tour's two UI moments join the set, at 42 vantages. 4 sweeps, per-vantage medoid, `FIRSTPIN=`.
+Both measured with `stability.mjs` before pinning, as the ski field's three first pins were.
+
+`26_tour_brochure` — worst take-to-take SSIM **1.0000** across five takes, and all four sweeps
+byte-identical (spread 0). It is a full-screen overlay with its own background, so the running game
+never reaches the frame. As clean a tripwire as the set has.
+
+`27_travel_card` — worst take-to-take SSIM **0.9984**, sweep spread 179 px. IT COULD NOT BE PINNED
+AT ALL AS STAGED, and getting there needed two new hooks in the game, both inert in play:
+
+- **The follow cam was photographed mid-ease.** It converges at `1 - 0.0018^dt`, which is
+  frame-rate independent in wall clock and 99.8% done inside a second — so in play it is always
+  effectively converged, but under the rig's pinned clock what decides how far it got is the number
+  of TICKS the machine managed. `G.camSnap` snaps it, which is the state it holds in play a moment
+  later.
+- **A clock cannot be pinned from outside the loop.** The staging set `G.travel.t` to half the
+  duration every requestAnimationFrame — the idiom every other live vantage uses — while
+  `travelUpdate` added `dt` to the same field inside the game's own tick. The camera came to rest at
+  exactly three positions, evenly spaced along the line from the follow cam to the arrival anchor:
+  `t = 0.85 + n*dt` for n of 0, 1 and 2. `G.travelHold` pins **u** instead, so the beat is held at
+  exactly halfway however many ticks elapse. The `t` pin stays, for a different job — it stops
+  `travelUpdate` reaching `dur` and calling `travelEnd`, which replaces `G.travel` and drops its
+  anchor and card, and the card is what this vantage exists to photograph.
+
+Before those two: worst take-to-take SSIM **0.5616** against a 0.995 threshold, and four sweeps
+17,431 to 96,294 pixels apart with no two agreeing. After: 179 px.
+
+A battery row now asserts all three photographer hooks (`camLock`, `camSnap`, `travelHold`) are
+unset on a normal boot, that `travelHold` overrides `travelU` and restores when cleared, that it
+clamps outside 0..1, and that `travelEnd` still ends the beat on its own clock.
+
+AND `diff.mjs` NO LONGER FLAGS STALE FRAMES AS DRIFT. Pinning these two exposed the trap TODO 115
+named: a targeted two-vantage sweep leaves the other forty frames in `gauntlet/capture` from an
+older build, and diffing those against a fresh baseline flagged `25_preen_follow` at 0.9605 when
+its frame was thirty minutes older than `dist/kea.js`. Frames older than the bundle are now
+reported and not compared.

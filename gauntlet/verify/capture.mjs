@@ -392,10 +392,27 @@ await shotR('26_tour_brochure',`const G=KEAGAME.G, S=KEAGAME.STARS;
    NO camLock HERE, deliberately: this vantage is photographing the travel blend, which camLock is
    built to override. The beat is held at u=0.5 by pinning its clock every frame, because
    travelUpdate would otherwise run it out during the settle - the same law-12 idiom as everything
-   else in this file that leaves something live. */
+   else in this file that leaves something live.
+   AND G.travelHold, WITHOUT WHICH THIS FRAME CANNOT BE PINNED AT ALL. Pinning travel.t from a
+   requestAnimationFrame — the idiom every other live vantage uses — cannot work here, because
+   travelUpdate also adds dt to t inside the game's own tick and how many of those land between the
+   pin and the shutter depends on the machine. The camera came to rest at exactly three positions,
+   evenly spaced along the line from the follow cam to the arrival anchor: t = 0.85 + n*dt for n of
+   0, 1 and 2. Five takes scored a worst take-to-take SSIM of 0.5616 against a 0.995 threshold.
+   travelHold pins u itself, so the beat is held at exactly halfway however many ticks elapse. The
+   t pin STAYS, for a different job: it stops travelUpdate reaching dur and ending the beat, which
+   would destroy the card this vantage exists to photograph.
+   AND G.camSnap, which was the first half of the same problem. Measured when Eric called for
+   it to join the set: four sweeps came back 17,431 to 96,294 pixels apart from one another, up to
+   18.6% of the frame, with no two runs agreeing. Pinning travel.t fixes the blend's e and not the
+   position e is applied FROM - the follow cam is still easing toward its target at
+   1 - 0.0018^dt, and under a pinned clock what decides how far it got is the number of TICKS the
+   machine managed. Snapping the ease is the state the camera holds in play a second later; the
+   blend itself still runs, which is what this vantage is for. */
 await shotR('27_travel_card',`const k=KEAGAME.G.keas[0];
   KEAGAME.TRAVEL.in();
   ${PIN("k.x=0;k.z=0;k.y=0;k.vy=0;k.grounded=true;k.ry=2.2;k.stun=0;k.idleT=0;k.idleAct=null;"+
+        "KEAGAME.G.camSnap=true;KEAGAME.G.travelHold=0.5;"+
         "KEAGAME.G.time=12.0; if(KEAGAME.G.travel&&KEAGAME.G.travel.phase)KEAGAME.G.travel.t=KEAGAME.TRAVEL.K.in*0.5;")}`);
 /* ---------- THE CLUB SKI FIELD (TODO 39) ----------
    THREE FIRST PINS, AND ALL THREE ARE LEFT FLAGGED, per the brief: nothing here has ever been

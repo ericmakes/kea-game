@@ -3631,7 +3631,8 @@ function initScene(){
 }
 function buildSky(){
   // gradient dome
-  const sg=new THREE.SphereGeometry(210,20,14);
+  const DOMER=210;                       // named, because the cloud clamp below has to agree with it
+  const sg=new THREE.SphereGeometry(DOMER,20,14);
   const cols=[]; const pos=sg.attributes.position; const cTop=new THREE.Color(PAL.skyTop).convertSRGBToLinear(),cMid=new THREE.Color(PAL.skyMid).convertSRGBToLinear(),cLow=new THREE.Color(PAL.skyLow).convertSRGBToLinear();
   for(let i=0;i<pos.count;i++){ const y=pos.getY(i)/210; const c=y>0.25?cTop.clone().lerp(cMid,1-(y-0.25)/0.75):cMid.clone().lerp(cLow,1-Math.max(0,(y+0.15)/0.4));
     cols.push(c.r,c.g,c.b); }
@@ -3787,6 +3788,22 @@ function buildSky(){
     { const hd=Math.hypot(cg.position.x,cg.position.z);
       const e=(SKY.cloudElev+(cg.position.y-49)/13*SKY.cloudElevVary)*Math.PI/180;
       cg.position.y=hd*Math.tan(e); }
+    /* AND PULLED INSIDE THE DOME BY ITS OWN MEASURED EXTENT. The dome is BackSide, so any vertex
+       further from the origin than DOMER sits behind its inner surface and is simply not drawn —
+       a cloud with a bite taken out of it. The centre being inside is not enough: these masses run
+       to 17 m of radius, so a centre at 200 m puts vertices at 217.
+       FOUND BY A BATTERY AND NOT BY EYE, and only after that battery was fixed. Its first version
+       compared the CENTRE against a hard-coded 205, which is both the wrong quantity and a literal
+       fitted to one seed — cloud positions come from rnd() and buildSky runs at the first
+       initScene, so the same check read 178 m in one process and 207 m in another. Measuring
+       vertices against the dome's own radius found a real clip at 212.7 m.
+       THE EXTENT IS COMPUTED FROM THE SPECS, which is the same list the geometry is built from, so
+       it cannot disagree with what was actually drawn. */
+    { let bound=0;
+      for(const sp of specs)
+        bound=Math.max(bound,Math.hypot(sp.x,sp.y*sp.sy,sp.z)+sp.r);
+      const d=cg.position.length(), room=DOMER*0.97-bound;
+      if(d>room&&d>1e-6)cg.position.multiplyScalar(room/d); }
     /* THE TINT, AFTER THE POSITION, because it is a function of the distance. FogExp2's own
        curve — 1 - exp(-(density*d)^2) — so that the sky's aerial perspective and the ground's are
        the same SHAPE of falloff at different densities, which is what makes them agree at the
@@ -7751,7 +7768,21 @@ function travelIn(from){
   return travelBegin('in',{from:from||null,to:id,anchor:travelAnchorOf(id),
                            card:(BIOMES[id]&&BIOMES[id].label)||id});
 }
-function travelU(){ const v=G.travel; return (!v||!v.dur)?1:clamp(v.t/v.dur,0,1); }
+/* G.travelHold — THE GAUNTLET'S THIRD CAMERA-SIDE HOOK, and the only way this beat can be
+   photographed twice the same. Inert in play, like camLock and camSnap.
+   WHY A CLOCK CANNOT BE PINNED FROM OUTSIDE THE LOOP. 27_travel_card stages itself by setting
+   G.travel.t to half the duration on every requestAnimationFrame, which is the same idiom every
+   other live vantage uses. It does not work here, because travelUpdate ALSO adds dt to t inside
+   the game's own tick, and how many of those land between the pin and the shutter depends on the
+   machine. Measured: the camera came to rest at exactly three positions — (0.81,13.11,17.23),
+   (0.98,13.45,17.68) and (1.15,13.80,18.14) — evenly spaced along the line from the follow cam to
+   the arrival anchor, which is t = 0.85 + n*dt for n of 0, 1 and 2. Five takes scored a worst
+   take-to-take SSIM of 0.5616 against a 0.995 threshold.
+   So the HELD QUANTITY is u and not t. t still gets pinned by the staging, for a different job —
+   it stops travelUpdate reaching dur and ending the beat, which would destroy the card this
+   vantage exists to photograph — but nothing downstream reads t any more once this is set. */
+function travelU(){ if(G.travelHold!=null)return clamp(G.travelHold,0,1);
+  const v=G.travel; return (!v||!v.dur)?1:clamp(v.t/v.dur,0,1); }
 function travelSkip(){ const v=G.travel; if(!v||!v.phase||!v.armed)return false;
   v.skipped=true; v.t=v.dur; travelEnd(); return true; }
 function travelUpdate(dt){
@@ -10856,7 +10887,19 @@ function updateCams(dt){
         if(hit){ frac=Math.max(0.22,(si-1)/10); break; } }
       if(frac<1){ tx=bx+(tx-bx)*frac; ty=by+(ty-by)*frac; tz=bz+(tz-bz)*frac; } }
     const gh=groundHeightAt(tx,tz,ty); ty=Math.max(ty,gh+1.2,1.4);
-    const sm=1-Math.pow(0.0018,dt);
+    /* G.camSnap — THE GAUNTLET'S SECOND CAMERA HOOK, and it exists for 27_travel_card.
+       The follow cam eases toward its target at 1 - 0.0018^dt, which is frame-rate independent in
+       WALL CLOCK and converges 99.8% inside a second — so in play the camera is always effectively
+       converged. Under the capture rig's pinned clock, though, what matters is the number of TICKS,
+       and that varies with machine load: four sweeps of this vantage came back 17,431 to 96,294
+       pixels apart, because each one photographed the ease at a different point along it. The
+       travel blend below lerps FROM this position, so pinning travel.t alone pins e and not what e
+       is applied to.
+       SNAPPING IS THE PLAY-ACCURATE STATE, not a shortcut: it is where the cam would be a second
+       later in any real game. camLock is the wrong tool here — this vantage exists to photograph
+       the travel blend and camLock is built to override it — so the ease is what gets pinned, and
+       the blend still runs. Inert in play, like camLock. */
+    const sm=G.camSnap?1:1-Math.pow(0.0018,dt);
     cam.position.x+=(tx-cam.position.x)*sm; cam.position.y+=(ty-cam.position.y)*sm; cam.position.z+=(tz-cam.position.z)*sm;
     if(G.shake>0){ const shk=G.shake*(RM?0.15:1); cam.position.x+=rnd(-1,1)*shk*0.3; cam.position.y+=rnd(-1,1)*shk*0.22; }
     let lax=k.x+Math.sin(effRy)*1.6, lay=k.y+0.72*(k.size||1), laz=k.z+Math.cos(effRy)*1.6;

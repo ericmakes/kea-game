@@ -4136,6 +4136,53 @@ C.section('SKY.md step 0: the visible sun sits where the light comes from');
        ') — buildSky is scene-level, so WORLDREGS would have emptied them'); }
 }
 
+C.section('the three photographer hooks are inert in play');
+{
+  /* camLock, camSnap and travelHold. Each exists because a vantage had to photograph something
+     the game keeps moving, and each is a place where the gauntlet reaches into the running game —
+     so each is a place where a stray assignment would change the SHIPPED product. The rule is that
+     a normal boot leaves all three unset and the code paths they gate are not taken.
+     TODO 73's re-pin makes this worth a battery row rather than a comment: the two new ones landed
+     with a first pin, so from now on forty-two baselines depend on them behaving. */
+  X.boot({biome:'carpark'}); tick(4);
+  ok(!G.camLock,'camLock is unset on a normal boot');
+  ok(!G.camSnap,'camSnap is unset on a normal boot — the follow cam eases as it always did');
+  ok(G.travelHold==null,'travelHold is unset on a normal boot — the travel beat runs on its clock');
+  /* AND THE EASE IS STILL AN EASE. camSnap replaces 1 - 0.0018^dt with 1, so the guard is only
+     honest if the unsnapped value is genuinely not 1 at a plausible dt. */
+  const sm=dt=>1-Math.pow(0.0018,dt);
+  ok(sm(1/60)>0.09&&sm(1/60)<0.11&&sm(1)>0.99,
+     'the follow cam eases at '+sm(1/60).toFixed(3)+' per 60 Hz tick and '+sm(1).toFixed(4)+
+     ' per second — frame-rate independent in wall clock, which is why photographing it mid-ease '+
+     'was machine-dependent and not frame-count-independent');
+  /* travelHold OVERRIDES u AND RESTORES. Asserted both ways, because a hook that cannot be turned
+     off is a hook that has changed the game. */
+  { X.TRAVEL.in();
+    const v=G.travel;
+    ok(!!(v&&v.phase==='in'&&v.anchor&&v.card),'a travel beat is live, with an anchor and a card');
+    v.t=v.dur*0.25;
+    const free=X.TRAVEL.u();
+    G.travelHold=0.5; const held=X.TRAVEL.u();
+    G.travelHold=null; const back=X.TRAVEL.u();
+    ok(Math.abs(free-0.25)<1e-9&&Math.abs(held-0.5)<1e-9&&Math.abs(back-0.25)<1e-9,
+       'travelU reads the clock ('+free.toFixed(3)+'), then the hold ('+held.toFixed(3)+
+       '), then the clock again ('+back.toFixed(3)+')');
+    ok(X.TRAVEL.u.length===0,'and travelU still takes no argument, so nothing else had to change');
+    /* AND IT CLAMPS, because a baseline shot at u = 1.4 would be a baseline of nothing. */
+    G.travelHold=1.9; const hi=X.TRAVEL.u(); G.travelHold=-3; const lo=X.TRAVEL.u();
+    G.travelHold=null;
+    ok(hi===1&&lo===0,'a hold outside 0..1 is clamped ('+hi+', '+lo+') rather than run out of '+
+       'range into a beat that has no meaning');
+    /* THE BEAT'S OWN CLOCK STILL ENDS IT, which is why the vantage pins t as well as u: an
+       unpinned t reaches dur, travelEnd replaces G.travel and DROPS its anchor and card, and the
+       card is the thing 27_travel_card exists to photograph. */
+    v.t=v.dur; X.update(0.001);
+    ok(!G.travel.phase&&!G.travel.anchor&&!G.travel.card,
+       'and travelEnd still ends the beat on its own clock, dropping the anchor and the card — '+
+       'which is why the vantage pins t as well, and why it cannot be restarted once ended'); }
+  X.boot({biome:'carpark'});
+}
+
 C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture');
 {
   /* THE SKY SCORED 6 OF 9 AT BASELINE and the three properties it failed were the three the brief
@@ -4191,8 +4238,25 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
   /* AND STILL INSIDE THE DOME. Lowering the near clouds shortened their distance from the origin,
      which is the safe direction, but a cloud outside the 210 m BackSide dome fails the depth test
      against it and vanishes — so it is checked rather than reasoned about. */
-  ok(cl.every(c=>c.position.length()<205),'and inside the 210 m dome (furthest '+
-     Math.max(...cl.map(c=>c.position.length())).toFixed(0)+' m)');
+  /* MEASURED AS THE FURTHEST VERTEX, AGAINST THE DOME'S OWN RADIUS. Two faults in the first
+     version of this line, both worth keeping the record of. It compared the cloud's CENTRE against
+     a hard-coded 205, and a centre is not what gets clipped: the dome is BackSide, so any vertex
+     further from the origin than its radius is behind its inner surface and vanishes, and a cloud
+     16 m across can have its centre inside and its far side outside. And 205 was a literal fitted
+     to one seed — cloud positions come from rnd(), buildSky runs at the first initScene, and the
+     stream state there depends on what ran before, so the same check read 178 m in one process and
+     207 m in another and went red on the arithmetic rather than on a defect. */
+  { const domeR=(G.sky&&G.sky.geometry&&G.sky.geometry.parameters&&
+                 G.sky.geometry.parameters.radius)||0;
+    ok(domeR>0,'the sky dome reports its own radius ('+domeR+' m) rather than being remembered');
+    let worst=0;
+    for(const c of cl){ c.updateMatrixWorld(true);
+      c.traverse(o=>{ if(!o.isMesh)return;
+        const p=o.geometry.attributes.position, v=new THREE.Vector3();
+        for(let k=0;k<p.count;k++){ v.fromBufferAttribute(p,k).applyMatrix4(o.matrixWorld);
+          const d=v.length(); if(d>worst)worst=d; } }); }
+    ok(worst<domeR,'and every cloud VERTEX is inside it (furthest '+worst.toFixed(1)+' m of '+
+       domeR+') — a vertex beyond the dome is behind its BackSide inner surface and is not drawn'); }
   /* THE SKY'S OWN AERIAL PERSPECTIVE, at the sky's density and not the ground's — SKY.md 3.5.
      Taking the terrain fog off was right; having no aerial perspective at all was not, because the
      plate's cloud field darkens from 0.89 at the top of frame to 0.75 near the ridges and that
