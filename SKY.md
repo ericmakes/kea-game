@@ -227,7 +227,25 @@ with a table alone.
   of the sky whose tone Eric is picking, so correcting its brightness inside the same commit would
   move the thing being judged and hide it in a refactor. It is reported here instead and belongs
   with whichever tone is chosen.
-- **CLOUD VARIETY.** One recipe, eight instances, three to five spheres each. The plates carry
+- **CLOUD VARIETY — SECOND RECIPE SHIPPED 2026-09-11: CIRRUS**, on Eric's call. SKY.md always said
+  "variety is a count of RECIPES, not of instances", and until now the sky had one recipe and eight
+  instances of it differing only in size and elevation. Three of the eight are cirrus now: high
+  (30 degrees against the cumulus deck's 13.5), thin, drawn out along the wind (aspect 3.0 to 5.0
+  against 1.3 to 2.9), with NO flat base and no shaded underside — it is ice, not a rising thermal —
+  and the wisp tier carrying the shape rather than solid lobes. Triangles FALL by 5,784, because a
+  cirrus is mostly margin.
+  **THE MIX IS CHOSEN BY RANK, NOT BY THRESHOLD.** Comparing each cloud's hash against the share
+  gave SIX cirrus out of eight for a share of 0.375 — eight samples of a hash are nowhere near
+  uniform, and a proportion that only holds on average is not a proportion when n is eight. Ranking
+  all eight and taking the lowest k gives exactly k, every boot.
+  **AND IT IMPROVED THE BOUNDARY METRIC AS A SIDE EFFECT**, 5.30 to 6.28, because a cirrus sheet
+  contributes real ragged edge — still short of 7.11, still TODO 118's ceiling.
+  It is invisible at NIGHT, which is honest rather than a defect: the night dimming takes a thin
+  ice cloud to nothing, which is what a thin ice cloud does under moonlight. Judge it by day.
+  Four base-plane battery rows went red the moment it landed, correctly — they said "every cloud"
+  about a cumulus invariant — and are scoped to cumulus now rather than loosened.
+
+- *(original brief)* **CLOUD VARIETY.** One recipe, eight instances, three to five spheres each. The plates carry
   cumulus, stratus and cirrus in one frame. Variety is a count of RECIPES, not of instances, and it
   should be asserted as such — the terrain pass's "every peak its own shape" measurement (mean
   correlation between normalised profiles, where identical cones score 1.00) transfers directly.

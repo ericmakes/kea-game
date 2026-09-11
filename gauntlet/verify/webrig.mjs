@@ -119,6 +119,10 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
   'cloudFringeAt','cloudLit','cloudEmissive','cloudNorm','cloudHaze','cloudHazeD',
   'cloudElev','cloudElevVary',
   'moonColor','moonLimb','moonLimbPow','cloudNightEmis','cloudNightTint','stars','starR','starSize','starMinEl','starDim',
+  /* SKY.md 4's second cloud recipe — cirrus. Registered in the same commit as the constants,
+     because this list has drifted four times now and the battery row that compares it against
+     SKY caught this one before a single variant was shot. */
+  'cirrusBase', 'cirrusElev', 'cirrusElevVary', 'cirrusFringe', 'cirrusFringeAt', 'cirrusFringeR', 'cirrusLobes', 'cirrusPuffs', 'cirrusRMul', 'cirrusSpread', 'cirrusStretch', 'cirrusWisp', 'cirrusWispEmis', 'cirrusWispR', 'cloudCirrus',
   'skySatMul','skyHueRot','hazeColor','skyMidAt','skyLowAt',
   'cloudWisp','cloudWispR','cloudWispAt','cloudWispEmis','cloudWispAlpha'];
 

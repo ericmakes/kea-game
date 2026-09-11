@@ -4427,11 +4427,59 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
     ok(spread>0.5,'and their normals come from the BODY rather than from the quad — the first '+
        'cloud\'s wisp normals span '+spread.toFixed(2)+' across the mass, where a billboard '+
        'normal would give every one of them the same direction'); }
+  /* CLOUD VARIETY IS A COUNT OF RECIPES, NOT OF INSTANCES — SKY.md 4 says exactly that, and until
+     Eric named cirrus the sky had one recipe and eight instances of it differing only in size and
+     elevation. Two now, and the row asserts what SKY.md asks: that both exist, and that they are
+     measurably DIFFERENT rather than two names for the same cloud. */
+  { const rec=cl.map(c=>c.userData.recipe);
+    const kinds=[...new Set(rec)];
+    ok(kinds.length>=2,'the sky carries more than one cloud RECIPE ('+kinds.join(', ')+')');
+    for(const k of kinds)
+      ok(rec.filter(v=>v===k).length>0,'  and '+k+' is actually built ('+
+         rec.filter(v=>v===k).length+' of '+rec.length+')');
+    /* CHOSEN BY RANK, so the share is exact. Comparing each cloud's hash against a threshold gave
+       SIX cirrus out of eight for a share of 0.375 — eight samples of a hash are nowhere near
+       uniform, and a proportion that only holds on average is not a proportion when n is 8. */
+    ok(rec.filter(v=>v==='cirrus').length===Math.round(cl.length*X.SKY.cloudCirrus),
+       '  and the mix is exact rather than probabilistic: '+
+       rec.filter(v=>v==='cirrus').length+' cirrus for a share of '+X.SKY.cloudCirrus+
+       ' of '+cl.length);
+    /* AND THE TWO RECIPES DO NOT OVERLAP. Cirrus is ice high up and drawn out along the wind;
+       cumulus is a rising thermal with a flat base. If their elevation and aspect ranges met, the
+       second recipe would be decoration rather than variety. */
+    const stats=k=>{ const a=[];
+      cl.forEach(c=>{ if(c.userData.recipe!==k)return; c.updateMatrixWorld(true);
+        const bb=new THREE.Box3().setFromObject(c);
+        a.push({el:Math.atan2(c.position.y,Math.hypot(c.position.x,c.position.z))*180/Math.PI,
+                as:(bb.max.x-bb.min.x)/Math.max(1e-6,bb.max.y-bb.min.y)}); });
+      return a; };
+    const cu=stats('cumulus'), ci=stats('cirrus');
+    if(cu.length&&ci.length){
+      const cuEl=Math.max(...cu.map(x=>x.el)), ciEl=Math.min(...ci.map(x=>x.el));
+      ok(ciEl>cuEl,'  cirrus sits entirely ABOVE the cumulus deck (lowest cirrus '+
+         ciEl.toFixed(1)+' degrees against the highest cumulus '+cuEl.toFixed(1)+')');
+      const cuAs=Math.max(...cu.map(x=>x.as)), ciAs=Math.min(...ci.map(x=>x.as));
+      ok(ciAs>cuAs*1.0,'  and is drawn out further along the wind (thinnest cirrus aspect '+
+         ciAs.toFixed(1)+' against the widest cumulus '+cuAs.toFixed(1)+')');
+      /* NO FLAT BASE ON CIRRUS. It never condensed at one altitude, so it has no cut and no
+         shaded underside — which is the structural half of being a different recipe. */
+      let flat=0;
+      cl.forEach(c=>{ if(c.userData.recipe!=='cirrus')return;
+        c.traverse(o=>{ if(o.isMesh&&o.geometry.userData.cloud&&o.geometry.userData.cloud.clipped>0)flat++; }); });
+      ok(flat===0,'  and no cirrus carries a flat base plane — it is ice, not a rising thermal'); }
+  }
+
   /* CLOUD FORM — ERIC'S BRIEF OF 2026-09-11, asserted about the geometry. The pixel side is
      platescore's (flatness, underside shading, boundary); these are the structural claims that
      make those numbers possible, and each one is a thing that was wrong at some point today. */
   { const bodies=[]; for(const c of cl) c.traverse(o=>{ if(o.isMesh&&o.name!=='cloudwisp')bodies.push(o); });
     ok(bodies.length===cl.length,'one body mesh per cloud ('+bodies.length+')');
+    /* THE BASE-PLANE ROWS BELOW ARE ABOUT CUMULUS ONLY, and they went red the moment cirrus
+       landed — correctly. Cirrus has no flat base because it never condensed at one altitude, so
+       "every cloud has a base plane" is a cumulus invariant wearing a sky-wide name. Scoped rather
+       than loosened: the count is still exact, it is just exact over the right set. */
+    const cuBodies=[]; cl.forEach(c=>{ if(c.userData.recipe!=='cumulus')return;
+      c.traverse(o=>{ if(o.isMesh&&o.name!=='cloudwisp')cuBodies.push(o); }); });
     /* A FLAT BASE EXISTS, and it is flat: every base vertex of a cloud shares one y. */
     /* THE PLANE IS FOUND AS THE MODE, NOT AS THE MINIMUM, and the first version of this check got
        it wrong in a way worth recording: a SPHERE'S SOUTH POLE also has a straight-down normal. So
@@ -4441,7 +4489,7 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
        and taking the most populated bucket finds the plane itself. */
     let flatOK=0, downOK=0, tintOK=0, fringeBelow=0;
     const bt=new THREE.Color(X.SKY.cloudBaseTint).convertSRGBToLinear();
-    for(const b of bodies){
+    for(const b of cuBodies){
       const p=b.geometry.attributes.position, nr=b.geometry.attributes.normal,
             co=b.geometry.attributes.color;
       const bucket=new Map(); let nd=0;
@@ -4469,15 +4517,15 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
       const ud=b.geometry.userData.cloud;
       if(ud&&ud.clipped>0&&ud.clipped<=ud.hostVerts)fringeBelow++;
     }
-    ok(downOK===bodies.length,'every cloud has a base plane whose normals point straight DOWN ('+
-       downOK+' of '+bodies.length+') — which is what makes it shade itself, with no painted grey');
-    ok(flatOK===bodies.length,'and the base really is FLAT: all its vertices share one height in '+
-       flatOK+' of '+bodies.length+' clouds');
-    ok(tintOK===bodies.length,'and carries the base tint in its vertex colour ('+tintOK+' of '+
-       bodies.length+') — the hemisphere light\'s ground colour is tussock brown and the HDRI\'s '+
+    ok(downOK===cuBodies.length,'every CUMULUS has a base plane whose normals point straight DOWN ('+
+       downOK+' of '+cuBodies.length+') — which is what makes it shade itself, with no painted grey');
+    ok(flatOK===cuBodies.length,'and the base really is FLAT: all its vertices share one height in '+
+       flatOK+' of '+cuBodies.length+' cumulus');
+    ok(tintOK===cuBodies.length,'and carries the base tint in its vertex colour ('+tintOK+' of '+
+       cuBodies.length+') — the hemisphere light\'s ground colour is tussock brown and the HDRI\'s '+
        'lower half is rock, so an untinted downward face renders as a bright tan saucer');
-    ok(fringeBelow===bodies.length,'and the plane clips ONLY the hosts, never the rim fringe ('+
-       fringeBelow+' of '+bodies.length+' clouds) — clipping the fringe flattened it into wafers '+
+    ok(fringeBelow===cuBodies.length,'and the plane clips ONLY the hosts, never the rim fringe ('+
+       fringeBelow+' of '+cuBodies.length+' cumulus) — clipping the fringe flattened it into wafers '+
        'sticking out sideways, which is what made the first flat-based clouds look like saucers');
     /* HORIZONTALLY STRETCHED. Measured as the body's own bounding box, which is the shape Eric
        asked for: "horizontally stretched", not a ball. */
@@ -8178,6 +8226,13 @@ C.section('REPLAT P6A: the model-swap seam');
        carpark  mesh beb71e0c09a90359, meshes 943, tris 325228
        skifield mesh 6fd3a8a3e9aa873b, meshes 328, tris 155594
 
+     RE-PINNED FOR THE CIRRUS RECIPE, 2026-09-11 — SKY.md 4's cloud variety, which asks for a count
+     of RECIPES rather than of instances. Three of the eight clouds are cirrus now: high, thin,
+     drawn out along the wind, no flat base and no shaded underside, with the wisp tier carrying the
+     shape. Triangles fall by 5,784 in both worlds, because a cirrus is mostly margin.
+       carpark  mesh 397477477f215d0a, meshes 943, tris 298530
+       skifield mesh a9b28722a40491ac, meshes 328, tris 128896
+
      RE-PINNED FOR THE NIGHT SKY, 2026-09-11 — the moon derived from SKY.sunPosNight instead of
      hard-coded 10.6 degrees away from it. Mesh COUNT and triangle count unchanged in both worlds;
      only the moon's transform moved, which is the whole of the delta.
@@ -8188,10 +8243,10 @@ C.section('REPLAT P6A: the model-swap seam');
        carpark  mesh 72ff1bdc05788274, meshes 943, tris 324628
        skifield mesh f135eff3fff40162, meshes 328, tris 154994 */
   const PRESEAM={
-    carpark :{mesh:'397477477f215d0a', col:'1b025c57715cb017', meshes:943, tris:298530,
+    carpark :{mesh:'6bfb3df5fb099709', col:'1b025c57715cb017', meshes:943, tris:292746,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'a9b28722a40491ac', col:'fc06ef03250ea1ed', meshes:328, tris:128896,
+    skifield:{mesh:'1353d5c947a65631', col:'fc06ef03250ea1ed', meshes:328, tris:123112,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

@@ -353,6 +353,27 @@ const SKY={
      four rnd() values — so building fewer lobes by shortening the loop would change the draw count
      and relocate every seeded object in every map (TODO 47). The loop still runs to n and still
      takes its four numbers per lobe; lobes past this limit simply do not emit geometry. */
+  /* A SECOND CLOUD RECIPE: CIRRUS — SKY.md 4's cloud variety, and Eric named the kind. That
+     section is explicit that "variety is a count of RECIPES, not of instances", and until now the
+     sky had exactly one: eight cumulus differing only in size and elevation.
+     CIRRUS IS NEARLY THE OPPOSITE OF CUMULUS and the constants say so rather than nudging the
+     cumulus ones. It is high, thin, fibrous and horizontally drawn out; it has NO flat base,
+     because it never condensed at one — it is ice, not a rising thermal — and so no shaded
+     underside either, which is why cirrusFlatBase is off and the base tint does not reach it.
+     It is mostly MARGIN: the solid lobes shrink to almost nothing and the wisp tier carries the
+     shape, which is what the alpha atlas was built for.
+     WHICH CLOUDS ARE WHICH IS HASH-DRIVEN off the cloud index, so the mix costs the seeded stream
+     nothing (TODO 47) and the same sky comes back every boot. */
+  cloudCirrus:0.375,     // the share of the eight that are cirrus rather than cumulus
+  cirrusElev:30.0,       // degrees: high, well above the cumulus deck at 13.5
+  cirrusElevVary:3.5,
+  cirrusRMul:0.48,       // small solid cores...
+  cirrusBase:0.16,       // ...and very flat: a sheet, not a heap
+  cirrusStretch:3.4,     // drawn out along the wind
+  cirrusSpread:2.6,      // and the lobes strung further apart
+  cirrusLobes:3, cirrusPuffs:0,   // no billows at all
+  cirrusFringe:7, cirrusFringeR:0.30, cirrusFringeAt:1.30,
+  cirrusWisp:4, cirrusWispR:1.8, cirrusWispEmis:0.72,  // the wisps ARE the cloud
   cloudLobes:3,
   cloudPuffs:2,          // was 3: two big billows on each lobe, not a stack of three
   cloudFringe:4,         // was 26: a rim, not a coat
@@ -4112,7 +4133,7 @@ function buildSky(){
       ex=Math.max(ex,Math.abs(sp.x-cx)+sp.r); ey=Math.max(ey,Math.abs(sp.y-cy)+sp.r*sp.sy);
       ez=Math.max(ez,Math.abs(sp.z-cz)+sp.r); }
     return {cx,cy,cz,ex,ey,ez}; };
-  const mergeSpheres=(specs)=>{
+  const mergeSpheres=(specs,RC)=>{
     const gs=[], own=[]; let n=0;
     for(const sp of specs){
       /* THE FRINGE GETS A CHEAPER SPHERE. 26 bumps per lobe at 10x8 segments added 113,400
@@ -4151,7 +4172,7 @@ function buildSky(){
        the sun is 39.5 degrees up, so a downward face sees none of it and falls to the hemisphere
        bounce plus the neutral emissive floor, which is a grey cloud base. */
     let _clipped=0, _baseY=null;
-    if(SKY.cloudFlatBase&&specs.length){
+    if(RC.flatBase&&specs.length){
       let sy=0,sh=0;
       for(const sp of specs){ sy+=sp.y; sh+=sp.r*sp.sy; }
       const baseY=sy/specs.length-(sh/specs.length)*(1-SKY.cloudBaseCut);
@@ -4207,13 +4228,13 @@ function buildSky(){
      wisp and body would be a visible line. Using the same body-normal formula the merged spheres
      use means a wisp on the sunward side is bright and one underneath is dark, exactly like the
      mass it extends. */
-  const mergeWisps=(specs,pos,centre,ext)=>{
+  const mergeWisps=(specs,pos,centre,ext,RC)=>{
     const P=[],NR=[],UV=[];
     const G4=4, cell=1/G4;
     let idx=0;
     for(const sp of specs){
       if(!sp.host)continue;
-      for(let q=0;q<SKY.cloudWisp;q++){
+      for(let q=0;q<RC.wisp;q++){
         const wx=pos.x+sp.x, wy=pos.y+sp.y*sp.sy, wz=pos.z+sp.z;
         const dl=Math.hypot(wx,wy,wz)||1;
         const dx=-wx/dl, dy=-wy/dl, dz=-wz/dl;            // toward the origin
@@ -4228,7 +4249,7 @@ function buildSky(){
         const ca=Math.cos(a), sa=Math.sin(a);
         const px0=sp.x+(rx*ca+ux*sa)*rr, py0=sp.y*sp.sy+(ry*ca+uy*sa)*rr,
               pz0=sp.z+(rz*ca+uz*sa)*rr;
-        const hs=sp.r*SKY.cloudWispR*(0.72+_thash(idx*53+11,idx*29+5)*0.56)*0.5;
+        const hs=sp.r*RC.wispR*(0.72+_thash(idx*53+11,idx*29+5)*0.56)*0.5;
         /* the body normal at the wisp's own place, so it shades with the mass */
         let nx=(px0-centre.x)/ext.x, ny=(py0-centre.y)/ext.y, nz2=(pz0-centre.z)/ext.z;
         const nl=Math.hypot(nx,ny,nz2)||1; nx/=nl; ny/=nl; nz2/=nl;
@@ -4272,41 +4293,70 @@ function buildSky(){
   G.postExclude=[];
   G.cloudWisps=[];
   for(let i=0;i<8;i++){ const cg=new THREE.Group(); const n=3+((i*7)%3);
+    /* WHICH RECIPE THIS CLOUD IS. Hash-driven off the index, so the mix takes nothing from the
+       seeded stream (TODO 47) and the same sky comes back every boot. Every knob the loop reads
+       comes from P, so a recipe is a complete description rather than a set of overrides. */
+    /* CHOSEN BY RANK, NOT BY THRESHOLD. Comparing each cloud's hash against cloudCirrus gave SIX
+       cirrus out of eight for a share of 0.375 — eight samples of a hash are nowhere near uniform,
+       and a proportion that only holds on average is not a proportion when n is eight. Ranking all
+       eight and taking the lowest k gives exactly k, every boot, for any share. */
+    const cirrus=(()=>{ const k=Math.round(8*SKY.cloudCirrus);
+      const h=[]; for(let q=0;q<8;q++)h.push({q,v:_thash(q*457+19,q*211+7)});
+      h.sort((a,b)=>a.v-b.v);
+      return h.slice(0,k).some(e=>e.q===i); })();
+    const P=cirrus?{
+      elev:SKY.cirrusElev, elevVary:SKY.cirrusElevVary, elevVaryX:SKY.cirrusElevVary,
+      rmul:SKY.cirrusRMul, base:SKY.cirrusBase, top:SKY.cloudTop, stretch:SKY.cirrusStretch,
+      spread:SKY.cirrusSpread, lobes:SKY.cirrusLobes, puffs:SKY.cirrusPuffs, rise:SKY.cloudRise,
+      fringe:SKY.cirrusFringe, fringeR:SKY.cirrusFringeR, fringeAt:SKY.cirrusFringeAt,
+      wisp:SKY.cirrusWisp, wispR:SKY.cirrusWispR, wispEmis:SKY.cirrusWispEmis,
+      wispAlpha:SKY.cloudWispAlpha,
+      flatBase:0, vary:SKY.cloudVary
+    }:{
+      elev:SKY.cloudElev, elevVary:SKY.cloudElevVary, elevVaryX:SKY.cloudElevVaryX,
+      rmul:SKY.cloudRMul, base:SKY.cloudBase, top:SKY.cloudTop, stretch:SKY.cloudStretch,
+      spread:SKY.cloudSpread, lobes:SKY.cloudLobes, puffs:SKY.cloudPuffs, rise:SKY.cloudRise,
+      fringe:SKY.cloudFringe, fringeR:SKY.cloudFringeR, fringeAt:SKY.cloudFringeAt,
+      wisp:SKY.cloudWisp, wispR:SKY.cloudWispR, wispEmis:SKY.cloudWispEmis,
+      wispAlpha:SKY.cloudWispAlpha,
+      flatBase:SKY.cloudFlatBase, vary:SKY.cloudVary
+    };
+    cg.userData.recipe=cirrus?'cirrus':'cumulus';
     const specs=[];
     /* SIZE VARIES ACROSS THE SKY — wisps at one end, towers at the other. Hash-driven off the
        cloud's index, so it adds no rnd() draw (TODO 47) and the same cloud is the same size every
        boot. A deck whose every mass is the same size reads as wallpaper. */
     const cv=1+(_thash(i*211+13,i*97+41)-0.5)*2*SKY.cloudVary;
     for(let j=0;j<n;j++){ const r=rnd(6,12);
-      const R=r*SKY.cloudRMul*Math.max(0.25,cv);
-      const bx=(j*rnd(5,8)-n*3)*SKY.cloudSpread, by=rnd(-0.5,1.5), bz=rnd(-2,2);
+      const R=r*P.rmul*Math.max(0.25,cv);
+      const bx=(j*rnd(5,8)-n*3)*P.spread, by=rnd(-0.5,1.5), bz=rnd(-2,2);
       /* THE DRAWS ABOVE ARE ALWAYS TAKEN; only the geometry below is skipped. */
-      if(j>=SKY.cloudLobes)continue;
-      specs.push({r:R,x:bx,y:by,z:bz,sy:SKY.cloudBase,sx:SKY.cloudStretch,host:1});
+      if(j>=P.lobes)continue;
+      specs.push({r:R,x:bx,y:by,z:bz,sy:P.base,sx:P.stretch,host:1});
       /* THE PUFFS ARE THE VERTICAL BUILD. Each sits higher and smaller than the last, offset
          sideways by a hash so the mass leans rather than stacking like a snowman. */
-      for(let k=1;k<=SKY.cloudPuffs;k++){
+      for(let k=1;k<=P.puffs;k++){
         const h1=_thash(i*97+j*13+k,k*31+7), h2=_thash(j*53+k*11,i*29+k*17), h3=_thash(k*41+i,j*67+k);
         const pr=R*(0.86-0.17*k+h1*0.22);
         if(pr<1.2)continue;
-        specs.push({r:pr, x:bx+(h2-0.5)*R*0.85*SKY.cloudStretch,
-                    y:by+R*SKY.cloudRise*k*(0.75+h1*0.5),
-                    z:bz+(h3-0.5)*R*0.6*SKY.cloudStretch,
-                    sy:SKY.cloudTop, sx:SKY.cloudStretch, host:1}); }
+        specs.push({r:pr, x:bx+(h2-0.5)*R*0.85*P.stretch,
+                    y:by+R*P.rise*k*(0.75+h1*0.5),
+                    z:bz+(h3-0.5)*R*0.6*P.stretch,
+                    sy:P.top, sx:P.stretch, host:1}); }
       /* AND THE FRINGE IS THE RAGGED EDGE. Round the lobe's rim, at hash angles, so the outline
          scallops instead of describing an ellipse. */
       /* THE FRINGE GOES ON THE TOP HALF ONLY NOW. It used to ring the whole lobe, which put lumps
          under the cloud — and a lump under a flat base is the thing the base plane exists to
          remove. Angles are drawn in [0, pi) so sin(a) is never negative. */
-      for(let k=0;k<SKY.cloudFringe;k++){
+      for(let k=0;k<P.fringe;k++){
         const a=_thash(i*131+j*17+k,k*53+3)*Math.PI;
-        const rad=R*SKY.cloudFringeAt*(0.8+_thash(k*23+j,i*19+k)*0.4);
-        const fr=R*SKY.cloudFringeR*(0.7+_thash(k*7+i*3,j*11+k*5)*0.6);
+        const rad=R*P.fringeAt*(0.8+_thash(k*23+j,i*19+k)*0.4);
+        const fr=R*P.fringeR*(0.7+_thash(k*7+i*3,j*11+k*5)*0.6);
         if(fr<0.9)continue;
-        specs.push({r:fr, x:bx+Math.cos(a)*rad*SKY.cloudStretch,
-                    y:by+Math.sin(a)*rad*SKY.cloudBase*1.6,
-                    z:bz+(_thash(k*61+i,j*43+k)-0.5)*R*0.5*SKY.cloudStretch,
-                    sy:SKY.cloudTop, sx:SKY.cloudStretch, seg:1}); }
+        specs.push({r:fr, x:bx+Math.cos(a)*rad*P.stretch,
+                    y:by+Math.sin(a)*rad*P.base*1.6,
+                    z:bz+(_thash(k*61+i,j*43+k)-0.5)*R*0.5*P.stretch,
+                    sy:P.top, sx:P.stretch, seg:1}); }
     }
     /* fog:false, LIKE THE REST OF THE SKY, AND THIS IS THE THIRD DEFECT THE PASS FOUND. The dome
        and the horizon haze band are both fog:false; the clouds never were, and MeshBasicMaterial
@@ -4318,7 +4368,7 @@ function buildSky(){
        sky's aerial perspective belongs to the dome's gradient and the haze band, which is what
        SKY.md 3.5 is about; a cloud painted out by terrain fog is not aerial perspective, it is a
        cloud that has been erased. */
-    const mesh=new THREE.Mesh(mergeSpheres(specs), SKY.cloudLit
+    const mesh=new THREE.Mesh(mergeSpheres(specs,P), SKY.cloudLit
       /* reflectivity 0 — THE HDRI'''S GROUND HALF WAS PAINTING THE CLOUD BASES TAN.
          src/sky.mjs installs a real alpine HDRI as scene.environment, and three applies
          scene.environment to MeshLambertMaterial as an envMap with the default MULTIPLY blend. A
@@ -4345,8 +4395,8 @@ function buildSky(){
        The drawn value (36..62, centre 49, half-range 13) becomes the variation about it, so no
        draw is added, none is dropped, and the order is unchanged. */
     { const hd=Math.hypot(cg.position.x,cg.position.z);
-      const e=(SKY.cloudElev+(cg.position.y-49)/13*SKY.cloudElevVary
-               +(_thash(i*307+11,i*163+29)-0.5)*2*SKY.cloudElevVaryX)*Math.PI/180;
+      const e=(P.elev+(cg.position.y-49)/13*P.elevVary
+               +(_thash(i*307+11,i*163+29)-0.5)*2*P.elevVaryX)*Math.PI/180;
       cg.position.y=hd*Math.tan(e); }
     /* AND PULLED INSIDE THE DOME BY ITS OWN MEASURED EXTENT. The dome is BackSide, so any vertex
        further from the origin than DOMER sits behind its inner surface and is simply not drawn —
@@ -4385,16 +4435,16 @@ function buildSky(){
        rectangle stuck to the side of a cloud. So it ships hidden and the material install turns it
        on; a failed fetch leaves the sky precisely as SKY.md step 2 shipped it. G.cloudWisps is the
        handle materials.mjs dresses and the batteries read. */
-    if(SKY.cloudWisp>0){
+    if(P.wisp>0){
       const bf=bodyFrame(specs);
       const wg=mergeWisps(specs,cg.position,{x:bf.cx,y:bf.cy,z:bf.cz},
-                                            {x:bf.ex,y:bf.ey,z:bf.ez});
+                                            {x:bf.ex,y:bf.ey,z:bf.ez},P);
       if(wg){
         const wm=new THREE.MeshStandardMaterial({color:mesh.material.color.clone(),
-          emissive:mesh.material.color.clone().multiplyScalar(SKY.cloudWispEmis),
+          emissive:mesh.material.color.clone().multiplyScalar(P.wispEmis),
           transparent:true, depthWrite:false, side:THREE.DoubleSide, fog:false,
           roughness:1, metalness:0, envMapIntensity:0,
-          alphaTest:SKY.cloudWispAlpha});
+          alphaTest:P.wispAlpha});
         /* THE HAZE TINT IS INHERITED FROM THE BODY rather than recomputed, so a wisp can never be
            a different distance from the sky than the cloud it is attached to. */
         const wmesh=new THREE.Mesh(wg,wm);
