@@ -980,3 +980,23 @@ ramp are night-only, so no daytime frame is touched. Verified rather than reason
 `01_carpark_wide` and `10_skifield` reshot at 0.9994 and 0.9997 against their existing pins.
 Both night frames were also INSIDE the 0.965 threshold (0.9977 and 0.9966), so nothing was flagged;
 they are re-pinned anyway so the baseline describes the shipped tree rather than the one before it.
+
+## FIRST PIN 2026-09-11 — 43_night_range, on Eric's call
+
+The set had no vantage that could judge the night sky, and the night pass proved it: a moon moved
+10.6 degrees, 420 new stars and the environment dropped from 0.80 to 0.08 moved `21_night_camp` by
+**0.002 of SSIM**. SKY.md claimed 21 and 22 were "already pinned to judge" the night sky; 21 sits at
+(38.2, 1.7, -3.2) looking DOWN at a campfire and carries almost no sky. A change that large being
+invisible to the set is the definition of a gap in it.
+
+AIMED BY ARITHMETIC. The moon is derived from `SKY.sunPosNight`, so it sits at azimuth 324.2 and
+elevation 34.0. A camera in the carpark pitched up that bearing at the game's own field of view puts
+the moon, the range and a great deal of star field in one frame.
+
+**RE-AIMED ONCE, FOR STABILITY RATHER THAN FOR LOOK.** The first aim (pitch 20 degrees) included the
+carpark floor and its campfire and measured a worst take-to-take SSIM of **0.9953** — passing, but
+against a 0.995 threshold, which is no margin at all. The fire flickers. Pitching to 28 degrees puts
+it out of frame and the same measurement reads **0.9996**, and the frame is more of a night sky for
+it. Four sweeps then came back BYTE-IDENTICAL, spread 0.
+
+Measured before pinning with `stability.mjs`, five takes, as the ski field's three first pins were.

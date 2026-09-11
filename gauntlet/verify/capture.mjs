@@ -435,6 +435,25 @@ await shotR('27_travel_card',`const k=KEAGAME.G.keas[0];
    WHY THEY ARE STABLE, since it is not luck: every one pins the bird every frame (law 7), freezes
    G.time so the grass shader cannot sway under them (law 12, TODO 30), and stands on a map with no
    cast at all - so law 4, the ambient AI walking a human back into shot, cannot reach them. */
+/* 43 (Eric's critic pass, 2026-09-11): THE NIGHT SKY, WHICH NOTHING IN THE SET COULD JUDGE.
+   SKY.md claimed 21_night_camp and 22_torch_beam were "already pinned to judge" the night sky and
+   they are not: 21 sits at (38.2, 1.7, -3.2) looking DOWN at a campfire and carries almost no sky,
+   which is why the whole night pass — a moon moved 10.6 degrees, 420 new stars, the environment
+   dropped from 0.80 to 0.08 — moved it by 0.002 of SSIM. A change that large being invisible to
+   the set is the definition of a gap in it.
+   AIMED BY ARITHMETIC, NOT BY EYE. The moon is derived from SKY.sunPosNight, so it sits at azimuth
+   324.2 and elevation 34.0. A camera in the carpark pitched 20 degrees up that bearing spans -10
+   to 50 degrees of elevation at the game's own field of view, which puts the moon (34), the range
+   (0 to 17) and a great deal of star field in one frame. Nothing else in the set frames all three.
+   THE BIRD IS PARKED WELL OUT OF THE VIEW CONE rather than merely pinned: this vantage exists to
+   photograph the sky, and a kea in the corner of it would make every future re-pin an argument
+   about the bird. */
+await shotR('43_night_range',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
+  const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN("k.x=-34;k.z=34;k.y=0;k.vy=0;k.grounded=true;k.ry=0;k.stun=0;"+
+        "KEAGAME.G.nightManual=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);")}
+  ${CAM(6,2.2,8,70,48,-48)}`);
+
 const SKI={biome:'skifield'};
 /* 28: the bottom station - engine shed, bull wheel, the queue pad, drifts banked against the shed.
    THE BIRD IS NOT ON THE SHED ROOF ANY MORE, and TODO 40 is why: k_shed pays for standing up there,
