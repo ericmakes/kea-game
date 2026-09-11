@@ -1000,3 +1000,12 @@ it out of frame and the same measurement reads **0.9996**, and the frame is more
 it. Four sweeps then came back BYTE-IDENTICAL, spread 0.
 
 Measured before pinning with `stability.mjs`, five takes, as the ski field's three first pins were.
+
+## RE-PIN 2026-09-11c — the critic pass, all 43 vantages
+
+4 sweeps, per-vantage medoid, `BATCH=6`. Provenance: run1 23, run2 10, run3 8, run4 2. Every sweep
+43 of 43, no dead batches, no orphans swept. First re-pin that includes `43_night_range`.
+
+WHAT MOVED, and it is nearly everything: the night environment from 0.80 to 0.08 (which changes
+every night frame), the moon derived and given a limb, the cloud lobes rebuilt to fewer and larger
+with a full-height shading gradient, and three of the eight clouds turned to cirrus.
