@@ -18,7 +18,7 @@ vantage and every battery still sees the primitive bird they were calibrated on;
 
 | | |
 |---|---|
-| **the 1c texture** | colour, scallops, coverts and barring. Eric's approval, from the renders |
+| **the 1b texture — THE PAINT OF RECORD** | Eric's decision of 2026-09-11: 1c never reached this machine and the bird has another geometry round coming anyway, so 1b is the paint everything is built on from here. See below |
 | **Task 3's closed gape** | the rest and folded poses show no exposed red mouth lining |
 | **Task 3's shortened bill** | shorter, continuously hooked, lower mandible a shallow tucked wedge |
 
@@ -37,7 +37,31 @@ fine; the rest pose the game samples is wrong. `src/bird.mjs` sets it by seeking
 seam: either a better `restT`, or a authored fold pose. Asking a texture or geometry pass to fix a
 pose would get a re-rigged file back, and the automated gate rejects any change to the armature.
 
-## THE BLOCKER, AND IT IS THE FIRST THING TO SETTLE
+## THE BLOCKER IS SETTLED: 1b IS THE PAINT OF RECORD
+
+**Eric's call, 2026-09-11: "promote 1b as the paint of record — 1c never reached this machine and the
+bird has another geometry round coming anyway."**
+
+So the blocker below is closed, and it is closed by DECISION rather than by the drop arriving. What
+that means in practice, and it is short:
+
+- **Task 3's GLB is correct as it stands.** It carries Task 1b's images, which was recorded below as
+  the defect that made it unusable; with 1b promoted it is simply the paint of record, and no
+  substitution is needed.
+- **The guarded 1c patch below is not needed and should not be run.** Its whole purpose was to move
+  Task 3's head geometry onto a *different* GLB that carried the 1c images. There is no such GLB.
+  The section is kept because the patch is the right tool if 1c ever does arrive, and because the
+  md5 chain in it is the evidence that Task 3's baseline is 1b.
+- **The neck feather-size gradient stays pending and stays a TEXTURE item.** Promoting 1b settles
+  which paint we build on; it does not mean 1b has no faults. That one was listed against the paint
+  before this decision and is unaffected by it.
+- **Nothing about this changes what the game loads.** `KEABIRD.model` is still false, the shipped
+  url is still `models/kea_bill.glb`, and the bird is still PARKED.
+
+The pending geometry work — Task 3b skull rounding, Task 2 tail vanes — is what the "another
+geometry round" refers to, and a geometry round does not care which images are in the file.
+
+### THE ORIGINAL BLOCKER, KEPT FOR ITS EVIDENCE
 
 **THE APPROVED 1c TEXTURE IS NOT IN THIS TREE, OR ANYWHERE ON THIS MACHINE.**
 
@@ -53,6 +77,9 @@ Two ways forward, both Eric's call:
 1. **get the 1c drop** (albedo + normal 4096 PNGs, or a GLB carrying them), then apply the guarded
    patch below; or
 2. **promote 1b** as the paint of record and re-approve from its renders.
+
+**Eric chose 2 on 2026-09-11.** The two options are left standing above because option 1 remains the
+route if the 1c drop ever turns up, and the guarded patch exists for exactly that.
 
 ## THE GUARDED 1c PATCH
 
