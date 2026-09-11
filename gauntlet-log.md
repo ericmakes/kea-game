@@ -5461,3 +5461,78 @@ processes. Three re-pins have been taken with it since, 42 of 42 on every sweep.
 ## THE LOCK
 
 Released as the final act, per OVERNIGHT.md's SESSION LOCK rule.
+
+---
+
+# SESSION 36d — 2026-09-11 — ERIC'S CRITIC PASS, AND TWO LAWS OUT OF MY OWN MISTAKES
+
+Six numbered fixes, shipped as two pieces. Both night faults were ONE seam; both new cloud
+properties needed my first hypothesis thrown away; and two of the three things I blamed for the
+moon were not true. Eric turned the last two into standing law — FLAKES 16 and 17.
+
+## THE NIGHT WAS LIT BY A DAYTIME HDRI, BRIGHTER THAN THE DAY
+
+`envIntensityNight` was **0.80 against `envIntensityDay`'s 0.55** — higher after dark — while the
+comment on the very line that scales it says it exists to dim: *"without this the IBL would keep
+pouring full daylight bounce into a night scene... the single biggest reason a night frame can look
+flat and lifted after IBL goes in — the torch stops reading because everything already has fill."*
+The knob was right and the number was backwards, which reads as 0.80 having been meant as 80% of
+the day value rather than as an absolute.
+
+The environment is a DAYTIME alpine panorama, so at night the whole scene was lit by sunlit rock and
+tussock. Eric's "tan blowout" was never a patch — **4.09% of the whole frame read warm** — and it is
+also why the clouds were fully-lit day cumulus under a night sky. Both of his night bugs, one
+number. 0.08 off a six-value sweep; the snowcaps hold at 0.30 mean luma, which is what the fill
+exists to protect.
+
+## LAW 16 — I HAD WRITTEN AN ASSERTION THAT LOCKED THE BUG IN
+
+A battery row from the previous piece asserted `envIntensityNight > envIntensityDay` and used it to
+EXPLAIN the cloud glow. I measured the cause, found it explained the symptom exactly, and pinned it.
+It passed — and it would have made the fix go red, which is how a careless session ends up "fixing
+the test". **The tell is that the message explains rather than requires:** "X really is Y, which is
+why Z happens" is a diagnosis, not an assertion. Eric's law: an assertion encodes how it SHOULD be.
+
+## LAW 17 — THREE MEASUREMENTS WERE READING THE CAMPFIRE
+
+"Peak luma 1.000 with a 156-pixel plateau" sent me hunting a blown moon. It was the carpark fire,
+which is the brightest thing in any night frame; the moon's own peak is 0.910 and it was never
+clipped. The same fire then turned up as a "clipped disc" in a second reading and as the source of a
+warm percentage in a third. **A frame-wide peak is a statement about the whole frame, and a frame
+contains things that are legitimately extreme.** `nightcheck.mjs` measures over the top 62% and says
+in a comment that the fire is exempt by position and on purpose.
+
+## BOTH NEW CLOUD PROPERTIES: FIRST HYPOTHESIS WRONG, BOTH TIMES
+
+**SUB-STRUCTURE.** I expected a cluster of equal spheres to concentrate gradient energy at its own
+scale, and so to score LOWER entropy than a real cloud. Measured, the game is the MORE multi-scale
+of the three — entropy 0.945 against 0.913 and 0.883 — because every fringe bump adds fine detail.
+What separates them is where the energy sits: fine-over-coarse 0.39 against 0.29 and 0.25.
+**INTERNAL CONTRAST.** Eric's words suggest ours is too low. It is too HIGH: 0.424 against 0.318 and
+0.184, from a p10 of 0.474 where the plates sit at 0.672 — the whole spread was one dark base line
+with uniform billows above it, which is precisely the fault he described.
+**AND BOTH WERE BANDED FROM CLEAR SKY AT FIRST.** They fell back to the sky region whenever the
+cloud mask was refused, which handed cloud rows bands measured on cloudless plates. `cloudMask`
+refuses in two distinct ways and only one means "measure the whole crop instead".
+
+## THE METRIC-OPTIMAL CLOUD LOOKED WORSE AND WAS REJECTED
+
+Two lobes, one billow, three rim bumps scored well and came back as a smooth featureless lens — a
+UFO rather than a cumulus. Three lobes with two LARGE billows each reads as cloud and scores the
+same. Second time this session the strip overruled a green table.
+
+## AN ASSERTION WITHDRAWN AFTER THREE WRONG VERSIONS
+
+The concern was real — a cloud whose top is off-frame shows only its underside — but every
+structural version measured something else: the group centres against the knobs (true by
+construction), the elevation union across eight deliberately-spread clouds, and each cloud's own
+elevation extent (a wide flat sheet seen obliquely from 70 m spans a large elevation range because
+its near edge is closer than its far edge — shortening the stack moved it 24.0 to 21.1 degrees,
+because the number was never about height). Withdrawn, with the reasoning kept in place, because the
+thing it reached for is measured on pixels by the property it damaged.
+
+## THE COVERAGE CALL
+
+Eric's: keep 29.4%. Sub-structure only reaches its band by adding cloud (0.293 at 48.5%) or by
+switching off the wisp tier (0.313); coverage stays and the wisps are TODO 118's deliverable, so an
+eight-point rise is the smallest of the three moves.

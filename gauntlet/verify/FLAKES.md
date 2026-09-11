@@ -67,3 +67,34 @@ Institutional memory: every class of headless nondeterminism met so far, and the
     root two). Law 10 already says read the convention; this is what it costs when one assertion in
     four does not. Idiom: derive the bound from how the value is CONSTRUCTED, per axis if it is drawn
     per axis, and never from the number one prop happened to produce.
+16. AN ASSERTION MUST ENCODE HOW IT SHOULD BE, NOT WHAT CURRENTLY EXPLAINS THE SYMPTOM. Eric's law,
+    2026-09-11, from my own mistake in the sky pass. The night clouds glowed; I measured why, found
+    that `envIntensityNight` (0.80) was HIGHER than `envIntensityDay` (0.55) and that this explained
+    it exactly — and then wrote that inequality down as a battery row, with the explanation in its
+    message: "the night environment really is stronger than the day one, which is why an undimmed
+    cloud glows after dark". It passed. It was also asserting the defect, so the fix a session later
+    went RED on a row that had been green for the wrong reason, and a less careful session would have
+    "fixed the test" instead.
+    THE TELL IS THAT THE MESSAGE EXPLAINS RATHER THAN REQUIRES. "X really is Y, which is why Z
+    happens" is a diagnosis; an assertion needs "X must be Y, because Z is what we want". The same
+    row written the right way round — night environment DIMMER than day — catches the inversion and
+    survives every legitimate re-tune of both numbers.
+    Idiom: after measuring a cause, ask whether the thing you are about to pin is a REQUIREMENT or
+    an OBSERVATION. If the honest sentence starts "currently", it does not belong in a battery
+    without the word "should" beside it and an inequality pointing the right way. Law 10 says
+    assertions derive from convention and law 15 from construction; this one says they derive from
+    INTENT, and that intent is not the same thing as the present state even when the present state
+    is what you just carefully measured.
+
+17. CROP TO THE REGION UNDER TEST BEFORE DRAWING A CONCLUSION FROM A PEAK. Eric's law, same day,
+    from three separate measurements in one session that were unknowingly reading the CARPARK
+    CAMPFIRE. The strip vantage carries a fire and warm van lights in its bottom third, and they are
+    the brightest thing in any night frame — so "peak luma 1.000 with a 156-pixel plateau", which
+    sent an afternoon into hunting a blown moon, was the fire; the moon's own peak is 0.910 and it
+    was never clipped. The same fire then appeared as a "clipped disc" in a second reading and as
+    the source of a "warm blowout" percentage in a third.
+    A frame-wide max, min, percentile or histogram is a statement about the WHOLE FRAME, and a frame
+    contains things that are legitimately extreme. Idiom: state the region first and measure inside
+    it — `nightcheck.mjs` asserts over the top 62% for exactly this reason, and says in a comment
+    that the fire is exempt BY POSITION and on purpose because it is a warm source IN the scene
+    rather than daylight leaking onto it. A peak with no region attached is an anecdote.
