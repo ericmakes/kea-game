@@ -663,6 +663,13 @@ and reshuffles grass, snow, tussock and beech across all 25 baselines. And it ta
 and a star page out of a live save.
 DO IT AFTER 40, so the missions have a home to graduate INTO rather than being deleted from one map
 and reinvented in another.
+PLANNED 2026-09-11, NOT EXECUTED - SKIFIELD_GRADUATION.md, awaiting Eric's approval. The plan's
+finding changes the shape of the piece: piece 40 reinvented four of the five missions anyway, one of
+them word-for-word (s_goggles / k_goggles), so this is a retirement of four and a migration of one.
+The draw-order hazard above is answered by the TODO 47 precedent - keep all five propAt calls and
+their five draws, suppress only the geometry - which turns a 43-frame re-pin into a 4-frame one if a
+probe confirms it. Four decisions wanted from Eric; four assertions to rewrite, one of them a
+FLAKES 16 (harness-everything 3615 asserts the PRE-graduation arrangement as a law).
 
 ### 40. skifield-missions
 8-12 missions incl. the graduates. Signatures: tray-slide down the
