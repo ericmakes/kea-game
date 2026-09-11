@@ -111,7 +111,27 @@ const SKY={
      tilting an environment to fix that tips its horizon and drags the ground bounce sideways —
      a worse artefact than the one it cures. kloofendal_43d_clear matches elevation to 3.4deg and
      is on the shelf in assets/hdri/ if Eric would rather have that trade. */
-  hdri:'hdri/pizzo_pernice_1k.hdr', envIntensityDay:0.55, envIntensityNight:0.80,
+  /* envIntensityNight WAS 0.80 — HIGHER THAN THE DAY'S 0.55 — AND THE COMMENT IN nightApply THAT
+     SCALES IT SAYS IT EXISTS TO DIM. The two contradicted each other for as long as both existed:
+     "without this the IBL would keep pouring full daylight bounce into a night scene... it is the
+     single biggest reason a night frame can look flat and lifted after IBL goes in — the torch
+     stops reading because everything already has fill". The knob was right and the number was
+     backwards, which reads as 0.80 having been meant as "80% of the day value" (0.44) rather than
+     as an absolute.
+     WHAT IT COST, measured on a night frame at the strip vantage. The environment is a DAYTIME
+     alpine HDRI (pizzo_pernice), so at night the whole scene was lit by bright daylight from a
+     panorama whose ground half is sunlit rock and tussock:
+        4.09% of the frame read WARM (r-b > 12) — Eric's "tan blowout ... day-sun or day
+             environment lighting leaking onto geometry that should be moonlit". It is the whole
+             frame's warmth, not a patch: the ridge, the scree and the cloud bellies all of it.
+        the clouds read mean luma 0.508, fully-lit day cumulus under a night sky.
+     Both of Eric's night bugs, 4 and 5, are this one seam.
+     0.08 CHOSEN BY MEASUREMENT, off a sweep of 0.80 / 0.30 / 0.16 / 0.08 / 0.04 / 0.00: warmth
+     falls 4.09% -> 1.87 -> 0.98 -> 0.40 -> 0.35 -> 0.33, and the moonlit snowcaps — the thing the
+     fill exists to keep readable — hold at 0.30 mean luma for the brightest 3% of terrain against
+     0.27 with the environment off entirely. 0.08 is where the warmth has essentially gone and the
+     caps have not. */
+  hdri:'hdri/pizzo_pernice_1k.hdr', envIntensityDay:0.55, envIntensityNight:0.08,
   envRotationY:2.0630,
   /* THE MEASURED INPUTS TO envRotationY, KEPT SO THE ROTATION CAN CHECK ITSELF. hdriSunAz is
      pizzo_pernice's own solar azimuth (the energy-weighted centroid of its brightest 0.02% of
@@ -229,6 +249,34 @@ const SKY={
      sky light, and at night there is a great deal less of it — moonlit cloud is dim grey, not
      white. 0.10 leaves enough that a cloud is still a shape against the stars rather than a hole
      in them. */
+  /* THE MOON — Eric's critic point 6: "a flat white disc brighter than the moonlit snowcaps -
+     soften the limb, and make sure it doesn't out-bloom the terrain it's meant to be lighting."
+     TWO OF THE THREE THINGS I FIRST BLAMED WERE NOT TRUE, and the record matters more than the
+     tidy version. It does NOT bloom: the threshold is 2.0 and this material sits near 1.0 in
+     linear, so UnrealBloomPass never sees it. And it was never CLIPPED — the "peak luma 1.000 with
+     156 pixels inside 2% of it" that sent me looking was the CARPARK CAMPFIRE, which is the
+     brightest thing in both night frames; the moon's own peak is 0.910. That only became clear
+     once the measurement was restricted to the sky, and three separate readings in this session
+     were quietly about the campfire before that limit went in.
+     WHAT IS REAL is the flatness. A sphere of uniform emissive colour has no limb: every visible
+     facet is the same brightness right to the silhouette, which is what makes it read as a sticker
+     rather than a body. The moon is also far brighter than the moonlit snowcaps — 0.906 against
+     0.298 — and that part is correct, because a real moon is.
+     ITS COLOUR IS CONVERTED NOW, for consistency and not as a bug fix. It was a RAW HEX on the
+     material while the stars three blocks down and the dome's three stops all convert — the
+     ColorManagement trap this project has paid for four times, and ARTBIBLE's standing law says
+     convert at the seam every time. It did not cause the flatness.
+     moonLimb IS HOW MUCH BRIGHTNESS SURVIVES AT THE EDGE, applied as a vertex colour from the
+     dot of each vertex's normal with the direction back to the origin. The camera sits within
+     52 m of the origin and the moon is 148 m out, so that direction is the view direction to
+     within a few degrees — the same static-billboard approximation the sun sprite and the cloud
+     wisps already make, and for the same reason. */
+  /* 0.10 AND 1.0, off a sweep measured on the moon frame with the CARPARK EXCLUDED — the campfire
+     is the brightest thing in that frame and three measurements in this session were quietly about
+     it before the sky limit went in. Rendered profile from disc centre outward, as a fraction of
+     the centre: 60% of radius 0.994, 85% 0.934, 95% 0.293. And peak luma 0.910 with ZERO clipped
+     pixels, against 1.000 and a 156-pixel plateau before the colour convert. */
+  moonColor:0xEAF2FF, moonLimb:0.10, moonLimbPow:1.0,
   cloudNightEmis:0.10,
   /* AND THE CLOUD'S ALBEDO DROPS AT NIGHT, WHICH IS ODD PHYSICS AND THE ONLY LEVER THERE IS.
      Measured: at night a cloud top reads rgb 229,231,235 — brilliant white over a deep blue sky —
@@ -3798,10 +3846,24 @@ function initScene(){
      DERIVED RATHER THAN REPEATED, exactly as the sun sprite is: move the night light and the moon
      follows. MOONDIST keeps it inside the 210 m dome, and 148 is a little further out than the sun
      sprite's 168 would put it — the moon should read as the most distant thing in the sky. */
-  const moon=new THREE.Mesh(new THREE.SphereGeometry(4.5,12,10),new THREE.MeshBasicMaterial({color:0xEAF2FF,fog:false}));
+  const mg=new THREE.SphereGeometry(4.5,24,18);
+  const moon=new THREE.Mesh(mg,new THREE.MeshBasicMaterial({
+    color:new THREE.Color(SKY.moonColor).convertSRGBToLinear(),
+    vertexColors:true, fog:false}));
   { const MP=SKY.sunPosNight, ml=Math.hypot(MP[0],MP[1],MP[2]), MOONDIST=148;
     G.moonPos=[MP[0]/ml*MOONDIST,MP[1]/ml*MOONDIST,MP[2]/ml*MOONDIST];
-    moon.position.set(G.moonPos[0],G.moonPos[1],G.moonPos[2]); }
+    moon.position.set(G.moonPos[0],G.moonPos[1],G.moonPos[2]);
+    /* THE LIMB. Brightness falls toward the silhouette, so the disc reads as a body rather than a
+       sticker. 24x18 segments instead of 12x10 because the falloff is interpolated across vertices
+       and a coarse sphere makes a faceted terminator. */
+    { const nr=mg.attributes.normal, vc=[];
+      const l=Math.hypot(G.moonPos[0],G.moonPos[1],G.moonPos[2])||1;
+      const vx=-G.moonPos[0]/l, vy=-G.moonPos[1]/l, vz=-G.moonPos[2]/l;   // toward the origin
+      for(let i=0;i<nr.count;i++){
+        const f=Math.max(0,nr.getX(i)*vx+nr.getY(i)*vy+nr.getZ(i)*vz);
+        const b=SKY.moonLimb+(1-SKY.moonLimb)*Math.pow(f,SKY.moonLimbPow);
+        vc.push(b,b,b); }
+      mg.setAttribute('color',new THREE.Float32BufferAttribute(vc,3)); } }
   moon.visible=false; G.scene.add(moon); G.moon=moon;
   buildSky();
 }

@@ -118,7 +118,7 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
   'cloudFlatBase','cloudBaseCut','cloudBaseTint','cloudBaseSoft','cloudSegW','cloudSegH','cloudStretch','cloudVary',
   'cloudFringeAt','cloudLit','cloudEmissive','cloudNorm','cloudHaze','cloudHazeD',
   'cloudElev','cloudElevVary',
-  'cloudNightEmis','cloudNightTint','stars','starR','starSize','starMinEl','starDim',
+  'moonColor','moonLimb','moonLimbPow','cloudNightEmis','cloudNightTint','stars','starR','starSize','starMinEl','starDim',
   'skySatMul','skyHueRot','hazeColor','skyMidAt','skyLowAt',
   'cloudWisp','cloudWispR','cloudWispAt','cloudWispEmis','cloudWispAlpha'];
 

@@ -4204,6 +4204,33 @@ C.section('SKY.md 4: the night sky — the moon, the stars, and a name that was 
        pass's item 6d, which left the world booted as the ski field and broke item 7. */
     G.nightManual=false; G.nightT=0; X.nightApply(0); X.boot({biome:'carpark'}); tick(2); }
 
+  /* THE NIGHT ENVIRONMENT MUST BE DIMMER THAN THE DAY ONE. It was not: envIntensityNight was 0.80
+     against envIntensityDay's 0.55, while the comment on the knob that scales it says it exists to
+     DIM ("without this the IBL would keep pouring full daylight bounce into a night scene"). The
+     environment is a DAYTIME alpine HDRI, so the whole night scene was lit by bright daylight from
+     a panorama whose ground half is sunlit rock and tussock — 4.09% of a night frame read WARM, and
+     the clouds read as fully-lit day cumulus. Both of Eric's night bugs were this one number.
+     ASSERTED AS AN INEQUALITY, not as a value, so it survives a re-tune and still catches an
+     inversion. gauntlet/verify/nightcheck.mjs carries the pixel half. */
+  ok(X.SKY.envIntensityNight<X.SKY.envIntensityDay,
+     'the night environment is dimmer than the day one ('+X.SKY.envIntensityNight+' against '+
+     X.SKY.envIntensityDay+') — it was 0.80 against 0.55, which is brighter after dark');
+  /* THE MOON'S COLOUR IS CONVERTED, like the stars and the dome's three stops. ColorManagement is
+     off in this project, so a raw hex is treated as LINEAR and renders brighter than authored. */
+  { const want=new THREE.Color(X.SKY.moonColor).convertSRGBToLinear();
+    ok(G.moon&&Math.abs(G.moon.material.color.r-want.r)<1e-6,
+       'the moon\'s colour goes through convertSRGBToLinear (' +
+       (G.moon?G.moon.material.color.getHexString():'-')+' from '+
+       X.SKY.moonColor.toString(16)+')');
+    /* AND IT HAS A LIMB. A sphere of uniform emissive colour is the same brightness right to its
+       silhouette, which reads as a sticker; the falloff is a vertex colour from the dot of each
+       normal with the direction back to the origin. */
+    const c=G.moon&&G.moon.geometry.attributes.color;
+    ok(!!c,'and carries per-vertex brightness for its limb');
+    if(c){ let lo=9,hi=-9; for(let i=0;i<c.count;i++){lo=Math.min(lo,c.getX(i));hi=Math.max(hi,c.getX(i));}
+      ok(hi-lo>0.4,'which really does fall off ('+lo.toFixed(2)+' at the limb to '+hi.toFixed(2)+
+         ' at the centre) rather than being a flat attribute'); } }
+
   /* AND THE CLOUDS DIM AFTER DARK, WHICH THEY DID NOT. Their emissive floor stands in for sky
      light and nightApply was darkening the dome and the haze band around it while leaving that
      floor at its daytime value — so the first night frames came back with brilliant white clouds
@@ -4217,10 +4244,13 @@ C.section('SKY.md 4: the night sky — the moon, the stars, and a name that was 
   { ok(Array.isArray(G.cloudNight)&&G.cloudNight.length>0,
        'the cloud materials are registered for the night ramp ('+
        (G.cloudNight||[]).length+' of them)');
-    ok(X.SKY.envIntensityNight>X.SKY.envIntensityDay,
-       'and the night environment really is stronger than the day one ('+
-       X.SKY.envIntensityNight+' against '+X.SKY.envIntensityDay+
-       ') — which is why an undimmed cloud glows after dark rather than before it');
+    /* THIS ROW USED TO ASSERT THE BUG. It read `envIntensityNight > envIntensityDay` and explained
+       the cloud glow with it — I measured the inversion, found it explained the symptom, and then
+       wrote it down as an INVARIANT, which pinned the defect in place and would have made fixing
+       it go red. The inequality is asserted the right way round above. Kept as a comment because
+       an assertion that locks in a measured defect is a distinct way to be wrong, and worth
+       recognising next time: the question is not "does this explain what I see" but "is this how
+       it should be". */
     const e0=G.cloudNight[0];
     const dayE=e0.dayE.clone(), dayC=e0.dayC.clone();
     G.nightManual=true; G.nightT=1; X.nightApply(1);
@@ -8113,6 +8143,12 @@ C.section('REPLAT P6A: the model-swap seam');
        carpark  mesh c24bbd4c94f84b9a, meshes 943, tris 315092
        skifield mesh 011576537fad8366, meshes 328, tris 145458
 
+     RE-PINNED FOR THE NIGHT BUG FIXES, 2026-09-11 — the moon's sphere from 12x10 to 24x18 so its
+     limb falloff has vertices to interpolate across (+600 triangles in both worlds), plus its
+     colour converted and its vertex colours added. Mesh counts unchanged.
+       carpark  mesh 9492aed10902f79a, meshes 943, tris 324628
+       skifield mesh bb7cbd3ac74a9df5, meshes 328, tris 154994
+
      RE-PINNED FOR THE NIGHT SKY, 2026-09-11 — the moon derived from SKY.sunPosNight instead of
      hard-coded 10.6 degrees away from it. Mesh COUNT and triangle count unchanged in both worlds;
      only the moon's transform moved, which is the whole of the delta.
@@ -8123,10 +8159,10 @@ C.section('REPLAT P6A: the model-swap seam');
        carpark  mesh 72ff1bdc05788274, meshes 943, tris 324628
        skifield mesh f135eff3fff40162, meshes 328, tris 154994 */
   const PRESEAM={
-    carpark :{mesh:'9492aed10902f79a', col:'1b025c57715cb017', meshes:943, tris:324628,
+    carpark :{mesh:'beb71e0c09a90359', col:'1b025c57715cb017', meshes:943, tris:325228,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'bb7cbd3ac74a9df5', col:'fc06ef03250ea1ed', meshes:328, tris:154994,
+    skifield:{mesh:'6fd3a8a3e9aa873b', col:'fc06ef03250ea1ed', meshes:328, tris:155594,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };
