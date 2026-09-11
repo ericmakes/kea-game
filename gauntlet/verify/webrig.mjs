@@ -124,7 +124,11 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
      SKY caught this one before a single variant was shot. */
   'cirrusBase', 'cirrusElev', 'cirrusElevVary', 'cirrusFringe', 'cirrusFringeAt', 'cirrusFringeR', 'cirrusLobes', 'cirrusPuffs', 'cirrusRMul', 'cirrusSpread', 'cirrusStretch', 'cirrusWisp', 'cirrusWispEmis', 'cirrusWispR', 'cloudCirrus',
   'skySatMul','skyHueRot','hazeColor','skyMidAt','skyLowAt',
-  'cloudWisp','cloudWispR','cloudWispAt','cloudWispEmis','cloudWispAlpha'];
+  'cloudWisp','cloudWispR','cloudWispAt','cloudWispEmis','cloudWispAlpha',
+  /* THE OUTLINE SPREADS — the second cumulus round. Registered before the first variant was shot,
+     which is the point of the battery row that compares this list against SKY: the fifth drift
+     never happened. */
+  'cloudLobeVary','cloudAspVary','cloudOffMul','cloudFringeVary','cloudFringe3D','cloudFringeTop','cloudNormFringe'];
 
 /* REPLAT P3b added `breakup` and leaving it out of this list cost a whole variant strip: every
    KEAMATS in it was REFUSED, the four shots died, and four copies of one stale frame got compared

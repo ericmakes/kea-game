@@ -328,7 +328,15 @@ const SKY={
   cloudSegW:16, cloudSegH:12,
   cloudStretch:1.8,      // horizontal scale on a lobe: an oblate ellipsoid, not a ball
   cloudVary:0.85,        // per-cloud size spread, hash-driven — wisps at one end, towers at the other
-  cloudRMul:0.95,        // lobe radius multiplier: the old radii subtend about 2 degrees
+  /* AND THE RADIUS COMES DOWN TO PAY FOR THE RING. Eighteen bumps at 1.10R take a lobe's
+     effective radius to about 1.3R, so the fringe that breaks the outline also inflates the mass:
+     cloud cover went 28.3% to 36.8% while the boundary row did not move. Eric's coverage call is
+     29.4% and it stands, so the lobe gives back what the ring took — 0.72 lands at 28.0%, and it
+     is also the best the boundary row has read, because the metric is a RATIO and shrinking the
+     mass under a fixed ring of bumps is the one move that lengthens the edge relative to the
+     area. Three earlier attempts to raise it by adding outline all failed for the same reason:
+     they added area too. */
+  cloudRMul:0.78,        // lobe radius multiplier: the old radii subtend about 2 degrees
   cloudBase:0.42,        // vertical squash of the base lobe (was 0.32, which is a plate)
   cloudTop:0.85,         // vertical squash of the puffs stacked on it — nearly round
   /* SPREAD IS WHAT THE BOUNDARY METRIC ACTUALLY RESPONDS TO, and the arithmetic says so. For N
@@ -338,7 +346,16 @@ const SKY={
      adding a single sphere, and the fringe and the wisps keep the mass connected across the gaps
      (separate round blobs would each score 3.5 and the metric is area-weighted, so breaking the
      cloud up would make it WORSE, not better). */
-  cloudSpread:1.0,       // stretches the lobe chain along its own axis
+  /* AND SPREAD IS THE KNOB THAT WAS NEVER TURNED. The paragraph above worked out that spreading
+     the chain "lengthens the outline without adding a single sphere" and it has sat at 1.0 through
+     two cloud rounds. Measuring the plate settled which lever matters: nz_carpark_01's deck runs
+     8,013 px of outline around 300,135 px of area for its 14.63, and ours ran 1,627 around 91,662
+     for 5.37 — the plate's edge is NOTCHES AND HOLES, not bumps. A hole is worth far more to
+     perimeter/root-area than a bump of the same size, because it adds outline while SUBTRACTING
+     area, and separating the lobes until the fringe and the wisps only just bridge them is how a
+     union of spheres gets holes at all. Three fringe configurations — four large bumps, ten
+     medium, fourteen small — moved the metric 6.28, 5.48, 5.55. The bumps were never the lever. */
+  cloudSpread:1.70,      // stretches the lobe chain along its own axis
   /* FEWER, LARGER PRIMARY LOBES — Eric's critic point 1. The lobes "read as cauliflower - clusters
      of small equal spheres", and the sub-structure property says so in numbers: fine-over-coarse
      gradient energy 0.385 against nz_carpark_01's band of 0.241 to 0.347. Every fringe bump and
@@ -376,8 +393,43 @@ const SKY={
   cirrusWisp:4, cirrusWispR:1.8, cirrusWispEmis:0.72,  // the wisps ARE the cloud
   cloudLobes:3,
   cloudPuffs:2,          // was 3: two big billows on each lobe, not a stack of three
-  cloudFringe:4,         // was 26: a rim, not a coat
-  cloudFringeR:0.34,     // and each rim bump a little larger, since there are fewer
+  /* EIGHTEEN. Fourteen put the sub-structure row out at 0.237 against a floor of 0.241 — a row
+     this piece BROKE, not one it inherited, so it had to come back before anything shipped. The
+     notched chain of iteration four added coarse energy to the denominator and the rim bumps are
+     the only fine energy the cloud has; eighteen of them reads 0.290, with headroom at both ends
+     of the band rather than sitting on its edge. Twenty-two reads 0.294 and costs 3,500 more
+     triangles for four thousandths. */
+  cloudFringe:18,        // was 26 (a coat), then 4 (too sparse to break an outline)
+  cloudFringeR:0.19,     // SMALL again, and this time the arithmetic says why: see below
+  /* BREAKING THE OUTLINE — Eric's second critic round on the near cumulus. The first round cured
+     the cauliflower and produced its opposite: "a stack of flattened discs with hard rims", and
+     the boundary row names the same fault in numbers, 6.28 against a floor of 7.11.
+     WHY IT HAPPENED IS IN THE KNOBS ABOVE. Every host lobe was squashed by exactly cloudBase and
+     stretched by exactly cloudStretch, every puff by cloudTop and the same cloudStretch, and the
+     puffs sat within 0.42R of their lobe's axis against a half-width of 1.8R. Identical aspect
+     plus near-concentric centres is the recipe for CONCENTRIC ELLIPTICAL RIMS, and a pile of
+     concentric ellipses is a stack of plates however well each one is shaded.
+     SO THE FOUR THINGS BELOW ARE THE FOUR THINGS HE ASKED FOR, and each one is a spread rather
+     than a new shape: radii vary per lobe, aspects vary per sphere, the stacking offsets go wide
+     enough that no two rims are concentric, and the fringe moves from a half-circle in XY to the
+     whole upper hemisphere so the bumps land on the SILHOUETTE whatever azimuth it is seen from.
+     ALL HASH-DRIVEN, NOT rnd(). Every value here comes from _thash on the cloud and lobe indices,
+     so the seeded draw order is untouched (TODO 47) and the same sky comes back every boot. */
+  cloudLobeVary:0.45,    // per-lobe radius spread, so the chain is not three equal discs
+  cloudAspVary:0.35,     // per-sphere squash and stretch spread, so no two rims are concentric
+  cloudOffMul:1.30,      // multiplies the puff's lateral offset: lean, not stack
+  cloudFringeVary:0.50,  // the rim-bump size spread — some small and sharp, some large and soft
+  /* AND WHY THE BUMPS GOT SMALLER AS THEY GOT MORE NUMEROUS, since 0.34R with ten of them took
+     cloud cover from 28.3% to 38.8% and left the boundary metric at 5.48. A bump of radius f
+     sitting proud at 1.1R adds about pi*f of outline and about f*f/2 of area, so its value to
+     perimeter/sqrt(area) scales as f while its cost scales as f squared: N SMALL bumps beat N/4
+     bumps of twice the size, and the ring of 0.49R bumps was simply making the lobe bigger — an
+     effective radius of 1.6R, which is 2.5 times the area for a barely longer edge.
+     THIS IS THE SAME TRADE THE cloudFringeAt COMMENT ABOVE RECORDS, arrived at from the other
+     direction: "many small bumps, sitting proud of the rim, rather than a few big ones sunk into
+     it". Twice now the cure for the boundary row has been more and smaller. */
+  cloudFringe3D:1,       // place the fringe round the whole azimuth, not a slice of XY
+  cloudFringeTop:35,     // degrees above the lobe's equator: the band that reads as silhouette
   /* A LIGHT-TO-DARK GRADIENT THROUGH THE WHOLE MASS — critic point 2, which asks for "grey valleys
      and a light-to-dark gradient, not uniform white with one dark base line". The base tint used to
      reach only cloudBaseSoft above the plane, which IS one dark line: internal contrast measured
@@ -425,6 +477,7 @@ const SKY={
      single lumpy body while keeping its lumpy SILHOUETTE, which is the half that the boundary
      metric is about. 0 is per-sphere, 1 is one smooth ellipsoid. */
   cloudNorm:0.68,
+  cloudNormFringe:0.18,  // the rim keeps its own curvature — see mergeSpheres
   /* THE SKY'S OWN AERIAL PERSPECTIVE, WHICH IS SKY.md 3.5 AND NOT A RETREAT FROM 3. Taking the
      terrain fog off the clouds was right: at density 0.0062 over 70 to 218 m it was replacing a
      quarter to four fifths of every cloud with the fog colour, which is not aerial perspective,
@@ -4140,8 +4193,12 @@ function buildSky(){
          triangles to every world, and a bump is about 26 px across in the frame — 6x4 segments is
          more than that resolution can tell apart and costs a third as much. The lobes and the
          vertical puffs keep the full 10x8, because they are the silhouette. */
-      const g=new THREE.SphereGeometry(sp.r,sp.seg?6:SKY.cloudSegW,
-                                            sp.seg?4:SKY.cloudSegH).toNonIndexed();
+      /* seg IS NOW A GRADE, NOT A FLAG: 0 a body lobe, 1 a small sharp rim bump, 2 a large soft
+         one. The old form read `sp.seg?6:...` and would have given every graded bump the cheap
+         sphere, quietly discarding the size-to-segments link the fringe now depends on. */
+      const sgw=sp.seg?(sp.seg>1?12:6):SKY.cloudSegW;
+      const sgh=sp.seg?(sp.seg>1?8:4):SKY.cloudSegH;
+      const g=new THREE.SphereGeometry(sp.r,sgw,sgh).toNonIndexed();
       g.scale(sp.sx||1,sp.sy,sp.sx||1); g.translate(sp.x,sp.y,sp.z);
       own.push({from:n,to:n+g.attributes.position.count,sp});
       gs.push(g); n+=g.attributes.position.count; }
@@ -4157,8 +4214,23 @@ function buildSky(){
        spherical would light its ends like its top. */
     const k=Math.max(0,Math.min(1,SKY.cloudNorm));
     const {cx,cy,cz,ex,ey,ez}=bodyFrame(specs);
-    if(k>0){
+    /* THE BLEND IS FOR THE BODY AND NOT FOR THE RIM, and it took a picture to see why. The
+       paragraph above is right about the lobes: without it a cloud shades as a bunch of grapes.
+       Applied to a rim bump it does the opposite of what it does to a lobe — a bump is small
+       enough that 68% of its normals become the body's, so its own curvature is erased and it
+       shades UNIFORMLY. Eighteen uniformly-shaded bumps ringing a lobe read as flat oval plates
+       stuck to the cloud, with a hard silhouette and no roundness at all: the plate-stack fault
+       Eric named, rebuilt at one tenth the scale.
+       cloudNormFringe KEEPS MOST OF EACH BUMP'S OWN NORMAL, so it reads as a lump. It still takes
+       a little of the body normal, because a bump on the shaded flank should not be lit as though
+       it were on the sunward one. */
+    const kf=Math.max(0,Math.min(1,SKY.cloudNormFringe));
+    if(k>0||kf>0){
+      const kOf=new Float32Array(n);
+      for(const o of own){ const kk=o.sp.host?k:kf;
+        for(let i=o.from;i<o.to;i++)kOf[i]=kk; }
       for(let i=0;i<n;i++){
+        const k=kOf[i]; if(k<=0)continue;
         const bx=(P[i*3]-cx)/ex, by=(P[i*3+1]-cy)/ey, bz=(P[i*3+2]-cz)/ez;
         const bl=Math.hypot(bx,by,bz)||1;
         let nx=N[i*3]*(1-k)+bx/bl*k, ny=N[i*3+1]*(1-k)+by/bl*k, nz=N[i*3+2]*(1-k)+bz/bl*k;
@@ -4182,11 +4254,68 @@ function buildSky(){
          disc extending past the mass on both sides. Only the hosts, the lobes and the vertical
          puffs that make up the body, meet the plane. */
       const bt=new THREE.Color(SKY.cloudBaseTint).convertSRGBToLinear();
+      /* NO RIM BUMP HANGS BELOW THE FLAT BASE. It is the clip's own argument applied to the other
+         half of the mass: the base plane exists so the cloud has one flat bottom, and a bump
+         dangling under it contradicts that as plainly as a lump would. The lobes get there by
+         being cut; a bump cannot be cut without turning into a wafer, so it is LIFTED instead —
+         a rigid translation of its own vertices, so it stays a sphere and its normals stay true.
+         WHICH ALSO SETTLES THE TAN. A bump under the plane presents downward faces to the
+         hemisphere light's ground term, 0x8a7c42 tussock brown, and came out warm; tinting those
+         faces grey removed the colour but drew a hard horizontal line along every base — the
+         flatness row went 2.249 to 5.744, out of band above nz_alps_02, which is critic point 2's
+         "one dark base line" arriving by a new route. Lifting the bump removes the cause rather
+         than painting over it: there is nothing below the plane to be lit brown OR tinted grey. */
+      for(const o of own){ if(o.sp.host)continue;
+        let lo=Infinity;
+        for(let i=o.from;i<o.to;i++)lo=Math.min(lo,P[i*3+1]);
+        if(lo>=baseY)continue;
+        const lift=baseY-lo;
+        for(let i=o.from;i<o.to;i++)P[i*3+1]+=lift;
+        o.sp.y+=lift; }
       /* THE GRADIENT'S REACH IS THE CLOUD'S OWN HEIGHT, not a fixed band. Measured from the specs
          so a small cloud and a tower get the same SHAPE of shading rather than the same metres. */
       let ymin=Infinity,ymax=-Infinity;
       for(const sp of specs){ ymin=Math.min(ymin,sp.y-sp.r*sp.sy); ymax=Math.max(ymax,sp.y+sp.r*sp.sy); }
       const grad=Math.max(1e-4,(ymax-baseY)*SKY.cloudGrad);
+      /* THE CLIP IS HOSTS ONLY AND THE TINT IS EVERYTHING, which are two different questions and
+         were answered by one `continue` for two rounds. The clip has to skip the fringe — the
+         comment above records what happened when it did not, rim puffs flattened into wafers
+         sticking out sideways. The TINT has no such reason, and skipping it was a bug with a
+         colour: a rim bump hanging below the base plane got no base tint, so its downward faces
+         fell through to the hemisphere light's GROUND term, which is 0x8a7c42 tussock brown. The
+         bumps under the near cumulus came out warm tan — the same fault, in the same place, as
+         the saucer Eric hunted, and it only became visible when the fringe moved down to the
+         lobe's equator where bumps can sit under the plane at all.
+         A CLOUD'S UNDERSIDE IS GREY WHEREVER IT IS, whether the geometry under it is a lobe or a
+         bump, so the height test alone decides the colour. */
+      /* AND THE TINT IS STILL HOSTS ONLY, which was tried both ways and measured both ways. The
+         tan under the bumps looked like a colour problem, so the colour was the first thing
+         changed — extend the tint to every spec — and it worked on the tan and cost the flatness
+         row: 2.249 to 5.744, out of band above nz_alps_02, because eighteen tinted bumps ringing
+         each base draw one strong horizontal grey band and flatness IS row-versus-column
+         anisotropy. The lift above fixes the same fault by removing the geometry that was lit
+         brown, so the colour never needed to change. Both edits were in the tree at once for one
+         shot, which is why it took a third measurement to tell them apart. */
+      /* AND A RIM BUMP'S OWN UNDERSIDE IS GREY TOO, which the lift alone did not achieve and a
+         battery said so: the base-tint row went to 2 of 5 cumulus. Lifting a bump onto the plane
+         stops it hanging below the cloud, but its lower cap still FACES DOWN, still takes the
+         hemisphere light's ground term — 0x8a7c42, tussock brown — and still renders warm. The
+         lift was the shape fix; this is the colour one, and it needed both.
+         DOWNWARD FACES ONLY, AND THAT IS THE DIFFERENCE FROM THE VERSION THAT FAILED. Tinting
+         every fringe vertex BELOW THE PLANE painted a wide grey region under each lobe and took
+         the flatness row from 2.249 to 5.744, out of band — one hard horizontal line, which is
+         the fault critic point 2 was about. A bump's lower cap is a handful of vertices at the
+         bottom of a small sphere, so it greys the valleys without drawing a band. */
+      for(const o of own){ if(o.sp.host)continue;
+        for(let i=o.from;i<o.to;i++){
+          if(N[i*3+1]>-0.5)continue;
+          /* FULLY GREY BY -0.9 AND NOT ONLY AT -1.0, which the base-tint battery caught: it asks
+             that the plane's downward vertices carry the tint to within 0.02, and a ramp that only
+             reaches the tint at exactly straight-down leaves a vertex at -0.98 four percent short
+             of it — 0.028 off in red, which fails a 0.02 tolerance. Saturating a little early is
+             also the truer shading: the whole lower cap of a bump sees no sun, not just its pole. */
+          const t=Math.min(1,(-N[i*3+1]-0.5)/0.4);
+          CO[i*3]=1+(bt.r-1)*t; CO[i*3+1]=1+(bt.g-1)*t; CO[i*3+2]=1+(bt.b-1)*t; } }
       for(const o of own){ if(!o.sp.host)continue;
         for(let i=o.from;i<o.to;i++){
           const y=P[i*3+1];
@@ -4210,7 +4339,42 @@ function buildSky(){
        has a straight-down normal, so "is there anything below the plane" answered yes or no
        depending on where the rim puffs happened to fall, which is incidental rather than designed.
        So the merge says what it did, and the assertion reads it. */
-    out.userData.cloud={verts:n, hostVerts:0, fringeVerts:0, clipped:_clipped, baseY:_baseY};
+    /* WHAT THE OUTLINE ROUND DID, RECORDED THE SAME WAY THE CLIP IS. A battery cannot read a
+       merged buffer back into spheres, and the three claims this round makes are all per-sphere:
+       that the lobes do not share one proportion, that the fringe rings the whole azimuth, and
+       that a rim bump keeps its own curvature. Each is measured here, where the spheres still
+       exist, and asserted from these numbers rather than re-derived from the buffer. */
+    let _aMin=Infinity,_aMax=0, _quads=0, _qmin=0, _below=0, _spread=0, _nf=0;
+    { const q=[0,0,0,0];
+      for(const o of own){
+        if(o.sp.host){ const a=(o.sp.sx||1)/o.sp.sy;
+          _aMin=Math.min(_aMin,a); _aMax=Math.max(_aMax,a); continue; }
+        _nf++;
+        /* WHICH AZIMUTH QUADRANT THIS BUMP SITS IN, about its own lobe's axis. The old fringe drew
+           one angle in [0, pi) and used it for x and y, so every bump landed in two quadrants of
+           the four and the outline was bare when the cloud was seen end-on. */
+        q[(o.sp.x>=0?0:1)+(o.sp.z>=0?0:2)]++;
+        /* AND HOW ROUND IT STILL SHADES. The mean of a sphere's normals is near zero, so the
+           spread is measured against the bump's own centre direction instead: the mean absolute
+           dot of each normal with the vector from the bump's centre to the vertex. A sphere left
+           alone reads near 1; one whose normals were all replaced by a single body normal reads
+           near the average of a random dot, which is far lower. */
+        let acc=0,cnt=0;
+        for(let i=o.from;i<o.to;i++){
+          const dx=P[i*3]-o.sp.x, dy=P[i*3+1]-o.sp.y, dz=P[i*3+2]-o.sp.z;
+          const l=Math.hypot(dx,dy,dz); if(l<1e-6)continue;
+          acc+=Math.abs((N[i*3]*dx+N[i*3+1]*dy+N[i*3+2]*dz)/l); cnt++; }
+        if(cnt)_spread+=acc/cnt;
+        if(_baseY!==null){
+          let lo=Infinity;
+          for(let i=o.from;i<o.to;i++)lo=Math.min(lo,P[i*3+1]);
+          if(lo<_baseY-0.01)_below++; } }
+      _quads=(q[0]?1:0)+(q[1]?1:0)+(q[2]?1:0)+(q[3]?1:0);
+      _qmin=Math.min(...q); }
+    out.userData.cloud={verts:n, hostVerts:0, fringeVerts:0, clipped:_clipped, baseY:_baseY,
+      hostAspectMin:isFinite(_aMin)?_aMin:null, hostAspectMax:_aMax||null,
+      fringeQuads:_quads, fringeQuadMin:_qmin, fringeSpheres:_nf, fringeBelowPlane:_below,
+      fringeRoundness:_nf?_spread/_nf:null};
     for(const o of own){ const c=o.to-o.from;
       if(o.sp.host)out.userData.cloud.hostVerts+=c; else out.userData.cloud.fringeVerts+=c; }
     return out; };
@@ -4311,6 +4475,11 @@ function buildSky(){
       fringe:SKY.cirrusFringe, fringeR:SKY.cirrusFringeR, fringeAt:SKY.cirrusFringeAt,
       wisp:SKY.cirrusWisp, wispR:SKY.cirrusWispR, wispEmis:SKY.cirrusWispEmis,
       wispAlpha:SKY.cloudWispAlpha,
+      /* CIRRUS KEEPS THE OLD FRINGE AND NO SPREADS. Eric's brief on this round is the near
+         cumulus and nothing else — "the small puffs and the wisp tier already read right, don't
+         touch them" — and cirrus is mostly wisp tier. Zeroes here are not neglect: they say this
+         recipe does not want those spreads, which is what a recipe is for. */
+      lobeVary:0, aspVary:0, offMul:1, fringeVary:0.6, fringe3D:0,
       flatBase:0, vary:SKY.cloudVary
     }:{
       elev:SKY.cloudElev, elevVary:SKY.cloudElevVary, elevVaryX:SKY.cloudElevVaryX,
@@ -4319,6 +4488,8 @@ function buildSky(){
       fringe:SKY.cloudFringe, fringeR:SKY.cloudFringeR, fringeAt:SKY.cloudFringeAt,
       wisp:SKY.cloudWisp, wispR:SKY.cloudWispR, wispEmis:SKY.cloudWispEmis,
       wispAlpha:SKY.cloudWispAlpha,
+      lobeVary:SKY.cloudLobeVary, aspVary:SKY.cloudAspVary, offMul:SKY.cloudOffMul,
+      fringeVary:SKY.cloudFringeVary, fringe3D:SKY.cloudFringe3D,
       flatBase:SKY.cloudFlatBase, vary:SKY.cloudVary
     };
     cg.userData.recipe=cirrus?'cirrus':'cumulus';
@@ -4332,31 +4503,83 @@ function buildSky(){
       const bx=(j*rnd(5,8)-n*3)*P.spread, by=rnd(-0.5,1.5), bz=rnd(-2,2);
       /* THE DRAWS ABOVE ARE ALWAYS TAKEN; only the geometry below is skipped. */
       if(j>=P.lobes)continue;
-      specs.push({r:R,x:bx,y:by,z:bz,sy:P.base,sx:P.stretch,host:1});
+      /* THE SPREADS. jit() takes a value, an amount and two hash seeds and returns the value
+         scattered about itself — one helper for radii and aspects alike, so a later reader cannot
+         find two different scatters that were meant to be the same one. */
+      const jit=(v,amt,a,b)=>v*(1+(_thash(a,b)-0.5)*2*amt);
+      /* AND THE ASPECT JITTER IS ANTI-CORRELATED, which the first version of it was not and which
+         cost an iteration. Scattering sx and sy independently scatters VOLUME: the first shot came
+         back with lenses 2.4 times as wide as they were tall and cloud cover at 46.2% against
+         28.3%, a grey blimp rather than a broken outline. asp() takes one scatter per sphere and
+         spends it in opposite directions — wider is flatter, taller is narrower — so the sphere's
+         footprint is very nearly preserved and only its PROPORTION moves. Proportion is the whole
+         quarrel: identical proportions are what made the rims concentric. */
+      const asp=(a,b)=>(_thash(a,b)-0.5)*2*P.aspVary;
+      const RL=R*Math.max(0.35,jit(1,P.lobeVary,i*601+j*37+5,j*149+i*19));
+      { const d=asp(i*613+j*29+1,j*167+i*23+5);
+        specs.push({r:RL,x:bx,y:by,z:bz,
+                    sy:P.base*(1-d), sx:P.stretch*(1+d), host:1}); }
       /* THE PUFFS ARE THE VERTICAL BUILD. Each sits higher and smaller than the last, offset
          sideways by a hash so the mass leans rather than stacking like a snowman. */
       for(let k=1;k<=P.puffs;k++){
         const h1=_thash(i*97+j*13+k,k*31+7), h2=_thash(j*53+k*11,i*29+k*17), h3=_thash(k*41+i,j*67+k);
-        const pr=R*(0.86-0.17*k+h1*0.22);
+        const pr=RL*(0.86-0.17*k+h1*0.22);
         if(pr<1.2)continue;
-        specs.push({r:pr, x:bx+(h2-0.5)*R*0.85*P.stretch,
-                    y:by+R*P.rise*k*(0.75+h1*0.5),
-                    z:bz+(h3-0.5)*R*0.6*P.stretch,
-                    sy:P.top, sx:P.stretch, host:1}); }
+        /* OFFSET FAR ENOUGH TO MATTER. The old offset was 0.85R against a half-width of
+           stretch*R = 1.8R, so a puff's rim sat inside its lobe's rim all the way round — two
+           concentric ellipses, which is a plate with a smaller plate on it. offMul takes the
+           lateral throw past the parent's flank so the two outlines CROSS instead. */
+        specs.push({r:pr, x:bx+(h2-0.5)*RL*0.85*P.offMul*P.stretch,
+                    y:by+RL*P.rise*k*(0.75+h1*0.5),
+                    z:bz+(h3-0.5)*RL*0.6*P.offMul*P.stretch,
+                    sy:P.top*(1-asp(i*619+j*41+k*7,k*181+i*31+j*11)),
+                    sx:P.stretch*(1+asp(i*619+j*41+k*7,k*181+i*31+j*11)),
+                    host:1}); }
       /* AND THE FRINGE IS THE RAGGED EDGE. Round the lobe's rim, at hash angles, so the outline
          scallops instead of describing an ellipse. */
       /* THE FRINGE GOES ON THE TOP HALF ONLY NOW. It used to ring the whole lobe, which put lumps
          under the cloud — and a lump under a flat base is the thing the base plane exists to
          remove. Angles are drawn in [0, pi) so sin(a) is never negative. */
       for(let k=0;k<P.fringe;k++){
-        const a=_thash(i*131+j*17+k,k*53+3)*Math.PI;
-        const rad=R*P.fringeAt*(0.8+_thash(k*23+j,i*19+k)*0.4);
-        const fr=R*P.fringeR*(0.7+_thash(k*7+i*3,j*11+k*5)*0.6);
+        const rad=RL*P.fringeAt*(0.8+_thash(k*23+j,i*19+k)*0.4);
+        /* THE SIZE SPREAD IS WHAT "VARY RIM SHARPNESS" MEANS IN GEOMETRY. A row of equal bumps is
+           a scallop pattern, which is still a regular edge; bumps running from 0.45 to 2.35 of
+           fringeR give the outline features at several sizes at once, and the small ones read
+           sharp against the large ones' softness. */
+        const fr=RL*P.fringeR*(0.45+_thash(k*7+i*3,j*11+k*5)*P.fringeVary*2);
         if(fr<0.9)continue;
-        specs.push({r:fr, x:bx+Math.cos(a)*rad*P.stretch,
-                    y:by+Math.sin(a)*rad*P.base*1.6,
-                    z:bz+(_thash(k*61+i,j*43+k)-0.5)*R*0.5*P.stretch,
-                    sy:P.top, sx:P.stretch, seg:1}); }
+        /* AND SEGMENTS FOLLOW SIZE, which is the other half of the same word. A small bump at
+           6x4 shows its facets and reads as a sharp corner on the rim; a large one at 6x4 would
+           read as a hexagon, so it gets 10x6 and reads soft. The threshold is the bump's own
+           size against the recipe's nominal, not a metre value, so it holds for a wisp-sized
+           cloud and a tower alike. */
+        const soft=fr>RL*P.fringeR*1.05?2:1;   // 12x8 or 6x4 — see mergeSpheres
+        /* PLACED OVER THE WHOLE UPPER HEMISPHERE. The old placement drew one angle in [0, pi) and
+           used it as cos for x and sin for y, which puts every bump in the XY half-disc: seen from
+           the side the rim scalloped, and seen down the cloud's long axis — which is how the near
+           overhead cumulus IS seen from the carpark — the outline was bare. Azimuth now runs the
+           full circle and the polar angle rises from the equator, so the bumps ring the widest
+           part of the lobe and climb over its top. That equator IS the silhouette from any
+           azimuth, which is the property the boundary metric measures. */
+        const ph=P.fringe3D?_thash(i*131+j*17+k,k*53+3)*Math.PI*2
+                           :_thash(i*131+j*17+k,k*53+3)*Math.PI;
+        /* AND THE POLAR ANGLE STOPS WELL SHORT OF THE TOP, which the first version of it did not.
+           Running it to 90 degrees put bumps on the cloud's UPPER SURFACE, where a bump buys no
+           outline at all — the sun is 39.5 degrees up, so it lights their caps square and they
+           read as bright flat plates lying on the billows. Eric's words are "soft fringe bumps on
+           the silhouette", and the silhouette of an oblate lobe is its equator: 35 degrees keeps
+           every bump in the band that actually projects to the edge.
+           ESTABLISHED BY TURNING THE FRINGE OFF, not by reasoning about it. The patches were the
+           fringe and nothing else — with cloudFringe 0 the mass came back a smooth blimp. */
+        const th=P.fringe3D?_thash(k*211+j*7,i*97+k*13)*SKY.cloudFringeTop*Math.PI/180:0;
+        const cz=P.fringe3D?Math.sin(ph)*Math.cos(th)*rad
+                          :(_thash(k*61+i,j*43+k)-0.5)*RL*0.5;
+        const cy=P.fringe3D?Math.sin(th)*rad*P.base*1.6
+                          :Math.sin(ph)*rad*P.base*1.6;
+        specs.push({r:fr, x:bx+Math.cos(ph)*Math.cos(th)*rad*P.stretch,
+                    y:by+cy,
+                    z:bz+cz*P.stretch,
+                    sy:P.top, sx:P.stretch, seg:soft}); }
     }
     /* fog:false, LIKE THE REST OF THE SKY, AND THIS IS THE THIRD DEFECT THE PASS FOUND. The dome
        and the horizon haze band are both fog:false; the clouds never were, and MeshBasicMaterial

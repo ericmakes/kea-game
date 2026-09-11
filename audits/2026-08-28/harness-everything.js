@@ -4542,6 +4542,58 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
     const mn=Math.min(...vol), mx=Math.max(...vol);
     ok(mx/mn>2.0,'and they vary in size across the sky by '+(mx/mn).toFixed(1)+
        'x — hash-driven off the cloud index, so it costs no rnd() draw');
+
+    /* THE OUTLINE ROUND — ERIC'S SECOND CUMULUS BRIEF, 2026-09-11. The first round cured the
+       cauliflower and produced its opposite, "a stack of flattened discs with hard rims", and the
+       three rows below are the three structural reasons that happened. Each states how the
+       geometry SHOULD be and not what the symptom was (FLAKES 16): a later re-tune that puts the
+       plate stack back has to make one of these go red.
+       THE BOUNDARY ROW IS NOT HERE AND THAT IS DELIBERATE. perimeter/root-area is a pixel
+       measurement and platescore owns it; it did not close (6.30 against a 7.11 floor) and the
+       ceiling is recorded in SKY.md rather than asserted as though it had. */
+    let aspOK=0, quadOK=0, roundOK=0, aboveOK=0; const qPool=[];
+    for(const b of cuBodies){ const ud=b.geometry.userData.cloud; if(!ud)continue;
+      /* NO TWO RIMS CONCENTRIC. Every lobe used to be squashed by exactly cloudBase and stretched
+         by exactly cloudStretch, so every rim was the same ellipse at a different size — which is
+         what a stack of plates IS. The spread is what breaks it, so the spread is the claim. */
+      if(ud.hostAspectMax/ud.hostAspectMin>1.25)aspOK++;
+      /* AND THE FRINGE RINGS THE WHOLE AZIMUTH. The old placement drew one angle in [0, pi) and
+         spent it on x and y, which fills two quadrants of four: seen end-on — which is how the
+         near overhead cumulus is seen from the carpark — the outline had no bumps on it at all. */
+      /* AND THE CLAIM IS MADE WHERE IT CAN BE OBSERVED. One cumulus in the carpark keeps only 3
+         rim bumps — it is a small cloud and the rest fall under the fr<0.9 size guard — and three
+         samples cannot fill four quadrants however the angles are drawn. So the per-cloud row asks
+         it of clouds with at least eight bumps, and the pooled row below asks the stronger
+         question of all of them at once: no quadrant may be starved. Narrowing the row to where
+         the evidence exists is not the same as loosening it. */
+      if(ud.fringeSpheres<8||ud.fringeQuads===4)quadOK++;
+      if(ud.fringeSpheres>=8)qPool.push(ud.fringeQuadMin/ud.fringeSpheres);
+      /* AND A RIM BUMP KEEPS ITS OWN CURVATURE. cloudNorm blends 68% of every normal toward the
+         body's, which is what stops a cloud shading as a bunch of grapes and is exactly wrong for
+         a bump: at that weight a small sphere's normals are nearly all the body's, so it shades
+         uniformly and reads as a flat oval plate stuck to the cloud. Eighteen of those per lobe
+         is the plate stack rebuilt at a tenth of the scale — which is what the frame showed. */
+      if(ud.fringeRoundness===null||ud.fringeRoundness>0.80)roundOK++;
+      /* AND NOTHING HANGS BELOW THE FLAT BASE. The base plane exists so a cumulus has one flat
+         bottom; a rim bump dangling under it contradicts that, and it had a colour as well as a
+         shape — a downward face below the plane takes the hemisphere light's ground term, tussock
+         brown, so the bumps under the near cloud came out warm tan. They are LIFTED onto the
+         plane rather than clipped onto it, because clipping a bump makes a wafer. */
+      if(ud.fringeBelowPlane===0)aboveOK++; }
+    ok(aspOK===cuBodies.length,'no cumulus stacks one ellipse: its lobes\' width-to-height ratios '+
+       'spread by more than 1.25x ('+aspOK+' of '+cuBodies.length+')');
+    ok(quadOK===cuBodies.length,'and the rim fringe rings all four azimuth quadrants wherever '+
+       'there are enough bumps to tell ('+quadOK+' of '+cuBodies.length+') — a half-circle of '+
+       'bumps leaves the end-on outline bare');
+    ok(qPool.length>0&&Math.min(...qPool)>0.12,'and no quadrant is starved: the thinnest holds '+
+       (qPool.length?(Math.min(...qPool)*100).toFixed(0):'-')+'% of its cloud\'s bumps across '+
+       qPool.length+' cumulus, against 25% for a perfectly even ring');
+    ok(roundOK===cuBodies.length,'and each rim bump keeps its own curvature rather than the body '+
+       'normal ('+roundOK+' of '+cuBodies.length+') — at the body weight a bump shades flat and '+
+       'reads as an oval plate stuck to the cloud');
+    ok(aboveOK===cuBodies.length,'and no rim bump hangs below the flat base ('+aboveOK+' of '+
+       cuBodies.length+') — a downward face under the plane is lit by the hemisphere\'s tussock '+
+       'brown ground term and renders tan');
   }
 
   /* AND THEY ARE HIDDEN FROM THE DEPTH-BASED POST PASSES. GTAOPass and BokehPass each render their
@@ -8243,10 +8295,10 @@ C.section('REPLAT P6A: the model-swap seam');
        carpark  mesh 72ff1bdc05788274, meshes 943, tris 324628
        skifield mesh f135eff3fff40162, meshes 328, tris 154994 */
   const PRESEAM={
-    carpark :{mesh:'6bfb3df5fb099709', col:'1b025c57715cb017', meshes:943, tris:292746,
+    carpark :{mesh:'f987c6c0f356aed6', col:'1b025c57715cb017', meshes:943, tris:307122,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'1353d5c947a65631', col:'fc06ef03250ea1ed', meshes:328, tris:123112,
+    skifield:{mesh:'70e0c5352afa103f', col:'fc06ef03250ea1ed', meshes:328, tris:137488,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

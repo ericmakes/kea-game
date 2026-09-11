@@ -431,3 +431,40 @@ The gate prints CERTIFIED-SHIP before ship. One piece = one commit with its proo
 breath. FLAKES discipline — never weaken an assertion to get green; if a target band is wrong, fix
 the band and say why, and expect that to make the test harder. Judged at vantage. Session lock: one
 writer owns the tree. Every look fix ships with its assertion in the same commit. Taste is Eric's.
+
+## §4c THE BOUNDARY CEILING — recorded, on Eric's instruction, rather than ground against
+
+Eric's second cumulus brief asked for the outline to be broken and added: "if the row still won't
+close but the cloud LOOKS right, ship it and record the ceiling rather than grinding." It did not
+close. This is the ceiling and the arithmetic behind it.
+
+    perimeter / sqrt(area), area-weighted over blobs, in the strip's sky band
+      nz_carpark_01   14.63   its dominant blob: 8,013 px of outline around 300,135 px of area
+      band            [7.11 … 17.25]
+      the game        6.29    its dominant blob: about 1,700 px around about 92,000 px
+
+WHAT THE PLATE'S EDGE IS MADE OF, measured rather than assumed: holes. Its deck covers 75.7% of
+the band as ONE blob and still runs four times a circle's outline, because the outline is not the
+mass's rim — it is hundreds of small blue gaps punched through the middle, plus filigree at the
+edges where the deck thins to nothing. A hole is worth far more to this ratio than a bump of the
+same size: it adds outline while SUBTRACTING area.
+
+A UNION OF OPAQUE SPHERES CANNOT PUNCH A HOLE. That is the ceiling, and it is structural rather
+than a matter of tuning. Everything that adds outline to a sphere union also adds area, so the
+ratio moves slowly and then stops:
+
+    four large rim bumps                        6.28    (as shipped before this round)
+    ten medium                                  5.48
+    fourteen small                              5.55
+    the chain spread to 1.7 so it notches       6.08
+    eighteen bumps, radius paid back to 0.72    6.60    at 28.0% cover
+    as shipped, radius 0.78                     6.29    at 31.2% cover
+
+Three of those five moves made it WORSE. The only lever that reliably helps is shrinking the mass
+under a fixed ring of bumps, which trades against Eric's coverage call of 29.4% — 6.60 is available
+at 28.0% cover and is not obviously a better picture.
+
+WHAT WOULD ACTUALLY CLOSE IT is the wisp tier, not the geometry: an alpha-mapped card can have
+holes, and TODO 118's atlas already does. Cirrus is built that way and is mostly margin. A cumulus
+recipe that carries its rim in alpha rather than in spheres is the move, and it is a piece of its
+own rather than the tail of this one.
