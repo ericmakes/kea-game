@@ -114,8 +114,8 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
      stale frame compared as though they were four variants. harness-everything now asserts that
      every key of SKY appears in this array, so the third drift is a red battery rather than a
      wasted strip. */
-  'cloudRMul','cloudBase','cloudTop','cloudPuffs','cloudRise','cloudSpread','cloudFringe','cloudFringeR',
-  'cloudFlatBase','cloudBaseCut','cloudBaseTint','cloudBaseSoft','cloudSegW','cloudSegH','cloudStretch','cloudVary',
+  'cloudRMul','cloudBase','cloudTop','cloudLobes','cloudPuffs','cloudRise','cloudSpread','cloudFringe','cloudFringeR',
+  'cloudFlatBase','cloudBaseCut','cloudBaseTint','cloudBaseSoft','cloudGrad','cloudGradPow','cloudElevVaryX','cloudSegW','cloudSegH','cloudStretch','cloudVary',
   'cloudFringeAt','cloudLit','cloudEmissive','cloudNorm','cloudHaze','cloudHazeD',
   'cloudElev','cloudElevVary',
   'moonColor','moonLimb','moonLimbPow','cloudNightEmis','cloudNightTint','stars','starR','starSize','starMinEl','starDim',

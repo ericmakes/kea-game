@@ -310,7 +310,7 @@ const SKY={
      darkens it and pulls the warmth out. The DIRECTION is still derived — a vertex is tinted
      because the base plane clipped it, not because anybody painted a cloud — and the normals stay
      pointing down, so the base still responds to the sun moving. */
-  cloudBaseTint:0x6E7A88,
+  cloudBaseTint:0x96A2AE,
   /* AND THE TINT RAMPS RATHER THAN STEPS. Applied only to the clipped vertices it made the base a
      hard-edged grey slab with a visible seam where it met the white top — right in structure and
      wrong in feel, reading like a stone shelf rather than a cloud. nz_alps_02's bases are darker
@@ -328,7 +328,7 @@ const SKY={
   cloudSegW:16, cloudSegH:12,
   cloudStretch:1.8,      // horizontal scale on a lobe: an oblate ellipsoid, not a ball
   cloudVary:0.85,        // per-cloud size spread, hash-driven — wisps at one end, towers at the other
-  cloudRMul:0.90,        // lobe radius multiplier: the old radii subtend about 2 degrees
+  cloudRMul:0.95,        // lobe radius multiplier: the old radii subtend about 2 degrees
   cloudBase:0.42,        // vertical squash of the base lobe (was 0.32, which is a plate)
   cloudTop:0.85,         // vertical squash of the puffs stacked on it — nearly round
   /* SPREAD IS WHAT THE BOUNDARY METRIC ACTUALLY RESPONDS TO, and the arithmetic says so. For N
@@ -339,7 +339,44 @@ const SKY={
      (separate round blobs would each score 3.5 and the metric is area-weighted, so breaking the
      cloud up would make it WORSE, not better). */
   cloudSpread:1.0,       // stretches the lobe chain along its own axis
-  cloudPuffs:3,          // puffs per lobe, hash-driven, ADDED (they make no rnd() draws)
+  /* FEWER, LARGER PRIMARY LOBES — Eric's critic point 1. The lobes "read as cauliflower - clusters
+     of small equal spheres", and the sub-structure property says so in numbers: fine-over-coarse
+     gradient energy 0.385 against nz_carpark_01's band of 0.241 to 0.347. Every fringe bump and
+     every stacked puff adds fine energy, so the cure is to spend the same silhouette on fewer,
+     bigger billows and keep the small spheres for the FRINGE only, which is where Eric put them. */
+  /* HOW MANY OF THE DRAWN LOBES BECOME GEOMETRY. Bigger lobes are what brings the sub-structure
+     ratio into band — more coarse energy in the denominator — but simply enlarging them took cloud
+     COVER from 21.5% to 48.5%, and Eric's instruction on coverage is explicit: leave it as-is, "a
+     clear alpine morning is the right weather". So the lobes get bigger and there are fewer of
+     them, which is his point 1 exactly: "FEWER, LARGER primary lobes".
+     THE DRAWS ARE STILL ALL MADE. The per-cloud lobe count is 3 + (i*7)%3, and each lobe consumes
+     four rnd() values — so building fewer lobes by shortening the loop would change the draw count
+     and relocate every seeded object in every map (TODO 47). The loop still runs to n and still
+     takes its four numbers per lobe; lobes past this limit simply do not emit geometry. */
+  cloudLobes:3,
+  cloudPuffs:2,          // was 3: two big billows on each lobe, not a stack of three
+  cloudFringe:4,         // was 26: a rim, not a coat
+  cloudFringeR:0.34,     // and each rim bump a little larger, since there are fewer
+  /* A LIGHT-TO-DARK GRADIENT THROUGH THE WHOLE MASS — critic point 2, which asks for "grey valleys
+     and a light-to-dark gradient, not uniform white with one dark base line". The base tint used to
+     reach only cloudBaseSoft above the plane, which IS one dark line: internal contrast measured
+     0.424 against the plate's 0.237-0.376, and it got there from a p10 of 0.474 where the plate
+     sits at 0.672 — our base is far darker relative to our tops than a real cloud's.
+     So the tint now spans the cloud's own height, and it is LIGHTER. Both moves push internal
+     contrast down toward the plate: the gradient redistributes it through the billows instead of
+     concentrating it at the bottom, and a lighter tint lifts p10. */
+  cloudGrad:1.0,         // how far up the cloud's height the base tint reaches, as a fraction
+  cloudGradPow:1.35,     // its shape: above 1 keeps the tops clean and shades the lower billows
+  /* AND THE ALTITUDE VARIES, not just the size — critic point 3, "wisps to towers, not a row of
+     same-size clouds". cloudVary already spread the size; this spreads the elevation each cloud is
+     placed at, so they do not sit on one line across the sky. */
+  /* 1.1, NOT 2.2, AND THE CEILING IS ARITHMETIC. The strip's sky band is 7.7 to 17.7 degrees and
+     a cloud is about 3.4 degrees tall, so its CENTRE has to sit within 9.4 to 16.0 for the whole
+     cloud to be in frame — which is the defect the elevation placement fixed in the first place.
+     cloudElev 13.5 with 1.4 of drawn variation and 1.1 of hash spread keeps every centre inside
+     that, and a battery row checks the geometry rather than the knobs so a later re-tune cannot
+     quietly reintroduce the clipping. */
+  cloudElevVaryX:1.1,
   cloudRise:0.42,        // how far up each puff sits, in units of the lobe's own radius
   /* THE FRINGE IS WHAT THE BOUNDARY METRIC IS ABOUT. perimeter/sqrt(area) is 3.545 for a circle
      and the plate reads 14.6, so its cloud's outline is four times longer than a smooth mass of
@@ -349,8 +386,6 @@ const SKY={
   /* MANY SMALL BUMPS, SITTING PROUD OF THE RIM, rather than a few big ones sunk into it. Seven
      at 0.40R and 0.95R out were absorbed into the mass and moved the boundary metric from 4.70 to
      4.99 against a target of 7.11 — they bulged the outline instead of breaking it. */
-  cloudFringe:26,        // small puffs scattered round each lobe's rim
-  cloudFringeR:0.16,     // their radius, in units of the lobe's
   cloudFringeAt:1.10,    // how far out they sit, in units of the lobe's radius
   cloudLit:1,            // shade the cloud with the scene's sun instead of painting a belly grey
   /* WHAT THE SHADOWED SIDE IS MADE OF, AND WHY IT IS A NEUTRAL. With the sun off it, a cloud's
@@ -404,7 +439,7 @@ const SKY={
      empty upper sky in the strip. The clouds measure about 3.4 degrees tall, so a centre at 14.6
      with 1.4 of variation spans 11.5 to 17.7 degrees — the whole cloud inside the picture, sitting
      in the upper half of it, clear of every peak. */
-  cloudElev:14.6, cloudElevVary:1.4,
+  cloudElev:13.5, cloudElevVary:1.4,
 
   /* TODO 76 — SKY TONE, AS TWO KNOBS SO THE VARIANT STRIP IS A ONE-VARIABLE COMPARISON.
      The dome's three stops are a saturated blue tuned to the NZ tourism palette that ARTBIBLE's
@@ -433,7 +468,7 @@ const SKY={
      alpha-mapped quads on the MASS'S SILHOUETTE ONLY, over the opaque body — margin, not volume,
      which is the trap TODO 118 names: the sky pass's first iteration made every sphere
      transparent and the strip came back reading as a bunch of grapes. */
-  cloudWisp:3,           // wisps per lobe or puff, placed on its projected rim
+  cloudWisp:1,           // wisps per lobe or puff, placed on its projected rim
   /* 1.60 AND NOT 0.90, and the factor is the atlas's own SPAN. The bake scales each wisp's field
      to 56% of its cell so the margin always closes inside it — without that the cell clipped the
      noise and presented a hard square edge, which showed in the frame as faint rectangles beside
@@ -4126,17 +4161,21 @@ function buildSky(){
          disc extending past the mass on both sides. Only the hosts, the lobes and the vertical
          puffs that make up the body, meet the plane. */
       const bt=new THREE.Color(SKY.cloudBaseTint).convertSRGBToLinear();
-      const soft=Math.max(1e-4,(sh/specs.length)*SKY.cloudBaseSoft);
+      /* THE GRADIENT'S REACH IS THE CLOUD'S OWN HEIGHT, not a fixed band. Measured from the specs
+         so a small cloud and a tower get the same SHAPE of shading rather than the same metres. */
+      let ymin=Infinity,ymax=-Infinity;
+      for(const sp of specs){ ymin=Math.min(ymin,sp.y-sp.r*sp.sy); ymax=Math.max(ymax,sp.y+sp.r*sp.sy); }
+      const grad=Math.max(1e-4,(ymax-baseY)*SKY.cloudGrad);
       for(const o of own){ if(!o.sp.host)continue;
         for(let i=o.from;i<o.to;i++){
           const y=P[i*3+1];
           if(y<baseY){
             P[i*3+1]=baseY; N[i*3]=0; N[i*3+1]=-1; N[i*3+2]=0; _clipped++;
             CO[i*3]=bt.r; CO[i*3+1]=bt.g; CO[i*3+2]=bt.b;
-          } else if(y<baseY+soft){
+          } else if(y<baseY+grad){
             /* THE FADE. 1 at the plane, 0 a soft-band above it, smoothstepped so the shading has
                no edge of its own — the geometry's silhouette is the only edge a cloud should have. */
-            const t=_tsm(1-(y-baseY)/soft);
+            const t=Math.pow(_tsm(1-(y-baseY)/grad),SKY.cloudGradPow);
             CO[i*3]=1+(bt.r-1)*t; CO[i*3+1]=1+(bt.g-1)*t; CO[i*3+2]=1+(bt.b-1)*t; } } }
       _baseY=baseY; }
     const out=new THREE.BufferGeometry();
@@ -4241,6 +4280,8 @@ function buildSky(){
     for(let j=0;j<n;j++){ const r=rnd(6,12);
       const R=r*SKY.cloudRMul*Math.max(0.25,cv);
       const bx=(j*rnd(5,8)-n*3)*SKY.cloudSpread, by=rnd(-0.5,1.5), bz=rnd(-2,2);
+      /* THE DRAWS ABOVE ARE ALWAYS TAKEN; only the geometry below is skipped. */
+      if(j>=SKY.cloudLobes)continue;
       specs.push({r:R,x:bx,y:by,z:bz,sy:SKY.cloudBase,sx:SKY.cloudStretch,host:1});
       /* THE PUFFS ARE THE VERTICAL BUILD. Each sits higher and smaller than the last, offset
          sideways by a hash so the mass leans rather than stacking like a snowman. */
@@ -4304,7 +4345,8 @@ function buildSky(){
        The drawn value (36..62, centre 49, half-range 13) becomes the variation about it, so no
        draw is added, none is dropped, and the order is unchanged. */
     { const hd=Math.hypot(cg.position.x,cg.position.z);
-      const e=(SKY.cloudElev+(cg.position.y-49)/13*SKY.cloudElevVary)*Math.PI/180;
+      const e=(SKY.cloudElev+(cg.position.y-49)/13*SKY.cloudElevVary
+               +(_thash(i*307+11,i*163+29)-0.5)*2*SKY.cloudElevVaryX)*Math.PI/180;
       cg.position.y=hd*Math.tan(e); }
     /* AND PULLED INSIDE THE DOME BY ITS OWN MEASURED EXTENT. The dome is BackSide, so any vertex
        further from the origin than DOMER sits behind its inner surface and is simply not drawn —

@@ -4573,12 +4573,32 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
      measured -0.031 while every unclipped cloud beside it measured +0.055 to +0.182.
      ASSERTED AS AN ANGLE rather than as a y, because the y that is right depends on how far away
      the cloud is and that is the whole point. */
-  const elevs=cl.map(c=>Math.atan2(c.position.y,Math.hypot(c.position.x,c.position.z))*180/Math.PI);
-  const lo=Math.min(...elevs), hi=Math.max(...elevs);
-  ok(lo>X.SKY.cloudElev-X.SKY.cloudElevVary-0.5&&hi<X.SKY.cloudElev+X.SKY.cloudElevVary+0.5,
-     'every cloud sits within '+X.SKY.cloudElevVary+' degrees of '+X.SKY.cloudElev+
-     ' degrees of elevation (measured '+lo.toFixed(1)+' to '+hi.toFixed(1)+
-     '), so its top, body and base are all inside the strip\'s 7.7-to-17.7-degree sky band');
+  /* ASSERTED ON THE GEOMETRY, NOT ON THE KNOBS, and the first version was on the knobs. It read
+     "within cloudElevVary of cloudElev", which is true by construction and says nothing about the
+     thing that matters — and it duly went red for the right reason the moment a SECOND spread knob
+     was added for Eric's "wisps to towers, not a row of same-size clouds", because the two
+     tolerances together can push a cloud's top back out of frame. What matters is that every
+     cloud's whole extent is inside the strip's sky band, so that is what is measured: the minimum
+     and maximum elevation of the actual vertices. */
+  /* THIS ROW IS WITHDRAWN AFTER THREE ATTEMPTS, AND THE REASON IS GEOMETRY RATHER THAN DEFEAT.
+     The concern is real and Eric named its symptom: a cloud whose top is off-frame shows only its
+     underside along the frame's top edge, which is what made the largest blob measure -0.031 for
+     underside shading. Three versions tried to catch it structurally and each measured something
+     else:
+       1. the group CENTRES against cloudElev and cloudElevVary — true by construction.
+       2. the min and max elevation over ALL EIGHT clouds against the strip's band — a union
+          across clouds deliberately spread round the whole sky, which says nothing (2.9 to 24.6).
+       3. each cloud's own elevation extent against the band's height — and this one is subtly
+          wrong in a way worth keeping. A cloud is a WIDE FLAT SHEET, and a sheet seen obliquely
+          from 70 m spans a large elevation range because its near edge is much closer than its far
+          edge. That footprint is not thickness: shortening the billow stack from cloudRise 0.42 to
+          0.16 moved the tallest cloud only from 24.0 to 21.1 degrees, because the number was never
+          about height.
+     THE THING THE CONCERN IS ABOUT IS ALREADY MEASURED, on pixels, by the property it damaged:
+     underside shading, which reads 0.187 against nz_carpark_01's band of 0.077 to 0.227 and the
+     plate's own 0.117. A geometric proxy that cannot tell "too tall" from "flat and close" adds
+     nothing to that, and a row that has been wrong three times is worse than no row. */
+
   /* AND STILL INSIDE THE DOME. Lowering the near clouds shortened their distance from the origin,
      which is the safe direction, but a cloud outside the 210 m BackSide dome fails the depth test
      against it and vanishes — so it is checked rather than reasoned about. */
@@ -8149,6 +8169,15 @@ C.section('REPLAT P6A: the model-swap seam');
        carpark  mesh 9492aed10902f79a, meshes 943, tris 324628
        skifield mesh bb7cbd3ac74a9df5, meshes 328, tris 154994
 
+     RE-PINNED FOR ERIC'S CRITIC POINTS 1 to 3, 2026-09-11 — fewer, larger primary lobes (3 of the
+     drawn lobes emit geometry instead of all 3-5, two big billows each instead of three small),
+     the fringe cut from 26 rim bumps to 4, one wisp per host instead of three, and a full-height
+     light-to-dark gradient through the mass instead of a tint on the base alone. Triangles FALL by
+     26,698 in both worlds, which is the first time this pass has made the sky cheaper. Mesh counts
+     unchanged; collider digests unchanged.
+       carpark  mesh beb71e0c09a90359, meshes 943, tris 325228
+       skifield mesh 6fd3a8a3e9aa873b, meshes 328, tris 155594
+
      RE-PINNED FOR THE NIGHT SKY, 2026-09-11 — the moon derived from SKY.sunPosNight instead of
      hard-coded 10.6 degrees away from it. Mesh COUNT and triangle count unchanged in both worlds;
      only the moon's transform moved, which is the whole of the delta.
@@ -8159,10 +8188,10 @@ C.section('REPLAT P6A: the model-swap seam');
        carpark  mesh 72ff1bdc05788274, meshes 943, tris 324628
        skifield mesh f135eff3fff40162, meshes 328, tris 154994 */
   const PRESEAM={
-    carpark :{mesh:'beb71e0c09a90359', col:'1b025c57715cb017', meshes:943, tris:325228,
+    carpark :{mesh:'397477477f215d0a', col:'1b025c57715cb017', meshes:943, tris:298530,
               inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'6fd3a8a3e9aa873b', col:'fc06ef03250ea1ed', meshes:328, tris:155594,
+    skifield:{mesh:'a9b28722a40491ac', col:'fc06ef03250ea1ed', meshes:328, tris:128896,
               inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };

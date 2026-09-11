@@ -614,6 +614,88 @@ export function cloudFlat(im,L,keep,cm){
   return {value:(gy/n)/((gx/n)||1e-9), gy:gy/n, gx:gx/n, n};
 }
 
+/* 7. SUB-STRUCTURE — is the cloud made of ONE characteristic lump size, or of many?
+      Eric's critic point 1: the lobes "read as cauliflower - clusters of small equal spheres", and
+      the flatness property of 6 passes them, so this is the row that catches it.
+      MEASURED AS FINE ENERGY OVER COARSE: the share of gradient energy at blur 2 and 4 px against
+      the share at 16 and 32. A mass built from many small equal spheres carries relatively more
+      FINE energy than a real cumulus, whose big billows dominate.
+      AND MY FIRST GUESS WAS BACKWARDS, which is why the profile is reported and not just the
+      ratio. I expected a sphere cluster to CONCENTRATE energy at its own scale and so to score
+      LOWER entropy than a real cloud. Measured, the game's entropy is 0.945 against the plates'
+      0.913 and 0.883 — it is the MORE multi-scale of the three, because every fringe bump adds
+      fine detail. What does separate them is where the energy sits:
+
+                        blur  2     4     8    16    32     fine/coarse
+          nz_carpark_01     0.071 0.115 0.182 0.273 0.359      0.29
+          nz_alps_02        0.065 0.101 0.163 0.259 0.412      0.25
+          the game          0.085 0.138 0.202 0.263 0.311      0.39
+
+      So the target is to come DOWN toward the plates: fewer, larger primary lobes. */
+export const FINESCALES=[2,4,8,16,32];
+export function cloudFine(im,L,keep,cm){
+  L=L||lumPlane(im);
+  /* A CLOUD PROPERTY NEEDS A CLOUD, AND THE MASK ALREADY KNOWS THE DIFFERENCE. cloudMask refuses
+     in two distinct ways and only one of them means "measure the whole crop instead": wall-to-wall
+     cover means the crop IS cloud (nz_alps_02), while "no cloud to speak of" means there is none
+     (nz_tussock_03, nz_alps_01). Falling back to the sky region in both cases handed this property
+     bands of [0.126 … 0.186] and [0.176 … 0.253] that were measurements of CLEAR SKY wearing a
+     cloud row's name — and under "in band if any plate" a sky band on a cloud property is a
+     loophole. */
+  if(cm&&!cm.mask&&!/wall-to-wall/.test(cm.note||''))
+    return {value:null,note:cm.note};
+ const {w,h}=im;
+  const m=(cm&&cm.mask)?cm.mask:keep;
+  const e=[];
+  for(const st of FINESCALES){
+    const B=boxBlur(L,w,h,st); let g=0,n=0;
+    for(let y=st;y<h-st;y++)for(let x=st;x<w-st;x++){
+      const i=y*w+x;
+      if(m&&!(m[i]&&m[i-st]&&m[i+st]&&m[i-st*w]&&m[i+st*w]))continue;
+      g+=Math.hypot(B[i+st]-B[i-st],B[i+st*w]-B[i-st*w]); n++; }
+    e.push(n?g/n:0); }
+  const sum=e.reduce((a,b)=>a+b,0);
+  if(!(sum>0))return {value:null,note:'no gradient energy inside the cloud mask'};
+  const p=e.map(v=>v/sum);
+  const coarse=p[3]+p[4];
+  return {value:coarse>1e-9?(p[0]+p[1])/coarse:null, profile:p.map(v=>+v.toFixed(3))};
+}
+
+/* 8. INTERNAL CONTRAST — Eric's critic point 2: "billows have grey valleys and a light-to-dark
+      gradient, not uniform white with one dark base line", scored "against the plate's internal
+      contrast". The p90 minus p10 of luma inside the cloud mask.
+      OURS IS TOO HIGH, NOT TOO LOW, WHICH IS THE OPPOSITE OF WHAT THE WORDS SUGGEST — and the
+      reason is exactly the fault he names. The game measures 0.424 against 0.318 and 0.184, and it
+      gets there from a p10 of 0.474 where the plates sit at 0.672 and 0.702: the spread is all in
+      the one dark base line, with the billows above it uniform. A real cloud's base is far lighter
+      relative to its top than ours, and its variation is distributed through the mass.
+      SO COMING INTO BAND MEANS TWO THINGS AT ONCE — lifting the base and putting real shading in
+      the crevices — and a single number cannot tell them apart. The billow spread (the same
+      quantile gap with the darkest fifth dropped) is reported beside it for that: the plates read
+      0.285 and 0.122, the game 0.185, so the distribution is the half that is not yet wrong. */
+export function cloudContrast(im,L,keep,cm){
+  L=L||lumPlane(im);
+  /* A CLOUD PROPERTY NEEDS A CLOUD, AND THE MASK ALREADY KNOWS THE DIFFERENCE. cloudMask refuses
+     in two distinct ways and only one of them means "measure the whole crop instead": wall-to-wall
+     cover means the crop IS cloud (nz_alps_02), while "no cloud to speak of" means there is none
+     (nz_tussock_03, nz_alps_01). Falling back to the sky region in both cases handed this property
+     bands of [0.126 … 0.186] and [0.176 … 0.253] that were measurements of CLEAR SKY wearing a
+     cloud row's name — and under "in band if any plate" a sky band on a cloud property is a
+     loophole. */
+  if(cm&&!cm.mask&&!/wall-to-wall/.test(cm.note||''))
+    return {value:null,note:cm.note};
+
+  const m=(cm&&cm.mask)?cm.mask:keep;
+  const v=[]; for(let i=0;i<L.length;i++)if(!m||m[i])v.push(L[i]);
+  if(v.length<500)return {value:null,note:'fewer than 500 cloud pixels'};
+  v.sort((a,b)=>a-b);
+  const q=t=>v[Math.min(v.length-1,Math.floor(v.length*t))];
+  const up=v.slice(Math.floor(v.length*0.20));
+  const qu=t=>up[Math.min(up.length-1,Math.floor(up.length*t))];
+  return {value:q(0.90)-q(0.10), p10:q(0.10), p50:q(0.50), p90:q(0.90),
+          billow:qu(0.90)-qu(0.10)};
+}
+
 /* THE SKY'S OWN ROWS — every gradient property is a statement about height, so they all share one
    pass that produces, per row of the band, the mean luma / saturation / hue of the sky pixels that
    are NOT cloud. Excluding cloud is not optional: a row crossing a cumulus is a row about a cloud,
@@ -756,7 +838,7 @@ export function skyColour(im,keep,cm){
   return {luma:l/n, sat:s/n, hue, px:n};
 }
 
-export const SKYPROPS=['cloudShape','underside','cloudFlat',
+export const SKYPROPS=['cloudShape','underside','cloudFlat','cloudFine','cloudContrast',
                        'lumaRatio','satRatio','maxStep',
                        'skyLuma','skyHue','skySat'];
 /* cloudFlat IS BANDED FROM ONE PLATE ONLY, AND NOT BY THE "EITHER PLATE" RULE.
@@ -766,6 +848,11 @@ export const SKYPROPS=['cloudShape','underside','cloudFlat',
    current sky a pass on the plate whose form nobody asked for, which is the loophole this file
    already refuses twice over (cloud cover, and nz_alps_02's own luma for tone). One plate, named,
    with the reason — and it makes the row harder rather than easier. */
+/* cloudFine AND cloudContrast ARE BANDED FROM BOTH CLOUD PLATES, unlike cloudFlat. Flatness is
+   about a FORM only nz_alps_02 shows, so offering carpark_01's towering-cumulus band alongside
+   would be a loophole. These two are about what any real cloud is made of and how its light is
+   distributed, and both plates are real clouds — so both bands count, and the union is honest
+   rather than permissive: the game is outside BOTH on both properties. */
 export const SKYFORMPROPS=['cloudFlat'];
 /* CLOUD VERTICAL EXTENT IS WITHDRAWN FROM THE JUDGED SET, and the direction of that change is
    the part worth stating: the game PASSES it (0.920, against a band of 0.819 to 1.179) and it is
@@ -809,7 +896,7 @@ export const SKYFORMPROPS=['cloudFlat'];
    17.4 rows simply because its gradient is shallow, while nz_carpark_01 holds one for 2.7. A band
    spanning those accepts every sky ever rendered. maxStep is the judged form of the same question
    and the two clear-sky plates agree on it exactly: 1 level, all four tiles, both plates. */
-export const SKYCONTEXT=['cloudCover','cloudVext','cloudBlobs','skyTopLuma','skyHorizLuma',
+export const SKYCONTEXT=['cloudBillow','cloudCover','cloudVext','cloudBlobs','skyTopLuma','skyHorizLuma',
                          'skyTopSat','skyHorizSat','aerial','hueRot','bandWidth','levels','skyPx'];
 
 export function skyMeasureAll(im,inSky){
@@ -821,8 +908,10 @@ export function skyMeasureAll(im,inSky){
   const cf=cloudForm(im,cm), us=undersideShading(im,L,cm);
   const gr=skyGradient(im,L,keep,cm), ap=aerialPersp(im,L,keep,cm), sc=skyColour(im,keep,cm);
   const fl=cloudFlat(im,L,keep,cm);
+  const fn=cloudFine(im,L,keep,cm), ct=cloudContrast(im,L,keep,cm);
   let skyPx=0; if(keep){for(let i=0;i<keep.length;i++)if(keep[i])skyPx++;} else skyPx=w*h;
   return { cloudShape:cf.shape, cloudVext:cf.vext, underside:us.value, cloudFlat:fl.value,
+           cloudFine:fn.value, cloudContrast:ct.value, cloudBillow:ct.billow,
            lumaRatio:gr.lumaRatio, satRatio:gr.satRatio, maxStep:gr.maxStep,
            skyTopLuma:gr.topLuma, skyHorizLuma:gr.horizLuma,
            skyTopSat:gr.topSat,   skyHorizSat:gr.horizSat, aerial:ap.value,
@@ -831,7 +920,7 @@ export function skyMeasureAll(im,inSky){
            bandWidth:gr.bandWidth, levels:gr.levels, skyPx,
            _extra:{cm:{thr:cm.thr,cover:cm.cover,note:cm.note,hist:cm.hist,
                        meanCloudSat:cm.meanCloudSat,meanSkySat:cm.meanSkySat},
-                   cf,us,gr,ap,sc,fl} };
+                   cf,us,gr,ap,sc,fl,fn,ct} };
 }
 
 /* THE SKY'S BAND COMES FROM ITS PLATE'S OWN FOUR TILES, exactly as the terrain's does, and the
@@ -1008,11 +1097,12 @@ export async function skyScore({frames=null}={}){
 }
 
 const SKYFMT={cloudShape:v=>v.toFixed(2), cloudVext:v=>v.toFixed(3), underside:v=>v.toFixed(3),
-  cloudFlat:v=>v.toFixed(3),
+  cloudFlat:v=>v.toFixed(3), cloudFine:v=>v.toFixed(3), cloudContrast:v=>v.toFixed(3),
   lumaRatio:v=>v.toFixed(3), satRatio:v=>v.toFixed(3), maxStep:v=>v.toFixed(1),
   skyLuma:v=>v.toFixed(3), skyHue:v=>v.toFixed(0), skySat:v=>v.toFixed(3)};
 const SKYLABEL={cloudShape:'cloud form (perim/sqrt area)', cloudVext:'cloud vertical extent',
   underside:'underside shading (top-belly)', cloudFlat:'cloud flatness (layered vs round)',
+  cloudFine:'sub-structure (fine/coarse energy)', cloudContrast:'internal contrast (p90-p10)',
   lumaRatio:'gradient (horizon/zenith luma)',
   satRatio:'aerial perspective (sat ratio)', maxStep:'banding (max 8-bit step)',
   skyLuma:'sky luma', skyHue:'sky hue', skySat:'sky saturation'};
