@@ -5536,3 +5536,23 @@ thing it reached for is measured on pixels by the property it damaged.
 Eric's: keep 29.4%. Sub-structure only reaches its band by adding cloud (0.293 at 48.5%) or by
 switching off the wisp tier (0.313); coverage stays and the wisps are TODO 118's deliverable, so an
 eight-point rise is the smallest of the three moves.
+
+## THE RE-PIN, AND WHAT MOVED UNDER IT
+
+All 43 vantages, four sweeps at BATCH=6, per-vantage medoid. Provenance run1 23, run2 10, run3 8,
+run4 2 — a run is disqualified per frame, never wholesale, so a run that lost one vantage still
+supplies the others. First pin to include `43_night_range`.
+
+The pin had to move because nearly everything above the ridge moved: the night environment 0.80 to
+0.08, a derived moon with a soft limb, cloud lobes rebuilt fewer-and-larger with a full-height
+shading gradient, and three of eight clouds turned to cirrus.
+
+## AND ONE MORE CAMPFIRE, CAUGHT THIS TIME
+
+The night vantage looked, to my eye, as though the wisps under the cloud banks were warm tan. The
+warmth measure on the frame agreed: 0.186% above the sky line, over the 0.05% limit. Cropping to
+the wisps before believing it — FLAKES 17, written an hour earlier — showed them at rgb 31,46,81
+and 0.00% warm, along with every other box in the sky. Every warm pixel in that frame is the HUD's
+gold CHAOS pill and the sound button, which are DOM and were never lit by anything. The fourth
+measurement this session to be about something other than its subject, and the first one the law
+caught before it became a finding.
