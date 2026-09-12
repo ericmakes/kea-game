@@ -981,7 +981,10 @@ C.section('THE STAR LEDGER — three stars a page, and no cleared page is ever l
     const raw=_m.get('keaSaveV1_n');
     ok(!!raw,'a blob was written under the unchanged v1 key name');
     const blob=JSON.parse(raw);
-    ok(blob.v===3,'the schema announces itself as v3, one slot per map (TODO 37) ('+blob.v+')');
+    /* v4 SINCE THE GRADUATION CARRY-OVER (TODO 39b). The shape is unchanged — one slot per map, as
+       TODO 37 left it; the version moved because migrate() now does a one-time area rename inside
+       it, and the version is how "one-time" is enforced. */
+    ok(blob.v===4,'the schema announces itself as v4, one slot per map (TODO 37) ('+blob.v+')');
     ok(!!blob.stars&&blob.stars[P1A]&&blob.stars[P1A].cleared===true,'the star is on the wire');
     ok(!!blob.pages&&blob.pages[P1A]&&blob.pages[P1A].earned>0,
        'so is the page chaos snapshot ('+JSON.stringify(blob.pages[P1A])+')');
@@ -2148,7 +2151,7 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
 
     X.SAVE.write();
     { const blob=JSON.parse(_m.get('keaSaveV1_n'));
-      ok(blob.v===3&&!!blob.biomes&&!!blob.biomes.carpark,'the write puts the carpark in its own slot');
+      ok(blob.v===4&&!!blob.biomes&&!!blob.biomes.carpark,'the write puts the carpark in its own slot');
       ok(blob.biome==='carpark','and records which map it was written from ('+blob.biome+')');
       ok(Array.isArray(blob.biomes.carpark.areas)&&blob.biomes.carpark.areas.length===G.chapters.length,
          'with its page list, so the brochure can say n of m without loading the map ('+
@@ -2262,7 +2265,7 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
                 pages:{[G.chapters[0]]:{open:0,close:400,earned:400,paid:200,caged:0}},
                 hats:[null]};
       const mg=X.SAVE.migrate(v2);
-      ok(mg.v===3,'a v2 blob migrates to v3 ('+mg.v+')');
+      ok(mg.v===4,'a v2 blob migrates to v4 ('+mg.v+')');
       ok(mg.biome==='carpark'&&!!mg.biomes.carpark,'into the carpark slot, because that is the world it described');
       ok(mg.biomes.carpark.from==='v2','and the slot records the vintage it was retro-granted from ('+mg.biomes.carpark.from+')');
       ok(mg.peak===1234&&mg.t===56&&mg.band===2,
@@ -2280,8 +2283,61 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
       ok(T.model().pins[STUB].stars===0,'while the other map is back to nothing, because v2 never had one');
       // a v1 blob has no marker at all
       const v1=X.SAVE.migrate({done:['wiper'],chapIdx:0});
-      ok(v1.v===3&&v1.biomes.carpark.from==='v1','a blob with no marker at all migrates as v1 ('+v1.biomes.carpark.from+')');
+      ok(v1.v===4&&v1.biomes.carpark.from==='v1','a blob with no marker at all migrates as v1 ('+v1.biomes.carpark.from+')');
       ok(X.SAVE.migrate(null)===null&&X.SAVE.migrate('rubbish')===null,'and nothing migrates to nothing rather than throwing'); }
+
+    /* 6b. THE GRADUATION CARRY-OVER — v4, TODO 39b. Eric's call: "a cleared carpark ski page
+       carries to THE ROPE TOW - nobody should lose a page they earned to a refactor."
+       THE FIXTURE IS A PRE-GRADUATION SAVE, hand-built rather than produced by this build, because
+       that is the only kind of save this code exists for: a v3 blob whose carpark slot carries
+       three pips on a page called THE SKI FIELD, which no list in this build declares any more. */
+    { const pre={v:3, biome:'carpark', peak:9, t:9, band:0, biomes:{ carpark:{
+        done:['s_ski','s_pole','s_binding','s_goggles','s_lift','wiper'], chapIdx:5,
+        stars:{'THE SKI FIELD':{cleared:true,style:true,clean:false}},
+        pages:{'THE SKI FIELD':{open:0,close:300,earned:300,paid:150,caged:0}},
+        hats:[null], areas:['THE CARPARK','THE CAMPSITE','THE HUT','THE ROAD','THE SKI FIELD',
+                            'THE TRAILHEAD','THE PADDOCK & NEST','TOGETHER'] } } };
+      const g=X.SAVE.migrate(pre);
+      ok(g.v===4,'a pre-graduation v3 blob migrates to v4 ('+g.v+')');
+      const rt=g.biomes.skifield&&g.biomes.skifield.stars&&g.biomes.skifield.stars['THE ROPE TOW'];
+      ok(!!rt&&rt.cleared===true&&rt.style===true,
+         'and the cleared ski page arrives on THE ROPE TOW with its pips ('+
+         (rt?Object.keys(rt).join(','):'nothing')+')');
+      ok(!rt.clean,'and only the pips that were earned — a star the carpark never granted is not invented');
+      ok(!!g.biomes.skifield,'a skifield slot is created for a player who never went up the hill');
+      /* THE LEDGER DOES NOT TRAVEL, and that is deliberate: a page record is one visit chaos
+         accounting, so moving it would describe a session that never happened. */
+      ok(!(g.biomes.skifield.pages&&g.biomes.skifield.pages['THE ROPE TOW']),
+         'while the chaos ledger stays behind, because it describes a visit and not an achievement');
+      /* IT RUNS ONCE. A v4 blob is already carried, and carrying again could only re-grant
+         something the player has since lost. */
+      const twice=X.SAVE.migrate(g);
+      ok(JSON.stringify(twice.biomes.skifield.stars)===JSON.stringify(g.biomes.skifield.stars),
+         'and a v4 blob is not carried a second time');
+      /* NEVER A DOWNGRADE, in either direction: a pip already earned on the hill survives a
+         carpark record that lacks it. */
+      const both={v:3, biome:'carpark', biomes:{
+        carpark:{done:[],stars:{'THE SKI FIELD':{cleared:true}},pages:{}},
+        skifield:{done:[],stars:{'THE ROPE TOW':{clean:true}},pages:{}} } };
+      const bg=X.SAVE.migrate(both).biomes.skifield.stars['THE ROPE TOW'];
+      ok(bg.cleared===true&&bg.clean===true,'the carry is a union, so neither side loses a pip ('+
+         Object.keys(bg).join(',')+')');
+      /* AND A SAVE WITH NO SKI PAGE IS LEFT ALONE. */
+      ok(!X.SAVE.migrate({v:3,biome:'carpark',biomes:{carpark:{done:[],stars:{},pages:{}}}})
+            .biomes.skifield,
+         'and a save that never cleared that page gets no skifield slot invented for it');
+      /* chapIdx IS NOT THE HAZARD THE PLAN THOUGHT IT WAS, and this row is here so nobody re-derives
+         that worry: applySave does not read the saved number at all. It walks G.chapters from zero
+         and stops at the first page whose rows are not all done, so a page leaving the list moves
+         every later index and misplaces nobody. The fixture above saves chapIdx 5 - THE TRAILHEAD
+         under the old eight-page list - and the assertion is about where a boot actually lands. */
+      _m.set('keaSaveV1_n',JSON.stringify(pre));
+      X.boot({biome:'carpark'}); X.startGame(1); tick(12);
+      const land=G.chapters[G.chapIdx];
+      ok(G.chapIdx===0&&land==='THE CARPARK',
+         'a save with chapIdx 5 lands on the first page it has not finished, derived and not '+
+         'restored ('+land+' at index '+G.chapIdx+')');
+      _m.set('keaSaveV1_n',''); }
 
     // 7. A WIPE TAKES THE PICK WITH IT, or the next boot would keep walking into a map the player
     //    just asked to forget.

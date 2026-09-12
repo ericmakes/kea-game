@@ -3767,22 +3767,54 @@ const SAVE={
     hats:G.keas.map(k=>(k.hatProp&&k.hatProp.name)||null),
     areas:(G.chapters||[]).slice() }; },   // so a map can say n stars of m without being loaded
   write(){ if(!this.ok())return; try{
-    const b=this.migrate(this.load())||{v:3,biome:BIOME_DEFAULT,peak:0,t:0,band:0,biomes:{}};
+    const b=this.migrate(this.load())||{v:4,biome:BIOME_DEFAULT,peak:0,t:0,band:0,biomes:{}};
     const id=G.biome||BIOME_DEFAULT, s=this.slot();
-    b.v=3; b.biome=id; b.biomes=b.biomes||{}; b.biomes[id]=s;
+    b.v=4; b.biome=id; b.biomes=b.biomes||{}; b.biomes[id]=s;
     b.peak=Math.max(b.peak||0,G.chaosPeak||0); b.t=G.playT||b.t||0; b.band=G.bandIdx||0;
     b.done=s.done; b.chapIdx=s.chapIdx; b.stars=s.stars; b.pages=s.pages; b.hats=s.hats; // the mirror
     localStorage.setItem(this.key(),JSON.stringify(b)); }catch(e){} },
   load(){ if(!this.ok())return null; try{ const r=localStorage.getItem(this.key()); return r?JSON.parse(r):null; }catch(e){ return null; } },
-  /* any vintage in, v3 shape out, and the containers always exist so no caller has to test for them */
+  /* any vintage in, v4 shape out, and the containers always exist so no caller has to test for them */
   migrate(b){ if(!b||typeof b!=='object')return null;
-    const base={v:3, biome:(b.v>=3&&b.biome)||BIOME_DEFAULT,
+    const was=+b.v||1;
+    const base={v:4, biome:(b.v>=3&&b.biome)||BIOME_DEFAULT,
                  peak:+b.peak||0, t:+b.t||0, band:+b.band||0, biomes:{}};
-    if(b.v>=3&&b.biomes&&typeof b.biomes==='object'){ base.biomes=b.biomes; return base; }
-    base.biomes[BIOME_DEFAULT]={done:b.done||[], chapIdx:+b.chapIdx||0,
+    if(b.v>=3&&b.biomes&&typeof b.biomes==='object'){ base.biomes=b.biomes; }
+    else base.biomes[BIOME_DEFAULT]={done:b.done||[], chapIdx:+b.chapIdx||0,
       stars:b.stars||{}, pages:b.pages||{}, hats:b.hats||null,
-      areas:(b.areas&&b.areas.slice())||null, from:'v'+(+b.v||1)};
+      areas:(b.areas&&b.areas.slice())||null, from:'v'+was};
+    if(was<4)this.graduate(base.biomes);
     return base; },
+  /* ---------- v4: THE GRADUATION CARRY-OVER (TODO 39b) ----------
+     Eric's call: "a cleared carpark ski page carries to THE ROPE TOW — nobody should lose a page
+     they earned to a refactor."
+     WHY IT NEEDS DOING AT ALL, and it is the one thing in this save that a rename really does break:
+     G.stars and G.pageChaos are keyed by the AREA TITLE STRING, not by mission id. The carpark's
+     ski page was called THE SKI FIELD; after the graduation the carpark has no page by that name and
+     the hill's equivalent is called THE ROPE TOW, so three earned pips would sit in the carpark slot
+     under a key nothing reads again.
+     WHAT chapIdx DOES *NOT* NEED, which is worth writing down because the graduation plan got it
+     wrong: applySave never reads the saved chapIdx. It re-derives it by walking G.chapters and
+     stopping at the first page whose rows are not all done, so a page leaving the list cannot
+     misplace anybody — the derivation is already by name. The saved number is written as part of
+     the slot and read by nothing.
+     THE PIPS CARRY AND THE LEDGER DOES NOT. stars are what the player earned; pages is a chaos
+     ledger for one visit to one page (open, close, earned, paid, caged), and adding one page's
+     ledger to another's describes a session that never happened. starsInit only restores CLOSED
+     ledgers anyway, and the style and clean judgements it feeds have already been spent — their
+     verdicts are in stars, which is what travels.
+     UNION, NEVER OVERWRITE, so a player who has already earned a pip on the hill cannot lose it to
+     a carpark record that lacks it, in either direction. And it runs once: the version gate above
+     means a v4 blob is never carried again. */
+  graduate(biomes){
+    const from=biomes&&biomes[BIOME_DEFAULT], src=from&&from.stars&&from.stars['THE SKI FIELD'];
+    if(!src)return false;
+    const to=biomes.skifield||(biomes.skifield={done:[],chapIdx:0,stars:{},pages:{},hats:null,
+                                                areas:null,from:'graduation'});
+    to.stars=to.stars||{};
+    const dst=to.stars['THE ROPE TOW']||(to.stars['THE ROPE TOW']={});
+    for(const k of STARKINDS)if(src[k])dst[k]=true;
+    return true; },
   pick(id){ if(!this.ok())return; try{ localStorage.setItem(TOURKEY,String(id)); }catch(e){} },
   picked(){ if(!this.ok())return null; try{ const v=localStorage.getItem(TOURKEY);
     return (v&&BIOMES[v])?v:null; }catch(e){ return null; } },
@@ -8529,7 +8561,7 @@ function tourStarsIn(rec){ let n=0; if(!rec)return 0;
 /* THE MAP YOU ARE STANDING IN IS READ LIVE, not off the blob, so the brochure is right the moment a
    star is granted rather than the next time the game happens to write. */
 function tourModel(blob){
-  const b=blob||SAVE.migrate(SAVE.load())||{v:3,biomes:{}};
+  const b=blob||SAVE.migrate(SAVE.load())||{v:4,biomes:{}};
   const here=G.biome||BIOME_DEFAULT, slots=b.biomes||{};
   let total=0;
   const pins=TOUR.map(t=>{ const s=slots[t.id]||null, cur=(t.id===here);
