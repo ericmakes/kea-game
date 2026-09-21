@@ -1320,14 +1320,31 @@ function creditsRender(){
    bird is right, and that is a one-line piece with its own proof. */
 const KEABIRD={
   model:false,                       // OFF: the primitive bird ships until Eric judges the model
-  /* THE SHIPPED FILE IS THE DERIVED ONE. rockatoo.glb is the unmodified upstream and stays in the
-     tree so the derivation chain can be re-run; kea_base.glb is it with the crest gone; kea_bill.glb
-     is that with the mandible reshaped. Each has its own ledger row and md5. */
-  url:'models/kea_bill.glb',
-  /* Posed scene box is 96.5 model units tall (the BIND pose spans 169.6 with the wings out — the
-     wrong number to scale against, and both are recorded in LICENCES.md so nobody picks it twice).
-     A kea stands about 0.5 m. Derived, not typed: `scale = standM / posedUnits`. */
-  standM:0.50, posedUnits:96.5,
+  /* THE SHIPPED FILE IS ASTRA'S APPROVED CHARACTER (2026-09-21). rockatoo.glb is the unmodified
+     upstream and stays in the tree so the derivation chain can be re-run; kea_base, kea_bill and
+     the three Astra drops are the links between; kea_animated.glb is the approved shape with the
+     wing-release morph and ten named clips on it. Every link has its own ledger row and md5, and
+     BIRD_STATE.md is the state of record.
+     THE ANIMATED FILE IS THE ONE LOADED, not kea_approved.glb, because they carry byte-identical
+     geometry and only this one carries the clips. Verified rather than assumed: POSITION, NORMAL,
+     UV, JOINTS, WEIGHTS and the index buffer hash identically between the two. */
+  url:'models/astra_incoming/approved/kea_animated.glb',
+  /* Posed scene box is 54.44 model units tall in the APPROVED REST POSE. It was 96.5 for
+     kea_bill.glb, and the difference is almost all wing: that number was read off a bird whose
+     rest came from a legacy clip with a half-open wing. The loader MEASURES this after evaluating
+     the rest clip and never trusts the constant — see bird.mjs — so this is the recorded reading
+     to cross-check against, which is exactly what the battery does.
+     A kea stands about 0.5 m. Derived, not typed: `scale = standM / measured posed height`. */
+  standM:0.50, posedUnits:54.44,
+  /* ---- THE REST POSE IS A NAMED CLIP NOW, AND THAT IS THE WHOLE OF DEFECT 1 ----
+     bird.mjs used to evaluate `animations[0]` at `restT`. For this package animations[0] is
+     `Animation_01` — the 22.5 s legacy source sequence whose own manifest says, in as many words,
+     "do not select automatically". Its scale AND its ground offset were measured from that wrong
+     pose, so the naive swap photographed a bird sunk to mid-body with one wing half open.
+     A CLIP IS CHOSEN BY NAME. `restT` survives ONLY as the fallback for the legacy assets that
+     have no named rest — point the url at kea_bill.glb and the old behaviour comes back, which is
+     what makes an A/B against the old bird possible at all. */
+  restClip:'approved_idle', restT:5.49,
   /* THE JOINT MAP. Names read out of the file, not guessed — see LICENCES.md for the full skeleton.
      `crest` is listed because P5d has to remove 60 joints of it and something has to name them. */
   bones:{
@@ -1346,8 +1363,61 @@ const KEABIRD={
        exactly which key is missing when one is wrong, which is how this was caught in one shot. */
     femR :'cockatoo_Femur_R_bone_076',   tibR :'cockatoo_Tibia_R_bone_077',
     femL :'cockatoo_Femur_l_bone_092',   tibL :'cockatoo_Tibia_l_bone_00',
+    /* THE BILL SOCKET, and it is the package's own: BEAK_GRIP.json and CARRY_ATTACHMENT.json both
+       name glTF node 41, `cockatoo_Bone047_bone_08`, and both give a local point on it. A carried
+       prop used to hang off the HEAD bone's origin, which is the middle of the skull; it hangs off
+       the bill now, where a bird actually holds things. Not written by rigCommit — it is a socket,
+       not a pose handle. */
+    bill :'cockatoo_Bone047_bone_08',
   },
+  /* CARRY_ATTACHMENT.json's centerLocalPosition, in the bill bone's own local frame and in SOURCE
+     units — the loader divides by the model scale, as its note instructs. */
+  billSocket:{x:14.4955,y:0.0838,z:3.8908},
   crestPrefix:'cockatoo_FeatherHead',   // 60 joints a kea does not have — removed in P5d
+  /* ---- THE CLIPS, AND WHO OWNS WHICH BONE (2026-09-21) ----
+     Astra's package ships ten named clips and every one of them writes ALL 101 joints. rigCommit
+     writes 15 of them every frame from the primitive bird's handles. Both cannot win, and
+     EXPORT_CHANGES.md says integration must pick an owner. It is picked here, in data, because
+     the alternative is the decision living in three different functions.
+     THE CLIPS OWN THE WINGS, THE LEGS AND THE TAIL. Not a taste call — a measured one. The
+     authored flight pose reaches 55.6 units wrist-to-wrist; rigCommit's `open` term, swept across
+     every axis and both signs, tops out at 35.6 and AS SHIPPED reaches 19.6, which is tighter
+     than the folded rest. The procedural rig cannot make a flying bird on this skeleton. The
+     clips can, so they do.
+     rigCommit KEEPS THE HEAD, NECK, JAW AND BODY, which is where this game's character actually
+     lives: the look-at, the peck, the preen and scan idles, the stun wobble, the scream, and
+     poseLock — none of which any clip covers, all of which the 80 write sites already do well. */
+  clipOwns:['humR','ulnaR','metaR','humL','ulnaL','metaL','femR','tibR','femL','tibL','tail'],
+  /* loop: held means a one-frame pose held open (the manifest's own word); once means play to the
+     end and stop. rate is the playback multiplier at full throttle. */
+  clips:{
+    approved_idle    :{loop:'held'},
+    watch_idle       :{loop:true},
+    walk_loop        :{loop:true, rate:1.9},
+    carry_idle       :{loop:true},
+    carry_walk       :{loop:true, rate:1.9},
+    flight_loop      :{loop:true, rate:1.25},
+    flight_glide     :{loop:'held'},
+    flight_bank_left :{loop:'held'},
+    flight_bank_right:{loop:'held'},
+    beak_tear        :{loop:'once'},
+  },
+  /* THE WALK RATE IS NOT THE AUTHORED ONE, AND THE ARITHMETIC IS WHY. CLIP_MANIFEST.md records a
+     flat-plane stance rate of 9.677419 source-render units per second. This asset scales at
+     standM/posedUnits = 0.5/54.44 = 0.009185 m per source unit, so the authored bird walks at
+     0.089 m/s. The game's kea runs at 4.4*(0.75+0.3*size) = 4.62 m/s on the ground — FIFTY-TWO
+     TIMES the authored stance. Matching footfall literally would play the cycle 52x a second,
+     which is not a walk any more, it is a blur. So the rate is a believable band driven by the
+     throttle and the authored figure is recorded here rather than used as a literal. If the
+     game's ground speed is ever retuned toward a real bird, this is the number to come back to. */
+  walkAuthoredMS:0.0889,
+  /* ---- beak_tear IS DRIVEN BY THE TEAR, NOT BY A CLOCK ----
+     The clip carries five authored events. Running it on its own timeline beside a tear that
+     completes whenever the player's hold completes would put the grip and the release in the
+     wrong places. So the clip's TIME is driven from the tear's own progress: the grip lands when
+     the hold starts, the impulse lands when the tear completes, and the pull in between stretches
+     or compresses to whatever the tear actually took. The event times are the package's. */
+  tearEvents:{grip:1.05, regrip:[1.62,2.05], impulse:2.90, release:3.35},
   /* ---- THE REST POSE COMES FROM THE RIGGER, NOT FROM THE BIND POSE — REPLAT P5d ----
      The model's BIND pose is wings-SPREAD, which is how rigs are usually bound and is the worst
      possible rest for a bird that spends the game perched: it photographed as a fairground ride.
@@ -1370,7 +1440,22 @@ const KEABIRD={
      supplies feather detail as LUMINANCE and the palette supplies hue, so a black cockatoo's silky
      plumage becomes olive plumage rather than a flat olive decal. What it cannot supply is the
      kea's scalloped feather EDGING, which is a texture feature the source does not have. */
-  plume:{
+  /* ---- THE RECOLOUR IS OFF FOR THIS ASSET, AND THAT IS DEFECT 3 ----
+     keaRecolour exists because the base was an unpainted black cockatoo: it supplies hue and lets
+     the source texture supply detail as luminance. Astra's approved character arrives ALREADY
+     PAINTED — scalloped olive-brown, slate hooked bill, orange eye ring, scarlet underwing, all in
+     its own 4096 texture. Running the palette over it washed the head to pale cream and flattened
+     the folded wing to a green slab; with the palette off the asset's own paint comes through and
+     matches the canonical renders that BIRD_STATE.md pins as the definition of approved.
+     THE EYE RINGS GO WITH IT, and that is a feature: they were two small meshes added to the head
+     bone because the old texture had no eye to speak of. This one paints its own.
+     jawShut GOES TOO, and that is also correct rather than a loss: it existed to close a bill that
+     the old asset's BIND pose held open, and this asset's rest clip closes it already.
+     THE PALETTE IS KEPT, UNDER A NAME NOTHING READS, because it is three sessions of plate
+     sampling and it is the recipe for painting ANY unpainted bird this project loads next. Turning
+     it back on for a legacy asset is KEABIRD='{"plume":{...}}' with these values. */
+  plume:null,
+  plumeLegacy:{
     /* ---- SAMPLED OFF THE PLATES BY HSV CLASS, WITH MATCH COUNTS — REPLAT P5e ----
        Not boxes drawn by eye: each region is a stated hue/saturation window searched over a stated
        area, and the count is reported so a class that matched almost nothing can be seen to have
@@ -9882,6 +9967,55 @@ function keaRigBind(THREE,bones,frame){
    THE FRAME QUATERNION IS FOLDED IN because the pose writes mean "about the bird's right/up/
    forward", and the bird's frame is not the world's on this model. */
 const KEARIG_TMP={};
+/* ---- REPLAT P5c: WHICH CLIP, AND WHEN ----
+   The state machine is deliberately tiny and reads only signals the game already keeps: grounded,
+   the throttle, whether something is held, whether a tear is being tugged, and the flap flag. It
+   returns a NAME; everything about blending, rate and ownership is the driver's business.
+   THE ORDER OF THESE TESTS IS THE PRIORITY ORDER. A bird tugging a tear is doing that whatever
+   else is true, which is why the tear comes first — it is the only state with authored events. */
+function keaAnimState(k,spd,inp){
+  if(k.tug)return 'beak_tear';
+  if(!k.grounded){
+    if(k.flapDrive)return 'flight_loop';
+    if(inp&&inp.l)return 'flight_bank_left';
+    if(inp&&inp.r)return 'flight_bank_right';
+    return 'flight_glide';
+  }
+  const moving=Math.abs(spd||0)>0.05;
+  if(k.held)return moving?'carry_walk':'carry_idle';
+  return moving?'walk_loop':'watch_idle';
+}
+/* THE TEAR DRIVES ITS OWN CLIP. beak_tear is the one clip whose timeline is NOT wall-clock: its
+   time is mapped from the tear's progress, so beak_grip lands when the hold starts and
+   tear_impulse lands exactly when the tear completes, however long the player took. Running it
+   free beside the tear would put the grip and the impulse wherever the two clocks happened to
+   meet, which is the kind of thing that looks like a physics bug and is really a scheduling one.
+   THE RELEASE IS A TAIL, not part of the map: once the hold ends there is no progress left to
+   drive it, so the 2.90 -> 3.35 beat plays out on its own over its authored 0.45 s. */
+function keaAnimDrive(k,dt,spd,inp){
+  const A=k._anim; if(!A||!A.mixer)return;
+  const T=KEABIRD.tearEvents, C=KEABIRD.clips;
+  const want=keaAnimState(k,spd,inp);
+  const hold=(a,t)=>{ if(!a)return; a.paused=true; a.time=t; A.fire(k,t); };
+  if(want==='beak_tear'&&k.tug){
+    const u=clamp((k.tug.progress||0)/Math.max(1e-6,k.tug.need||1),0,1);
+    A.play('beak_tear',0.12);
+    hold(A.act['beak_tear'], T.grip+u*(T.impulse-T.grip));
+    A.tearTail=0.45; A.mixer.update(0); return;
+  }
+  if((A.tearTail||0)>0&&A.cur==='beak_tear'){
+    A.tearTail=Math.max(0,A.tearTail-dt);
+    hold(A.act['beak_tear'], T.impulse+(1-A.tearTail/0.45)*(T.release-T.impulse));
+    A.mixer.update(0);
+    if(A.tearTail>0)return;
+    A.seen=null;                       // the next tear starts its events clean
+  }
+  A.play(want, want.indexOf('flight')===0?0.12:0.18);
+  const a=A.act[want], c=C[want]||{};
+  if(a){ a.paused=false;
+    a.setEffectiveTimeScale(c.rate?(0.8+Math.abs(spd||0)*(c.rate-0.8)):1); }
+  A.mixer.update(dt);
+}
 function keaRigApply(THREE,b,rot,frame,posScale){
   const T=KEARIG_TMP;
   T.e=T.e||new THREE.Euler(); T.q=T.q||new THREE.Quaternion(); T.o=T.o||new THREE.Quaternion();
@@ -10362,7 +10496,26 @@ class Kea{
     const v=new THREE.Vector3(); this.beakTip.getWorldPosition(v);
     p.mesh.position.copy(v); p.mesh.rotation.y=this.ry; p.x=v.x; p.y=v.y; p.z=v.z;
   }
+  /* ---- REPLAT P5c: THE COMMIT RUNS ON EVERY PATH, AND THAT IS A BUG FIX ----
+     animatePose() is the eighty write sites, and it has always had early returns: a bird that is
+     TUGGING poses itself and returns, and so does one mid-recoil. The model tier was wired at the
+     BOTTOM of that function, after those returns — so for the whole of a tug and the whole of the
+     snap-back, rigCommit never ran and a loaded model simply froze in its previous pose while the
+     primitive handles went on moving underneath it. Nobody had seen it because the model has
+     never been on; the milestone run found it in one frame, with the bird locked in watch_idle
+     while the tear it was pulling ticked up to 0.48.
+     SO THE POSE AND THE COMMIT ARE TWO THINGS NOW. animate() runs the pose, then the mixer, then
+     the commit — unconditionally, on every branch, including the ones that return early. Not one
+     of the eighty write sites changed; only the place they are read from did.
+     THE MIXER RUNS FIRST AND THE COMMIT SECOND, and that order IS the ownership rule: the clip
+     writes all 101 joints, and rigCommit then overwrites only the four it owns, having skipped
+     the eleven it does not. */
   animate(dt,spd,inp){
+    this.animatePose(dt,spd,inp);
+    if(this._anim)keaAnimDrive(this,dt,spd,inp);
+    if(this._model)this.rigCommit();
+  }
+  animatePose(dt,spd,inp){
     // idle life: preen, scan, hop, stretch, ruffle, ground-peck when the player's hands are off
     /* A BIRD IN A CRATE IS NOT ENTERTAINING ITSELF (TODO 15). The caged branch returns before the
        movement code but it still calls animate, and animate is where the idle clock lives - so an
@@ -10536,7 +10689,6 @@ class Kea{
     /* REPLAT P5b: THE HANDLES ARE NOW READ, ONCE, AND MAPPED ONTO BONES. Everything above this
        line wrote to the primitive hierarchy exactly as it always has — that is the whole design.
        No-op unless the model is attached. */
-    if(this._model)this.rigCommit();
   }
   /* ---- REPLAT P5b: HANDLES -> BONES ----
      Reads the pose the 80 write sites just built and carries each one into its bone's local frame.
@@ -10548,7 +10700,13 @@ class Kea{
     const M=this._model; if(!M)return;
     const T=THREE, B=KEABIRD, bn=M.bones, fr=M.frame, rig=M.rig;
     const by={}; for(const b of rig)by[b.key]=b;
-    const put=(key,x,y,z)=>{ const b=by[key]; if(b)keaRigApply(T,b,{x,y,z},fr); };
+    /* THE MASK. A key a clip owns is not written here at all — not written and then overwritten,
+       NOT written. keaRigApply sets an absolute quaternion from the captured rest, so writing it
+       would wipe the clip's pose for that bone every frame and the wing would snap back to the
+       procedural one. Empty when no clip is playing, so the primitive-driven path is unchanged. */
+    const owned=(this._anim&&this._anim.owns)||null;
+    const put=(key,x,y,z)=>{ if(owned&&owned.has(key))return;
+      const b=by[key]; if(b)keaRigApply(T,b,{x,y,z},fr); };
     const R=this.body.rotation, N=this.neck.rotation, H=this.head.rotation;
     put('body', R.x, R.y, R.z);
     put('neck', N.x, N.y, N.z);
@@ -12227,6 +12385,10 @@ if(typeof globalThis!=='undefined'){
     /* REPLAT P5b: the rig adapter. Exported so bird.mjs can bind and a battery can exercise the
        conjugation against a synthetic skeleton without booting a bird. */
     KEABIRD, keaBirdFrame, keaRigBind, keaRigApply,
+    /* REPLAT P5c: the clip state machine and its driver, exported for the same reason the rig
+       adapter is — a battery can exercise "which clip for this state" against a stub kea without
+       booting a browser or loading 32 MB of GLB. */
+    keaAnimState, keaAnimDrive,
     GRASS, grassTier, grassCuts, grassBladeGeo, grassLattice, GRASS_GLSL_V,
     /* REPLAT P4e. The ground term's fbm has to be comparable to the blade shader's AS TEXT, because
        "a similar noise field" is how the seam comes back. */

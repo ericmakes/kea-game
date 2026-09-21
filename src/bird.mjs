@@ -150,6 +150,26 @@ function keaRecolour(THREE,mat,P){
   mat.needsUpdate=true;
 }
 
+/* ---- THE FIVE AUTHORED BEATS — REPLAT P5c ----
+   CLIP_MANIFEST.md is explicit that a glTF player emits nothing and the application must dispatch
+   these itself. They are BEATS, not state: the tear system still owns progress, completion, the
+   award and the spawned prop, exactly as it did before a model existed. What a beat does is sound
+   and a spy line — which is what keeps this safe, because the alternative (letting an animation
+   event award points or detach geometry) puts the game's economy on an animation clock.
+   THE SPY IS NOT DECORATION. G.birdBeats is how a headless battery proves the grip fired before
+   the impulse without photographing anything.
+   AND THEY DELIBERATELY MAKE NO SOUND. The first cut called AU.tug() on the grip and the regrips
+   — which did nothing at all, because AU is not on the KEAGAME export surface, so the calls were
+   silent no-ops dressed up as a feature. Worse, had they worked they would have DOUBLED the tear's
+   own beak-work tug, which interact() already plays on exactly these beats. The tear owns the
+   sound because the tear owns the act. What these beats are FOR is the piece after this one: real
+   detachment, where something has to happen at 2.90 that nothing in the game does yet. */
+function keaBeat(K,kea,name,at){
+  const G=K.G;
+  (G.birdBeats=G.birdBeats||[]).push({idx:kea.idx,name,at,t:+(G.time||0).toFixed(3)});
+  if(G.birdBeats.length>64)G.birdBeats.shift();
+}
+
 export async function installBird(K){
   const B=K.KEABIRD;
   if(!B||!B.model){ K.G.bird={mode:'primitive',why:'KEABIRD.model is off'}; return; }
@@ -172,19 +192,32 @@ export async function installBird(K){
     const bones={}; let missing=[];
     for(const [k,n] of Object.entries(B.bones)){ if(by[n])bones[k]=by[n]; else missing.push(k+'='+n); }
     if(missing.length){ K.G.bird={mode:'primitive',why:'bones missing: '+missing.join(', ')}; return false; }
-    /* EVALUATE THE CLIP AT THE FOLDED FRAME AND MAKE THAT THE REST. Done before anything is
-       measured or bound, so the scale box, the ground offset and every bone rest all describe the
-       perched bird rather than the spread bind pose. The mixer is used once and dropped — nothing
-       animates at runtime; the game poses this skeleton itself. */
-    if(gltf.animations&&gltf.animations.length&&B.restT>0){
+    /* EVALUATE THE REST CLIP AND MAKE THAT THE REST. Done before anything is measured or bound,
+       so the scale box, the ground offset and every bone rest all describe the perched bird rather
+       than the spread bind pose.
+       BY NAME, NEVER animations[0] — REPLAT P5c, and this was a real defect rather than a tidy-up.
+       Astra's package puts the 22.5 s legacy source sequence first and says in its own manifest not
+       to select it automatically; taking it anyway measured the scale and the ground offset off a
+       half-open-winged frame and sank the bird to mid-body in the ground. `restClip` names the clip
+       and `restT` survives only as the fallback for a legacy asset that has no named rest. */
+    const restClip=(B.restClip&&(gltf.animations||[]).find(a=>a.name===B.restClip))||null;
+    if(restClip){
+      const mx=new THREE.AnimationMixer(root);
+      mx.clipAction(restClip).play(); mx.setTime(0);
+      K.G.bird.restClip=restClip.name;
+      root.updateMatrixWorld(true);
+    } else if(gltf.animations&&gltf.animations.length&&B.restT>0){
       const mx=new THREE.AnimationMixer(root);
       mx.clipAction(gltf.animations[0]).play();
       mx.setTime(Math.min(B.restT,gltf.animations[0].duration));
+      K.G.bird.restClip='animations[0]@'+B.restT;
       /* NO stopAllAction() HERE — it resets every track and puts the bind pose straight back, which
          is exactly what the first cut did: the clip was evaluated, then thrown away, and the box
          came back byte-identical to the spread pose. The mixer is simply dropped; the bones keep
          the values it wrote. */
       root.updateMatrixWorld(true);
+    } else if(B.restClip){
+      K.G.bird.restWhy='the named rest clip '+B.restClip+' is not in this file';
     }
     root.updateMatrixWorld(true);
     /* REGIONS AND RECOLOUR, once per bird because SkeletonUtils.clone gives each its own geometry
@@ -324,9 +357,56 @@ export async function installBird(K){
        writes still lands on it — but its geometry is hidden. Nothing about update() changes. */
     kea.body.visible=false;
     if(kea.shadowM)kea.shadowM.visible=true;
-    /* props are carried on the HEAD, so they need the model's head, not the hidden one */
-    kea.headAttach=new THREE.Object3D(); bones.head.add(kea.headAttach);
-    kea.headAttach.scale.setScalar(1/ (s*gScale) * gScale);   // undo the model scale for props
+    /* PROPS ARE CARRIED ON THE BILL, NOT IN THE MIDDLE OF THE SKULL — REPLAT P5c. They used to
+       hang off the head bone's ORIGIN because that was the only socket the rig had. Astra's
+       package supplies a real one: BEAK_GRIP.json and CARRY_ATTACHMENT.json both name node 41,
+       `cockatoo_Bone047_bone_08`, and give a point on it in SOURCE units. The point is divided by
+       the model scale on the way in, exactly as CARRY_ATTACHMENT.json's note instructs
+       ("retain your normal bird asset scale above both").
+       IT FALLS BACK TO THE HEAD, because a legacy asset without that bone must still carry things. */
+    kea.headAttach=new THREE.Object3D();
+    { const sock=B.billSocket, host=(sock&&bones.bill)||bones.head;
+      host.add(kea.headAttach);
+      kea.headAttach.scale.setScalar(1/ (s*gScale) * gScale);   // undo the model scale for props
+      if(sock&&bones.bill)kea.headAttach.position.set(sock.x,sock.y,sock.z);
+      K.G.bird.carrySocket=(sock&&bones.bill)?'bill':'head'; }
+    /* ---- THE MIXER — REPLAT P5c ----
+       ONE PER BIRD, because SkeletonUtils.clone gave this bird its own skeleton and a shared
+       mixer would pose two birds as one — the same reason the clone exists at all.
+       WHAT IT IS ALLOWED TO OWN is `KEABIRD.clipOwns`, and rigCommit reads that same set to know
+       what NOT to write. One list, two readers, so the two halves of the ownership rule cannot
+       drift apart.
+       THE MORPH NEEDS NO CODE HERE. Every clip carries its own `Object_168.morphTargetInfluences`
+       track and the mixer binds it through the clone by name — measured: flight_glide drives the
+       weight to 1 and walk_loop to 0, with nothing in this file touching it. That is the package's
+       "one owner for the weight" contract met by doing nothing, which is the best way to meet it. */
+    if((gltf.animations||[]).length&&B.clips){
+      const mixer=new THREE.AnimationMixer(root), act={};
+      for(const c of gltf.animations){
+        const spec=B.clips[c.name]; if(!spec)continue;      // Animation_01 is not in the table
+        const a=mixer.clipAction(c);
+        if(spec.loop==='held'||spec.loop==='once'){ a.setLoop(THREE.LoopOnce,1); a.clampWhenFinished=true; }
+        else a.setLoop(THREE.LoopRepeat,Infinity);
+        act[c.name]=a;
+      }
+      const owns=new Set(B.clipOwns||[]);
+      kea._anim={ mixer, act, owns, cur:null, tearTail:0, seen:null,
+        play(name,fade){ const nx=act[name]; if(!nx||this.cur===name)return;
+          nx.enabled=true; nx.setEffectiveWeight(1); nx.setEffectiveTimeScale(1); nx.reset().play();
+          if(this.cur&&act[this.cur])act[this.cur].crossFadeTo(nx,fade||0.18,false);
+          this.cur=name; this.seen=null; },
+        /* EVENTS ARE EDGES, NOT TIMES. glTF players emit nothing, and beak_tear's time is driven
+           BACKWARDS from tear progress, so it can stall, creep or jump; a test of "are we near
+           1.05" would fire the grip every frame the player paused there. Each event fires once per
+           pass and re-arms when the clip restarts. */
+        fire(k,t){ const E=B.tearEvents; if(!E)return;
+          const seen=this.seen||(this.seen={});
+          const hit=(nm,at)=>{ if(t>=at&&!seen[nm+at]){ seen[nm+at]=1; keaBeat(K,k,nm,at); } };
+          hit('beak_grip',E.grip);
+          for(const r of (E.regrip||[]))hit('beak_regrip',r);
+          hit('tear_impulse',E.impulse); hit('beak_release',E.release); } };
+      K.G.bird.clips=Object.keys(act).length;
+    }
     K.G.bird.birds++; K.G.bird.bones=Object.keys(bones).length;
     return true;
   };

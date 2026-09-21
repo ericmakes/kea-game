@@ -6987,7 +6987,13 @@ C.section('REPLAT P5b: the rig adapter');
      right's — the right runs _076/_077 and the left runs _092/_00, numbered in creation order —
      so two guessed names shipped and the bind refused the whole model. Parsed straight out of the
      GLB here, so a rename or a re-export cannot quietly un-bind the bird. */
-  { const f=pathx.join(ROOT,'assets/models',pathx.basename(B.url));
+  /* THE URL IS A PATH NOW, NOT A BASENAME. It used to be `models/kea_bill.glb` and this resolved
+     it with pathx.basename, which was fine until the recipe pointed into a subdirectory — the
+     approved package lives at models/astra_incoming/approved/. A basename lookup would have gone
+     hunting for assets/models/kea_animated.glb, not found it, and reported "the model file the
+     recipe names is NOT in the tree" about a file that is. Resolved against assets/ the way the
+     browser resolves it. */
+  { const f=pathx.join(ROOT,'assets',B.url);
     ok(fsx.existsSync(f),'the model file the recipe names is in the tree ('+B.url+')');
     if(fsx.existsSync(f)){
       const buf=fsx.readFileSync(f);
@@ -7120,8 +7126,21 @@ C.section('REPLAT P5b: the rig adapter');
      the jaw sign could flip, the wing-open gate could be deleted, the shading could go back to the
      floor-clamped ratio that dimmed the bird to mud, and nothing would have gone red. Proof in the
      same breath as the change is the law and this pass did not have it. */
-  { const P=B.plume, bsrc=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
-    ok(!!P,'there is a plumage palette (KEABIRD.plume)');
+  /* THE PALETTE IS RETIRED FROM THE PIPELINE AND KEPT AS A RECIPE — REPLAT P5c, 2026-09-21.
+     Everything in this block and the next still holds, and every one of these rows still earns its
+     keep, but what they are ABOUT has changed and saying so is the honest thing. keaRecolour was
+     written for an UNPAINTED black cockatoo. Astra's approved character arrives painted, and
+     running the palette over it washed the head to cream and flattened the folded wing to a green
+     slab — so `KEABIRD.plume` is null and the recolour does not run for the shipped asset.
+     THE VALUES ARE NOT DELETED, because they are three sessions of plate sampling and they are the
+     recipe for the next unpainted bird this project loads. They live on `plumeLegacy`, and these
+     assertions read them there. Two rows below assert the RETIREMENT itself, so the null cannot be
+     undone by accident. */
+  { const P=B.plumeLegacy, bsrc=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
+    ok(B.plume===null,'the recolour is OFF for the approved asset — it ships its own paint ('+
+       JSON.stringify(B.plume)+')');
+    ok(!!P,'and the sampled palette is KEPT, under plumeLegacy, as the recipe for the next '+
+       'unpainted bird ('+Object.keys(P||{}).length+' keys)');
 
     /* (i) THE BILL RESTS SHUT, AND THE SIGN IS THE WHOLE POINT. Swept and measured on the posed
        bird as the angle between the mandibles' length axes: +0.6 gives 6.8 degrees, 0 gives 35.5,
@@ -7131,6 +7150,13 @@ C.section('REPLAT P5b: the rig adapter');
        'negative forces a 70 degree gape ('+P.jawShut+')');
     ok(/jaw\.rotation\.x \+ \(B\.plume\?B\.plume\.jawShut:0\)/.test(code),
        'and it is ADDED to what the game asks, so the beak still opens from a closed rest');
+    /* AND IT CONTRIBUTES NOTHING NOW, WHICH IS CORRECT RATHER THAN BROKEN. jawShut existed to
+       close a bill the OLD asset held open in its bind pose. The approved asset's rest clip closes
+       it already, so with plume null the guard takes the zero branch and the rest is the rigger's.
+       Asserted because "a correction that is now a no-op" is exactly the kind of thing a later
+       reader deletes as dead, and it is not dead — it is the legacy asset's correction. */
+    ok(B.plume===null,'and with the palette off it adds ZERO — the approved rest closes the bill '+
+       'without help, and jawShut stays for the legacy asset');
 
     /* (ii) A KEA SHOWS NO RED UNTIL IT OPENS. Both the coverts and the barred underside live under
        a folded wing, so both are gated on the wing's own open state. Measured on the render: 0 of
@@ -7204,7 +7230,7 @@ C.section('REPLAT P5b: the rig adapter');
   /* ---- (6c) THE P5e KEA PASS, EACH CHANGE ASSERTED ----
      P5E.md's own constraint: "Every look fix ships with its assertion in the same commit. P5d2
      proved what happens otherwise: seven fixes, seven green sabotages." */
-  { const P=B.plume, bsrc=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
+  { const P=B.plumeLegacy, bsrc=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
     const led=fsx.readFileSync(pathx.join(ROOT,'assets/LICENCES.md'),'utf8');
     const ch=(h)=>({r:(h>>16)&255,g:(h>>8)&255,b:h&255});
 
@@ -7212,11 +7238,17 @@ C.section('REPLAT P5b: the rig adapter');
        the RECIPE must point at the warped file, and the file must exist and be in the ledger.
        The warp's measured outcome (culmen:head 0.793 -> 1.268 against the plate's 1.27) is
        recorded in LICENCES.md beside the md5, which is the auditable place for it. */
-    ok(/kea_bill\.glb/.test(B.url),'the recipe points at the reshaped-bill model ('+B.url+')');
+    /* THE RECIPE POINTS AT THE APPROVED CHARACTER NOW, and kea_bill.glb is one link back in the
+       chain rather than the shipped file. Both claims are asserted, because the chain is what the
+       CC-BY attribution rests on: the shipped file must be the approved one, AND the link it was
+       derived through must still be in the tree with its ledger row. */
+    ok(/approved\/kea_animated\.glb/.test(B.url),
+       'the recipe points at the approved animated character ('+B.url+')');
+    ok(led.indexOf('models/astra_incoming/approved/kea_animated.glb')>0,
+       'with a ledger row, as CC-BY requires');
     { const f=pathx.join(ROOT,'assets/models','kea_bill.glb');
-      ok(fsx.existsSync(f),'and that file is in the tree');
-      ok(led.indexOf('models/kea_bill.glb')>0,'with a ledger row naming the change, as CC-BY '+
-         'requires'); }
+      ok(fsx.existsSync(f),'and the reshaped-bill link is still in the tree to re-derive from');
+      ok(led.indexOf('models/kea_bill.glb')>0,'with its own ledger row naming that change'); }
 
     /* (ii) THE VALUE LIFT. The plates run 0.46 to 0.70 and centre near 0.52; the P5d2 palette sat
        at 0.486 with a shading FLOOR of 0.62 that cost a fifth of it on lit surfaces and far more in
@@ -7279,6 +7311,170 @@ C.section('REPLAT P5b: the rig adapter');
     ok(P.openLo>0,'and there is still no red until the wing opens');
     ok(!/scallop/i.test(bsrc),'and no scalloping is faked — P5E.md puts it outside this scope and '+
        'TODO 84 carries it'); }
+
+  /* ---- (6d) REPLAT P5c: THE CLIPS OWN THE WINGS, AND THE OWNERSHIP IS DATA ----
+     Astra's ten clips each write ALL 101 joints and rigCommit writes 15 of them every frame.
+     EXPORT_CHANGES.md says integration must choose one owner per bone; this block asserts that the
+     choice was made, that it is made in ONE place, and that the two halves of it agree. */
+  { const owns=B.clipOwns||[], clips=B.clips||{};
+    const RIGKEYS=['body','neck','head','jaw','tail','humR','ulnaR','metaR','humL','ulnaL','metaL',
+                   'femR','tibR','femL','tibL'];
+    ok(Array.isArray(owns)&&owns.length>0,'the clips are given a bone set to own ('+owns.length+')');
+    ok(owns.every(k=>RIGKEYS.includes(k)),'and every bone in it is one rigCommit could write — a '+
+       'name that is not a rigCommit key would mask nothing and read as protection ('+
+       owns.filter(k=>!RIGKEYS.includes(k)).join(',')+')');
+    /* THE FOUR THAT MUST NOT BE OWNED, named individually rather than counted. The game's whole
+       character is in these: the look-at, the peck, the preen, the stun wobble, poseLock. A clip
+       taking the head would take all of it and the loss would be silent. */
+    for(const k of ['head','neck','jaw','body'])
+      ok(!owns.includes(k),'rigCommit keeps the '+k+' — the clips must never own it');
+    for(const k of ['humL','humR','ulnaL','ulnaR','metaL','metaR'])
+      ok(owns.includes(k),'and the clips own the '+k+', because the procedural open term cannot '+
+         'make a flight pose on this skeleton');
+    ok(owns.includes('tail')&&owns.includes('femL')&&owns.includes('femR'),
+       'along with the tail and the legs, as Eric specified');
+    /* ONE LIST, TWO READERS. The mask in rigCommit and the mixer in bird.mjs both read clipOwns.
+       A second copy of the set is how the two halves drift apart three sessions later. */
+    ok(/const owned=\(this\._anim&&this\._anim\.owns\)\|\|null;/.test(code),
+       'rigCommit reads the owned set off the live mixer rather than keeping its own copy');
+    ok(/if\(owned&&owned\.has\(key\)\)return;/.test(code),
+       'and it SKIPS an owned key rather than writing and being overwritten — keaRigApply sets an '+
+       'absolute quaternion from the rest, so writing it would wipe the clip every frame');
+    ok(/if\(this\._anim\)keaAnimDrive\(this,dt,spd,inp\);\s*\n\s*if\(this\._model\)this\.rigCommit\(\);/.test(code),
+       'and the mixer runs BEFORE the commit, which is what makes the order the ownership rule');
+    const bsrc2=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
+    ok(/owns=new Set\(B\.clipOwns\|\|\[\]\)/.test(bsrc2),'and the mixer owns exactly that set');
+
+    /* ---- AND THE COMMIT RUNS ON EVERY PATH, WHICH IS A BUG THIS PIECE FOUND AND FIXED ----
+       animatePose has early returns — a bird mid-TUG poses itself and returns, so does one
+       mid-recoil — and the model tier used to be wired at the BOTTOM of that function, after
+       them. So for the whole of a tug and the whole of the snap-back, rigCommit never ran: a
+       loaded model froze in its last pose while the primitive handles moved underneath it. It was
+       invisible because the model had never been switched on. The milestone run found it in one
+       frame: the bird sat in watch_idle while the tear it was pulling ticked to 0.48.
+       ASSERTED AS A SHAPE, not as a string of statements: the wrapper must contain no `return`,
+       because the whole point is that nothing can skip the commit. */
+    { const m=code.match(/animate\(dt,spd,inp\)\{([\s\S]*?)\n  \}/);
+      ok(!!m,'animate() is a wrapper that can be read');
+      const body=m?m[1]:'';
+      ok(/this\.animatePose\(dt,spd,inp\);/.test(body),'it runs the pose');
+      ok(/keaAnimDrive\(this,dt,spd,inp\);/.test(body),'then drives the mixer');
+      ok(/this\.rigCommit\(\);/.test(body),'then commits');
+      ok(!/return/.test(body),'and it contains NO early return, so no branch of the pose can skip '+
+         'the commit the way the tug branch used to');
+      const pose=code.match(/animatePose\(dt,spd,inp\)\{([\s\S]*?)\n  \}\n/);
+      ok(!!pose&&/return;/.test(pose?pose[1]:''),
+         'while animatePose still has the early returns that made this necessary — if they ever '+
+         'go away this guard is still correct, but the reason for it should be re-read'); } }
+
+  /* ---- (6e) WHICH CLIP FOR WHICH STATE, DRIVEN RATHER THAN READ ----
+     keaAnimState is exported precisely so this can be exercised without a browser or 32 MB of
+     GLB. Eight states, each asserted by name. */
+  { const st=(o,spd,inp)=>X.keaAnimState(Object.assign(
+      {tug:null,grounded:true,held:null,flapDrive:0},o),spd,inp||{});
+    ok(st({},0)==='watch_idle','standing still is the alert ground idle');
+    ok(st({},1)==='walk_loop','walking is the walk loop');
+    ok(st({held:{}},1)==='carry_walk','walking with something in the beak is the CARRY walk');
+    ok(st({held:{}},0)==='carry_idle','and standing with it is the carry idle');
+    ok(st({grounded:false},1)==='flight_glide','airborne and not flapping is the glide');
+    ok(st({grounded:false,flapDrive:1},1)==='flight_loop','flapping is the powered wingbeat');
+    ok(st({grounded:false},1,{l:1})==='flight_bank_left','steering left in the air banks left');
+    ok(st({grounded:false},1,{r:1})==='flight_bank_right','and right banks right');
+    ok(st({tug:{progress:0,need:1}},0)==='beak_tear','and a tug outranks everything, because it '+
+       'is the only state with authored events');
+    /* THE THRESHOLD IS A THRESHOLD, not a truthiness test: a bird drifting at 0.01 throttle is
+       standing, and a walk cycle on a bird that is not moving is the classic foot-skate. */
+    ok(st({},0.04)==='watch_idle'&&st({},0.06)==='walk_loop',
+       'and the moving test has a real deadband rather than testing for non-zero'); }
+
+  /* ---- (6f) THE TEAR DRIVES ITS OWN CLIP, AND THE EVENTS ARE EDGES ----
+     beak_tear is the one clip whose time is not wall-clock. Driven here through the REAL
+     keaAnimDrive against a recording stand-in for the mixer, so what is measured is the shipped
+     mapping and not a copy of it. */
+  { const T=B.tearEvents;
+    ok(!!T&&T.grip<T.impulse&&T.impulse<T.release,
+       'the authored event times are ordered ('+JSON.stringify(T)+')');
+    const mk=()=>{ const fired=[], act={};
+      for(const n of Object.keys(B.clips))act[n]={paused:false,time:0,rate:1,
+        setEffectiveTimeScale(v){this.rate=v;}};
+      return {fired, A:{mixer:{update(){}}, act, owns:new Set(B.clipOwns), cur:null, tearTail:0,
+        seen:null, play(n){ this.cur=n; }, fire(k,t){ fired.push(+t.toFixed(3)); }}}; };
+    /* the time map: no progress sits at the grip, full progress sits at the impulse */
+    { const {A}=mk(), k={_anim:A,tug:{progress:0,need:1.6},grounded:true,held:null,flapDrive:0};
+      X.keaAnimDrive(k,1/60,0,{});
+      ok(A.cur==='beak_tear','a tug selects beak_tear');
+      ok(Math.abs(A.act.beak_tear.time-T.grip)<1e-6,
+         'and no progress holds the clip AT the grip, not at zero ('+A.act.beak_tear.time+')');
+      ok(A.act.beak_tear.paused===true,'with the clip paused, because the tear owns its clock'); }
+    { const {A}=mk(), k={_anim:A,tug:{progress:1.6,need:1.6},grounded:true,held:null,flapDrive:0};
+      X.keaAnimDrive(k,1/60,0,{});
+      ok(Math.abs(A.act.beak_tear.time-T.impulse)<1e-6,
+         'a completed tear lands exactly on tear_impulse ('+A.act.beak_tear.time+')'); }
+    { const {A}=mk(), k={_anim:A,tug:{progress:0.8,need:1.6},grounded:true,held:null,flapDrive:0};
+      X.keaAnimDrive(k,1/60,0,{});
+      const mid=T.grip+0.5*(T.impulse-T.grip);
+      ok(Math.abs(A.act.beak_tear.time-mid)<1e-6,'and half a tear is half way between them ('+
+         A.act.beak_tear.time.toFixed(3)+' vs '+mid.toFixed(3)+')'); }
+    /* THE RELEASE IS A TAIL ON ITS OWN CLOCK, because once the hold ends there is no progress
+       left to drive it. Let go and the clip must walk from the impulse to the release and then
+       hand the bird back to an ordinary state. */
+    { const {A}=mk(), k={_anim:A,tug:{progress:1.6,need:1.6},grounded:true,held:null,flapDrive:0};
+      X.keaAnimDrive(k,1/60,0,{});
+      k.tug=null;
+      X.keaAnimDrive(k,0.2,0,{});
+      ok(A.cur==='beak_tear','letting go does not cut the clip off mid-pull');
+      ok(A.act.beak_tear.time>T.impulse,'it walks on past the impulse ('+
+         A.act.beak_tear.time.toFixed(3)+')');
+      X.keaAnimDrive(k,0.4,0,{});
+      ok(A.cur==='watch_idle','and when the tail is spent the bird goes back to an ordinary state'); }
+    /* AND THE STATE AFTER A TEAR IS THE CARRY, which is the whole milestone in one row: the tear
+       spawns a prop, the bird picks it up, and the clip that plays is the one for a full beak. */
+    { const {A}=mk(), k={_anim:A,tug:null,grounded:true,held:{name:'muesli bar'},flapDrive:0};
+      X.keaAnimDrive(k,1/60,1,{});
+      ok(A.cur==='carry_walk','walking away from a finished tear with the prize plays carry_walk'); }
+    /* the walk rate rises with the throttle rather than being pinned */
+    { const {A}=mk(), k={_anim:A,tug:null,grounded:true,held:null,flapDrive:0};
+      X.keaAnimDrive(k,1/60,1,{});   const fast=A.act.walk_loop.rate;
+      A.cur=null; X.keaAnimDrive(k,1/60,0.2,{}); const slow=A.act.walk_loop.rate;
+      ok(fast>slow&&slow>0,'the walk plays faster at full throttle than at a crawl ('+
+         slow.toFixed(2)+' -> '+fast.toFixed(2)+')'); } }
+
+  /* ---- (6g) THE ASSET ITSELF ANSWERS THE MORPH AND THE SOCKET ----
+     Read out of the shipped GLB rather than out of the paperwork. */
+  { const f=pathx.join(ROOT,'assets',B.url);
+    if(fsx.existsSync(f)){
+      const buf=fsx.readFileSync(f);
+      const j=JSON.parse(buf.slice(20,20+buf.readUInt32LE(12)).toString('utf8'));
+      const names=(j.animations||[]).map(a=>a.name);
+      ok(names.indexOf(B.restClip)>=0,'the named rest clip is in the file ('+B.restClip+')');
+      ok(names[0]!==B.restClip,'and it is NOT animations[0] — which is exactly why the loader must '+
+         'ask for it by name ('+names[0]+' is first)');
+      for(const n of Object.keys(B.clips))
+        ok(names.indexOf(n)>=0,'the clip table names a clip the file actually has ('+n+')');
+      /* THE MORPH IS THE CLIP'S, AND THE FILE PROVES IT: every flight clip keys the weight to 1
+         and every ground clip keys it to 0, so "the weight follows the clip" needs no code at all
+         — which is the cleanest possible way to have exactly one owner of it. */
+      const prim=j.meshes[0].primitives[0];
+      ok((prim.targets||[]).length===1,'the mesh carries exactly one morph target');
+      ok(/flight_wing_release/.test(JSON.stringify(j.meshes[0].extras||{})),
+         'and it is the wing release, by name');
+      /* and the socket the carry hangs off is a real joint in this file */
+      const joints=new Set((j.skins&&j.skins[0]?j.skins[0].joints:[]).map(i=>j.nodes[i].name));
+      ok(joints.has(B.bones.bill),'the bill socket names a real joint ('+B.bones.bill+')');
+      const sk2=B.billSocket;
+      ok(sk2&&isFinite(sk2.x)&&isFinite(sk2.y)&&isFinite(sk2.z),
+         'and the carry point on it is a finite point in source units ('+JSON.stringify(sk2)+')'); }
+    const bsrc3=fsx.readFileSync(pathx.join(ROOT,'src/bird.mjs'),'utf8');
+    ok(/\.find\(a=>a\.name===B\.restClip\)/.test(bsrc3),
+       'the loader selects the rest clip BY NAME');
+    ok(!/mx\.clipAction\(gltf\.animations\[0\]\)\.play\(\);\s*\n\s*mx\.setTime\(Math\.min\(B\.restT,gltf\.animations\[0\]\.duration\)\);\s*\n\s*\/\* NO stopAllAction/.test(bsrc3)||/restClip/.test(bsrc3),
+       'and animations[0] survives only as the LEGACY fallback, never as the first choice');
+    /* NOTHING OUTSIDE THE MIXER WRITES THE WEIGHT. One owner, and the way to keep it one is that
+       no other line in either file assigns it. */
+    ok(!/morphTargetInfluences\[0\]\s*=/.test(bsrc3),
+       'and no line in bird.mjs assigns the morph weight — the mixer is its only owner');
+    ok(!/morphTargetInfluences/.test(code),
+       'nor does anything in game.mjs touch it'); }
 
   /* ---- (7) THE PRIMITIVE BIRD IS STILL THE ONE THAT SHIPS ----
      Everything above is inert until Eric flips KEABIRD.model. The handles the 80 writes use must

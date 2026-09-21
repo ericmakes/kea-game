@@ -1,0 +1,107 @@
+{
+  "target": {
+    "label": "UNZIP THE UNATTENDED PACK",
+    "x": 41.4,
+    "y": 0.7,
+    "z": -38.8
+  },
+  "shots": [
+    {
+      "name": "1_walk",
+      "note": "mid-stride on the real forward key",
+      "clip": "walk_loop",
+      "tug": false,
+      "prog": null,
+      "held": null,
+      "beats": []
+    },
+    {
+      "name": "2_grip",
+      "note": "the grab key goes down, beak_grip fires",
+      "clip": "beak_tear",
+      "tug": true,
+      "prog": 0.78,
+      "held": null,
+      "beats": [
+        "beak_grip",
+        "beak_regrip"
+      ]
+    },
+    {
+      "name": "3_pull",
+      "note": "mid-pull, clip time driven by tear progress",
+      "clip": "beak_tear",
+      "tug": false,
+      "prog": null,
+      "held": null,
+      "beats": [
+        "beak_grip",
+        "beak_regrip",
+        "beak_regrip",
+        "tear_impulse"
+      ]
+    },
+    {
+      "name": "4_detach",
+      "note": "the tear completes — tear_impulse",
+      "clip": "watch_idle",
+      "tug": false,
+      "prog": null,
+      "held": null,
+      "beats": [
+        "beak_grip",
+        "beak_regrip",
+        "beak_regrip",
+        "tear_impulse",
+        "beak_release"
+      ]
+    },
+    {
+      "name": "5_carry",
+      "note": "walking off with the prize",
+      "clip": "carry_walk",
+      "tug": false,
+      "prog": null,
+      "held": "muesli bar",
+      "beats": [
+        "beak_grip",
+        "beak_regrip",
+        "beak_regrip",
+        "tear_impulse",
+        "beak_release"
+      ]
+    }
+  ],
+  "beats": [
+    {
+      "idx": 0,
+      "name": "beak_grip",
+      "at": 1.05,
+      "t": 2.484
+    },
+    {
+      "idx": 0,
+      "name": "beak_regrip",
+      "at": 1.62,
+      "t": 3.017
+    },
+    {
+      "idx": 0,
+      "name": "beak_regrip",
+      "at": 2.05,
+      "t": 3.451
+    },
+    {
+      "idx": 0,
+      "name": "tear_impulse",
+      "at": 2.9,
+      "t": 4.25
+    },
+    {
+      "idx": 0,
+      "name": "beak_release",
+      "at": 3.35,
+      "t": 4.7
+    }
+  ]
+}
