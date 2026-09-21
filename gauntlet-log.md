@@ -5719,3 +5719,98 @@ frames; every ski-field subject box is 0.9999 or better.
 and pxdiff's churn table, which is calibrated to 2026-09-03 and has no measured band at all for 15
 pinned vantages. A whole-set re-pin is the natural moment to redo that table; it is a piece of its
 own and was not smuggled into this one.
+
+---
+
+# SESSION 38 — 2026-09-21 — THE APPROVED BIRD: ADOPTED ON PAPER, ASSESSED IN THE GAME, NOT WIRED
+
+Eric approved a character and handed over Astra's package. This session did two things and
+deliberately not a third: it adopted the package as the bird of record in the ledger and in
+BIRD_STATE.md, and it measured what wiring it would actually cost. **No game code was changed.**
+`KEABIRD.model` is still false, the shipped url is still `kea_bill.glb`, and the bird stays off
+until Eric judges it in-game.
+
+## THE PAPERWORK CHECKED OUT, ALL OF IT
+
+Re-verified rather than taken on trust: both GLBs match their recorded SHA256, MD5 and byte count;
+`PACKAGE_HASHES.json` verifies **89 of 89** files with nothing missing and nothing unlisted but the
+manifest itself; all seven files in `APPROVED_CHARACTER_LOCK.json` match. Structurally both files
+are 4,927 triangles, 3,013 vertices and 101 joints with the original `cockatoo_*` names **in
+identical order** — so the existing `KEABIRD.bones` map binds this asset with no edit at all. The
+two files share byte-identical POSITION, NORMAL, UV, JOINTS, WEIGHTS and index buffers, the
+approved POSITION/NORMAL hash to the locked `.bin` files, and `glbdiff.mjs` against the 3q source
+reports **0 accessors changed, 0 images changed**. The morph moves 532 of 3,013 rows, matching
+`MORPH_VERTEX_SCOPE.csv` row for row.
+
+## THREE DEFECTS, AND NOT ONE OF THEM IS THE ASSET'S
+
+**1. THE LOADER PICKS THE WRONG CLIP, AND EVERYTHING DOWNSTREAM INHERITS IT.** `bird.mjs` takes its
+rest from `gltf.animations[0]` at `restT` 5.49 s. For this package animations[0] is `Animation_01`,
+the 22.5 s legacy sequence the manifest says by name not to select automatically. Scale AND the
+ground offset are measured from that pose, so a naive url swap photographs a bird **sunk to
+mid-body with one wing half-open**. There is a frame of it. The fix is one line — select
+`approved_idle` by name — but it must also re-measure the box, because `posedUnits` came back
+**54.44** against the recipe's recorded 96.5.
+
+**2. THE PROCEDURAL `open` TERM FOLDS THE WING INSTEAD OF OPENING IT.** This is the finding worth
+carrying. Measured wrist-to-wrist on the skeleton, through the game's own `keaRigApply`:
+
+    authored flight_glide     55.57        folded rest (approved_idle)    27.70
+    procedural open 0.00      28.10        procedural open 1.00           19.61
+
+The flight pose the game asks for is **tighter than the folded rest**. Swept across every axis and
+both signs, the best a single-scalar `open` reaches is 35.62, and driving it three times harder
+makes it worse. **It is pre-existing**: the shipped `kea_bill.glb` does the same thing (27.02 ->
+21.94), which was checked precisely so this would not be filed against the new package. REPLAT P5b
+called this "a genuine loss of articulation" when it distributed one wing joint across three; it is
+worse than a loss, it is inverted. The authored clips are the cure, not the cause.
+
+**3. THE RECOLOUR OVER-PAINTS A BIRD THAT IS ALREADY PAINTED.** `keaRecolour` exists because the
+base was an unpainted black cockatoo. The approved character arrives with the kea paint in its own
+texture — the canonical renders show scalloped olive-brown, a slate hooked bill and an orange eye
+ring. With the recolour ON the head washes to pale cream and the folded wing becomes a flat green
+slab; with `KEABIRD='{"plume":null}'` the asset's own paint comes through and matches the renders.
+The eye-ring geometry the recolour adds is redundant too — this texture paints its own.
+**The canonical renders are what made this attributable in one step**, which is exactly why they
+are pinned in BIRD_STATE.md as the definition of "approved": when the game looks wrong, they say
+whether it is the asset or the engine.
+
+## THE OWNERSHIP QUESTION, ANSWERED WITH NUMBERS
+
+Every clip writes all 101 joints; `rigCommit` writes 15 of them every frame; all 15 are contested
+by all 11 clips. `EXPORT_CHANGES.md` says integration must choose an owner, and the measurement
+above chooses it: **the clips own the wings, because the procedural rig cannot make the shape.**
+
+Recommended split — mixer owns locomotion, flight and carry; `rigCommit` keeps head, neck, jaw and
+body (the look-at, the peck, the preen, the stun, `poseLock`) and has its wing, leg and tail
+channels masked while a clip owns them; the morph weight follows the clip and procedural code never
+touches it; `beak_tear` is a later piece driven by the existing tear.
+
+**THE COST AGAINST THE MISSIONS IS ESSENTIALLY NIL, AND THAT IS MEASURED RATHER THAN HOPED.**
+`interact()` computes from `this.x`, `this.y+0.4*size`, `this.z` — the kea GROUP, never a bone. So
+no bone a mixer moves can shift a mission anchor, a detector range or the seal's twelve hits. The
+only bone-parented gameplay objects in the tree are `kea.headAttach` (carried and worn props) and
+the eye rings; a carried prop following the animated head is what you would want, and the eye rings
+leave with the recolour. What it DOES cost is a whole-set re-pin, because the bird is in every
+frame — and that is Eric's call, which is why the switch stays off.
+
+## THE MORPH UNDER A PROCEDURAL WING POSE, WHICH THE PACKAGE SAID WAS UNCERTIFIED
+
+It is, and now there are numbers. Under the procedural glide pose, against the authored
+`flight_glide` as the only approved reference: at weight 0, **497 of 939** morph-touched faces sit
+under a quarter of their authored area — the bunching the package warns about. At weight 1 that
+falls to **78**. So the morph does release the correction as documented. But it does not rescue the
+pose: mean deviation from the authored flight surface is 30.7 units at weight 0 and 30.4 at weight
+1, essentially unchanged, because the skeleton underneath is wrong (defect 2). **The morph is not a
+substitute for the clip.**
+
+## TWO INSTRUMENTS, KEPT
+
+`gauntlet/verify/birdclips.mjs` — clip inventory, bone-ownership overlap, and the morph measured
+under a procedural pose against the authored one. `gauntlet/verify/birdpose.mjs` — photographs each
+clip through the game's OWN loader, with `NOPOSE=1` for the naive-swap control and `PLUME=off` to
+see the asset's own paint. Both re-runnable when the bird is wired.
+
+## THE LOCK
+
+Taken at the start, released as the final act.

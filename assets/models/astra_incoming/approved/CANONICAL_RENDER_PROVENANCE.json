@@ -1,0 +1,61 @@
+{
+  "date": "2026-09-21",
+  "renderer": "tools/render_cached.py CPU skinned triangle rasterizer, embedded images, no generated imagery",
+  "approvedGlbSha256": "149e7e3860c864a3fc208c5a8121c62dc1693c472640be256b367c718f8ebed1",
+  "animatedGlbSha256": "4efcc6daa3471d7c339fe7f0a23bddfec41e8f84e97dc884398ee16c52d3117a",
+  "views": {
+    "head": {
+      "file": "canonical_renders/head.png",
+      "model": "kea_approved.glb",
+      "clip": "approved_idle",
+      "time": 0,
+      "camera": [
+        1,
+        0.08,
+        0.7
+      ],
+      "target": [
+        0,
+        43,
+        4
+      ],
+      "span": 28
+    },
+    "side": {
+      "file": "canonical_renders/side.png",
+      "model": "kea_approved.glb",
+      "clip": "approved_idle",
+      "time": 0,
+      "camera": [
+        1,
+        0.08,
+        0
+      ]
+    },
+    "folded_rear": {
+      "file": "canonical_renders/folded_rear.png",
+      "model": "kea_approved.glb",
+      "clip": "approved_idle",
+      "time": 0,
+      "camera": [
+        0.55,
+        0.18,
+        -1
+      ]
+    },
+    "wings_open": {
+      "file": "canonical_renders/wings_open.png",
+      "model": "kea_animated.glb",
+      "clip": "flight_glide",
+      "time": 0,
+      "morphWeight": 1,
+      "camera": [
+        0,
+        -0.55,
+        1
+      ]
+    }
+  },
+  "visuallyReviewed": true,
+  "limits": "Not camera-identical recreations of historical game screenshots; new repeatable canonical views. Open view is the animated release state."
+}

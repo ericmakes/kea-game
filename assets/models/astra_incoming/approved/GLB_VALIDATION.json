@@ -1,0 +1,32 @@
+{
+  "standalone": true,
+  "approvedBasePositionBytesExact": true,
+  "approvedBaseNormalBytesExact": true,
+  "originalNodesExact": true,
+  "originalSkinsExact": true,
+  "originalBinaryPrefixExact": true,
+  "originalAnimationExact": true,
+  "UVAndSkinWeightAccessorBindingsExact": true,
+  "originalIndexAccessorExact": true,
+  "materialsTexturesImagesExact": true,
+  "jointCount": 101,
+  "triangleCount": 4927,
+  "addedClips": [
+    "approved_idle",
+    "walk_loop",
+    "flight_loop",
+    "beak_tear",
+    "flight_glide",
+    "flight_bank_left",
+    "flight_bank_right",
+    "watch_idle",
+    "carry_walk",
+    "carry_idle"
+  ],
+  "newMorphTargets": [
+    "flight_wing_release"
+  ],
+  "morphScope": "Only existing POSITION/NORMAL values; no topology, UV, skin weight or rig changes. Ground base is the exact approved evaluated shape.",
+  "fileSha256": "4efcc6daa3471d7c339fe7f0a23bddfec41e8f84e97dc884398ee16c52d3117a",
+  "flightPositionMaxError": 1.9073486328125e-06
+}

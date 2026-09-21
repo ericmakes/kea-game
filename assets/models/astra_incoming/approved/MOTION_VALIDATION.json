@@ -1,0 +1,100 @@
+{
+  "approvedFilesHashChecks": "PASS",
+  "geometrySculpted": false,
+  "rigDefinitionsModified": false,
+  "clips": [
+    {
+      "name": "walk_loop",
+      "duration": 1.0,
+      "frameCount": 31,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 12.052460466467755,
+      "maximumPlantedFootErrorSourceCoordinates": 1.401041309338299e-06
+    },
+    {
+      "name": "flight_loop",
+      "duration": 0.6,
+      "frameCount": 19,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 21.8218715090582,
+      "maximumPlantedFootErrorSourceCoordinates": null
+    },
+    {
+      "name": "beak_tear",
+      "duration": 4.2,
+      "frameCount": 127,
+      "exactLoopEndpoints": null,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 2.9814814814813886,
+      "maximumPlantedFootErrorSourceCoordinates": 1.806486835978234e-06
+    },
+    {
+      "name": "flight_glide",
+      "duration": 1.0,
+      "frameCount": 31,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 2.9575586669421963e-06,
+      "maximumPlantedFootErrorSourceCoordinates": null
+    },
+    {
+      "name": "flight_bank_left",
+      "duration": 1.0,
+      "frameCount": 31,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 2.9575586669421963e-06,
+      "maximumPlantedFootErrorSourceCoordinates": null
+    },
+    {
+      "name": "flight_bank_right",
+      "duration": 1.0,
+      "frameCount": 31,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 2.9575586669421963e-06,
+      "maximumPlantedFootErrorSourceCoordinates": null
+    },
+    {
+      "name": "watch_idle",
+      "duration": 3.0,
+      "frameCount": 91,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 1.57951040900367,
+      "maximumPlantedFootErrorSourceCoordinates": 2.2780655740098357e-11
+    },
+    {
+      "name": "carry_walk",
+      "duration": 1.0,
+      "frameCount": 31,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 12.052460466467755,
+      "maximumPlantedFootErrorSourceCoordinates": 1.401041309338299e-06
+    },
+    {
+      "name": "carry_idle",
+      "duration": 3.0,
+      "frameCount": 91,
+      "exactLoopEndpoints": true,
+      "allFinite": true,
+      "maxAnimatedScaleDeviation": 0.0,
+      "maximumRotationStepDegreesAt30fps": 0.8986368120587533,
+      "maximumPlantedFootErrorSourceCoordinates": 2.2780655740098357e-11
+    }
+  ],
+  "scope": "Lock hashes, original-data preservation (separate report), sampled rotations/scales/foot constraints. Not an exhaustive animation collision test or live-game test.",
+  "paperPropHasSkin": false,
+  "paperTriangleCount": 10
+}

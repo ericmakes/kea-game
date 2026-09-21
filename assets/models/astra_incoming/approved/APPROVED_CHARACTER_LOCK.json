@@ -1,0 +1,20 @@
+{
+  "status": "USER APPROVED \u2014 LOCKED",
+  "approval": "User approved the bill smoothing and instructed lock it in.",
+  "files": {
+    "wing-rest-correction.mjs": "142c646dad174fedb82ed4df5134f74f6e15f5f4903887562339a0648b88f01e",
+    "kea_motion_shape.json": "0d7ba59d8a4e2cb30bea22c021ff582fe72360bc2e05fe1a67b28ca96d6a8f81",
+    "kea_rest_wing_correction.json": "e409545393eeea723d0c963b58c971e4310cc280e9751051c68d4184900c97c5",
+    "SOURCE_README.md": "c44d72a979baceab47f1205dde196eee4965f70ca4044e475559d2ad9c2125ca",
+    "kea_reference_shape.glb": "d22637bd1725b8cfc64b7eb5d5a8546bfa421985946316eeaacdb7cd0331acb7",
+    "actual_position_1.bin": "97428dd619ff490ad1a905015f11741c847c890a25ce7f03b8711d105a0eb42b",
+    "actual_normal_1.bin": "546635d49ec3d120a09b5bed980632612e1e11a27ee56cd52e8e54de3f8f5939"
+  },
+  "geometry_changes_allowed_in_this_motion_task": false,
+  "rig_definition_changes_allowed": false,
+  "joint_count": 101,
+  "triangle_count": 4927,
+  "original_head_pose_time": 3.5,
+  "new_animation_tracks_allowed": true,
+  "approvedSourceArchiveSha256": "dc8cd600f555fa6d7b614632d34b30d6c6d4b74eade2a1c7226cf9efa2ae809b"
+}

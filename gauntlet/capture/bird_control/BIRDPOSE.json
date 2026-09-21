@@ -1,0 +1,21 @@
+{
+  "glb": "models/astra_incoming/approved/kea_animated.glb",
+  "shots": [
+    {
+      "clip": "approved_idle",
+      "t": 0,
+      "dur": 1,
+      "morph": 0,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 52.38,
+        "scale": 0.013637
+      }
+    }
+  ]
+}

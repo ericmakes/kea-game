@@ -1,0 +1,38 @@
+{
+  "walk_loop": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 1.1538411897049627e-06
+  },
+  "flight_loop": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 5.658225592952704e-06
+  },
+  "beak_tear": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 1.2322729432412416e-06
+  },
+  "flight_glide": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 1.6546891288271581e-06
+  },
+  "flight_bank_left": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 2.7700464855229257e-06
+  },
+  "flight_bank_right": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 1.7250285040404378e-06
+  },
+  "watch_idle": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 5.569244692082975e-07
+  },
+  "carry_walk": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 1.1538411897049627e-06
+  },
+  "carry_idle": {
+    "sampledPoseCount": 4,
+    "maxPositionDifferenceSourceCoordinates": 7.153508931878605e-07
+  }
+}

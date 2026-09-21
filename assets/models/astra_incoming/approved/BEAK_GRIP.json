@@ -1,0 +1,38 @@
+{
+  "glTFNodeIndex": 41,
+  "nodeName": "cockatoo_Bone047_bone_08",
+  "localPosition": [
+    12.964078907285838,
+    0.332733680895668,
+    3.4430543160724394
+  ],
+  "tipVertex": 968,
+  "previewPaperAnchor": [
+    -0.4657877448342411,
+    19.942484659876254,
+    16.57461676659333
+  ],
+  "events": [
+    {
+      "time": 1.05,
+      "name": "beak_grip"
+    },
+    {
+      "time": 1.62,
+      "name": "beak_regrip"
+    },
+    {
+      "time": 2.05,
+      "name": "beak_regrip"
+    },
+    {
+      "time": 2.9,
+      "name": "tear_impulse"
+    },
+    {
+      "time": 3.35,
+      "name": "beak_release"
+    }
+  ],
+  "note": "Preview prop is unrigged and procedurally torn; gameplay physics is not implemented."
+}

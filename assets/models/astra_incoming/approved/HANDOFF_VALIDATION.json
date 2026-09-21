@@ -1,0 +1,102 @@
+{
+  "baseline": "APPROVED_CHARACTER_LOCK.json and exact locked evaluated POSITION/NORMAL arrays; not historical Task 3",
+  "lock_file_hashes_match": {
+    "wing-rest-correction.mjs": true,
+    "kea_motion_shape.json": true,
+    "kea_rest_wing_correction.json": true,
+    "SOURCE_README.md": true,
+    "kea_reference_shape.glb": true,
+    "actual_position_1.bin": true,
+    "actual_normal_1.bin": true
+  },
+  "hashes": {
+    "kea_approved.glb": {
+      "sha256": "149e7e3860c864a3fc208c5a8121c62dc1693c472640be256b367c718f8ebed1",
+      "md5": "1f4c716597fcbee14dfe8dde4665e4b9",
+      "bytes": 29911060
+    },
+    "kea_animated.glb": {
+      "sha256": "4efcc6daa3471d7c339fe7f0a23bddfec41e8f84e97dc884398ee16c52d3117a",
+      "md5": "c5bb3f2764b8962dd7ca2796339547ca",
+      "bytes": 32741172
+    }
+  },
+  "checks": {
+    "101_joints": true,
+    "4927_triangles": true,
+    "approved_positions_match_approved_bytes": true,
+    "approved_normals_match_approved_bytes": true,
+    "approved_original_binary_prefix_exact": true,
+    "approved_nodes_exact": true,
+    "approved_skins_exact": true,
+    "approved_materials_exact": true,
+    "approved_textures_exact": true,
+    "approved_images_exact": true,
+    "approved_samplers_exact": true,
+    "approved_scenes_exact": true,
+    "approved_original_accessors_exact": true,
+    "approved_original_animation_exact": true,
+    "approved_TEXCOORD_0_bytes_exact": true,
+    "approved_JOINTS_0_bytes_exact": true,
+    "approved_WEIGHTS_0_bytes_exact": true,
+    "approved_index_bytes_exact": true,
+    "approved_no_compression": true,
+    "animated_positions_match_approved_bytes": true,
+    "animated_normals_match_approved_bytes": true,
+    "animated_original_binary_prefix_exact": true,
+    "animated_nodes_exact": true,
+    "animated_skins_exact": true,
+    "animated_materials_exact": true,
+    "animated_textures_exact": true,
+    "animated_images_exact": true,
+    "animated_samplers_exact": true,
+    "animated_scenes_exact": true,
+    "animated_original_accessors_exact": true,
+    "animated_original_animation_exact": true,
+    "animated_TEXCOORD_0_bytes_exact": true,
+    "animated_JOINTS_0_bytes_exact": true,
+    "animated_WEIGHTS_0_bytes_exact": true,
+    "animated_index_bytes_exact": true,
+    "animated_no_compression": true,
+    "animated_glb_unchanged_from_recovered_v2": true
+  },
+  "limits": [
+    "No live game or procedural rig test",
+    "No exhaustive animated intersection test",
+    "Canonical wing-open view uses animated flight morph, not static folded base alone"
+  ],
+  "morph": {
+    "name": "flight_wing_release",
+    "position_changed_rows": 532,
+    "normal_changed_rows": 532,
+    "union_rows": 532,
+    "vertex_count": 3013,
+    "partition_bones": {
+      "34": "cockatoo_Metacarpus_l_bone_075",
+      "35": "cockatoo_Ulna_l_bone_074",
+      "36": "cockatoo_Humerus_l_bone_073",
+      "37": "cockatoo_Metacarpus_r_bone_072",
+      "38": "cockatoo_Ulna_r_bone_071",
+      "39": "cockatoo_Humerus_r_bone_070"
+    },
+    "position_max_abs_component": 24.97800636291504,
+    "normal_only_rows_with_zero_wing_partition": 0
+  },
+  "accessors": {
+    "source_count": 293,
+    "approved_count": 901,
+    "animated_count": 3347,
+    "approved_active_position_normal": [
+      293,
+      294
+    ],
+    "animated_active_position_normal": [
+      293,
+      294
+    ],
+    "animated_morph": {
+      "POSITION": 295,
+      "NORMAL": 296
+    }
+  }
+}

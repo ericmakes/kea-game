@@ -1,0 +1,90 @@
+{
+  "sourceSha256": "d22637bd1725b8cfc64b7eb5d5a8546bfa421985946316eeaacdb7cd0331acb7",
+  "sourceModified": false,
+  "jointCount": 101,
+  "triangles": 4927,
+  "accessorsChanged": [],
+  "nodesChanged": [],
+  "originalAnimationsChanged": false,
+  "newAnimationFormat": "External node-index TRS clips; original GLB bytes untouched",
+  "headPose": {
+    "oldRotation": [
+      0.09822532534599304,
+      -0.1382383555173874,
+      -0.5023126006126404,
+      0.8478938937187195
+    ],
+    "approvedRotation": [
+      0.09822532534599304,
+      -0.1382383555173874,
+      -0.5023126006126404,
+      0.8478938937187195
+    ],
+    "originalHeadUpLateralDegrees": -14.923279249107463
+  },
+  "clips": [
+    {
+      "name": "walk_loop",
+      "frames": 31,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    },
+    {
+      "name": "flight_loop",
+      "frames": 19,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    },
+    {
+      "name": "beak_tear",
+      "frames": 127,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": null
+    },
+    {
+      "name": "flight_glide",
+      "frames": 31,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    },
+    {
+      "name": "flight_bank_left",
+      "frames": 31,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    },
+    {
+      "name": "flight_bank_right",
+      "frames": 31,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    },
+    {
+      "name": "watch_idle",
+      "frames": 91,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    },
+    {
+      "name": "carry_walk",
+      "frames": 31,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    },
+    {
+      "name": "carry_idle",
+      "frames": 91,
+      "finite": true,
+      "maximumQuaternionNormError": 7.792817613427871e-08,
+      "exactLoopEndpoint": true
+    }
+  ]
+}

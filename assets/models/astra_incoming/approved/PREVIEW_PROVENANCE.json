@@ -1,0 +1,17 @@
+{
+  "sourceLockedModelSha256": "d22637bd1725b8cfc64b7eb5d5a8546bfa421985946316eeaacdb7cd0331acb7",
+  "approvedShapeSha256": "e409545393eeea723d0c963b58c971e4310cc280e9751051c68d4184900c97c5",
+  "motionClipsSha256": "bd82fc884d32470ff75527c37f599a036dbd12285761f1b665a2ec14483f0e72",
+  "animatedGlbSha256": "4efcc6daa3471d7c339fe7f0a23bddfec41e8f84e97dc884398ee16c52d3117a",
+  "renderType": "Skinned triangle renders; no image generation",
+  "camera": "Fixed three-quarter motion previews; additional front-view glide/bank QA",
+  "paperDemo": "Unrigged procedural mesh, keyed to beak events",
+  "fps": 30,
+  "flightStates": "Actual standalone GLB poses, flight morph at 1, 0.24 s authored blends",
+  "trailerInspected": "Whole-trailer contact sheet plus 6 fps sample of 16\u201320 seconds",
+  "groundReference": "Uploaded Kea - Iconic New Zealand Alpine Parrot.mp4; ranges in GROUND_MOTION_REVIEW.md",
+  "groundReferenceVisuallyInspected": true,
+  "groundBlend": "Exported watch/walk poses blended in place over 0.25 s in preview",
+  "carryDemo": "Unrigged metric ball attached through CARRY_ATTACHMENT.json",
+  "groundMotionRevision": "Nibble/pry, revised walk, watch idle, carry walk/idle"
+}

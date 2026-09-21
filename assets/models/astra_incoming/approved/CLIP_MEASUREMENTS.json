@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Animation_01",
+    "duration": 22.45833396911621,
+    "loop": null,
+    "all_sampler_endpoints_identical": false
+  },
+  {
+    "name": "approved_idle",
+    "duration": 1.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "walk_loop",
+    "duration": 1.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "flight_loop",
+    "duration": 0.6000000238418579,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "beak_tear",
+    "duration": 4.199999809265137,
+    "loop": false,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "flight_glide",
+    "duration": 1.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "flight_bank_left",
+    "duration": 1.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "flight_bank_right",
+    "duration": 1.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "watch_idle",
+    "duration": 3.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "carry_walk",
+    "duration": 1.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  },
+  {
+    "name": "carry_idle",
+    "duration": 3.0,
+    "loop": true,
+    "all_sampler_endpoints_identical": true
+  }
+]

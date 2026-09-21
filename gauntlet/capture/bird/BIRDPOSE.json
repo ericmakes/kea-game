@@ -1,0 +1,325 @@
+{
+  "glb": "models/astra_incoming/approved/kea_animated.glb",
+  "shots": [
+    {
+      "clip": "approved_idle",
+      "t": 0,
+      "dur": 1,
+      "morph": 0,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "walk_loop",
+      "t": 0.25,
+      "dur": 1,
+      "morph": 0,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "flight_loop",
+      "t": 0.15,
+      "dur": 0.6,
+      "morph": 1,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "beak_tear",
+      "t": 1.05,
+      "dur": 4.2,
+      "morph": 0,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "flight_glide",
+      "t": 0,
+      "dur": 1,
+      "morph": 1,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "flight_bank_left",
+      "t": 0,
+      "dur": 1,
+      "morph": 1,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "flight_bank_right",
+      "t": 0,
+      "dur": 1,
+      "morph": 1,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "watch_idle",
+      "t": 0.9,
+      "dur": 3,
+      "morph": 0,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "carry_walk",
+      "t": 0.25,
+      "dur": 1,
+      "morph": 0,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    },
+    {
+      "clip": "carry_idle",
+      "t": 0.9,
+      "dur": 3,
+      "morph": 0,
+      "bones": 101,
+      "bird": {
+        "mode": "model",
+        "url": "models/astra_incoming/approved/kea_animated.glb",
+        "birds": 1,
+        "bones": 17,
+        "regions": {
+          "body": 1013,
+          "near": 209,
+          "foot": 1107,
+          "bill": 200,
+          "crown": 267,
+          "far": 217
+        },
+        "texMean": 0.3432,
+        "eyes": 2,
+        "headExt": [
+          15.7,
+          10.6,
+          15.12
+        ],
+        "eyeR": 1.018,
+        "wingSpanUnits": 26.9,
+        "posedUnits": 54.44,
+        "scale": 0.01312
+      }
+    }
+  ]
+}

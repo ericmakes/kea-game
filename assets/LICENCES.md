@@ -687,6 +687,95 @@ removed; the licensed one lives in `astra_incoming/astra_kea_task1_skin/`.
 
 ---
 
+## THE APPROVED CHARACTER — `models/astra_incoming/approved/`  (2026-09-21)
+
+**ERIC APPROVED THIS CHARACTER, AND IT SUPERSEDES THE THREE DROPS ABOVE AS THE BIRD OF RECORD.**
+The drops above stay licensed and stay in the tree because they are the derivation chain and the
+evidence for it; nothing here re-opens them.
+
+THE CHAIN, END TO END, AND EVERY LINK OF IT IS CC-BY 4.0: Macauley.B's **Rockatoo character** ->
+this project's `kea_base` (crest removed) and `kea_bill` (mandible reshaped) -> Astra's Task 1 /
+Task 1b paint -> Task 3 face geometry -> the "3p" body/wing/tail pass -> the "3q" local face
+refinement, which is `model/kea_reference_shape.glb` plus its correction JSON -> the two standalone
+files below, which BAKE that correction into the mesh arrays. Macauley.B is credited in game, and
+the whole chain carries that requirement.
+
+**AI-GENERATED, SAID PLAINLY.** Every edit from Task 1 onward — the paint, the vertex positions,
+the resting-shape corrections, the wing-release morph and all ten animation clips — was produced by
+**OpenAI GPT-6 Astra** at Eric's direction. No commercial reference mesh or texture atlas was
+incorporated; the TurboSquid kea gallery named in `model/SOURCE_README.md` was a SHAPE REFERENCE
+ONLY and none of its geometry or texture is present.
+
+**THE HASHES WERE RE-VERIFIED IN THIS SESSION, NOT TAKEN ON TRUST.** Both GLBs match their recorded
+SHA256, MD5 and byte count; the package's own `PACKAGE_HASHES.json` verifies **89 of 89** files with
+nothing missing and nothing unlisted; and all seven files in `APPROVED_CHARACTER_LOCK.json` match.
+
+### the approved rest shape — `approved/kea_approved.glb`
+
+| field | value |
+|---|---|
+| what | the 3q source GLB with the locked correction BAKED IN: POSITION and NORMAL appended as accessors 293/294 and the mesh primitive redirected to them, plus a static `approved_idle` clip |
+| licence | **CC-BY 4.0, unchanged** |
+| produced by | **OpenAI GPT-6 Astra**, at Eric's direction — AI-generated geometry corrections and animation |
+| geometry | 101 joints, 3,013 vertices, 4,927 triangles — unchanged from the whole chain |
+| verified here | its POSITION and NORMAL accessor bytes hash to `97428dd6…` and `546635d4…`, which ARE the locked `model/actual_position_1.bin` and `actual_normal_1.bin`. `glbdiff.mjs` against the 3q source reports **0 accessors changed, 0 images changed** — the only JSON change beyond the appended clip is the primitive's POSITION/NORMAL pointer |
+| file | `models/astra_incoming/approved/kea_approved.glb`, 29911060 bytes |
+| md5 | `1f4c716597fcbee14dfe8dde4665e4b9` |
+| sha256 | `149e7e3860c864a3fc208c5a8121c62dc1693c472640be256b367c718f8ebed1` |
+
+<!-- ASSET file=models/astra_incoming/approved/kea_approved.glb md5=1f4c716597fcbee14dfe8dde4665e4b9 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+### the animated character — `approved/kea_animated.glb`
+
+| field | value |
+|---|---|
+| what | the same approved base plus one morph target (`flight_wing_release`) and ten named clips. Byte-for-byte the recovered 11 September motion deliverable; not re-exported for this handoff |
+| licence | **CC-BY 4.0, unchanged** |
+| produced by | **OpenAI GPT-6 Astra**, at Eric's direction — AI-generated morph target and animation |
+| verified here | POSITION, NORMAL, TEXCOORD_0, JOINTS_0, WEIGHTS_0 and the index buffer hash **identically** to `kea_approved.glb`; the joint-name list is identical in name AND order; the morph moves **532 of 3,013** vertex rows, matching `MORPH_VERTEX_SCOPE.csv` row for row |
+| clips | 11 — the legacy `Animation_01` plus `approved_idle`, `walk_loop`, `flight_loop`, `beak_tear`, `flight_glide`, `flight_bank_left`, `flight_bank_right`, `watch_idle`, `carry_walk`, `carry_idle` |
+| file | `models/astra_incoming/approved/kea_animated.glb`, 32741172 bytes |
+| md5 | `c5bb3f2764b8962dd7ca2796339547ca` |
+| sha256 | `4efcc6daa3471d7c339fe7f0a23bddfec41e8f84e97dc884398ee16c52d3117a` |
+
+<!-- ASSET file=models/astra_incoming/approved/kea_animated.glb md5=c5bb3f2764b8962dd7ca2796339547ca attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+### the 3q source shape — `approved/model/kea_reference_shape.glb`
+
+Kept because the two files above are only auditable against it, and because
+`APPROVED_CHARACTER_LOCK.json` names it. **It is NOT the approved shape on its own** — the package
+says so in as many words, and this session confirmed it: the correction lives in the appended
+arrays, not in this file.
+
+| field | value |
+|---|---|
+| licence | **CC-BY 4.0, unchanged** — same chain, same credit |
+| produced by | **OpenAI GPT-6 Astra**, at Eric's direction |
+| file | `models/astra_incoming/approved/model/kea_reference_shape.glb`, 29693180 bytes |
+| md5 | `f27919865ffed56401edf78d68b1d39c` |
+| sha256 | `d22637bd1725b8cfc64b7eb5d5a8546bfa421985946316eeaacdb7cd0331acb7` |
+
+<!-- ASSET file=models/astra_incoming/approved/model/kea_reference_shape.glb md5=f27919865ffed56401edf78d68b1d39c attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
+### the two demonstration fixtures — `approved/carry_ball.glb`, `approved/paper_tear_demo.glb`
+
+**NOT part of the bird and NOT derived from the rockatoo**, which was checked rather than assumed:
+the ball is 60 triangles over 144 vertices and the paper is a 2-triangle quad, both unrigged, both
+with no skin and no animation. They exist to demonstrate the carry attachment and the scripted
+paper tear. The game loads neither. Attribution is not required because no CC-BY material is
+present in them; they are recorded here because REPLAT.md's condition is that no asset lands
+without its licence line, and that applies to a two-triangle quad as much as to a bird.
+
+| file | bytes | md5 |
+|---|---|---|
+| `models/astra_incoming/approved/carry_ball.glb` | 12176 | `fa76b77fd5252d59b1943ac0689ec91c` |
+| `models/astra_incoming/approved/paper_tear_demo.glb` | 5964 | `d52b7ee4ac1d6f3dd7d6f00928e535db` |
+
+<!-- ASSET file=models/astra_incoming/approved/carry_ball.glb md5=fa76b77fd5252d59b1943ac0689ec91c attrib=none author="OpenAI GPT-6 Astra" title="carry demonstration ball" licence="CC0-1.0" -->
+<!-- ASSET file=models/astra_incoming/approved/paper_tear_demo.glb md5=d52b7ee4ac1d6f3dd7d6f00928e535db attrib=none author="OpenAI GPT-6 Astra" title="paper tear demonstration quad" licence="CC0-1.0" -->
+
+---
+
 ### grass cards — `tex/grass_cards.png`  (TODO 82, 2026-09-10)
 
 **THIS ONE IS OURS, and that is the whole point of the row.** Every other file in this ledger is a

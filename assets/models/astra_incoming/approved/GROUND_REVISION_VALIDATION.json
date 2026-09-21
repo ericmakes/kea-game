@@ -1,0 +1,41 @@
+{
+  "approvedGeometryAndAllOriginalAccessorBytesExact": true,
+  "protectedJsonSectionsExact": [
+    "nodes",
+    "skins",
+    "meshes",
+    "materials",
+    "textures",
+    "images"
+  ],
+  "unchangedExistingClips": [
+    "Animation_01",
+    "approved_idle",
+    "flight_loop",
+    "flight_glide",
+    "flight_bank_left",
+    "flight_bank_right"
+  ],
+  "modifiedClips": [
+    "walk_loop",
+    "beak_tear"
+  ],
+  "addedClips": [
+    "watch_idle",
+    "carry_walk",
+    "carry_idle"
+  ],
+  "contactHoldMaxTipDriftSourceUnits": 3.815844513149093e-06,
+  "socketToSkinnedTipMaxErrorSourceUnits": 2.985983988781669e-14,
+  "carryPropCenterMaxErrorSourceUnits": 1.0067127490278589e-14,
+  "carryPropRigged": false,
+  "carryPropTriangles": 120,
+  "sourceVideo": "Kea - Iconic New Zealand Alpine Parrot.mp4",
+  "referenceRanges": [
+    "00:21\u201324.6",
+    "00:32.36\u201337.28",
+    "01:14\u201321.72",
+    "01:26.96\u201328.9"
+  ],
+  "scope": "Sampled contacts and unchanged-data checks, not an exhaustive collision audit or live game test."
+}

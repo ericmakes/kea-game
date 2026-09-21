@@ -1,0 +1,30 @@
+{
+  "glTFNodeIndex": 41,
+  "nodeName": "cockatoo_Bone047_bone_08",
+  "propFile": "carry_ball.glb",
+  "localMatrixColumnMajor": [
+    21.239647255912164,
+    -8.587292816422355,
+    -77.42492790022979,
+    0.0,
+    -76.57258721474534,
+    12.448688205094282,
+    -22.386508058509502,
+    0.0,
+    14.317972093268732,
+    79.31441119355907,
+    -4.869072471425534,
+    0.0,
+    16.40984533194938,
+    -0.22745728833357504,
+    4.4504471787053665,
+    1.0
+  ],
+  "centerLocalPosition": [
+    14.495530651580747,
+    0.08375991679378458,
+    3.8907844772426294
+  ],
+  "radiusSourceUnits": 2.5,
+  "note": "Attach prop root beneath this existing joint using localMatrixColumnMajor. It accounts for legacy source scale; retain your normal bird asset scale above both. Carry clips assume already holding; no pickup is implied."
+}

@@ -1,0 +1,24 @@
+{
+  "comparedWith": "previous delivered kea_animated.glb",
+  "changedExistingAccessors": [
+    1014,
+    1023
+  ],
+  "allowedChange": "flight_loop rotation outputs for existing humerus nodes 36 and 39",
+  "allOtherExistingAccessorBytesExact": true,
+  "protectedJsonSectionsExact": [
+    "nodes",
+    "skins",
+    "meshes",
+    "materials",
+    "textures",
+    "images"
+  ],
+  "groundClipsExact": true,
+  "newClips": [
+    "flight_glide",
+    "flight_bank_left",
+    "flight_bank_right"
+  ],
+  "onlineGroundMotionReferenceInspected": false
+}

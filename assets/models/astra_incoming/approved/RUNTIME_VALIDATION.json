@@ -1,0 +1,31 @@
+{
+  "keyframesChecked": 483,
+  "allMatchedWithin": 2e-7,
+  "tearEvents": [
+    {
+      "time": 1.05,
+      "name": "beak_grip",
+      "at": 1.05
+    },
+    {
+      "time": 1.62,
+      "name": "beak_regrip",
+      "at": 1.62
+    },
+    {
+      "time": 2.05,
+      "name": "beak_regrip",
+      "at": 2.05
+    },
+    {
+      "time": 2.9,
+      "name": "tear_impulse",
+      "at": 2.9
+    },
+    {
+      "time": 3.35,
+      "name": "beak_release",
+      "at": 3.35
+    }
+  ]
+}
