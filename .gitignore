@@ -7,3 +7,10 @@ SESSION.lock
 # sits BESIDE that directory and so was not covered — a 48MB binary that `git add -A` would have
 # swept into the repo. Added 2026-09-03 after exactly that near-miss.
 gauntlet/reference/*.zip
+
+# The Astra approved package's bulk provenance: model/ (the 3q source GLB and the locked
+# correction bins), tools/ and previews/. Moved out of the asset tree 2026-09-21 on Eric's
+# instruction — 36 MB that the game never loads and that publicDir would otherwise copy into
+# dist/ on every build. The files are still on disk here and their hashes are still recorded in
+# assets/LICENCES.md and PACKAGE_HASHES.json, so the chain stays auditable.
+astra_archive/

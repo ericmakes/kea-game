@@ -68,9 +68,12 @@ camera, clip, time, morph weight per view — is in `CANONICAL_RENDER_PROVENANCE
 - **DO NOT APPLY THE LEGACY SHAPE ADAPTER TO THE STANDALONE FILES.** Not
   `wing-rest-correction.mjs`, not `kea_motion_shape.json`, not `kea_rest_wing_correction.json`.
   The approved correction is **already baked into the mesh arrays** of both GLBs; applying it again
-  doubles it. Those files remain in `approved/model/` because they are the locked provenance and
-  because `APPROVED_CHARACTER_LOCK.json` hashes them — they are evidence, not a runtime step. The
-  adapter instructions in `model/SOURCE_README.md` apply to the SOURCE route only.
+  doubles it. Those files live in **`astra_archive/approved/model/`** at the repo root, which is
+  gitignored — moved out of the asset tree on 2026-09-21 because the game never loads them and
+  `publicDir` was copying 36 MB into `dist/` on every build. They are evidence, not a runtime step,
+  and their hashes stay recorded in `assets/LICENCES.md`, `APPROVED_CHARACTER_LOCK.json` and
+  `PACKAGE_HASHES.json` so the chain is still auditable. The adapter instructions in
+  `SOURCE_README.md` apply to the SOURCE route only.
 - **Do not auto-play `animations[0]`.** It is `Animation_01`, the 22.5 s legacy source sequence
   with substantial ilium travel, and the package says explicitly: *"do not select automatically"*.
   `src/bird.mjs` does exactly this today — see section 5, defect 1.

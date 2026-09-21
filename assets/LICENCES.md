@@ -740,22 +740,38 @@ nothing missing and nothing unlisted; and all seven files in `APPROVED_CHARACTER
 
 <!-- ASSET file=models/astra_incoming/approved/kea_animated.glb md5=c5bb3f2764b8962dd7ca2796339547ca attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
 
-### the 3q source shape — `approved/model/kea_reference_shape.glb`
+### the 3q source shape and the rest of the provenance — MOVED OUT OF THE TREE 2026-09-21
 
-Kept because the two files above are only auditable against it, and because
-`APPROVED_CHARACTER_LOCK.json` names it. **It is NOT the approved shape on its own** — the package
-says so in as many words, and this session confirmed it: the correction lives in the appended
-arrays, not in this file.
+`model/`, `tools/` and `previews/` were moved to **`astra_archive/approved/`** at the repo root,
+which is gitignored, on Eric's instruction. 36 MB the game never loads, and `publicDir` is
+`assets/`, so every one of those bytes was being copied into `dist/` on every build.
 
-| field | value |
-|---|---|
-| licence | **CC-BY 4.0, unchanged** — same chain, same credit |
-| produced by | **OpenAI GPT-6 Astra**, at Eric's direction |
-| file | `models/astra_incoming/approved/model/kea_reference_shape.glb`, 29693180 bytes |
-| md5 | `f27919865ffed56401edf78d68b1d39c` |
-| sha256 | `d22637bd1725b8cfc64b7eb5d5a8546bfa421985946316eeaacdb7cd0331acb7` |
+**THE CHAIN IS NOT WEAKENED BY THE MOVE, AND THIS ROW IS WHY.** The hashes below are the same ones
+`APPROVED_CHARACTER_LOCK.json` and `PACKAGE_HASHES.json` record, both of which stay in the tree, so
+the archive can be re-verified against the repo at any time — and if it is ever lost, what was lost
+is stated here rather than merely missing. There is no machine-readable ASSET marker for these any more,
+deliberately: a marker is a promise that the bytes are in `assets/` and can be checked there, and
+that promise would now be false. The law is "no asset lands without its licence line"; these have
+not landed, they have left.
 
-<!-- ASSET file=models/astra_incoming/approved/model/kea_reference_shape.glb md5=f27919865ffed56401edf78d68b1d39c attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+| file, under `astra_archive/approved/` | bytes | md5 | sha256 (first 16) |
+|---|---|---|---|
+| `model/kea_reference_shape.glb` | 29693180 | `f27919865ffed56401edf78d68b1d39c` | `d22637bd1725b8cf…` |
+| `model/actual_position_1.bin` | — | — | `97428dd619ff490a…` |
+| `model/actual_normal_1.bin` | — | — | `546635d49ec3d120…` |
+| `model/kea_rest_wing_correction.json` | — | — | `e409545393eeea72…` |
+| `model/kea_motion_shape.json` | — | — | `0d7ba59d8a4e2cb3…` |
+| `model/wing-rest-correction.mjs` | — | — | `142c646dad174fed…` |
+| `model/SOURCE_README.md` | — | — | `c44d72a979baceab…` |
+
+Licence for all of them is **CC-BY 4.0, unchanged**, same chain and same credit, produced by
+**OpenAI GPT-6 Astra** at Eric's direction. `tools/` and `previews/` carry no separate licence
+claim: they are the package's own generation and render scripts and its MP4 previews.
+
+**AND NONE OF IT IS A RUNTIME INPUT.** `wing-rest-correction.mjs`, `kea_motion_shape.json` and
+`kea_rest_wing_correction.json` are the LEGACY SHAPE ADAPTER. The approved correction is already
+baked into both standalone GLBs; applying the adapter again doubles it. They are evidence, kept for
+audit, and they must never be loaded. That is the same warning BIRD_STATE.md section 4 carries.
 
 ### the two demonstration fixtures — `approved/carry_ball.glb`, `approved/paper_tear_demo.glb`
 
