@@ -5,10 +5,17 @@ a bird that was PARKED mid-revision with four pending items and a texture blocke
 gone: Eric has approved a character, and `assets/models/astra_incoming/approved/` is it. Everything
 below supersedes the 2026-09-10 text, which survives only in git history.
 
-**THE BIRD IS STILL OFF BY DEFAULT.** `KEABIRD.model` is `false` in `src/game.mjs`; the shipped
-`url` is still `models/kea_bill.glb`; `G.bird` reports `{mode:'primitive'}` and node never loads a
-GLB. Every pinned vantage and every battery still sees the primitive bird. **Nothing in this
-package is loaded by the game, and it must not be switched on until Eric has judged it in-game.**
+**THE BIRD IS ON.** Eric judged the preview frames on 2026-09-21 — *"the bottom-right control
+(recolour off) is the bird"* — and `KEABIRD.model` is `true`. The shipped `url` is
+`models/astra_incoming/approved/kea_animated.glb`, the clips own the wings, and all 43 vantages
+were re-pinned in the same session.
+
+**HEADLESS STILL SEES THE PRIMITIVE BIRD, and that is deliberate rather than an oversight.**
+`installBird` is imported by `main.mjs` and never by the specimen, so a node battery has no
+loader, no fetch and no model: it poses the primitive hierarchy exactly as it did before the flip.
+That is what makes every headless digest, anchor and mission comparable across it — turning the
+bird on re-pinned photographs and changed not one assertion in the gate. There is a row asserting
+this, so it cannot quietly stop being true.
 
 ---
 
@@ -126,12 +133,13 @@ section 6; the short version:
 
 ---
 
-## 6. THE INTEGRATION RECOMMENDATION
+## 6. THE INTEGRATION, AS BUILT
 
-Recorded here because it is the next piece and it should not be re-derived. The reasoning, the
-numbers and the frames are in `gauntlet-log.md` under the 2026-09-21 assessment.
+**SHIPPED 2026-09-21.** What follows was the recommendation and is now the wiring; it is kept in
+this shape because the reasoning is the part worth re-reading. The numbers and frames are in
+`gauntlet-log.md`.
 
-**Let the clips own the wings; let the game keep the rest.** Specifically:
+**The clips own the wings; the game keeps the rest.** As built:
 
 - **A mixer owns locomotion, flight and the carry states** — `walk_loop`, `watch_idle`,
   `carry_walk`, `carry_idle`, `flight_loop`, `flight_glide`, the two banks — because those are
@@ -158,3 +166,22 @@ following the animated head is desirable, and the eye rings go away with the rec
 
 **What it does cost: a whole-set re-pin, and the bird is in every frame.** That is Eric's to judge
 and is the reason the switch stays off.
+
+
+---
+
+## 7. WHAT IS STILL OPEN
+
+- **Task 2, the tail vanes** — still open, as section 3 records and as the package insists.
+- **Five close-up bird vantages want re-staging.** `03_kea_plate`, `13_idle_preen`,
+  `18_rear_close`, `20_dead_rear` and `25_preen_follow` were framed for the primitive bird, which
+  is 1.084 m wide with its wings splayed; the approved bird is 0.626 m wide with them folded. The
+  frames are correct and inside threshold, they are just photographs of a smaller subject. A
+  closer camera on each is a look decision and a piece of its own. BASELINE.md's 2026-09-21b entry
+  has the measurements.
+- **`beak_tear` drives the clip, not the tearing.** The five authored beats fire in order and are
+  recorded on `G.birdBeats`, but `tear_impulse` does nothing yet — real detachment physics is the
+  piece those beats exist for.
+- **The walk cycle's rate is a believable band, not the authored stance rate.** The game's kea
+  moves 52x faster than the authored walk; matching footfall needs the ground speed retuned toward
+  a real bird, which is a game-feel decision. `KEABIRD.walkAuthoredMS` records the real figure.

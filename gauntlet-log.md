@@ -5814,3 +5814,90 @@ see the asset's own paint. Both re-runnable when the bird is wired.
 ## THE LOCK
 
 Taken at the start, released as the final act.
+
+---
+
+# SESSION 39 — 2026-09-21 — THE BIRD GOES IN: slimmed, wired, walked, switched on, re-pinned
+
+Eric's GO on the assessment. Four pieces, each certified and pushed: the package slimmed, the bird
+wired, the switch flipped, the set re-pinned.
+
+## THE SLIM
+
+`model/`, `tools/` and `previews/` moved to a gitignored `astra_archive/` — 36 MB out of git and,
+more usefully, out of `publicDir`, which was copying every byte into `dist/` on every build. The
+`kea_reference_shape.glb` ledger marker was REMOVED rather than repointed: an ASSET marker is a
+promise that the bytes are under `assets/` and checkable there, and a marker pointing outside the
+tree is a lie the battery cannot catch. A plain hash table replaced it.
+**And the ledger caught me writing a marker into prose about markers** — a sentence containing the
+literal comment syntax parsed as a thirteenth, malformed row.
+
+## THE WIRING, AND WHAT OWNS WHAT
+
+`KEABIRD.clipOwns` names eleven bones — six wing, four leg, the tail — and it is read twice: by the
+mixer in bird.mjs and by the mask in rigCommit. One list, two readers, so the halves cannot drift.
+A masked key is **not written** rather than written and overwritten, because `keaRigApply` sets an
+absolute quaternion from the captured rest and writing it would wipe the clip every frame.
+
+**The morph needed no code at all.** Every clip carries its own `Object_168.morphTargetInfluences`
+track and the mixer binds it through `SkeletonUtils.clone` by name — measured live: `flight_glide`
+drives it to 1, `walk_loop` to 0, with nothing in either file assigning it. The package's "one
+owner for the weight" contract met by doing nothing, which is the best way to meet it.
+
+## THE BUG THE MILESTONE FOUND, WHICH PREDATES THE MILESTONE
+
+`animatePose` has early returns — a tugging bird poses itself and returns, so does one mid-recoil —
+and the model tier was wired BELOW them. So for the whole of a tug, `rigCommit` never ran: a loaded
+model would freeze mid-pull while the primitive handles moved underneath it. **It had been there
+since P5b and was invisible only because the model was off.** The milestone run found it in one
+frame: the bird sat in `watch_idle` while the tear it was pulling ticked to 0.48. `animate()` is a
+three-line wrapper now — pose, mixer, commit — with no `return` in it, and the battery asserts that
+SHAPE rather than the statements.
+
+## THE MILESTONE IS WALKED, NOT STAGED — AND THE TOOL FAILED THREE TIMES FIRST
+
+`walk_loop -> beak_tear -> carry_walk`, with `beak_grip, beak_regrip, beak_regrip, tear_impulse,
+beak_release` in order, ending with the bird carrying the muesli bar the pack actually dropped.
+`beak_tear`'s TIME is driven from tear progress, so the grip lands when the hold starts and the
+impulse lands when the tear completes, however long the player took.
+
+Three of the four failures were the HARNESS, not the game, and each is written into the tool:
+- `press(KEAGAME.P1MAP.f)` — there is no `f`; the key is `fwd`. `press(undefined)` is a silent
+  no-op, so the tool reported a milestone that had not happened. It validates key names now.
+- a screenshot mid-approach costs a third of a second, which at 4.6 m/s is three metres of
+  unsupervised walking; the bird ended 90 m away with the loop hunting a target behind it. The
+  photograph and the approach are two runs over the same ground now, and the tool THROWS if the
+  approach overshoots, so it cannot report a staged milestone as a walked one.
+- the camera framed the pack — a red box — while the protagonist stood off the edge.
+The fourth was real and is the bug above.
+
+**And one silent no-op removed rather than kept:** the beats called `AU.tug()`, which does nothing
+because `AU` is not exported — and had it worked it would have doubled the tear's own beak-work
+sound. The beats are spies; the tear owns the act and the sound.
+
+## THE FLIP, AND WHAT IT COST
+
+`KEABIRD.model` is true. The assertion that guarded it for five pieces was INVERTED rather than
+deleted, because a switch with no assertion flips back by accident. What replaces the old guarantee
+is the row underneath: headless still sees the primitive bird, because `installBird` only runs in
+the browser — which is why turning the bird on re-pinned photographs and changed **not one**
+assertion in the gate. Seal 12/12, every mission anchor, every digest: untouched, as the assessment
+predicted from `interact()` reading the kea GROUP and never a bone.
+
+All 43 vantages re-pinned, 4 sweeps, provenance run1 18 / run2 6 / run3 12 / run4 7. The held-out
+check flagged exactly one frame, `21_night_camp`, which this log already records as bimodal.
+`boxdiff` found two subjects changed — `04_flight_underwing` and `13_idle_preen` — both bird boxes,
+both expected, with every scenery box 0.9916 or better.
+
+## FLAGGED FOR ERIC
+
+**Five close-ups were framed for a bird 1.084 m wide and the approved bird is 0.626 m wide.**
+03_kea_plate, 13_idle_preen, 18_rear_close, 20_dead_rear, 25_preen_follow now read as a small bird
+in a big field. Nothing is wrong and all five pass threshold — which is exactly why it is written
+down. Re-staging them is a look call and a piece of its own. The flight frames need nothing:
+04_flight_underwing and 17_flight are better than they were, because the authored clip gives a
+spread wing the procedural rig could not make.
+
+## THE LOCK
+
+Taken at the start, released as the final act.

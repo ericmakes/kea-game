@@ -6977,10 +6977,16 @@ C.section('REPLAT P5b: the rig adapter');
   const src=require('../2026-08-26/keasrc').specimenSource();
   const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
 
-  /* ---- (1) IT IS OFF BY DEFAULT, WHICH IS WHAT KEEPS EVERY PINNED VANTAGE HONEST ---- */
+  /* ---- (1) IT IS ON NOW, AND THE ROW SAYS WHY RATHER THAN JUST WHICH WAY ----
+     This asserted `model===false` for five pieces, and that was right: the default was the thing
+     keeping every pinned vantage honest while the bird was still being argued about. Eric judged
+     the preview frames on 2026-09-21 and turned it on, so the row is inverted rather than deleted
+     — a switch with no assertion on it is a switch that flips back by accident.
+     WHAT REPLACES THE OLD GUARANTEE is the one below it: headless still sees the primitive bird,
+     because installBird only runs in the browser. That is what keeps the batteries comparable
+     across the flip, and it is asserted at the end of this section. */
   ok(!!B,'there is a bird-model recipe (KEABIRD)');
-  ok(B.model===false,'and the model is OFF by default, so no baseline moves while the look is '+
-     'still being judged ('+B.model+')');
+  ok(B.model===true,'and the model is ON — Eric judged the frames on 2026-09-21 ('+B.model+')');
 
   /* ---- (2) EVERY BONE NAME IN THE RECIPE EXISTS IN THE ACTUAL FILE ----
      THE ONE THAT ALREADY EARNED ITS KEEP. The left leg's suffixes are not the mirror of the
@@ -7487,8 +7493,15 @@ C.section('REPLAT P5b: the rig adapter');
     ok(Array.isArray(k.wings)&&k.wings.length===2,'both wings');
     ok(Array.isArray(k.legs)&&k.legs.length===2,'both legs');
     ok(Array.isArray(k.tailF)&&k.tailF.length>=4,'and the tail fan');
-    ok(!k._model,'and no model is attached in a headless build, so the primitive bird is what the '+
-       'batteries and the pinned vantages see'); }
+    /* THE FLIP DID NOT MOVE THE BATTERIES, and this is the row that guarantees it. installBird
+       is imported by main.mjs and never by the specimen, so a node battery has no GLTFLoader, no
+       fetch and no model — it poses the primitive hierarchy exactly as it did before KEABIRD.model
+       became true. Every headless digest, anchor and mission in this file is therefore comparing
+       like with like across the flip, which is why turning the bird on re-pinned photographs and
+       changed not one assertion here. */
+    ok(!k._model,'and no model is attached in a HEADLESS build even with the model switched on — '+
+       'the batteries still see the primitive bird, which is what makes them comparable across '+
+       'the flip'); }
 
   X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }

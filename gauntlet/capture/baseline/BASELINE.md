@@ -1139,3 +1139,42 @@ whole-set re-pin is exactly when they go stale, and **15 pinned vantages have no
 all** and fall back to a deliberately loud DEFAULT of 200 (the selftest has said so since before
 this session — it is not new, and `44_tow_rack` shipped WITH a measured row rather than adding a
 sixteenth gap). Re-measuring the churn table is a piece of its own.
+
+## RE-PIN 2026-09-21b — THE BIRD IS ON: all 43 vantages, and the protagonist changed
+
+`KEABIRD.model` went true. Every frame in the set has the bird in it, so every frame moved and the
+whole set was re-pinned — 4 sweeps, BATCH=6, per-vantage medoid, 43 of 43 on every sweep, no dead
+batches. Provenance run1 18, run2 6, run3 12, run4 7.
+
+**THE HELD-OUT CHECK FLAGGED ONE FRAME AND IT IS THE KNOWN BIMODAL ONE.** A fresh sweep against
+pins it did not contribute to: 43 compared, 1 flagged — `21_night_camp` at 0.9633, which the entry
+above already records as flipping between 0.9634 and 0.9996 take to take. Nothing else in the set
+is outside the threshold.
+
+**`boxdiff` IS WHERE THE REAL ANSWER IS, and it says two subjects changed** — `04_flight_underwing`
+at 0.9307 and `13_idle_preen` at 0.9790, both bird boxes, both expected: the subject of those boxes
+is a different animal now. Every other subject box is 0.9916 or better, including all four ski-field
+ones, which is the useful negative result — swapping the protagonist did not disturb the frames
+whose subject is scenery.
+
+### FLAGGED FOR ERIC, AND IT IS A STAGING QUESTION RATHER THAN A DEFECT
+
+**Five close-up bird vantages were framed for a bird that is a metre wide, and this one is half a
+metre.** The primitive bird stands 0.525 m tall and **1.084 m wide** because its wings splay; the
+approved bird stands 0.497 m and is **0.626 m wide** because its wings are properly folded. Same
+height, 42% less width, and much less of it above the grass line. So:
+
+    03_kea_plate     the portrait of the set — the bird now sits small in deep tussock
+    13_idle_preen    same camera family, same result
+    18_rear_close    "close" is no longer close
+    20_dead_rear     the bird reads as a detail rather than the subject
+    25_preen_follow  the beak box still tracks, but the bird is far away in frame
+
+None of them is WRONG — they are correctly staged photographs of a smaller bird — and all five are
+inside the SSIM threshold, which is exactly why this is written down rather than left to be noticed.
+**Re-staging them is a look decision and Eric's call**, and it is a piece of its own: a closer
+camera on each, re-measured for stability, re-pinned and judged.
+
+The flight frames need nothing. `04_flight_underwing` and `17_flight` are better than they were —
+the authored flight clip gives a genuinely spread wing where the procedural rig could not, and the
+scarlet underwing reads.

@@ -1319,7 +1319,12 @@ function creditsRender(){
    move a baseline or break a mission while the look is still being judged. Eric flips it when the
    bird is right, and that is a one-line piece with its own proof. */
 const KEABIRD={
-  model:false,                       // OFF: the primitive bird ships until Eric judges the model
+  /* ON, 2026-09-21, on Eric's call after judging the preview frames. It was false for the whole
+     of P5 and P5b-e, and that default is what kept every pinned vantage and every battery honest
+     while the bird was still being argued about. What flips it is not the code being finished —
+     it was finished before — but Eric having LOOKED: "the bottom-right control (recolour off) is
+     the bird". The whole-set re-pin in the same session is the other half of this line. */
+  model:true,
   /* THE SHIPPED FILE IS ASTRA'S APPROVED CHARACTER (2026-09-21). rockatoo.glb is the unmodified
      upstream and stays in the tree so the derivation chain can be re-run; kea_base, kea_bill and
      the three Astra drops are the links between; kea_animated.glb is the approved shape with the
