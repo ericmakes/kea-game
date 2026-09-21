@@ -106,13 +106,21 @@ export const BUDGETS={
     what:'the glacier lake. THIS IS THE FRAME ERIC FLAGGED — it shipped with a specular hot spot '+
          '15.53% clipped pure white inside the box, and 5.17% across the whole band. Roughness '+
          '0.72 took it to 0.00%. sunangle.mjs has the one-variable-at-a-time evidence.' },
-  '10_skifield':{ box:{x0:280,y0:300,x1:400,y1:340}, clipPct:1.0,
-    what:'the ski field snow patch. It shipped as a flat CircleGeometry that clipped 27.5% of '+
-         'itself to pure white, which did not matter while it was flat and matters now that it is '+
-         'a mound with a crown, sun cups and a thinning margin to lose. kea_snow_01 — real '+
-         'photographed sunlit snow — clips 0.04% with a p99 of 246, so this budget is the plate\'s '+
-         'own discipline and not a preference: snow may be the brightest thing in the frame and '+
-         'still keep its detail.' },
+  /* THE SNOW-CLIP BUDGET OUTLIVED ITS VANTAGE — TODO 39b. It was measured on 10_skifield, the
+     carpark's ski corner, which is retired: the corner graduated to the ski field and the frame's
+     subject left the map. THE BUDGET IS NOT RETIRED WITH IT, because it was never really about
+     that corner — it is about sunlit snow keeping its detail, and the ski field is nothing but
+     sunlit snow. It moves to 44_tow_rack, which stands on the same kind of ground at the same kind
+     of distance, with the box aimed at the drift right of the rack.
+     THE NUMBER IS THE PLATE'S, UNCHANGED AND NOT RE-FITTED: kea_snow_01 — real photographed
+     sunlit snow — clips 0.04% with a p99 of 246, so 1.0% is the plate's own discipline and not a
+     preference. The history it came from: the patch shipped as a flat CircleGeometry clipping
+     27.5% of itself to pure white, which did not matter while it was flat and mattered the moment
+     it became a mound with a crown, sun cups and a thinning margin to lose. */
+  '44_tow_rack':{ box:{x0:600,y0:300,x1:820,y1:400}, clipPct:1.0,
+    what:'the drift banked beside the tow rack — sunlit ski-field snow, which is what this budget '+
+         'has always been about. Inherited from the retired 10_skifield (TODO 39b) with the number '+
+         'unchanged.' },
 };
 /* WHY SATURATION IS BUDGETED HERE AND NOT IN THE BATTERY. The plates Eric named measure
    PHOTOGRAPHS — nz_river_01 at sat 0.20, nz_water_01 at 0.33 — and the comparable quantity in this

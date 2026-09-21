@@ -226,7 +226,16 @@ await shotR('08_readability_320',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k
 await shotR('09_colossal',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=1.2;k.z=20.0;k.y=0;k.vy=0;k.grounded=true;k.ry=1.0;k.stun=0;')}
   ${CAM(5.8,2.9,25.2,1.2,1.3,19.6)}`,{colossal:true});
-await shotR('10_skifield',`const k=KEAGAME.G.keas[0];k.x=-37;k.z=-36;k.y=0;k.grounded=true;k.ry=3.9; ${CAM(-28,5,-27,-40,1.6,-40)}`);
+/* 10_skifield IS RETIRED — TODO 39b, Eric's decision of 2026-09-12: "retire it; the hill's three
+   cover the tow now and a re-staged 10 is a fourth frame of snow with nothing in it."
+   It was staged ON the corner and nowhere else: bird at (-37,-36), camera at (-28,5,-27) looking
+   at (-40,1.6,-40), which are the tow shed's own placement coordinates. The corner graduated to
+   the ski field, so the frame's whole subject left the map — there is no staging fix for a vantage
+   whose subject is gone, and re-aiming it at empty snow would be keeping the number rather than
+   the photograph. 28_skifield_base, 29_lodge_deck and 30_groomed_band carry the tow now, and
+   44_tow_rack below is the frame the migrated rack earned.
+   THE NUMBER IS NOT REUSED. A vantage id is how four sessions of logs refer to a photograph, so 10
+   stays retired rather than being handed to something else; the new one takes the next free id. */
 await shotR('11_trailhead',`const k=KEAGAME.G.keas[0];k.x=42;k.z=-37;k.y=0;k.grounded=true;k.ry=0.8; ${CAM(33,4.5,-30,44,1.8,-40)}`);
 await shotR('21_night_camp',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
   const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
@@ -475,6 +484,21 @@ await shotR('29_lodge_deck',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
 await shotR('30_groomed_band',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${PIN('k.x=17.0;k.z=19.0;k.y=0.11;k.vy=0;k.grounded=true;k.ry=3.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
   ${CAM(19.5,3.2,26.0, 15.0,1.2,-6.0)}`,SKI);
+/* 44: THE MIGRATED RACK — a FIRST PIN, and Eric asked for it (TODO 39b, decision 3: "yes, give the
+   rack its own frame; it is the only thing this piece actually built"). The tow-base rack is where
+   the carpark's ski corner ended up: the re-homed ski, a pole, and the CHEW THE BINDING tear that
+   is now the hill's k_binding. The bird stands ON the rail at the binding, which is both the
+   subject and the thing the piece had to get right — the grab-race measurement in the everything
+   battery is taken at exactly this pose.
+   IT FINISHES NOTHING DURING THE SETTLE, which is the lesson 28 was re-staged for. k_binding takes
+   a HOLD, so standing at the tear credits nothing; the bull wheel is 3.7 m away and the shed roof
+   3.6 m, so neither proximity rule fires either. No mission popup can land in this frame.
+   PINNED AND CLOCK-FROZEN like the other three (laws 7 and 12): the racks stand in the grass tier
+   this map gained in P4, so an unpinned G.time would put the field at a different wind phase in
+   every take. */
+await shotR('44_tow_rack',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
+  ${PIN('k.x=7.59;k.z=25.79;k.y=1.14;k.vy=0;k.grounded=true;k.ry=2.2;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${CAM(9.4,2.1,28.9, 7.55,1.10,25.65)}`,SKI);
 /* ---------- THE DOC CAMPGROUND (CAMPGROUND.md) ----------
    THREE FIRST PINS, AND ALL THREE ARE LEFT FLAGGED, per the ski field's precedent and Eric's
    standing order: nothing here has ever been photographed, so there is nothing to drift from and

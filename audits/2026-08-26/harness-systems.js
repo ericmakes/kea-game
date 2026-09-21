@@ -63,10 +63,10 @@ const utePk=G.inter.find(t=>t.kind==='peck'&&/UTE/.test(t.label));
 { const p=utePk.getPos(); stage(H,k0,p); k0.y=Math.max(k0.y,p.y-0.3); tick(2);
   tap(P1.grab); tick(2); tap(P1.grab); tick(2); }
 ok(G.missions.find(m=>m.id==='q_peck').done===true,'two real pecks fire q_peck');
-const bindT=G.inter.find(t=>t.kind==='tear'&&/BINDING/.test(t.label));
-{ const p=bindT.getPos(); stage(H,k0,p); k0.y=p.y; tick(1); hold(P1.grab);
-  let st=0; while(!bindT.done&&st<540){ k0.y=p.y; k0.vy=0; X.update(1/60); st++; } un(P1.grab); tick(2); }
-ok(G.missions.find(m=>m.id==='s_binding').done===true,'binding chewed via the real hold path');
+/* THE BINDING TEAR GRADUATED — TODO 39b. It was the only solo tear in the carpark and this battery
+   boots the carpark, so the real-hold-path test for it moved with the tear: harness-everything's ski
+   field section drives k_binding through the same path, against the tear on the hill's tow rack.
+   The pack unzip below is the same mechanic and still here, so this battery has not lost the verb. */
 const pkT=G.inter.find(t=>t.kind==='tear'&&/UNZIP/.test(t.label));
 { const p=pkT.getPos(); stage(H,k0,p); k0.y=p.y; tick(1); hold(P1.grab);
   let st=0; while(!pkT.done&&st<540){ k0.y=p.y; k0.vy=0; X.update(1/60); st++; } un(P1.grab); tick(3); }
@@ -343,12 +343,19 @@ for(let i=0;i<60*8;i++){ H.X.update(1/60);
 ok(minGap>=2.2,'bodies never interpenetrate (min gap '+minGap.toFixed(2)+')');
 ok(Math.abs(tc2.x-tc1.x)>=3.3,'follower parks a respectful length back ('+Math.abs(tc2.x-tc1.x).toFixed(2)+')');
 ok(tc1.speed<0.6&&tc2.speed<0.9,'both queued at the cone');
-// ADDED 2026-08-27: chapter pages + quickie detectors (ski field, trailhead, pegs, chimney)
-C.section('chapters: eight pages, visibility-gated, credit never blocked');
+// ADDED 2026-08-27: chapter pages + quickie detectors (trailhead, pegs, chimney). The ski field
+// was the fourth of those and it graduated to its own map in TODO 39b.
+C.section('chapters: seven pages, visibility-gated, credit never blocked');
 X.SAVE&&X.SAVE.wipe&&X.SAVE.wipe(); G.missions.forEach(m=>{m.done=false; m.n=0;}); G.chapIdx=0; // virgin board, world untouched
 H.X.startGame(1); tick(3); const kq=G.keas[0]; // fresh world: earlier sections completed most pages already
-ok(Array.isArray(G.chapters)&&G.chapters.length===8,'eight chapter pages defined');
-ok(G.chapters[4]==='THE SKI FIELD'&&G.chapters[5]==='THE TRAILHEAD','new settings hold pages 5 and 6');
+ok(Array.isArray(G.chapters)&&G.chapters.length===7,'seven chapter pages defined (eight before TODO 39b)');
+/* READ BY NAME, NOT BY INDEX, WHICH IS THE LESSON THE GRADUATION TAUGHT. This pair used to assert
+   chapters[4] and chapters[5] by number, so removing THE SKI FIELD from the middle of the list
+   broke a row that was really about the trailhead. An index into a list that can lose a member is
+   not a fact about the thing it names. */
+ok(G.chapters.indexOf('THE SKI FIELD')<0,'THE SKI FIELD has graduated off the carpark list');
+ok(G.chapters.indexOf('THE TRAILHEAD')>=0&&G.chapters.indexOf('THE PADDOCK & NEST')>
+   G.chapters.indexOf('THE TRAILHEAD'),'and the trailhead still comes before the paddock');
 const cpRows=G.missions.filter(m=>m.area==='THE CARPARK'&&!m.finale&&!m.hide&&!m.bonus);
 ok(cpRows.length>=5,'carpark page has its rows incl quickies ('+cpRows.length+')');
 const idx0=G.chapIdx;
@@ -365,23 +372,18 @@ for(const pg of pegs){ stage(H,kq,{x:pg.x,y:pg.y,z:pg.z}); kq.y=Math.max(kq.y,pg
 const qp=G.missions.find(m=>m.id==='q_pegs');
 ok(qp.done===true&&(preDone||qp.n>=3),'all three pegs stolen -> q_pegs done ('+(preDone?'pre-done':qp.n+'/3')+')');
 
-const pol=G.props.find(pp=>pp.name==='ski pole'&&pp.mission==='s_pole');
-stage(H,kq,{x:pol.x,y:pol.y,z:pol.z}); kq.y=Math.max(kq.y,pol.y-0.3); tick(2); tap(P1.grab); tick(2);
-ok(G.missions.find(m=>m.id==='s_pole').done===true,'ski pole pickup fires s_pole');
-if(kq.held){ far(H,kq); tick(1); tap(P1.grab); tick(2); }
-
-const ski=G.props.find(pp=>pp.name==='ski'&&pp.missionFar==='s_ski');
-stage(H,kq,{x:ski.x,y:ski.y,z:ski.z}); kq.y=Math.max(kq.y,ski.y-0.3); tick(2); tap(P1.grab); tick(2);
-ok(kq.held===ski,'the marked ski is carryable (heavy)');
-for(let i=0;i<46;i++){ kq.x+=0.6; kq.y=1.0; kq.vy=0; tick(1); } // fly-carry at believable speed: F5 range-release drops cargo on teleport-fast movement
-tick(1); tap(P1.grab); tick(3);
-ok(G.missions.find(m=>m.id==='s_ski').done===true,'ski dropped 24 out -> missionFar credits s_ski [held:'+(ski.heldBy?ski.heldBy.id:'no')+' d:'+Math.hypot(ski.x-ski.home.x,ski.z-ski.home.z).toFixed(1)+' farScored:'+(!!ski._farScored)+']');
+/* s_pole AND s_ski GRADUATED TOO, and both were retired rather than moved: the hill's k_poles wants
+   all three poles and its k_ski wants the ski out on the groomed band, which are better jobs and are
+   driven in harness-everything. WHAT THIS BATTERY LOSES IS THE missionFar MECHANIC, which s_ski was
+   the carpark's only user of — so it is asserted on the hill's k_boot instead, which is the same
+   thing at a radius of 12 rather than 18, in the ski field section of harness-everything. */
 
 { const wp=new THREE.Vector3(); G.chimneyRef.getWorldPosition(wp);
   for(let i=0;i<4;i++){ kq.x=wp.x; kq.y=wp.y; kq.z=wp.z; kq.grounded=true; kq.vy=0; tick(1); }
   ok(G.missions.find(m=>m.id==='q_chimney').done===true,'standing the chimney fires q_chimney [wp:'+wp.x.toFixed(1)+','+wp.y.toFixed(1)+','+wp.z.toFixed(1)+' kea:'+kq.x.toFixed(1)+','+kq.y.toFixed(1)+','+kq.z.toFixed(1)+' gr:'+kq.grounded+']'); }
-for(let i=0;i<4;i++){ kq.x=G.towWheel.position.x; kq.y=2.2; kq.z=G.towWheel.position.z; kq.vy=0; tick(1); }
-ok(G.missions.find(m=>m.id==='s_lift').done===true,'perching the tow wheel fires s_lift');
+/* AND THE TOW WHEEL IS NOT IN THIS MAP AT ALL ANY MORE. G.towWheel is undefined in the carpark
+   now, which is why this driver had to go rather than merely being renamed — it read the global
+   directly. The hill's k_wheel carries its own check() and is driven in harness-everything. */
 
 
 // ADDED 2026-08-27c: persistence, seeded RNG, cosmetic band

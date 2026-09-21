@@ -60,3 +60,16 @@ Deferred: baseline SSIM auto-diff (diff.mjs) — next luxury.
 - Cross-mode leakage green (colossal->classic scale/missions); perf floor <8ms headless mean.
 - META: gate.sh (one-command nine-battery gate+ship), diff.mjs (SSIM baseline auto-diff),
   FLAKES.md (staging-law ledger).
+
+## 2026-09-21 — THE SKI-FIELD GRADUATION (TODO 39b), AND WHAT IT DOES TO THE TALLIES ABOVE
+The two 2026-08-28 entries name `s_pole` and `s_binding` as driven and `s_ski` and `s_lift` as
+review-classified. Those lines are the record of that night and are left standing; this one says
+what is true now. The carpark's ski corner graduated to the ski field:
+- **retired, as duplicates the hill already answers better** — `s_ski` (`k_ski` wants it out on the
+  groomed band), `s_pole` (`k_poles` wants all three), `s_goggles` (`k_goggles` carried the line
+  word for word), `s_lift` (`k_wheel` reads the wheel's own height instead of a literal 2.2).
+- **migrated** — `s_binding` is `k_binding` on THE ROPE TOW, driven through the real hold path in
+  the ski field section of harness-everything, on the tear that moved with the rack.
+- Carpark: 43 jobs and 8 pages become 38 and 7. Ski field: 9 jobs become 10.
+- The driven tally for the classic matrix is therefore 11, not 13, and nothing moved to review: the
+  two that left the matrix left the game.

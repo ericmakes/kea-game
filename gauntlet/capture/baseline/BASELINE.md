@@ -1009,3 +1009,74 @@ Measured before pinning with `stability.mjs`, five takes, as the ski field's thr
 WHAT MOVED, and it is nearly everything: the night environment from 0.80 to 0.08 (which changes
 every night frame), the moon derived and given a limb, the cloud lobes rebuilt to fewer and larger
 with a full-height shading gradient, and three of the eight clouds turned to cirrus.
+
+## TODO 39b 2026-09-21 — THE SKI-FIELD GRADUATION: one vantage retired, one first-pinned, two re-pinned
+
+**`10_skifield` IS RETIRED.** Eric's ruling: *"retire it; the hill's three cover the tow now and a
+re-staged 10 is a fourth frame of snow with nothing in it."* It was staged ON the carpark's ski
+corner and nowhere else — bird at (-37,-36), camera at (-28,5,-27) looking at (-40,1.6,-40), which
+are the tow shed's own placement coordinates — and the corner graduated to the ski field. There is
+no staging fix for a vantage whose subject has left the map. Removed from `capture.mjs`, from the
+baseline, from `pxdiff.mjs`'s churn table and from `terrainvalue.mjs`'s default list. **The id is
+not reused**: 10 is how four sessions of logs refer to a photograph.
+
+**ITS SNOW-CLIP BUDGET DID NOT RETIRE WITH IT.** `lum.mjs` measured a 1.0% clip budget in that
+frame, and that budget was never really about the carpark corner — it is about sunlit snow keeping
+its detail, derived from `kea_snow_01` (real photographed sunlit snow, 0.04% clipped, p99 246). It
+moves to `44_tow_rack`, same ground, same distance, **the number unchanged and not re-fitted**.
+
+**`44_tow_rack` IS A FIRST PIN, FLAGGED, on Eric's ruling 3** (*"yes, give the rack its own frame;
+it is the only thing this piece actually built"*). The tow-base rack is where the carpark's ski
+corner ended up: the re-homed ski, a pole, and the CHEW THE BINDING tear that is now `k_binding`.
+The bird stands on the rail at the binding — the same pose the everything battery takes its
+grab-race measurement at. Nothing completes during the settle (k_binding takes a HOLD; the bull
+wheel is 3.7 m away and the shed roof 3.6 m), which is the lesson 28 was re-staged for.
+
+    stability   5 takes, worst take-to-take 0.9955 (threshold 0.995)
+    churn       4 takes: 2, 3 and 4 BYTE-IDENTICAL, take 1 standing 1832 px off (max 130 levels)
+    pin         4 sweeps, per-vantage medoid, run 2 of 4; runs 1/2/3 clustered, run 4 disqualified
+    diff        1.0000 against the new pin on a fresh shot;  pxdiff 14 px against a 1832 band
+
+**THE 0.9955 WAS CHASED BEFORE IT WAS ACCEPTED, and it is not the HUD plate and not the bird.**
+Cropped rather than guessed (law 17): the plate band reads 0.9990 take-to-take, the bird's own box
+0.9953, and the **bird-free near-field snow and grass on the left reads 0.9868** — that is where
+the noise is. `28_skifield_base` measures **0.9938** over three takes on the same map while
+`29_lodge_deck` and `30_groomed_band` read **1.0000**, so the tow base is this map's noisy corner
+and 44 sits inside that precedent rather than below it. Time-boxed under law 8 and written down
+instead: see the finding at the end of this entry.
+
+**`28_skifield_base` AND `29_lodge_deck` RE-PINNED** — 4 sweeps, per-vantage medoid, spread 0 and
+201. Both carry furniture this piece moved: 28 gains the ski and the binding on the tow rack, and
+29 shows **two** skis on the lodge rack where it showed three, which is the re-home.
+
+**`30_groomed_band` WAS DELIBERATELY NOT RE-PINNED, and that is the interesting half.** It drifts
+0.9451 from its pin — but eyeballed old against new, *the only thing that changed is the clouds*.
+The ground, the tow line, the flags and the bird are identical. Nothing this piece did is visible
+in that frame, and the house rule is that a re-pin on a vantage you were not aiming at is not a
+staging fix. It stays drifted and flagged, with the ten carpark frames below.
+
+### THE FINDING THIS PIECE OWES TO ANOTHER ONE: TEN CARPARK FRAMES ARE DRIFTED AND IT IS NOT 39b
+
+A 28-frame carpark sweep flagged ten vantages (worst `19_roof_follow` 0.9333). **Measured against a
+control before believing it**, because the world digest said the carpark is byte-identical outside
+the deleted corner: the same ten were reshot on the PRE-graduation tree, and
+
+    head-vs-baseline   0.9046 .. 0.9605   — already drifted before this piece existed
+    head-vs-now        0.9973 .. 0.9997   on every frame except 10_skifield (0.9855, the corner)
+    now1-vs-now2       0.9662 .. 1.0000   — and the three that look worst are inside their own noise
+
+So the piece moves exactly ONE carpark frame, which is the one it retires, exactly as the plan
+predicted. The drift belongs to **`9a09e61` PIECE: the cumulus outline**, which rebuilt the cloud
+lobes and the fringe AFTER the last whole-set re-pin (`f644034`) and re-pinned PRESEAM but not one
+photograph. **A whole-set re-pin is owed and it is Eric's to judge**, not a thing for a mission
+piece to absorb quietly.
+
+### AND A RIG PROPERTY WORTH A TODO: THE NEAR FIELD IS NOT SETTLED BY THE PIN
+
+`29_lodge_deck` photographs **differently depending on whether it is shot alone or after another
+vantage in the same process** — 1.0000 against its pin shot alone, 0.9729 shot second. The
+difference is entirely in the bottom three rows of a 16x9 cell map: the near-field grass and snow.
+The sky, the lodge and the range are identical. Same shape as `44_tow_rack`'s bimodal take 1. The
+pinned frames are the consensus state and every instrument passes, so nothing here is wrong — but
+the grass tier is the one live thing a capture pin does not currently hold, and law 12 says that is
+exactly what a pin is for.

@@ -671,6 +671,43 @@ their five draws, suppress only the geometry - which turns a 43-frame re-pin int
 probe confirms it. Four decisions wanted from Eric; four assertions to rewrite, one of them a
 FLAKES 16 (harness-everything 3615 asserts the PRE-graduation arrangement as a law).
 
+DONE 2026-09-21, in two pieces, on Eric's four rulings.
+  39b/1 (31f9f9c) THE SAVE, FIRST, so no build ever resumes a live save on a page that moved: v4,
+    SAVE.graduate carries a cleared THE SKI FIELD's pips to THE ROPE TOW by NAME, union never
+    overwrite, the ledger deliberately not carried. It also corrected the plan: applySave never
+    reads the saved chapIdx, so the "wakes up on THE PADDOCK" hazard the plan reported does not
+    exist, and there is an assertion saying so.
+  39b/2 (this piece) THE MOVE.
+    RETIRED, as duplicates the hill already answers better — s_ski, s_pole, s_goggles, s_lift.
+      THE WORDING IS THE CARPARK'S WHERE THE TWO SAID THE SAME THING (Eric's ruling 1): k_wheel
+      takes "Perch the spinning tow wheel" off s_lift and k_goggles already carried s_goggles word
+      for word. Where the carpark's line described a DIFFERENT JOB it is not taken — s_pole wanted
+      one pole and k_poles wants three, s_ski wanted "beyond the snowline" and the whole hill is —
+      so those two keep the carpark's VERB and the hill's object, because a label that contradicts
+      the detector under it is worse than a label a player has not seen.
+    MIGRATED — s_binding is k_binding on THE ROPE TOW, on the tow-base rack, with the CHEW THE
+      BINDING tear re-anchored to it. One ski was RE-HOMED from the lodge rack to carry it, so the
+      hill's prop count and seeded stream are untouched.
+    THE CARPARK KEEPS ITS FIVE DRAWS and the country did not move: five rnd(0,6) statements stand
+      where the five propAt calls were. Proved, not argued — the world's mesh rows were diffed
+      against the pre-piece tree ROW BY ROW and the delta is ONE contiguous deleted block (22
+      meshes, 2 colliders, 5 props, 1 tear) with every other row byte-identical and in the same
+      order, and deleting a single one of the five draws turns the mesh digest red.
+    s_lift's biome-blind detector is GONE from checkMisc. The hill's k_wheel reads
+      G.towWheel.position.y, and two new rows move the wheel and prove the credit moves with it.
+    VANTAGE 10 RETIRED (Eric's ruling 2), from capture.mjs, the baseline, lum.mjs's snow-clip
+      budget (which moved to 44 rather than retiring with it), pxdiff's churn table and
+      terrainvalue's default list. 44_tow_rack FIRST PINNED on the migrated rack (ruling 3),
+      FLAGGED. 28 and 29 re-pinned, FLAGGED. 30 deliberately NOT re-pinned: nothing this piece did
+      is visible in it.
+    Carpark 43 jobs and 8 pages -> 38 and 7; ski field 9 -> 10. sw_tow_shed's registry row retired
+      with the shed. Gate CERTIFIED-SHIP.
+  WHAT THIS PIECE DID NOT DO, AND SOMEBODY OWES IT: ten carpark vantages are drifted from their
+    pins by the CUMULUS OUTLINE piece (9a09e61), which shipped a visible sky after the last
+    whole-set re-pin (f644034) and did not take one. Measured rather than assumed — the same ten
+    drift by the same amount on the PRE-graduation tree, and head-vs-now is 0.997 or better on
+    every one of them. It is a re-pin Eric judges, not this piece's to absorb.
+
 ### 40. skifield-missions
 8-12 missions incl. the graduates. Signatures: tray-slide down the
 groomed band (new chaos verb), rope-tow ride, goggle heist, deck lunch

@@ -82,11 +82,12 @@ reviewed.push('q_median(honk-at-median interplay — staging-resistant headless;
 drive('q_muster',()=>{ const s=G.sheep[0]; if(s){ s.home={x:0,z:34}; for(let i=0;i<50;i++){ s.x=0; s.z=34; X.update(1/60); } s.home={x:-48,z:-48}; s.x=-48; s.z=-48; } });
 drive('q_pegs',()=>{ for(let r=0;r<3;r++){ const p=takeProp('clothes peg')||takeProp('peg'); if(p)dropAt(kq().x+2+r,0.4,kq().z+2); } });
 reviewed.push('b_cap(guarded-head)');
-drive('s_pole',()=>{ takeProp('ski pole')||tearL('POLE'); });
-drive('s_binding',()=>{ tearL('BINDING'); });
+/* s_pole AND s_binding ARE NOT DRIVEN HERE ANY MORE — TODO 39b. Both were carpark jobs at the ski
+   rack; the rack graduated. s_pole is retired as a duplicate of the hill's k_poles, which wants all
+   three rather than one, and s_binding went up the hill as k_binding and is driven there. */
 console.log('  DRIVEN: '+driven.join(','));
 if(failed.length)console.log('  FAILED: '+failed.join(','));
-reviewed.push('roofhonk','seal(sys)','snow(sys)','jam(flow)','spikes','slide','q_peck','q_table(p2)','bootroad(p2)','airmail(p2)','b_five(p2)','b_beanie(sys)','s_ski','s_lift','t_pole2','t_sign','sign','paddock','grumble3','b_dress','b_body');
+reviewed.push('roofhonk','seal(sys)','snow(sys)','jam(flow)','spikes','slide','q_peck','q_table(p2)','bootroad(p2)','airmail(p2)','b_five(p2)','b_beanie(sys)','t_pole2','t_sign','sign','paddock','grumble3','b_dress','b_body');
 console.log('  REVIEW-COVERED-OR-COMPLEX: '+reviewed.join(','));
 ok(failed.length===0,'every driven classic mission completes ('+driven.length+' driven, '+failed.length+' failed'+(failed.length?': '+failed.join(','):'')+')');
 
@@ -255,11 +256,13 @@ X.startGame(1); tick(4);
   quiet(); G.combo=3; G.comboArmed=true; X.award(12,'a small one on a hot streak',null);
   ok(G.hudPulse>0,'a small award on a hot combo kicks it too - the meter reads what LANDS'); }
 
-C.section('THE OUTSKIRTS GET A GAG - road, ski field, trailhead');
+C.section('THE OUTSKIRTS GET A GAG - road and trailhead, since the ski corner graduated');
 X.startGame(1); tick(8); park();
 { const homeNear=(nm,hx,hz,r)=>{ const p=G.props.filter(pp=>pp.name===nm).pop();
     return !!p&&Math.hypot(p.home.x-hx,p.home.z-hz)<r; };
-  ok(homeNear('ski goggles',-41.2,-38.05,2.0),'the goggles lie at the ski rack');
+  /* THE GOGGLES ARE NOT IN THIS MAP ANY MORE — TODO 39b. This section is "the outskirts get a gag"
+     and the ski corner was one of the three outskirts; it is a map of its own now, with two pairs of
+     goggles of its own. The sock below is the trailhead's and stays. */
   ok(homeNear('woollen sock',46.9,-39.0,2.0),'the sock lies under the boot rail');
   // the paddle, pecked where it stands
   ok(peckL('ROADWORKS PADDLE'),'the paddle is peckable at the verge');
@@ -283,12 +286,16 @@ X.startGame(1); tick(8); park();
     const yy=perchAt(p.x,p.z,0.5);
     for(let i=0;i<3;i++){ k.x=p.x; k.z=p.z; k.y=yy; k.vy=0; X.update(1/60); }
     tap(P1.grab); tick(3); return p; };
-  const gg=grab('ski goggles',-16,-44);
-  ok(gg&&kq().hatProp===gg,'the goggles go on the head, not in the beak');
-  ok(M('s_goggles'),'wearing the goggles credits s_goggles');
   const so=grab('woollen sock',22,-44);
   ok(so&&kq().held===so,'the sock is carryable');
-  ok(M('t_sock'),'taking the sock credits t_sock'); }
+  ok(M('t_sock'),'taking the sock credits t_sock');
+  /* THE GOGGLES MOVED UP THE HILL — TODO 39b, and so did their test, to THE CLUB FIELD TO-DO LIST
+     section where the hill is already booted. They were asked here because the carpark had a pair
+     at its ski rack; it has no ski rack now. Asking them here would have meant booting the ski
+     field and booting back in the middle of an early section, and a boot moves the seeded stream
+     for every section after it — FLAKES 15, and the first cut of this piece paid for it: the VS
+     fix-verb and carry-back sections, three hundred lines downstream, started picking different
+     props out of a differently-scattered world. The sock above is the trailhead's and stays. */ }
 
 C.section('THE CANOPY TAKES THE NIGHT');
 X.startGame(1); tick(4);
@@ -1050,9 +1057,17 @@ C.section('SNOW LIES ON THE COUNTRY — the shed no longer stands in a white sau
   X.boot();
   // 1. THE WORLD THE MEASUREMENT WAS TAKEN AGAINST. Assert it, so this section cannot pass quietly
   //    against a map where the shed has moved (FLAKES law 10 — read the convention, do not restate it).
-  const shed=G.colliders.find(c=>Math.abs(c.x+40)<0.01&&Math.abs(c.z+40)<0.01);
-  ok(!!shed,'the ski-field shed collider is where the session-3 measurement found it');
-  ok(shed&&shed.top===2&&Math.min(shed.w,shed.d)>=X.SNOWBULK,
+  /* THE FIXTURE IS FOUND, NOT TYPED — and it had to become so, which is the lesson TODO 39b taught
+     this section. It read the collider at (-40,-40) by its literal coordinates, because that is
+     where the session-3 measurement was taken: the ski corner's tow shed. The ski corner graduated,
+     the shed went with it, and four rows of this section went red having nothing to do with the
+     snow resolver they exist to test. A measurement should name the KIND of thing it needs — here, a
+     structure broad enough and tall enough to bury a snow patch — and go and find one. */
+  const shed=G.colliders.filter(c=>c.kind==='box'&&c.solid&&c.top>=1.5&&
+      Math.min(c.w,c.d)>=X.SNOWBULK).sort((a,b)=>Math.min(b.w,b.d)-Math.min(a.w,a.d))[0];
+  ok(!!shed,'a broad solid structure exists to bury a patch in ('+
+     (shed?shed.x.toFixed(1)+','+shed.z.toFixed(1):'none')+')');
+  ok(shed&&shed.top>=1.5&&Math.min(shed.w,shed.d)>=X.SNOWBULK,
      'and it is a broad structure topped above the ground ('+(shed?shed.w+' x '+shed.d+' top '+shed.top:'none')+')');
 
   // 2. THE LADDER STARTS WHERE IT IS. Rung zero is the identity, which is what makes a patch that
@@ -1063,14 +1078,47 @@ C.section('SNOW LIES ON THE COUNTRY — the shed no longer stands in a white sau
     ok(q.x===10&&q.z===-35&&q.slid===0,'a clear candidate is returned untouched ('+q.x+','+q.z+')'); }
 
   // 3. THE TWO PATCHES THE LEDGER MEASURED, by their recorded numbers. Both were buried; both move.
-  for(const [x,z,r,label] of [[-40.94,-40.41,2.57,'the big one, 45 of 80 samples on the roof'],
-                              [-39.25,-39.79,1.69,'the small one, 62 of 80']]){
-    ok(!!X.snowBlocked(x,z,r),'as found it is buried in the shed — '+label);
+  /* DETECTION HERE, RESOLUTION ON THE HILL, and splitting them is what the graduation forced — for
+     a good reason once measured rather than assumed.
+     THE TWO RADII ARE STILL THE MEASURED ONES: 2.57 and 1.69 came off the session-3 ledger. Put at
+     the centre of the carpark's broadest structure they are buried, which is the condition the
+     resolver exists for and is what these two rows assert.
+     THEY DO NOT RESOLVE THERE, AND ASSERTING THAT THEY DID WOULD HAVE BEEN A LIE. The ski corner's
+     shed stood alone in an empty corner; the hut stands in a yard with a ladder, a chimney and a
+     woodpile round it, and nothing on the ladder's 8 m reach is clear for a patch of ANY radius —
+     0.7 fails there as surely as 2.57. So the success path is asserted where it actually happens,
+     on the ski field, below. */
+  for(const [x,z,r,label] of [[shed.x,shed.z,2.57,'the big one, radius 2.57 off the session-3 ledger'],
+                              [shed.x+1.69,shed.z+0.62,1.69,'the small one, radius 1.69, off centre']]){
+    ok(!!X.snowBlocked(x,z,r),'a patch centred in a building is seen as buried — '+label);
     const q=X.snowSpot(x,z,r);
-    ok(!X.snowBlocked(q.x,q.z,q.r),'and it resolves onto clear country ('+x+','+z+' -> '+
-       q.x.toFixed(2)+','+q.z.toFixed(2)+', slid '+q.slid.toFixed(2)+')');
-    ok(q.r===r,'at its own radius, unshrunk ('+q.r+')');
-    ok(q.slid>0&&q.slid<=8.0,'by a slide off the fixed ladder, not an arbitrary jump ('+q.slid.toFixed(2)+')'); }
+    ok(q.r===r,'and the resolver never shrinks it to fit ('+q.r+')');
+    ok(q.slid>=0&&q.slid<=8.0,'and never jumps further than the ladder reaches ('+q.slid.toFixed(2)+')'); }
+
+  /* 3b. THE RESOLVER DOING ITS JOB, ON THE MAP THAT GIVES IT WORK. The ski field banks every drift
+     DELIBERATELY against a wall — that is what the diorama comment up there says it is for — so its
+     build is a live run of the resolver rather than a fixture: ten of its sixteen patches were moved
+     off a footprint, and every one of them moved by a distance that is on the ladder.
+     want IS THE EVIDENCE, not a reconstruction: each record keeps the position the draw asked for
+     alongside the one it got, so the slide can be checked against the two rather than trusted. */
+  { X.boot({biome:'skifield'});
+    const moved=(G.snow||[]).filter(p=>p.slid>0);
+    ok(moved.length>0,'the ski field build actually slid drifts off its walls ('+moved.length+' of '+
+       (G.snow||[]).length+')');
+    const rungs=new Set(X.SNOWSLIDE.map(([a,b])=>+Math.hypot(a,b).toFixed(3)));
+    const offLadder=moved.filter(p=>!rungs.has(+p.slid.toFixed(3)));
+    ok(offLadder.length===0,'and every slide is a rung of the fixed table, not a search ('+
+       (offLadder.map(p=>p.slid.toFixed(2)).join(',')||'all on the ladder')+')');
+    const wrong=moved.filter(p=>Math.abs(Math.hypot(p.x-p.want.x,p.z-p.want.z)-p.slid)>0.01);
+    ok(wrong.length===0,'and slid is the distance it really travelled from where the draw put it ('+
+       (wrong.length?wrong.length+' disagree':'all '+moved.length+' agree')+')');
+    ok((G.snow||[]).every(p=>p.r===p.r&&p.r>0),'at their own radii, unshrunk');
+    /* AND THE WORLD GOES BACK WHERE IT WAS FOUND, EXPLICITLY. A bare X.boot() follows the recorded
+       pick, which is not necessarily the map this section started in — the first version of this
+       left every later section standing on the ski field and the ranger battery threw on a map
+       with no ranger. The same fault as the night-ramp test earlier in the session: a test that
+       moves the world has to put it back by name, not by default. */
+    X.boot({biome:'carpark'}); }
 
   // 4. A TRUNK IS BANKED AGAINST, NOT SLID OFF. Snow round the foot of a tree is right; it is a
   //    BROAD footprint that turns a disc into a saucer. Set off the measured band: trunks 0.35-0.44.
@@ -1388,8 +1436,12 @@ C.section('HOME POSITIONS — every prop remembers the transform it was built at
   // 3. THE SWEEP IS THE POINT OF THE PIECE, and the skis are the case that proves it. They are laid
   //    over at rotation.x=1.35 on the line AFTER propAt returns, so a factory-time read would have
   //    recorded them flat and a later restore would have stood them up on the rack like new stock.
-  { const skis=B.filter(p=>p.name==='ski');
-    ok(skis.length===2,'two skis on the rack at build ('+skis.length+')');
+  /* THE WALKING POLES CARRY THIS CASE NOW, not the skis — TODO 39b took the ski rack up the hill.
+     It is the same case for the same reason: both poles are laid over at rotation.x=1.35 on the line
+     AFTER propAt returns, so a factory-time read would record them flat and a later restore would
+     stand them up on the boot rail like new stock. */
+  { const skis=B.filter(p=>p.name==='walking pole');
+    ok(skis.length===2,'two walking poles on the boot rail at build ('+skis.length+')');
     ok(skis.every(k=>Math.abs(k.home.rx-1.35)<1e-9),'their home rotation is the laid-over one they were BUILT with ('+
        skis.map(k=>k.home.rx.toFixed(2)).join(', ')+')');
     ok(skis.every(k=>Math.abs(k.home.rx-k.mrx)<1e-9),'which is exactly what the mesh said at build time');
@@ -1724,17 +1776,21 @@ C.section('THE PROP HEADING IS A DRAW NOBODY READS, AND IT IS NOW NAMED THAT');
 
   /* THE CLAIM THAT MATTERS: nothing reads it. Stated as the thing you could see if something did -
      a prop whose mesh had been turned by its own draw. Every prop is built axis-aligned about Y; the
-     two that a build site rotates are laid over about X (the skis, rotation.x=1.35). */
+     two that a build site rotates are laid over about X (rotation.x=1.35).
+     THE WALKING POLES ARE THAT PAIR NOW, NOT THE SKIS — TODO 39b took the ski rack up the hill.
+     Identical case for the identical reason: both poles are laid over on the line AFTER propAt
+     returns, so the draw is spent before anything rotates them and a mesh turned about Y would be
+     the tell. */
   const turned=built.filter(p=>p.mesh&&Math.abs(p.mesh.rotation.y)>1e-9);
   ok(turned.length===0,'not one prop mesh has been turned about Y ('+turned.length+' of '+built.length+
      (turned.length?': '+turned.slice(0,3).map(p=>p.name).join(', '):'')+')');
   const agree=built.filter(p=>p.mesh&&Math.abs(p.mesh.rotation.y-p._ryUnused)<1e-9);
   ok(agree.length===0,'and not one mesh heading agrees with its own draw, which is what applying it would look like');
-  const skis=built.filter(p=>p.name==='ski');
-  ok(skis.length===2,'the two skis on the rack are the build site that DOES rotate a prop ('+skis.length+')');
-  ok(skis.every(p=>Math.abs(p.mesh.rotation.x-1.35)<1e-9),'and it lays them over about X ('+
-     skis.map(p=>p.mesh.rotation.x.toFixed(2)).join(', ')+')');
-  ok(skis.every(p=>p.mesh.rotation.y===0),'about X and never about Y, which is the axis the dead draw would have used');
+  const laid=built.filter(p=>p.name==='walking pole');
+  ok(laid.length===2,'the two walking poles on the boot rail are the build site that DOES rotate a prop ('+laid.length+')');
+  ok(laid.every(p=>Math.abs(p.mesh.rotation.x-1.35)<1e-9),'and it lays them over about X ('+
+     laid.map(p=>p.mesh.rotation.x.toFixed(2)).join(', ')+')');
+  ok(laid.every(p=>p.mesh.rotation.y===0),'about X and never about Y, which is the axis the dead draw would have used');
   X.startGame(1); tick(6);
 }
 
@@ -2073,14 +2129,20 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
        too (18)" against twelve stars in hand. The fixture follows the price now. */
     const NEED2=T.TABLE[1].need, NEEDSTUB=T.TABLE[STUB].need;
     /* ONE MAP CAN NO LONGER PAY FOR THE LAST PIN, and that is arithmetic rather than a bug. The
-       carpark has eight pages, so twenty-four stars; the station costs thirty. This block has been
-       nudged twice already as maps landed — four pages, then ceil(need/3) — and both times the
-       nudge was really the same structural fact arriving late: THE TOUR TOTAL IS THE SUM ACROSS
-       MAPS, and once five maps are built the first unbuilt pin costs more than any single map
-       holds. So the fixture earns across maps, which is also how a real player reaches thirty.
-       The carpark is filled first and completely, and the shortfall is made up on the SECOND map —
-       whose slot is a different slot, which is the collision the per-biome save exists for and is
-       therefore worth exercising here rather than avoiding. */
+       carpark has seven pages since TODO 39b, so twenty-one stars; the station costs thirty. This
+       block has been nudged three times now as maps landed — four pages, then ceil(need/3), then
+       one whole second map — and every time the nudge was the same structural fact arriving late:
+       THE TOUR TOTAL IS THE SUM ACROSS MAPS, and once five maps are built the first unbuilt pin
+       costs more than any single map holds. So the fixture earns across maps, which is also how a
+       real player reaches thirty. Each map it visits is a different slot, which is the collision
+       the per-biome save exists for and is therefore worth exercising here rather than avoiding.
+       AND IT TAKES AS MANY MAPS AS THE PRICE NEEDS, which is the part that had to stop being a
+       literal. It granted on ONE second map and asserted that map had enough pages for the whole
+       shortfall — true while the carpark held twenty-four of the thirty, and false the morning the
+       carpark went to seven pages: the ski field has two pages and the shortfall wanted three, so
+       the row reported '3 of 2' and eleven assertions downstream asked unbuilt-map questions about
+       a pin nobody had paid for. A fixture that has to reach a PRICE should walk the brochure
+       until it has reached it, and say so if it runs out of maps. */
     const CARPAGES=G.chapters.length, CARSTARS=CARPAGES*S.KINDS.length;
     const listCarparkPage=G.chapters[0];       // named once, for the collision block below
     for(const a of G.chapters)grant(a,S.KINDS);
@@ -2099,23 +2161,30 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
            'answer ('+JSON.stringify(r0)+')');
         ok(!_m.has(T.KEY),'and the refusal recorded no pick');
         lockedAsked=true; } }
-    let extraStars=0, extraOn=null;
+    let extraStars=0; const extraOn=[];
     if(NEEDSTUB>CARSTARS){
-      const short=NEEDSTUB-CARSTARS, need2=Math.ceil(short/S.KINDS.length);
-      extraOn=T.TABLE[1].id;
-      X.SAVE.write();                              // bank the carpark before leaving it
-      X.boot({biome:extraOn}); X.startGame(1); tick(6);
-      ok(need2<=G.chapters.length,'the second map has enough pages to make up the shortfall ('+
-         need2+' of '+G.chapters.length+')');
-      for(let i=0;i<need2;i++)grant(G.chapters[i],S.KINDS);
-      extraStars=need2*S.KINDS.length;
+      let short=NEEDSTUB-CARSTARS;
+      /* THE CARPARK IS ALREADY FULL AND THE STUB HAS NO BUILDER, so both are skipped: the one
+         because there is nothing left to earn on it, the other because it cannot be booted. */
+      for(const t of T.TABLE){
+        if(short<=0)break;
+        if(t.id===B.DEFAULT||!B.ALL[t.id])continue;
+        X.SAVE.write();                            // bank the map being left, whichever it is
+        X.boot({biome:t.id}); X.startGame(1); tick(6);
+        const take=Math.min(G.chapters.length,Math.ceil(short/S.KINDS.length));
+        for(let i=0;i<take;i++)grant(G.chapters[i],S.KINDS);
+        extraStars+=take*S.KINDS.length; short-=take*S.KINDS.length; extraOn.push(t.id);
+      }
       X.SAVE.write();
       X.boot({biome:'carpark'}); X.startGame(1); tick(6); park();
+      ok(short<=0,'the built maps between them can pay for the most expensive pin on the brochure ('+
+         NEEDSTUB+' wanted, '+(CARSTARS+extraStars)+' earned across '+(1+extraOn.length)+' maps: '+
+         [B.DEFAULT].concat(extraOn).join(', ')+')');
     }
     const PAGES=CARPAGES;                          // what the CARPARK holds, for the pin-0 checks
     { const m=T.model();
       ok(m.stars===CARSTARS+extraStars,'the career total is the sum across maps ('+m.stars+
-         ' = '+CARSTARS+(extraStars?' + '+extraStars+' on '+extraOn:'')+')');
+         ' = '+CARSTARS+(extraStars?' + '+extraStars+' on '+extraOn.join('+'):'')+')');
       ok(m.pins[0].stars===CARSTARS,'and the carpark holds only what was earned on it ('+
          m.pins[0].stars+')');
       ok(NEED2<=m.stars,'which covers what the second pin costs ('+NEED2+')');
@@ -2200,7 +2269,7 @@ C.section('THE TOUR - a brochure, a save slot per map, and what it costs to open
       const a=stars('carpark'), b=stars(T.TABLE[STUB].id);
       /* HOW MANY SLOTS ARE IN THE BLOB depends on whether the fixture had to earn on a second map
          to afford the stub, which it does once five maps are built. Named rather than counted. */
-      const wantSlots=2+(extraOn?1:0);
+      const wantSlots=2+extraOn.length;
       ok(Object.keys(blob.biomes||{}).length===wantSlots,
          wantSlots+' slots are in the blob ('+Object.keys(blob.biomes||{}).join(',')+')');
       ok(Object.keys(a).length===PAGES&&Object.keys(b).length===1,
@@ -2751,15 +2820,42 @@ C.section('THE FIX VERB - wreck it, put it back, wreck it again, and it is worth
   G.vs.roles={menace:0,management:1};                  // staged, because the coin is a coin
   ok(FIX.can(b)&&!FIX.can(a),'only the management can put things back ('+V.role(0)+' / '+V.role(1)+')');
 
-  // a tear one bird can finish alone, and the other bird parked so it cannot join in (FLAKES law 3)
-  const t=G.inter.find(it=>it.kind==='tear'&&!it.done&&!it.needsBoth&&!it.needsPartner&&it.getPos);
+  /* a tear one bird can finish alone, and the other bird parked so it cannot join in (FLAKES law 3)
+     AND ONE THAT STAYS FINISHED, WHICH THIS DID NOT SAY AND HAD TO LEARN — TODO 39b. The find
+     picked CHEW THE BINDING for its whole life because the binding was the first tear in the
+     carpark's G.inter; the binding graduated to the ski field and the same find returned PEEL THE
+     3 HR RETURN STICKER, which is a STRIP tear. A strip resets done to false after each of its N
+     units (addStrip's onDone does it in one line), so act() held the key for its full twenty
+     seconds four times over and the section reported eleven findings about the fix economy, none
+     of which were about the fix economy.
+     !it.strip IS THE REQUIREMENT, not a way past the symptom: this section is about an object
+     being WRECKED and PUT BACK, and a thing that comes apart in five pieces cannot be put back at
+     all. The predicate now says what the section always needed, so the next prop shuffle picks a
+     tear that works or picks none and says so on the row below. */
+  const t=G.inter.find(it=>it.kind==='tear'&&!it.done&&!it.strip&&!it.needsBoth&&!it.needsPartner&&it.getPos);
   ok(!!t,'a solo-finishable tear to work on ('+(t?t.label:'none')+')');
   const far=k=>{ k.x=46; k.z=46; k.y=0.25; k.vy=0; k.grounded=true; };
   /* THE COMBO IS HELD AT ZERO FOR THE WHOLE ACT, not just before it: the award lands somewhere
      inside a multi-second hold, so there is no single moment to zero it at. Same reason as piece 22
      - a literal in an assertion below would otherwise be asserting the combo. */
+  /* AND THE TEAR MUST BE THE NEAREST THING TO THE BEAK WHEN THE KEY GOES DOWN — FLAKES law 3,
+     re-learned on the tear this section inherited. interact() takes the NEAREST candidate, and
+     UNZIP THE UNATTENDED PACK spawns a muesli bar a metre and a half from its own anchor when it
+     is wrecked. So the wreck worked, and then the management's hold went to the SNACK: the fix
+     paid nothing, the cycle count stopped, and five rows about the decay ladder went red about
+     something that was not the decay ladder.
+     ISOLATED RATHER THAN RE-PICKED, which is the law's own idiom and is the right one HERE — this
+     section is about what an act is worth, not about where a prop lives, so moving a neighbour out
+     of reach moves nothing the section is asking about. (The carry-back section two below makes
+     the opposite call for the opposite reason, and says so.) Cleared before EVERY act, because the
+     thing in the way is spawned by the act before it. */
+  const clear=q=>{ for(const p of G.props){ if(p.banked||p.heldBy)continue;
+      if(Math.hypot(p.x-q.x,p.z-q.z)<2.2){ p.x=46; p.z=-46; p.y=0.2; p.vx=0; p.vz=0; p.vy=0;
+        if(p.mesh)p.mesh.position.set(p.x,p.y,p.z); } } };
   const act=(k,map,other,want)=>{ far(other);
+    if(k.held){ k.held.heldBy=null; k.held=null; }     // nothing in the beak from the act before
     const q=t.getPos(), yy=Math.max(q.y,X.groundHeightAt(q.x,q.z,3)+0.02);
+    clear(q);
     const s0=V.scores()[k.idx];
     hold(map.grab); let st=0;
     while(t.done!==want&&st<60*20){ G.combo=0; G.comboT=0;
@@ -3518,8 +3614,23 @@ C.section('THE CLUB SKI FIELD - the second map boots, and it is a map and not a 
            G.props.filter(p=>claimed(p).length).length+' of '+G.props.length+')'); }
       ok(G.props.every(p=>p.name!=='boot'),'nothing up here is called boot, which is a detector and not a name');
       ok(G.props.every(p=>!p.food&&!p.shiny),'nothing is food or shiny, so no counted economy is shadowed');
-      ok(G.inter.length===G.props.length&&G.inter.every(it=>it.kind==='prop'),
-         'every interactable on the map is one of those props ('+G.inter.length+')'); }
+      /* TWELVE PROPS AND ONE TEAR SINCE TODO 39b. This read "every interactable is one of those
+         props", which was true of a map whose only interactables were gear — and it was really
+         saying that nothing up here is answerable except the gear this map declares. CHEW THE
+         BINDING graduated onto the tow rack, so the claim is made in the form that survives it:
+         every interactable is a prop or the binding tear, and the tear credits a mission THIS map
+         declares, which is the part TODO 55 cares about. */
+      const tears=G.inter.filter(it=>it.kind==='tear');
+      ok(G.inter.length===G.props.length+tears.length,
+         'every interactable on the map is one of those props or one of its tears ('+
+         G.props.length+' props + '+tears.length+' tear'+(tears.length===1?'':'s')+' = '+
+         G.inter.length+')');
+      ok(tears.length===1&&/BINDING/.test(tears[0].label||''),
+         'and the one tear is the binding that graduated from the carpark ('+
+         (tears.map(t=>t.label).join(', ')||'none')+')');
+      ok(G.inter.every(it=>it.kind==='prop'||it.kind==='tear'),
+         'nothing else answers a key up here ('+
+         [...new Set(G.inter.map(it=>it.kind))].join(', ')+')'); }
 
     /* 7. THE DRIFTS, AND THE UNBURY VERDICT AS LAW. Every drift up here is DELIBERATELY aimed at a
        wall, so the resolver does the work it was written for. The bound is read off how a drift is
@@ -3653,9 +3764,19 @@ C.section('THE CLUB FIELD TO-DO LIST - the second map stops handing out carpark 
     // 1. THE LIST IS THIS MAP LIST, and the pages are its own.
     ok(JSON.stringify(G.chapters)==='["THE ROPE TOW","THE DAY LODGE"]',
        'the ski field opens on its own two pages ('+JSON.stringify(G.chapters)+')');
-    ok(G.missions.length===9,'nine jobs including the finale ('+G.missions.length+')');
-    ok(ST.rows(G.chapters[0]).length===4&&ST.rows(G.chapters[1]).length===4,
-       'four rows on each page ('+ST.rows(G.chapters[0]).length+' and '+ST.rows(G.chapters[1]).length+')');
+    /* TEN JOBS SINCE TODO 39b, was nine, and the tenth is the graduated binding. THE PAGES ARE
+       NOT EVEN ANY MORE and that is the honest shape rather than a target: THE ROPE TOW carries
+       five rows because the rack the tear came to is the tow-base rack, and nothing about a page
+       requires four. What IS required is that every row lands on a page this map declares and that
+       the two pages between them account for the whole list bar the finale — asserted as that,
+       so a row added tomorrow is covered without another count to edit. */
+    ok(G.missions.length===10,'ten jobs including the finale ('+G.missions.length+')');
+    ok(ST.rows(G.chapters[0]).length===5&&ST.rows(G.chapters[1]).length===4,
+       'five rows on the rope tow, four on the day lodge ('+ST.rows(G.chapters[0]).length+
+       ' and '+ST.rows(G.chapters[1]).length+')');
+    ok(ST.rows(G.chapters[0]).length+ST.rows(G.chapters[1]).length===
+       G.missions.filter(m=>!m.finale&&!m.hide&&!m.bonus&&!m.coop).length,
+       'and the two pages between them hold every job on the list bar the finale');
     ok(G.missions.filter(m=>m.finale).length===1,'exactly one finale ('+
        G.missions.filter(m=>m.finale).map(m=>m.id).join(',')+')');
     ok(!G.missions.some(m=>m.bonus),'and no bonus page, because this map has not earned one yet');
@@ -3668,20 +3789,45 @@ C.section('THE CLUB FIELD TO-DO LIST - the second map stops handing out carpark 
     const cpIds=G.missions.map(m=>m.id);
     const overlap=skiIds.filter(id=>cpIds.indexOf(id)>=0);
     ok(overlap.length===0,'no id appears on both maps ('+(overlap.join(',')||'none')+')');
-    ok(cpIds.indexOf('s_ski')>=0&&skiIds.indexOf('s_ski')<0,
-       'the carpark keeps its own ski corner jobs and the ski field is not handed them ('+
-       cpIds.filter(i=>i.charAt(0)==='s'&&i.charAt(1)==='_').join(',')+')');
-    ok(cpIds.length===43&&G.chapters.length===8,
-       'and the carpark list is exactly what it always was ('+cpIds.length+' jobs, '+G.chapters.length+' pages)');
+    /* THE ROW THAT USED TO BE HERE WAS A FLAKES 16, AND IT IS WORTH LEAVING THE EVIDENCE. It read:
+         ok(cpIds.indexOf('s_ski')>=0 && skiIds.indexOf('s_ski')<0,
+            'the carpark keeps its own ski corner jobs and the ski field is not handed them')
+       That asserts the arrangement that happened to exist as though it were a law. TODO 39b had
+       said for two sessions that those jobs were leaving; the assertion said they must stay. FLAKES
+       16 is exactly this — an assertion must encode how it SHOULD be, not what currently explains
+       the state — and it went red on the graduation for the right reason.
+       WHAT SURVIVES IS THE LAW UNDERNEATH IT: no job is answerable on the wrong map. The row above
+       says no id is on both lists; this one says the five graduated ids are on NEITHER, so a later
+       session cannot quietly reinstate a carpark ski corner and have the pair of them pass. */
+    const GRADUATED=['s_ski','s_pole','s_binding','s_goggles','s_lift'];
+    const ghosts=GRADUATED.filter(id=>cpIds.indexOf(id)>=0||skiIds.indexOf(id)>=0);
+    ok(ghosts.length===0,'and the five graduated carpark ski ids are on neither list ('+
+       (ghosts.join(',')||'none')+') — four retired as duplicates of this map\'s own jobs, '+
+       's_binding re-declared up here as k_binding');
+    ok(cpIds.length===38&&G.chapters.length===7,
+       'and the carpark list is what the graduation left it ('+cpIds.length+' jobs, '+
+       G.chapters.length+' pages — was 43 and 8)');
+    /* AND THE PAGE IS GONE FROM THE CARPARK, not merely emptied. A page with no rows on it is
+       cleared the instant it opens, which would hand out a free pip. */
+    ok(G.chapters.indexOf('THE SKI FIELD')<0,
+       'THE SKI FIELD is not a carpark page any more ('+G.chapters.join(' / ')+')');
 
     // 3. EVERY JOB ON THE HILL IS DRIVEN, by the verbs a player has.
     X.boot({biome:'skifield'}); X.startGame(1); tick(8); park();
     { for(let i=0;i<3;i++){ const p=takeProp('ski pole');
         if(p)dropAt(kq().x+1.2+i,0.3,kq().z+1.2); tick(2); }
       ok(M2('k_poles').done===true,'three poles redistributed ('+(M2('k_poles').n||0)+' of 3)'); }
+    /* THE GOGGLES ARE THE MAP'S WEARABLE, so the wearable questions are asked here — TODO 39b.
+       They used to be asked in the carpark's outskirts section, because the carpark had a pair at
+       its ski rack; it has none now. Asked here they cost no extra boot, which matters: this
+       section already stands on the hill, and a boot inserted anywhere moves the seeded stream for
+       every section after it (FLAKES 15). */
     { const g=takeProp('ski goggles');
       ok(!!g&&M2('k_goggles').done===true,'the goggles are taken and WORN, which is what the row asks ('+
-         (g?g.name:'none')+')'); }
+         (g?g.name:'none')+')');
+      ok(!!g&&kq().hatProp===g,'and they go ON THE HEAD, not into the beak ('+
+         (kq().hatProp?kq().hatProp.name:'nothing worn')+' worn, '+
+         (kq().held?kq().held.name:'nothing')+' held)'); }
     { const b=G.props.find(p=>p.name==='ski boot');
       if(b){ perchAt(b.x,b.z,0.3); tap(P1.grab); tick(2);
         dropAt(b.home.x+16,0.3,b.home.z+2); tick(4); }
@@ -3689,6 +3835,22 @@ C.section('THE CLUB FIELD TO-DO LIST - the second map stops handing out carpark 
          (b?Math.hypot(b.x-b.home.x,b.z-b.home.z).toFixed(1):'none')+' from home, needs 12)'); }
     { hold(G.towWheel.position.x,G.towWheel.position.z,G.towWheel.position.y,8);
       ok(M2('k_wheel').done===true,'the bull wheel is perched'); }
+    /* AND THE RULE READS THE WHEEL RATHER THAN A NUMBER, which is the whole of the s_lift fault
+       written as a requirement — TODO 39b. The carpark's retired detector tested
+       Math.abs(k.y-2.2)<0.75 against a hard-coded height, and the hill hangs its wheel at 2.5:
+       inside the tolerance, so it fired up here, on the wrong map, for a job the player was not
+       doing. It was harmless only because done() cannot find an id that is not on the list, which
+       is luck. A detector that reads its own subject cannot be wrong about a subject that moves,
+       so: move the wheel and the credit must move with it, both ways. */
+    { const w=G.towWheel, y0=w.position.y, m=G.missions.find(x=>x.id==='k_wheel');
+      m.done=false; w.position.y=y0+1.4;
+      hold(w.position.x,w.position.z,y0,6);
+      ok(M2('k_wheel').done===false,'perching where the wheel USED to be credits nothing once it '+
+         'has moved ('+y0.toFixed(2)+' against the wheel at '+w.position.y.toFixed(2)+')');
+      hold(w.position.x,w.position.z,w.position.y,6);
+      ok(M2('k_wheel').done===true,'and perching where it now IS credits it, because the check '+
+         'reads G.towWheel.position.y and never a literal');
+      w.position.y=y0; }
     { hold(S.TOW.x,S.TOW.base,2.2,8);
       ok(M2('k_shed').done===true,'the engine shed roof is supervised from'); }
     { hold(S.LODGE.x,S.LODGE.z,3.6,8);
@@ -3698,6 +3860,39 @@ C.section('THE CLUB FIELD TO-DO LIST - the second map stops handing out carpark 
         dropAt((S.PISTE.x0+S.PISTE.x1)/2,0.3,10); tick(4); }
       ok(M2('k_ski').done===true,'and a ski is out on the groomed band ('+
          (p?p.x.toFixed(1)+','+p.z.toFixed(1):'none')+')'); }
+    /* THE GRADUATED BINDING, DRIVEN THROUGH THE REAL HOLD PATH — TODO 39b, and it is driven here
+       because this is where the tear now is. harness-systems drove it in the carpark for four
+       builds as the only solo tear on that map; the carpark has no binding and this map does.
+       HELD, NOT TAPPED, and held while the bird is pinned every frame: a tear's progress decays
+       the moment nothing is tugging it, so a tap reads zero on a tear that works perfectly.
+       AND THE COMPETITION IS MEASURED FIRST, because interact() takes the NEAREST candidate and
+       the carpark's version of this tear lost that race: raised onto the rail, a ski sat 0.395 m
+       from the beak against the tear's 0.41, and holding the key at the binding picked the SKI up.
+       WHAT PROTECTS IT UP HERE IS HEIGHT AS MUCH AS SPACING, and that is worth writing down
+       correctly rather than repeating the carpark's sentence: the tear is 0.06 m ABOVE the rail
+       line the skis lie on and a third of a ski width along it, and interact() measures from the
+       beak at y plus 0.4, so with the bird standing at the tear the tear is 0.40 away and the
+       nearest ski 0.57. The margin is asserted, not the anecdote — move either one and this says
+       so before the driver below has a chance to fail confusingly. */
+    { const bt=G.inter.find(it=>it.kind==='tear'&&/BINDING/.test(it.label||''));
+      const k=kq(); if(k.held){k.held.heldBy=null;k.held=null;}
+      if(bt){ const q=bt.getPos(), yy=Math.max(q.y,X.groundHeightAt(q.x,q.z,3)+0.02);
+        for(let i=0;i<3;i++){ k.x=q.x;k.z=q.z;k.y=yy;k.vy=0;k.grounded=true; X.update(1/60); }
+        { const beak={x:k.x,y:k.y+0.4,z:k.z};
+          const dT=Math.hypot(beak.x-q.x,beak.y-q.y,beak.z-q.z);
+          let dP=99, who='none';
+          for(const pp of G.props){ if(pp.banked||pp.heldBy)continue;
+            const d=Math.hypot(beak.x-pp.x,beak.y-pp.y,beak.z-pp.z);
+            if(d<dP){ dP=d; who=pp.name; } }
+          ok(dT<dP,'standing at the binding, the TEAR is the nearest thing to the beak ('+
+             dT.toFixed(3)+' against the '+who+' at '+dP.toFixed(3)+')'); }
+        H.hold(P1.grab);
+        let st=0; while(!bt.done&&st<60*12){ k.x=q.x;k.z=q.z;k.y=yy;k.vy=0;k.grounded=true;
+          X.update(1/60); st++; }
+        un(P1.grab); tick(2); }
+      ok(M2('k_binding').done===true,'the binding is chewed, thoroughly ('+
+         (bt?'tear progress '+(bt.progress||0).toFixed(2)+', '+(k.held?'HELD '+k.held.name:'nothing in the beak'):'no tear')+')'); }
+
     { let n=0;
       for(const nm of ['ski pole','ski goggles','ski']){
         for(let i=0;i<2&&n<3;i++){ const p=takeProp(nm); if(!p)break;
@@ -3779,7 +3974,7 @@ C.section('THE CLUB FIELD TO-DO LIST - the second map stops handing out carpark 
     X.SAVE.wipe&&X.SAVE.wipe();
     X.boot({biome:'carpark'}); X.startGame(1); tick(6);
   }
-  ok(G.biome==='carpark'&&G.chapters.length===8,'the section hands the carpark back its own list ('+
+  ok(G.biome==='carpark'&&G.chapters.length===7,'the section hands the carpark back its own list ('+
      G.biome+', '+G.chapters.length+' pages)');
 }
 
@@ -3808,9 +4003,13 @@ C.section('A BUILD TAKES ITS HANDLES BACK OFF THE BOARD - the last thing the dis
        filled.join(',')+')');
     ok(LS.every(l=>Array.isArray(G[l])&&G[l].length>0),'and fills its three lists ('+
        LS.map(l=>l+':'+(G[l]||[]).length).join(' ')+')');
-    ok(!!G.towWheel&&Math.abs(G.towWheel.position.x-(-37.9))<0.2,
-       'including the carpark tow wheel, at the ski corner where it is built ('+
-       (G.towWheel?G.towWheel.position.x.toFixed(1)+','+G.towWheel.position.z.toFixed(1):'none')+')');
+    /* AND NOT A TOW WHEEL, WHICH IS THE POINT OF TODO 39b FROM THE REGISTRY'S SIDE. The carpark
+       used to set G.towWheel at its ski corner and the ski field sets one too; one global, two
+       maps, and a carpark mission detector reading it on either. The corner has graduated, so the
+       carpark must leave the handle EMPTY — if a later session rebuilds a tow wheel down here this
+       row goes red, which is the whole reason to assert the absence rather than say nothing. */
+    ok(!G.towWheel,'and NOT a tow wheel — that graduated to the ski field ('+
+       (G.towWheel?G.towWheel.position.x.toFixed(1)+','+G.towWheel.position.z.toFixed(1):'empty')+')');
 
     /* 2. AND A BIOME THAT DOES NOT BUILD A THING DOES NOT HAVE IT. The bare-ground biome is the
        sharpest form of the question - not a map missing one hut, a map with nothing at all - and it
@@ -3865,8 +4064,12 @@ C.section('A BUILD TAKES ITS HANDLES BACK OFF THE BOARD - the last thing the dis
     const back=HS.filter(h=>!!G[h]);
     ok(back.length===filled.length&&back.join(',')===filled.join(','),
        'coming back rebuilds exactly the handles it had ('+back.length+' vs '+filled.length+')');
-    ok(!!G.towWheel&&Math.abs(G.towWheel.position.x-(-37.9))<0.2,
-       'the wheel is the carpark one again ('+(G.towWheel?G.towWheel.position.x.toFixed(1):'none')+')');
+    /* AND THE HANDLE IS EMPTY AGAIN, which is the harder half of the registry claim: the ski field
+       FILLS G.towWheel, so coming back to a carpark that does not build one proves the boot clears
+       it rather than leaving the hill's mesh on the board. That is the registry's own towWheel
+       lesson, now testable in the direction that matters. */
+    ok(!G.towWheel,'and the tow wheel the HILL hung is cleared, not carried back down ('+
+       (G.towWheel?G.towWheel.position.x.toFixed(1):'empty')+')');
     ok(LS.every(l=>(G[l]||[]).length>0),'and its three lists are full again ('+
        LS.map(l=>l+':'+(G[l]||[]).length).join(' ')+')');
   } finally {
@@ -3911,7 +4114,10 @@ C.section('A RAIL IS A SURFACE - the rack, the boot rail and the clothesline hol
        answer rather than a collider. */
     { const high=G.props.filter((p,i)=>at1[i].home>0.5&&!p.heldBy&&!p.banked&&p.name.indexOf('beanie')<0);
       const fell=high.filter(p=>p.y<p.home.y-0.05);
-      ok(high.length>=9,'the carpark places at least nine props up on something ('+high.length+': '+
+      /* EIGHT SINCE TODO 39b, was nine: the ski rack held two skis, two poles and the goggles, and
+         it graduated with its corner. The three surfaces this section is about — the washing line,
+         the boot rail and the picnic table — are all still here. */
+      ok(high.length>=8,'the carpark places at least eight props up on something ('+high.length+': '+
          [...new Set(high.map(p=>p.name))].join(', ')+')');
       ok(fell.length===0,'and after three seconds not one of them has fallen off it ('+
          (fell.map(p=>p.name+' '+p.home.y.toFixed(2)+'->'+p.y.toFixed(2)).join(', ')||'none')+')'); }
@@ -3926,9 +4132,9 @@ C.section('A RAIL IS A SURFACE - the rack, the boot rail and the clothesline hol
     { const pegs=G.props.filter(p=>p.name==='clothes peg');
       ok(pegs.length===3&&pegs.every(p=>p.y>1.4),'all three pegs are up on the line ('+
          pegs.map(p=>p.y.toFixed(2)).join(',')+')');
-      const skis=G.props.filter(p=>p.name==='ski');
-      ok(skis.length===2&&skis.every(p=>p.y>0.9),'both skis are up on the rack ('+
-         skis.map(p=>p.y.toFixed(2)).join(',')+')');
+      /* THE SKI RACK ROW WENT UP THE HILL WITH THE RACK (TODO 39b). The ski field's own section
+         holds five skis on three racks to the same standard. Two surfaces are left down here and
+         both are asserted: the washing line above and the boot rail below. */
       const wp=G.props.filter(p=>p.name==='walking pole');
       ok(wp.length===2&&wp.every(p=>p.y>0.7),'both walking poles are up on the boot rail ('+
          wp.map(p=>p.y.toFixed(2)).join(',')+')'); }
@@ -3941,9 +4147,14 @@ C.section('A RAIL IS A SURFACE - the rack, the boot rail and the clothesline hol
        skipped every behavioural assertion, and the finding read as a missing collider rather than a
        wall in the middle of the ski corner. Law 14 in its other form: do not let the thing being
        asserted decide whether the assertion runs. */
-    { const k=kq(); const rail=G.colliders.find(c=>c.kind==='box'&&c.top>0.9&&c.top<1.0&&
-        Math.abs(c.x+40.4)<0.2&&Math.abs(c.z+38.1)<0.2);
-      ok(!!rail,'the ski rack rail is a collider now ('+
+    /* THE BOOT RAIL CARRIES THIS SECTION NOW — the ski rack it was written against graduated with
+       its corner (TODO 39b). It is the same construct for the same reason: railTop() at the
+       trailhead, holding two walking poles, a rail rather than a wall. The behavioural rows below
+       are unchanged and are the point — a rail is not solid, a bird walks under it, and a bird that
+       walks into it steps up onto it under the ordinary step-up rule. */
+    { const k=kq(); const rail=G.colliders.find(c=>c.kind==='box'&&c.top>0.7&&c.top<0.9&&
+        Math.abs(c.x-46.2)<0.4&&Math.abs(c.z+39.0)<0.4);
+      ok(!!rail,'the boot rail is a collider ('+
          (rail?rail.w+' x '+rail.d+' top '+rail.top:'none')+')');
       ok(!!rail&&rail.solid===false,'and not a solid one, because a rail is perched and not bumped into ('+
          (rail?String(rail.solid):'no rail')+')');
@@ -3962,11 +4173,13 @@ C.section('A RAIL IS A SURFACE - the rack, the boot rail and the clothesline hol
            'while a bird already up at rail height is offered the rail to stand on ('+
            X.groundHeightAt(rail.x,rail.z,rail.top+0.2)+')'); } }
 
-    /* 5. THE REGRESSION THIS PIECE CAUSED AND FIXED, pinned so it cannot come back. interact()
-       measures from the beak - y plus 0.4 - so raising the skis onto the rail put one 0.395 from the
-       beak against the CHEW THE BINDING tear at 0.41, and holding the key at the binding picked up a
-       ski instead. The skis moved half a ski width apart. A single tap at the tear must not put
-       anything in the beak. */
+    /* 5. THE REGRESSION THIS PIECE CAUSED AND FIXED, pinned so it cannot come back — AND IT MOVED
+       UP THE HILL WITH THE RACK (TODO 39b). interact() measures from the beak, y plus 0.4, so a ski
+       raised onto a rail sits 0.395 from the beak against a CHEW THE BINDING tear at 0.41, and
+       holding the key at the binding picks up the SKI. The carpark's rack graduated, and the tear
+       went with it onto the ski field's tow rack — where the same ski, the same rail height and the
+       same 0.4 offset make the same trap available. So the test is made where the trap now is. */
+    X.boot({biome:'skifield'}); X.startGame(1); tick(8); park();
     { const t=G.inter.find(it=>it.kind==='tear'&&!it.done&&it.label&&it.label.includes('BINDING'));
       ok(!!t,'the binding tear is still there');
       if(t){ const q=t.getPos(), k=kq();
@@ -5383,7 +5596,13 @@ C.section('REPLAT P3: scanned materials');
       const pitched=Math.abs(vd.y)>0.05;
       if(pitched&&Math.abs(vd.y)<0.3)
         bad.push(m.userData.matFamily+' '+vd.x.toFixed(2)+','+vd.y.toFixed(2)+','+vd.z.toFixed(2)); });
-    ok(panels>=3,'corrugate panels found to measure ('+panels+')');
+    /* TWO SINCE TODO 39b, WAS THREE. The third was the SW tow shed's roof, and it graduated with
+       the ski corner — the hut's two pitched halves are what is left wearing the family in this
+       map. The bound stays a floor rather than becoming an equality because this row exists to
+       stop the measurement below passing on an empty traversal, and a carpark that grows another
+       corrugate roof should not have to edit an assertion about drainage to do it. */
+    ok(panels>=2,'corrugate panels found to measure ('+panels+' — the hut roof, since the tow '+
+       'shed graduated with the ski corner)');
     ok(bad.length===0,'THE CORRUGATIONS RUN DOWN THE SLOPE on every pitched panel, not along the '+
        'ridge — a roof that does not drain is the loudest way to get a scanned material wrong'+
        (bad.length?' — '+bad.join(' | '):''));
@@ -8349,13 +8568,30 @@ C.section('REPLAT P6A: the model-swap seam');
      the strongest invariant the gauntlet has cannot see a whole tier of sky geometry. The night
      section's own rows cover it instead (count, shell radius, elevation floor, the ramp).
        carpark  mesh 72ff1bdc05788274, meshes 943, tris 324628
-       skifield mesh f135eff3fff40162, meshes 328, tris 154994 */
+       skifield mesh f135eff3fff40162, meshes 328, tris 154994
+
+     RE-PINNED FOR THE SKI-FIELD GRADUATION, 2026-09-21 (TODO 39b) — the first re-pin of this
+     block that is about the WORLD rather than about the sky, and the only one so far that moves a
+     collider digest or a count. What moved, and it was diffed row by row against the pre-piece
+     tree rather than hashed and hoped:
+       carpark  ONE contiguous deleted block and nothing else. 22 meshes (the tow shed and its
+                roof, the wheel, the mast, the rack rail and its two legs, and the five props'
+                groups), 2 colliders (the shed box and the rack rail), 5 props, 1 tear. Every
+                other row in the file is byte-identical AND IN THE SAME ORDER, which is the proof
+                the five rnd() draws were preserved: a shifted stream would have moved the grass,
+                snow, tussock and beech rows that follow, and not one of them moved.
+       skifield mesh COUNT unchanged at 328 and the collider digest unchanged, because the ski is
+                a RE-HOME and not a new prop: three mesh rows leave rack 0 and three arrive on the
+                tow rack. inter goes 12 to 13 — the graduated CHEW THE BINDING tear. Triangles
+                unchanged in both worlds; teaching hints unchanged in both.
+       carpark  mesh 3bb403a96e75d3f2, col 53fa4b6e2386e838, meshes 921, tris 301060
+       skifield mesh a693bd96d8315e3f, col fc06ef03250ea1ed, meshes 328, tris 137488 */
   const PRESEAM={
-    carpark :{mesh:'f987c6c0f356aed6', col:'1b025c57715cb017', meshes:943, tris:307122,
-              inter:64, props:21, colliders:29, cars:6, sheep:3, strips:2, hints:9, snow:10,
+    carpark :{mesh:'3bb403a96e75d3f2', col:'53fa4b6e2386e838', meshes:921, tris:301060,
+              inter:58, props:16, colliders:27, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
-    skifield:{mesh:'70e0c5352afa103f', col:'fc06ef03250ea1ed', meshes:328, tris:137488,
-              inter:12, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
+    skifield:{mesh:'a693bd96d8315e3f', col:'fc06ef03250ea1ed', meshes:328, tris:137488,
+              inter:13, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
               foodSrc:0, gravel:0, stones:0, wear:0, nightMats:8},
   };
   const worldRead=(biome)=>{
@@ -8549,9 +8785,10 @@ C.section('REPLAT P6A: the model-swap seam');
      they agree.
      So this asks the question from outside the seam entirely: walk every interactable in the world,
      call the getPos() the game itself calls, and hash the answers against what the PRE-SEAM tree
-     answered. Sixty-five points in the carpark, twelve in the ski field, plus every teaching hint —
-     which are placed points too, and two of them moved from raw arithmetic to a declared anchor in
-     this piece. One millimetre anywhere and this goes red. */
+     answered. Fifty-nine points in the carpark and thirteen in the ski field since TODO 39b (they
+     were sixty-five and twelve), plus every teaching hint — which are placed points too, and two
+     of them moved from raw arithmetic to a declared anchor in this piece. One millimetre anywhere
+     and this goes red. */
   {
     const digest=(biome)=>{
       X.setSeed(20260828);
@@ -8568,8 +8805,15 @@ C.section('REPLAT P6A: the model-swap seam');
       const md=o=>crypto.createHash('md5').update(JSON.stringify(o)).digest('hex').slice(0,16);
       return {n:rows.length, inter:md(rows), hints:md(hints), hn:hints.length};
     };
-    const WANT={carpark :{n:65, inter:'50b3ca201d910e5d', hn:9, hints:'6e9458ae1276c86f'},
-                skifield:{n:12, inter:'d468e22d35759485', hn:4, hints:'1383d48400f14029'}};
+    /* RE-PINNED 2026-09-21 (TODO 39b). Sixty-five carpark points became fifty-nine: the five
+       graduated props and the CHEW THE BINDING tear. Twelve ski field points became thirteen: the
+       same tear, arrived. The HINT digests did not move in either map, which is worth saying out
+       loud — the ski corner taught nothing, so the graduation took no teaching with it. The
+       diff was taken row by row, not by comparing two hashes: the carpark's fifty-nine surviving
+       rows are byte-identical to fifty-nine of the old sixty-five, and the hill's twelve are
+       byte-identical to its old twelve. */
+    const WANT={carpark :{n:59, inter:'38630baf79d8dc1e', hn:9, hints:'6e9458ae1276c86f'},
+                skifield:{n:13, inter:'e05cb36edca22de5', hn:4, hints:'1383d48400f14029'}};
     for(const b of ['carpark','skifield']){
       const r=digest(b), w=WANT[b];
       ok(r.n===w.n,b+': the same number of interactables answer ('+r.n+' against '+w.n+')');

@@ -5556,3 +5556,132 @@ and 0.00% warm, along with every other box in the sky. Every warm pixel in that 
 gold CHAOS pill and the sound button, which are DOM and were never lit by anything. The fourth
 measurement this session to be about something other than its subject, and the first one the law
 caught before it became a finding.
+
+---
+
+# SESSION 37 — 2026-09-21 — THE SKI-FIELD GRADUATION (TODO 39b/2), AND ELEVEN FINDINGS THAT WERE NOT ABOUT SKIING
+
+Resumed a piece a machine restart killed mid-flight. SESSION.lock was dated 2026-09-12 and the
+machine rebooted twice after that (12 Sep 21:58, 18 Sep 17:42); nothing held the file, so it was
+taken over rather than waited on. The predecessor's uncommitted work — the assertion rewrites and
+the ski re-home — was reviewed against the plan and kept almost entirely. What it needed was
+finishing, and the finishing is where the session's findings are.
+
+## THE PIECE, IN ONE PARAGRAPH
+
+Four carpark ski missions retired as duplicates the hill already answers better; `s_binding`
+migrated as `k_binding` on THE ROPE TOW, with the CHEW THE BINDING tear re-anchored to the tow-base
+rack and one ski RE-HOMED from the lodge rack to carry it. `s_lift`'s biome-blind detector deleted
+from `checkMisc`. The carpark's ski corner suppressed with its five `rnd()` draws left standing.
+Carpark 43 jobs and 8 pages to 38 and 7; ski field 9 to 10. Vantage 10 retired, `44_tow_rack` first
+pinned, 28 and 29 re-pinned, 30 deliberately not. Gate CERTIFIED-SHIP.
+
+## THE DRAW PRESERVATION IS NOT AN ARGUMENT ANY MORE, IT IS A MEASUREMENT
+
+The plan reasoned that keeping five `propAt` draws would stop the seeded country moving. Reasoning
+is what the plan is for; this is what shipped instead. The world's mesh rows were dumped for the
+pre-piece tree and the post-piece tree and **diffed row by row**: one contiguous deleted block of
+22 meshes, 2 colliders, 5 props and 1 tear, with **every other row byte-identical and in the same
+order**. A shifted stream would have moved the grass, snow, tussock and beech rows that follow it,
+and not one of them moved. On the hill the mesh COUNT is unchanged at 328 — three rows leave rack 0
+and three arrive on the tow rack, which is what a re-home looks like from a digest.
+
+Then the same claim was sabotaged: delete ONE of the five draws and the carpark mesh digest and the
+anchor digest both go red. The five statements are load-bearing and the batteries know it.
+
+**AND THEY ARE FIVE STATEMENTS, NOT A LOOP.** The predecessor's comment argued for exactly that —
+"a loop would invite somebody to change the count" — and then wrote `for(let i=0;i<5;i++)`. Five
+lines now, one per prop that used to stand there, each naming which one.
+
+## ELEVEN FINDINGS IN THE VS ECONOMY, THREE HUNDRED LINES FROM ANYTHING ABOUT SKIING
+
+This is the part worth carrying to the next piece that deletes props. The fix-verb section picks
+its subject by POSITION — `G.inter.find(it=>it.kind==='tear' && ...)` — and for its whole life that
+returned CHEW THE BINDING, because the binding happened to be the first tear in the carpark. With
+the binding gone it returned PEEL THE 3 HR RETURN STICKER, which is a **strip** tear: `addStrip`'s
+`onDone` sets `done=false` again after each of its five units, so `act()` held a key for its full
+twenty seconds four times over and the section reported the decay ladder as broken.
+
+`!it.strip` is the fix and it is a requirement, not a symptom patch: this section is about an
+object being wrecked and PUT BACK, and a thing that comes apart in five pieces cannot be put back.
+
+**Then the same section met FLAKES 3 immediately underneath.** UNZIP THE UNATTENDED PACK spawns a
+muesli bar a metre and a half from its own anchor, so once it was wrecked the management's restore
+hold went to the SNACK: the fix paid nothing and the cycle count stopped. Isolated rather than
+re-picked, and the reason is written beside it — this section is about what an act is WORTH, so
+moving a neighbour out of reach moves nothing it asks about, while the carry-back section two below
+makes the opposite call because its question IS where a prop lives.
+
+**THE LESSON: a piece that removes props should expect its damage in the sections that choose a
+prop or an interactable by position, not in the ones that name the thing it removed.** None of
+those eleven rows mentions a ski.
+
+## A BOOT IS NOT FREE, AND THE FIRST CUT PAID FOR IT
+
+The predecessor moved the goggles wearable test to the hill by booting the ski field and back
+INSIDE an early carpark section. That shifts the seeded stream for every section after it (FLAKES
+15), and the VS sections started picking different props out of a differently-scattered world. The
+test went to the hill's own section instead, where the map is already booted — same two questions,
+same mechanic, no boot added. One cirrus row that had been failing came back green on its own when
+the boots came out, which is how the cause was confirmed.
+
+## THE CLEARANCE CLAIM WAS OVERSTATED, AND THE SABOTAGE SAID SO
+
+The carpark's hard-won lesson is that a tear 0.41 from the beak loses to a ski at 0.395. The new
+tear was placed "half a ski width clear" and the comment claimed that spacing was what saved it.
+Moving the tear 0.32 m along the rail did NOT reproduce the bug — so the claim was wrong. Measured
+properly: the tear is also 0.06 m ABOVE the line the skis lie on, and with the bird standing at it
+the tear is 0.400 from the beak against the nearest ski at 0.573. **The height is doing as much of
+the work as the spacing.** Put the tear at the ski's own height and the bug comes straight back —
+three rows go red and one prints `HELD ski`, which is the carpark's original bug verbatim. The
+margin is asserted now, not the anecdote.
+
+## TEN DRIFTED CARPARK FRAMES, AND THEY ARE NOT THIS PIECE'S
+
+A 28-frame carpark probe flagged ten vantages, worst 0.9333 — against a world digest that said the
+carpark is byte-identical outside the deleted corner. Two claims that cannot both be true, so the
+control was run: the same ten reshot on the PRE-graduation tree.
+
+    head-vs-baseline  0.9046 .. 0.9605     already drifted before this piece existed
+    head-vs-now       0.9973 .. 0.9997     every frame but 10_skifield, which is the corner
+    now1-vs-now2      0.9662 .. 1.0000     and the three that look worst are inside their own noise
+
+The piece moves exactly one carpark frame and it is the one being retired. The drift belongs to
+`9a09e61` PIECE: the cumulus outline, which rebuilt the cloud lobes after the last whole-set re-pin
+`f644034`, re-pinned PRESEAM, and left every photograph behind. A whole-set re-pin is owed and it
+is Eric's to judge. **Not absorbed quietly into this piece's pins** — which is also why
+`30_groomed_band` was re-pinned by `repin.mjs` and then deliberately RESTORED: eyeballed old
+against new, the only thing that changed in that frame is the clouds.
+
+## WHAT ERIC HAS TO LOOK AT
+
+Three frames, all FLAGGED:
+- **`44_tow_rack`** — the new one, the migrated rack with the bird on the rail at the binding.
+- **`28_skifield_base`** — gains the ski and the binding on the tow rack.
+- **`29_lodge_deck`** — two skis on the lodge rack where there were three.
+
+And a decision that is not a frame: the ten carpark vantages above want a whole-set re-pin, priced
+in SKIFIELD_GRADUATION.md §4 at about twelve and a half minutes of machine time.
+
+## TWO THINGS MEASURED AND LEFT ALONE, BOTH WRITTEN DOWN INSTEAD
+
+**The tow base is this map's noisy corner.** `44_tow_rack` measures 0.9955 take-to-take against a
+0.995 threshold and a renderer floor of ~0.998. Cropped before concluding (law 17): not the HUD
+plate (0.9990), not the bird (0.9953) — the bird-free near-field snow and grass reads 0.9868.
+`28_skifield_base` reads 0.9938 on the same map while 29 and 30 read 1.0000. So 44 sits inside an
+existing precedent rather than below it. Time-boxed under law 8.
+
+**The near field is not settled by the pin, and that is a real rig gap.** `29_lodge_deck`
+photographs differently shot alone (1.0000 against its pin) than shot second in the same process
+(0.9729), and the whole difference is in the bottom three rows of a 16x9 cell map — the grass and
+snow near field. The sky, the lodge and the range are identical. Same shape as 44's bimodal take 1,
+where takes 2, 3 and 4 came back byte-identical and take 1 stood 1832 px off. Law 12 says a pin
+must hold anything live during the settle; the grass tier is not held. Worth a TODO.
+
+**And the pxdiff selftest is already red for fifteen pinned vantages with no churn band** — checked
+against HEAD before reporting it, because a selftest going red in your own session looks like your
+fault. It is not; this piece adds a row rather than a gap.
+
+## THE LOCK
+
+Taken over from a dead session at the start, released as the final act.

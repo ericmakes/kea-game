@@ -3312,7 +3312,10 @@ const AMB={on:false,
 /* wearables: what you were wearing is part of who you are (reference 17, lean in) */
 const WEARABLE={"ranger's cap":{build:'rangercap',owner:'rex',mission:'b_cap'},
                 "tramper's beanie":{build:'beanie',owner:'tom',mission:'b_beanie'},
-                "ski goggles":{build:'goggles',owner:null,mission:'s_goggles'}};
+                /* k_goggles SINCE TODO 39b: the goggles live on the ski field now, and this table
+                   is what rewear() builds a worn prop from when a save says a bird had one on. It
+                   would have rebuilt it carrying the retired carpark id. */
+                "ski goggles":{build:'goggles',owner:null,mission:'k_goggles'}};
 /* THE STAR LEDGER (2026-09-01). Three stars per PAGE of the to-do list:
      cleared - every mission on the page is done (derivable, so it can always be retro-granted)
      style   - the chaos earned WHILE the page was open cleared par (piece 13 grants it)
@@ -6099,31 +6102,34 @@ function buildCarpark(){
      problem and it was accepted; extending the terrain inward would make it more visible, not less.
      Judge it from the strip: if that band wants its roll back it is a separate near-field piece,
      not a change to r0. */
-  // THE SKI FIELD (SW): rope-tow base, rack of skis, the most documented crime scene in the country
-  { const B=placeProp('sw_tow_shed'), bx=B.at.x, bz=B.at.z;
-    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.9,0.9,0.16,14),mat(PAL.red));
-    wheel.rotation.x=Math.PI/2; wheel.position.set(bx+2.1,2.2,bz); G.scene.add(wheel); G.towWheel=wheel;
-    cyl(0.09,0.09,2.2,PAL.metal,bx+2.1,1.1,bz,null,8);
-    box(1.8,0.08,0.12,PAL.woodD,bx-0.4,0.9,bz+1.9); cyl(0.05,0.05,0.9,PAL.woodD,bx-1.2,0.45,bz+1.9,null,6); cyl(0.05,0.05,0.9,PAL.woodD,bx+0.4,0.45,bz+1.9,null,6);
-    const rackY=railTop(bx-0.4,bz+1.9,1.8,0.34,0.94);      // TODO 63: the rack now holds what is put on it
-    /* THE BINDING NEEDS ELBOW ROOM NOW THAT THE SKIS ARE ACTUALLY ON THE RACK. The two of them sat
-       0.4 apart with the CHEW THE BINDING tear between them, which was fine while they were lying in
-       the dirt 0.9 metres below it: interact() measures from the beak - y plus 0.4 - so raising them
-       to the rail put a ski 0.395 from the beak against the tear 0.41, and holding the key at the
-       binding picked up a ski instead. Measured, not guessed, and the drive that found it is the
-       piece 18 fix-verb section, which works on the first solo tear in the world and this is it.
-       Half a ski width each way and the tear is the nearest thing again. */
-    const sk1=propAt('ski',bx-1.0,rackY,bz+1.95,PB.ski,{heavy:true,missionFar:'s_ski',farR:18}); sk1.mesh.rotation.x=1.35;
-    const sk2=propAt('ski',bx-0.4,rackY,bz+1.95,PB.ski,{heavy:true}); sk2.mesh.rotation.x=1.35;
-    /* AND THE POLES WERE STANDING IN THE GROUND. Placed upright at 0.7 with a 1.15 shaft, they fell
-       to 0.08 and spent every frame of every session half sunk in the dirt. They lie across the rack
-       like the skis do now, which is where a pole in a rack is. */
-    propAt('ski pole',bx+0.1,rackY,bz+1.95,PB.skipole,{mission:'s_pole'}).mesh.rotation.x=1.35;
-    propAt('ski pole',bx+0.3,rackY,bz+1.95,PB.skipole,{}).mesh.rotation.x=1.35;
-    propAt('ski goggles',bx-1.2,0.2,bz+2.25,PB.goggles,{wearable:true,mission:'s_goggles'}); // dropped at the rack, as they always are
-    addTear({label:'CHEW THE BINDING',need:1.6,range:1.2,air:true,keepMesh:true,getPos:()=>({x:bx-0.7,y:0.95,z:bz+1.95}),
-      onDone(p){ award(35,'BINDING: CHEWED',p); done('s_binding'); AU.pop(); burst(p,PAL.dark,8); }});
-  }
+  /* THE SKI FIELD CORNER HAS GRADUATED — TODO 39b, on Eric's decision of 2026-09-12. The rope-tow
+     base, the rack of skis, the poles, the goggles and the CHEW THE BINDING tear stood at (-40,-40)
+     and were, as the old comment here said, the most documented crime scene in the country. The ski
+     field is a map of its own now, with three gear racks, five skis, three poles, two goggles and a
+     bull wheel of its own, so a second rope tow in the corner of the carpark was the same class of
+     lie TODO 55 was sent to fix: the place that owns a thing should be the place that has it.
+     THE FIVE DRAWS STAY, AND THAT IS THE WHOLE REASON THIS PIECE COST FIVE FRAMES AND NOT FORTY
+     THREE. propAt takes one rnd() per prop — _ryUnused, TODO 47, a draw nothing reads kept
+     deliberately so the seeded country does not move — and there were five props here. Deleting
+     them would shift every later draw in buildWorld and reshuffle grass, snow, tussock and beech
+     across every carpark baseline, which is exactly what TODO 39b warned would make this an
+     expensive piece. So the draws are made and thrown away, in the same order, and the country is
+     bit-identical either side of the graduation.
+     COUNTED, NOT ASSUMED: the block that stood here contained no rnd() of its own, and placeProp,
+     railTop, addTear, box, cyl, mat, blob and the three prop builders contain none either. Five
+     propAt calls, one draw each, all rnd(0,6). The probe that proves it is the carpark's own world
+     digest: the collider and mesh digests move by exactly the corner's geometry and no scatter
+     follows them, and the reshoot of all 28 carpark vantages moved the one frame staged ON the
+     corner and nothing else.
+     IT IS FIVE STATEMENTS AND NOT A LOOP ON PURPOSE. A loop would invite somebody to change the
+     count; five lines make it obvious that the number is owed to something — one line per prop
+     that used to stand here, named, so the debt is legible rather than arithmetic. */
+  rnd(0,6);   // the ski that carried s_ski, now on the hill's tow rack
+  rnd(0,6);   // its neighbour on the rail
+  rnd(0,6);   // the pole that carried s_pole, retired into the hill's k_poles
+  rnd(0,6);   // its neighbour on the rail
+  rnd(0,6);   // the goggles that carried s_goggles, retired into the hill's k_goggles
+
   // THE TRAILHEAD (SE): the big DOC sign, an unattended pack, a boot rail
   { const SG=placeProp('doc_board'), sg=SG.group, tx=SG.at.x, tz=SG.at.z;
     { const pth=[]; for(let i=0;i<=5;i++)pth.push({x:-1.0+i*0.4,y:2.12,z:0.07});
@@ -6538,8 +6544,30 @@ function buildSkifield(){
     const onRack=(i,px,pz)=>{ const [rx,rz,ry]=RACKS[i], cs=Math.cos(ry), sn=Math.sin(ry);
       return {x:rx+px*cs+pz*sn, z:rz-px*sn+pz*cs, ry}; };
     const RACKY=1.075;
-    for(const [i,px] of [[0,-0.9],[0,-0.35],[0,0.4],[1,-0.5],[1,0.55]]){ const q=onRack(i,px,0.06);
+    /* ONE SKI MOVED TO THE TOW RACK — TODO 39b, so the graduated CHEW THE BINDING tear has a ski
+       to be a binding on. A RE-HOME AND NOT A NEW PROP: the count is unchanged, so the hill's
+       seeded draw stream is untouched and no scatter moves for it. Rack 2 is the one at the tow
+       base, which is what puts the tear on THE ROPE TOW page where Eric asked for it. */
+    const SKIAT=[[0,-0.9],[0,-0.35],[1,-0.5],[1,0.55],[2,0.5]];
+    for(const [i,px] of SKIAT){ const q=onRack(i,px,0.06);
       propAt('ski',q.x,RACKY,q.z,PB.ski,{heavy:true}).mesh.rotation.set(1.35,q.ry,0); }
+    /* THE BINDING, GRADUATED FROM THE CARPARK. It was the one job of the five with no equivalent up
+       here — the other four were reinvented by piece 40, one of them word for word — so it is the
+       only one that moved rather than retiring.
+       CLEAR OF THE SKI IN TWO DIRECTIONS, and the clearance is the carpark's hard-won lesson rather
+       than a guess: interact() takes the NEAREST candidate and measures from the beak at y plus
+       0.4, so down there a tear 0.41 from the beak against a ski 0.395 from it meant holding the
+       key at the binding picked up the SKI. The carpark answered it by moving its skis apart. Up
+       here the tear is placed clear from the start and it is clear on BOTH axes — a third of a ski
+       width along the rail (0.34) and 0.06 ABOVE the line the skis lie on — which measures 0.400
+       to the tear against 0.573 to the nearest ski. The height is doing as much of the work as the
+       spacing, which is worth saying because the spacing alone does not save it: put the tear on
+       the ski's own y and the bird picks the ski up again. Both numbers are asserted in the ski
+       field section of harness-everything, and that sabotage is what measured them. */
+    { const q=onRack(2,0.5,0.06), t=onRack(2,0.5-0.34,0.10);
+      addTear({label:'CHEW THE BINDING',need:1.6,range:1.2,air:true,keepMesh:true,
+        getPos:()=>({x:t.x,y:RACKY+0.06,z:t.z}),
+        onDone(p){ award(35,'BINDING: CHEWED',p); done('k_binding'); AU.pop(); burst(p,PAL.dark,8); }}); }
     /* TODO 40: the gear carries THIS MAP missions. It carried none at all the night the diorama
        shipped, because a prop up here answering a CARPARK mission is the lie 55 was sent to fix -
        and the battery still holds every id on every prop to the list this map declares. */
@@ -9224,27 +9252,22 @@ function drawKeaSil(c,cx,cy,sc,col){ // traced verbatim from the reference road 
    per-placement `at` override: one registry row describes the OBJECT (its body, its absent
    collider, its material policy, its biome) and four placements say where the four of them are.
    The same override is what lets the nest be declared once and placed in two maps. */
-/* ---- THE THREE CARPARK STRUCTURES THAT WERE NEVER EVEN A FUNCTION — REPLAT P6A ----
-   The SW rope-tow shed, the trailhead's DOC board and the unattended pack were written inline
-   inside buildCarpark, with their colliders pushed as raw literals a few lines under their
-   geometry. They are exactly the case P6A.md opens with: nothing named them, so nothing could
-   swap them, and a model arriving for any of the three would have meant reading forty lines of
-   map to find out where its collider was. Now each is a row.
-   THE RAW PUSHES BECOME DECLARED BOXES, and note the units: those three literals were HALF
-   extents, because they went into G.colliders directly rather than through addBoxCollider. The
-   entries state the full dimensions, which is the convention everywhere else in this file, and
-   propCollider halves them on the way out. The collider digest is what proves the conversion. */
-defineProp('sw_tow_shed',{
-  biome:'carpark', at:{x:-40,z:-40},
-  collider:[{kind:'box',w:3.4,d:2.6,top:2.0,solid:true}],
-  anchors:{roof:{x:0,y:2.1,z:0}, wheel:{x:2.1,y:2.2,z:0}, rack:{x:-0.4,y:0.9,z:1.9}},
-  material:{family:'corrugate',nightTint:false},
-  build(base,p){
-    box(3.2,2.0,2.4,0x4E6E8E,0,1.0,0,base);
-    const shR=box(3.6,0.14,2.8,PAL.hutRoof,0,2.1,0,base); shR.rotation.z=0.06;
-    p.collide();
-  },
-});
+/* ---- THE TWO CARPARK STRUCTURES THAT WERE NEVER EVEN A FUNCTION — REPLAT P6A ----
+   The trailhead's DOC board and the unattended pack were written inline inside buildCarpark, with
+   their colliders pushed as raw literals a few lines under their geometry. They are exactly the
+   case P6A.md opens with: nothing named them, so nothing could swap them, and a model arriving for
+   either would have meant reading forty lines of map to find out where its collider was. Now each
+   is a row.
+   THE RAW PUSHES BECOME DECLARED BOXES, and note the units: those literals were HALF extents,
+   because they went into G.colliders directly rather than through addBoxCollider. The entries
+   state the full dimensions, which is the convention everywhere else in this file, and
+   propCollider halves them on the way out. The collider digest is what proves the conversion.
+   THERE WERE THREE, AND sw_tow_shed IS GONE — TODO 39b. The SW rope-tow shed was the third, and
+   the ski corner graduated to the hill, so nothing places it any more. THE ROW GOES WITH THE
+   PLACEMENT, deliberately: this registry is the model-pass work list, and a row nothing builds is
+   a request for somebody to source, licence and fit a GLB for a shed that is not in the game. The
+   hill's own engine shed is a registry row of its own (`tow_shed`, declared beside SKITOW) and it
+   is the one a model should arrive for. MODEL_MANIFEST.md loses the row for the same reason. */
 defineProp('doc_board',{
   biome:'carpark', at:{x:44,z:-40},
   collider:[{kind:'box',w:2.3,d:0.3,top:2.45,solid:true}],
@@ -11246,8 +11269,12 @@ function defineMissions(mode,opts){
 function missionsCarpark(mode){
   // v5 (2026-08-26): to-do list rewritten in the Untitled-Goose grammar — grouped by area,
   // imperative, specific, and rude. Same ids, same detectors; six new tasks appended.
-  const A={cp:'THE CARPARK',hut:'THE HUT',camp:'THE CAMPSITE',road:'THE ROAD',ski:'THE SKI FIELD',tr:'THE TRAILHEAD',pad:'THE PADDOCK & NEST',co:'TOGETHER'};
-  G.chapters=[A.cp,A.camp,A.hut,A.road,A.ski,A.tr,A.pad,A.co]; G.chapIdx=0; G.needHydrate=true;
+  /* SEVEN PAGES, NOT EIGHT, SINCE TODO 39b. THE SKI FIELD graduated — its five jobs went up the
+     hill or were retired there as duplicates, so the page has nothing on it and a page with nothing
+     on it is cleared the instant it opens. The save carries anyone who had earned it: see
+     SAVE.graduate. */
+  const A={cp:'THE CARPARK',hut:'THE HUT',camp:'THE CAMPSITE',road:'THE ROAD',tr:'THE TRAILHEAD',pad:'THE PADDOCK & NEST',co:'TOGETHER'};
+  G.chapters=[A.cp,A.camp,A.hut,A.road,A.tr,A.pad,A.co]; G.chapIdx=0; G.needHydrate=true;
   G.missions=[
     {id:'wiper',  area:A.cp,  label:'Relieve three cars of their windscreen wipers',need:3,n:0},
     {id:'roofhonk',area:A.cp, label:'Ride a moving car\'s roof until the driver honks'},
@@ -11272,11 +11299,6 @@ function missionsCarpark(mode){
     {id:'q_median',area:A.road,label:'Get honked at from the centre line, on foot'},
     {id:'q_muster',area:A.pad, label:'Herd a sheep all the way onto the road'},
     {id:'q_twine', area:A.pad, label:'Chew through the baling twine holding the paddock gate shut'},
-    {id:'s_ski',  area:A.ski, label:'Relocate somebody\'s ski beyond the snowline'},
-    {id:'s_pole', area:A.ski, label:'Make off with a ski pole'},
-    {id:'s_binding',area:A.ski,label:'Chew a binding, thoroughly'},
-    {id:'s_goggles',area:A.ski,label:'Help yourself to the ski goggles, and wear them'},
-    {id:'s_lift', area:A.ski, label:'Perch the spinning tow wheel'},
     {id:'t_pack', area:A.tr,  label:'Unzip the unattended pack'},
     {id:'t_bar',  area:A.tr,  label:'Scoff the muesli bar at your nest'},
     {id:'t_pole2',area:A.tr,  label:'Redistribute both walking poles',need:2,n:0},
@@ -11328,14 +11350,34 @@ function missionsSkifield(mode){
   const settled=k=>Math.abs(k.vy||0)<0.7;                  // standing on it, not falling past it
   const onPiste=p=>p.x>=SKIPISTE.x0&&p.x<=SKIPISTE.x1&&p.z>=SKIPISTE.z0&&p.z<=SKIPISTE.z1;
   G.missions=[
-    {id:'k_poles', area:A.tow, label:'Redistribute all three ski poles',need:3,n:0},
-    {id:'k_wheel', area:A.tow, label:'Perch the spinning bull wheel',
+    {id:'k_poles', area:A.tow, label:'Make off with all three ski poles',need:3,n:0},
+    {id:'k_wheel', area:A.tow, label:'Perch the spinning tow wheel',
       check:anyKea(k=>!!G.towWheel&&Math.abs(k.x-G.towWheel.position.x)<1.1&&
         Math.abs(k.z-G.towWheel.position.z)<1.1&&Math.abs(k.y-G.towWheel.position.y)<0.85)},
     {id:'k_shed',  area:A.tow, label:'Supervise the tow from the roof of its own engine shed',
       check:anyKea(k=>Math.abs(k.x-SKITOW.x)<1.7&&Math.abs(k.z-SKITOW.base)<1.3&&k.y>=2.0&&settled(k))},
-    {id:'k_ski',   area:A.tow, label:'Leave somebody ski out on the groomed band',
+    /* THE WORDING IS THE CARPARK'S WHERE THE TWO DIFFERED — Eric's decision of 2026-09-12: "the
+       carpark wording is what players have seen and it's better tested." Applied where it can be
+       applied truthfully: k_wheel takes s_lift's "tow wheel" over "bull wheel", and k_goggles
+       already carried s_goggles' line word for word.
+       TWO OF THE FOUR KEEP THIS MAP'S SENTENCE, and the reason is that the carpark's was about a
+       different job rather than the same job in other words. s_pole asked for ONE pole and k_poles
+       asks for all three; s_ski asked for a ski "beyond the snowline" and the whole hill is beyond
+       the snowline, while k_ski asks for it out on the groomed band, which is a place a bird can
+       actually be sent. Taking the carpark's line for either would have made the label contradict
+       the detector underneath it, so the carpark's VERB is kept and its object is not. */
+    {id:'k_ski',   area:A.tow, label:'Relocate somebody\'s ski out onto the groomed band',
       check:()=>G.props.some(p=>p.name==='ski'&&!p.heldBy&&!p.banked&&onPiste(p))},
+    /* THE ONE JOB THAT MIGRATED RATHER THAN RETIRING, and it is DECLARED WITH ITS PAGE rather than
+       appended to the end of the list. A row's page is its area, but the to-do list is rendered in
+       declaration order within a page, and a row declared out of group reads as an afterthought in
+       the one place the player looks. It belongs to THE ROPE TOW because the rack it was re-homed
+       onto is the tow-base rack, which is Eric's ruling of 2026-09-12 in one line of data.
+       NO check() BECAUSE THE TEAR CARRIES IT: buildSkifield's CHEW THE BINDING calls done() from
+       its own onDone, which is the seam TODO 40 established — a mission is credited by the thing
+       that was actually done to, never by a proximity test in a per-frame loop. That is the
+       distinction s_lift got wrong and the reason its detector did not travel with the job. */
+    {id:'k_binding',area:A.tow, label:'Chew a binding, thoroughly'},
     {id:'k_goggles',area:A.lodge,label:'Help yourself to the ski goggles, and wear them'},
     {id:'k_roof',  area:A.lodge,label:'Stand on the day lodge roof like you own the place',
       check:anyKea(k=>Math.abs(k.x-SKILODGE.x)<SKILODGE.w/2&&Math.abs(k.z-SKILODGE.z)<SKILODGE.d/2&&
@@ -11468,7 +11510,20 @@ function checkMisc(){
   for(const k of G.keas){
     if(G._chCol){ const wp=G._chCol;
       if(Math.abs(k.x-wp.x)<0.9&&Math.abs(k.z-wp.z)<0.9&&Math.abs(k.y-wp.y)<1.2&&Math.abs(k.vy||0)<0.6)done('q_chimney'); }
-    if(G.towWheel&&Math.abs(k.x-G.towWheel.position.x)<1.0&&Math.abs(k.z-G.towWheel.position.z)<1.0&&Math.abs(k.y-2.2)<0.75)done('s_lift');
+    /* THE TOW-WHEEL DETECTOR IS GONE FROM HERE, and Eric named it: "it reads a G.towWheel both maps
+       set and its y tolerance fires on the hill today; it's only harmless by accident."
+       ALL THREE FAULTS IN ONE LINE. It lived in this loop, which runs on every map; it read
+       G.towWheel, a handle the carpark's ski corner set and the SKI FIELD's tow base still sets
+       (buildSkifield, beside SKITOW — named rather than numbered, because a line number in a
+       comment is wrong the next time anything above it moves); and it
+       tested Math.abs(k.y-2.2)<0.75 against a hard-coded carpark height while the hill puts its
+       bull wheel at 2.5 — inside tolerance, so perching the hill's wheel called done('s_lift')
+       every time. It did nothing only because done() guards an id it cannot find
+       (`if(!m||m.done)return`), which is luck rather than design and is exactly the accident the
+       `apex` throw in TODO 40 was not lucky enough to have.
+       THE HILL'S OWN k_wheel ALREADY DOES IT PROPERLY: declared beside the mission, reading
+       G.towWheel.position.y rather than a literal, so it cannot be wrong about a wheel that moves.
+       That is the seam TODO 40 built and this line predates it. */
   }
   for(const sh of G.sheep){ if(Math.abs(sh.z-34)<2.2)done('q_muster'); }
   if(!G._qtDone){ const tp=G.props.filter(p=>p.home&&dist2(p.home.x,p.home.z,15,-13)<3.2);

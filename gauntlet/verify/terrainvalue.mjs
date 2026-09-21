@@ -50,7 +50,9 @@ const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'../..'
 /* THE WIDE VANTAGES, and which of them actually carry the range is DISCOVERED rather than assumed:
    a vantage whose painted mask covers less than 1% of the frame is reported as "range not in
    frame" and not measured. That way the list can be generous without inventing measurements. */
-const IDS=(process.env.IDS||'01_carpark_wide,06_skyline,10_skifield,28_skifield_base,11_trailhead')
+/* 10_skifield left this list when it was retired (TODO 39b). It was a carpark vantage pointed at
+   the SW corner, and the range it carried is the same range 01 and 06 carry from the same map. */
+const IDS=(process.env.IDS||'01_carpark_wide,06_skyline,28_skifield_base,11_trailhead')
   .split(',').filter(Boolean);
 /* THE PLATE REFERENCES ARE IMPORTED, NOT TYPED, and that fixes a contradiction between two
    shipped instruments. These bands used to be hand-entered from a measurement of the plates' whole

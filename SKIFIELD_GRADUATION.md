@@ -1,6 +1,19 @@
-# SKIFIELD_GRADUATION.md — the plan for TODO 39b, for Eric's approval
+# SKIFIELD_GRADUATION.md — the plan for TODO 39b
 
-Nothing in this document has been executed. Written 2026-09-11 on Eric's instruction: *"plan it and
+**EXECUTED 2026-09-21, in two pieces, on Eric's four rulings. This document is now the plan AND its
+outcome: the plan text below is left exactly as it was written so it can be read against what
+actually happened, and the section at the very bottom records where it was right and where it was
+wrong.** The four decisions it asked for were taken on 2026-09-12:
+
+1. **The four duplicates: retired**, and the carpark's WORDING kept wherever the two lines
+   described the same job.
+2. **Vantage 10: retired.**
+3. **A new vantage on the migrated rack: yes** — `44_tow_rack`, first pin, flagged.
+4. **The orphaned page: it carries** — a cleared THE SKI FIELD becomes THE ROPE TOW, by name.
+
+---
+
+Nothing in this document had been executed when it was written. Written 2026-09-11 on Eric's instruction: *"plan it and
 STOP before executing — show me what migrates, what happens to live-save star pages, which carpark
 vantages get re-staged or retired, and what the whole-set re-pin will cost. I want to approve the
 plan before anything moves."*
@@ -233,3 +246,74 @@ One commit per numbered step, proof in the same breath, gate green before each p
 3. **A new vantage on the migrated rack**: yes or no?
 4. **The orphaned `stars['THE SKI FIELD']` page record**: leave it unread (recommended), or should a
    player who cleared it in the carpark arrive on the hill with THE ROPE TOW already marked?
+
+
+---
+
+# WHAT ACTUALLY HAPPENED — 2026-09-21
+
+## WHERE THE PLAN WAS RIGHT
+
+**The shape.** Four retirements and one migration, exactly as §1 predicted, and the four were
+retired because the hill answers them better rather than because they were in the way.
+
+**The draw-order answer.** Keeping the five `propAt` draws and suppressing only the geometry held.
+It is now proved twice over rather than argued: the world's mesh rows diffed against the
+pre-piece tree ROW BY ROW come back as ONE contiguous deleted block — 22 meshes, 2 colliders, 5
+props, 1 tear — with every other row byte-identical **and in the same order**; and deleting a
+single one of the five draws turns the carpark mesh digest and the anchor digest red.
+
+**The frame cost.** §4 predicted four or five frames instead of forty-three. It was four: 10
+retired, 44 first-pinned, 28 and 29 re-pinned. A 28-frame carpark probe confirmed the prediction
+that only the frame staged ON the corner moves.
+
+**The FLAKES 16 call.** `harness-everything:3615` did go red on the graduation for the right
+reason, and the law it encoded wrongly has been replaced by the law underneath it: the five
+graduated ids are on NEITHER list, so a later session cannot quietly reinstate a carpark ski
+corner and have the pair of assertions pass.
+
+## WHERE THE PLAN WAS WRONG, AND IT MATTERS BOTH TIMES
+
+**§2's `chapIdx` hazard does not exist.** This was found by 39b/1 and is repeated here because
+this document is where somebody will look: `applySave` never reads the saved `chapIdx`. It walks
+`G.chapters` from zero and stops at the first page whose rows are not all done, so the derivation
+is already by name and a page leaving the list cannot misplace anybody. "A player on THE TRAILHEAD
+wakes up on THE PADDOCK" was wrong. What a rename really breaks is the other half — `G.stars` and
+`G.pageChaos` are keyed by the AREA TITLE — and that is what `SAVE.graduate` carries.
+
+**§5 undercounted the damage by a long way.** It named "fourteen references across two batteries"
+and four assertions to rewrite. The real count was **thirty-six findings**, and the difference is
+the interesting part: eleven of them were in the VS fix-verb and carry-back sections, three hundred
+lines from anything about skiing. Two causes, both of them laws this project has already written
+down:
+- `G.inter.find(... kind==='tear' ...)` returned CHEW THE BINDING for its whole life because the
+  binding happened to be the first tear in the carpark. With the binding gone it returned PEEL THE
+  3 HR RETURN STICKER, a **strip** tear that resets `done` after each of its five units, so the
+  section held a key for twenty seconds four times and reported the fix economy as broken. The
+  predicate now says what the section always needed: `!it.strip`, because a thing that comes apart
+  in five pieces cannot be put back.
+- Then the same section met FLAKES 3: UNZIP THE UNATTENDED PACK spawns a muesli bar a metre and a
+  half from its own anchor, so the management's restore hold went to the SNACK.
+**The lesson to carry:** a piece that removes props should expect its damage in the sections that
+pick a prop or an interactable BY POSITION, not only in the ones that name the thing it removed.
+Those sections do not mention skis anywhere.
+
+**A boot is not free, and the first cut of this piece paid for it.** Moving the goggles test to the
+hill by booting the ski field inside an EARLY carpark section shifted the seeded stream for every
+section after it (FLAKES 15) and made the VS sections pick different props out of a differently
+scattered world. The test went to the hill's OWN section instead, where the map is already booted
+and the boot count does not change.
+
+## WHAT THE PLAN DID NOT MENTION AT ALL
+
+- **`sw_tow_shed`'s registry row.** The plan retired the shed's placement and said nothing about
+  its P6A entry. A registry row is a request to source, licence and fit a model, so a row nothing
+  places asks for a GLB of a shed that is not in the game. Retired, and MODEL_MANIFEST.md
+  re-measured with the same probe that generated it (57 entries, 57 placed, 84 instances).
+- **Four assertions elsewhere that were quietly about the ski corner**: the `_ryUnused` section's
+  "the two skis are the build site that rotates a prop" (the walking poles are that pair now), the
+  corrugate-drainage precondition (three panels, now two — the third was the shed's roof), the snow
+  resolver's fixture, and the rail-is-a-surface section's collider find.
+- **The hill's page shape.** `k_binding` makes THE ROPE TOW five rows against THE DAY LODGE's four.
+  Nothing requires a page to be four, and the battery now asserts the shape that is true plus the
+  invariant that matters: the two pages between them hold every job bar the finale.

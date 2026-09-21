@@ -113,8 +113,20 @@ const CHURN={
   '07_jam'              :   23,   // was 2865   5run 20    10run 5717  warm 22
   '08_readability_320'  :   15,   // was 1480   5run 15    10run 15    warm -
   '09_colossal'         : 3090,   // was 2233   5run 825   10run 3090  warm 814
-  '10_skifield'         : 1785,   // was 5822   5run 73    10run 1785  warm 72
+  /* '10_skifield' RETIRED — TODO 39b. Its row read 1785 (was 5822, 5run 73, 10run 1785, warm 72)
+     and it is deleted rather than kept, because the selftest's rule runs both ways: a PINNED
+     vantage with no row goes red, and a row with no pinned vantage is a measurement of a
+     photograph nobody takes. 44_tow_rack replaces it in the set and gets its own row below, from
+     its own sweeps — the old number is NOT inherited, because a churn band is a property of one
+     staging and this is a different one. */
   '11_trailhead'        :   13,   // was 4446   5run 7     10run 13    warm -
+  /* 44_tow_rack, FIRST PINNED 2026-09-21 (TODO 39b), and its band is measured on its own sweeps
+     rather than inherited from the 10_skifield row it replaces in the set. IT IS BIMODAL AND THE
+     PAIR MATRIX SAYS SO PLAINLY: four takes in one batch came back 2, 3 and 4 BYTE-IDENTICAL to
+     each other and take 1 standing 1832 px from all three, max amplitude 130. That is the
+     step-function shape this file's header describes, not a distance — a warm-up state on the
+     first take of a batch. The band is the worst pair seen, which is that 1832. */
+  '44_tow_rack'         : 1832,   // 4takes: 2/3/4 identical, take1 1832 (max 130)
   '12_seal_midpeel'     :  963,   // was 3123   5run 454   10run 963   warm -
   '13_idle_preen'       :  347,   // was 6932   5run 347   10run 100   warm -
   '14_player_view'      :    5,   // was 3872   5run 5     10run 5     warm -

@@ -10,13 +10,22 @@ Two independent probes were run — one in this session, one in the session that
 they agree: **58 distinct registry ids are placed**, not the 56 the handover note said and not
 P6A's original 26. The figure below is the measured one.
 
+**AMENDED 2026-09-21 (TODO 39b, the ski-field graduation): 57.** The carpark's ski corner
+graduated to the hill, so `sw_tow_shed` is placed by nothing and its row is gone from §3 — a
+registry row is a request to source, licence and fit a model, and this one now describes a shed
+that is not in the game. The counts in §0 and the carpark instance count in §2 were RE-MEASURED
+by the same probe rather than decremented by hand (57 entries, 57 placed, 84 instances, carpark
+25). The one number not re-measured is `map renders now` in §2, which is a browser figure this
+session did not re-run; the carpark's headless triangle count falls by 6,062 with the corner, and
+that column should be read as the 2026-09-08 census until somebody re-runs it in a browser.
+
 ## 0. WHAT IS HERE
 
 | | count |
 |---|---|
-| registry entries in `PROPS.ALL` | **58** |
-| of those, placed at least once | **58** |
-| total placed registry instances, six maps | **85** |
+| registry entries in `PROPS.ALL` | **57** |
+| of those, placed at least once | **57** |
+| total placed registry instances, six maps | **84** |
 | entries shipping `source:'model'` today | **0** — the seam is off until a registry line says otherwise |
 | **families living OUTSIDE the registry** | **5** — and the model pass misses them unless it is told (§4) |
 
@@ -32,7 +41,7 @@ wish list.
 | forward axis | **+Z is the front.** Derived, not assumed: every facing anchor in the registry sits at positive local z — `tow_shed.window +1.34`, `ski_lodge.door +3.53`, `camp_ablution.door +1.56`, `vill_shop.door +3.10`, `hut.door +2.76`, `stan_woolshed.step +5.20`. Six out of six. A wrong-facing export is corrected with `fit.ry`, not re-exported |
 | handedness | right-handed, glTF standard |
 | units | **metres.** The loader does not trust the file: `fit.standM` names the size the prop should occupy along `fit.axis`, and the scale is **measured on the clone every time** (`normalise()`). A model exported in centimetres still lands correctly — ship metres anyway |
-| origin | **ground contact at the footprint centre.** `fit.ground:true` lifts the asset so its lowest vertex sits on the prop's own y=0. Measured: 48 of the 58 already sit within 60 mm of their box bottom; the 10 exceptions are §5 and are deliberate |
+| origin | **ground contact at the footprint centre.** `fit.ground:true` lifts the asset so its lowest vertex sits on the prop's own y=0. Measured: 47 of the 57 already sit within 60 mm of their box bottom; the 10 exceptions are §5 and are deliberate (48 of 58 before TODO 39b — the retired `sw_tow_shed` was measured at +0.00, so it came out of the compliant side and the exception list did not move) |
 | scale | 1.0 in the file. `at.scale` is a per-placement multiplier and none of the asset's business |
 | textures | **glTF's own colour-space rules, and the loader does not override them.** `GLTFLoader` tags baseColor and emissive sRGB, and normal, occlusion and metallicRoughness linear. Do not pre-tag or pre-multiply. This is unlike `materials.mjs`, which must tag the family sets by hand because they arrive as loose JPEGs |
 | texture format | **JPEG or PNG embedded in the GLB.** 1024² is the family-set standard and is ample; 2048² only for something that fills the frame. **No KTX2/Basis** — nothing in the tree installs `KTX2Loader` |
@@ -58,7 +67,7 @@ REPLACES are already inside what each map renders now. So the honest figure is t
 
 | map | instances | model budget | primitives replaced | **net change** | map renders now |
 |---|---|---|---|---|---|
-| carpark | 26 | 97,000 | 120,098 | **-23,098** | 275,804 |
+| carpark | 25 | 94,500 | 120,074 | **-25,574** | 275,804 (pre-39b) |
 | skifield | 6 | 22,000 | 1,626 | **+20,374** | 108,770 |
 | campground | 17 | 46,100 | 21,852 | **+24,248** | 118,892 |
 | village | 14 | 48,200 | 10,406 | **+37,794** | 132,292 |
@@ -83,7 +92,7 @@ wheelie bins are one download and one budget, because `models.mjs` caches the pr
 url — so repeated props are the cheapest wins and `stan_pen` ×4, `camp_site_post` ×6, `keasign` ×4
 and `nest` ×6 should be modelled before anything unique.
 
-## 3. THE REGISTRY — 58 PLACED ENTRIES, MEASURED
+## 3. THE REGISTRY — 57 PLACED ENTRIES, MEASURED
 
 `box` is W × H × D in metres, measured on the placed group. `orig` is how far the group origin
 sits above the box bottom (0.00 = ground contact). `prim` is what the primitive costs today, so
@@ -112,7 +121,7 @@ families the primitive actually wears, read off its meshes.
 | `camp_tent` | 2.79 × 1.65 × 2.75 | +0.01 | +Z | B | 2,500 | 200 | no | 4/1 | 1 | campground | timber | nz_hikers_01 |
 | `camp_van` | 5.24 × 2.44 × 5.48 | +0.00 | +Z | A | 6,000 | 5,166 | no | 3/1 | 1 | campground | — | kea_on_car_01..09, kea_bus_01, kea_caravan_01, nz_carpark_01..03, nz_road_01 |
 
-### CARPARK (Aoraki visitor carpark)  (22 entries)
+### CARPARK (Aoraki visitor carpark)  (21 entries)
 
 | registry name | box W×H×D (m) | orig | fwd | tier | budget | prim | rig | anch/col | n | maps | families | reference photos |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -134,7 +143,6 @@ families the primitive actually wears, read off its meshes.
 | `roadworks_paddle` | 0.59 × 1.43 × 0.08 | +0.01 | +Z | C | 1,200 | 118 | no | 1/0 | 1 | carpark | — | nz_road_01, nz_carpark_01..03 |
 | `sheep_pen` | 9.50 × 0.90 × 6.12 | +0.00 | +Z | A | 6,000 | 288 | no | 2/0 | 1 | carpark | timber | nz_tussock_01..03, swag_context_01 |
 | `sign_dontfeed` | 1.79 × 2.45 × 0.24 | +0.00 | +Z | B | 2,500 | 1,022 | no | 2/0 | 1 | carpark | — | nz_road_01, nz_carpark_01..03 |
-| `sw_tow_shed` | 3.60 × 2.28 × 2.80 | +0.00 | +Z | B | 2,500 | 24 | no | 3/1 | 1 | carpark | corrugate | nz_hut_01, swag_context_01, swag_density_01 |
 | `tent` | 2.69 × 1.58 × 2.65 | +0.01 | +Z | B | 2,500 | 200 | no | 3/1 | 1 | carpark | timber | nz_hikers_01 |
 | `trail_pack` | 0.85 × 1.33 × 0.50 | +0.07 | +Z | C | 1,200 | 1,400 | no | 1/0 | 1 | carpark | — | nz_carpark_01..03, nz_hikers_01, kea_pilfer_01..09 |
 | `trailer` | 4.13 × 1.17 × 3.60 | +0.00 | +Z | A | 6,000 | 5,278 | no | 2/1 | 1 | carpark | — | kea_on_car_01..09, kea_bus_01, kea_caravan_01, nz_carpark_01..03, nz_road_01 |
