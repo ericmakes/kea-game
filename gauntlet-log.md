@@ -5901,3 +5901,48 @@ spread wing the procedural rig could not make.
 ## THE LOCK
 
 Taken at the start, released as the final act.
+
+## 2026-09-21c — THE RE-STAGE IS BLOCKED, AND THE MEASUREMENT THAT WAS GOING TO DRIVE IT WAS WRONG TWICE
+
+Eric asked for the five close-ups re-staged and for tail views. Neither shipped, and the reason is
+worth more than the job would have been.
+
+**FIRST, I HAD THE MEASUREMENT WRONG, AND IT WOULD HAVE SAID "DO NOTHING".** `birdframe.mjs`
+projects the bird's own vertices through the live camera. Its first cut reported the approved bird
+at 336 px on `03_kea_plate` against the primitive's 344 — all but identical, which would have
+closed the job as unnecessary. **248 of those pixels were the SHADOW**, a flat blob on the ground
+that is wider than the animal and does not shrink when the animal does. Excluding it:
+
+    03_kea_plate    primitive 295 px wide   approved 112   13_idle_preen  229 -> 104
+    18_rear_close   primitive 240 px wide   approved 100   20_dead_rear    37 ->  20
+    25_preen_follow primitive  38 px wide   approved  22
+
+So the eye was right and the instrument was wrong, which is the more dangerous way round.
+
+**SECOND, TWO OF THE FIVE ARE NOT CLOSE-UPS AND MUST NOT BE "FIXED".** `25_preen_follow` is pinned
+at `F_DIST=0.6` with a comment saying it is **the closest the engine's own camera clamp allows** —
+a real player camera, deliberately, and 20_dead_rear is the post-ejection follow cam. The bird is
+~4% of frame width in both, with the primitive too. Re-staging those means either overriding a
+recorded decision or changing the game's camera clamp; neither is a photograph job.
+
+**THIRD, AND THE ACTUAL BLOCKER: THE BIRD RENDERS WHITE.** The re-staged frames came back with an
+untextured bird. Chased to a boundary rather than a guess — the full elimination table is in
+BIRD_STATE.md §7 — and it is the asset size: `kea_bill.glb` (2.2 MB, 512²) loads its map, and
+`kea_animated.glb` (32 MB, two 4096² PNGs, 18.7 and 8.7 MB) comes back with NO MAP, three runs of
+three. The PNGs decode fine standalone in the same browser in 154 ms and 370 ms; blob URLs work;
+the dist copy is byte-identical; there is no CSP; memory is not short. GLTFLoader logs one line and
+returns a material with no texture.
+
+**THE PINNED SET IS FINE AND THAT WAS MEASURED** — the bird region of `03_kea_plate` reads
+140,116,68, a warm brown. The textures decoded during all five sweeps of the re-pin. What is broken
+is the ability to RESHOOT, which is its own kind of bad: a baseline you cannot reproduce.
+
+**SO THE RIG NOW REFUSES.** `webrig.assertBirdDressed()` runs after the boot evaluate in
+capture.mjs and throws with the reason; shotR retakes three times, then gives up loudly. Proved by
+running it: three retakes, one GAVE UP, no frame written. A white bird cannot reach a baseline now.
+**The first cut of that guard sat inside `assertBooted` and did nothing at all** — capture calls
+that before `startGame`, so there are no keas, the model has not attached, and it reported
+"nothing to wait for" every single time. A guard in the wrong place is worse than none, because it
+reads as cover.
+
+Nothing was pinned, and the three re-staged cameras were REVERTED rather than shipped unjudged.

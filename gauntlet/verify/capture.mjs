@@ -7,7 +7,7 @@ const OUT=path.join(ROOT,'gauntlet/capture'); fs.mkdirSync(OUT,{recursive:true})
 /* REPLAT P1 step 4: three is BUNDLED now (modern three ships no UMD build to intercept) and the
    page is served over loopback (ES modules will not load over file://). Both live in webrig.mjs,
    shared with probe/motion/journey so the four cannot drift apart again. */
-import {ensureBuild,serve,preparePage,assertBooted,launch,GAUNTLETSEED} from './webrig.mjs';
+import {ensureBuild,serve,preparePage,assertBooted,assertBirdDressed,launch,GAUNTLETSEED} from './webrig.mjs';
 let SRV=null;
 const origin=async()=>{ if(!SRV){ ensureBuild(); SRV=await serve(); console.log('capture: built and serving '+SRV.origin); } return SRV.origin; };
 // SEEDED WORLD (2026-08-28): the game seeds nothing, so every load builds a different country.
@@ -71,6 +71,11 @@ async function shot(name,stage,opts){
       await page.goto(url0,{waitUntil:'load'}); await sleep(1000);
       await assertBooted(page,{biome:want});   // the seed and the map took, or this shot does not happen
       await page.evaluate(o.colossal?BOOTCOL:BOOT); await sleep(500);
+      /* THE BIRD IS IN EVERY FRAME OF THIS SET, so a bird whose texture did not decode is a
+         wrong photograph of every vantage, not of one. Checked HERE and not in assertBooted
+         because the model attaches to keas, and the keas are built by the boot above. A refusal
+         costs a retake — shotR takes three — and a white bird costs a baseline. */
+      await assertBirdDressed(page);
       await page.evaluate(QUIET);
       if(o.colossal){ await page.evaluate(`window.__keaFeedKeep=true; for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
       await page.evaluate('{'+stage+'}'); await sleep(o.settle||900);

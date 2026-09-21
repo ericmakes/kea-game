@@ -170,7 +170,53 @@ and is the reason the switch stays off.
 
 ---
 
-## 7. WHAT IS STILL OPEN
+## 7. THE BLOCKER: THE 4096-SQUARE TEXTURES DO NOT DECODE IN THE CAPTURE BROWSER
+
+**Found 2026-09-21 while re-staging the close-ups, and it stops both that job and the tail views.**
+
+`kea_animated.glb` embeds three PNGs: an 18.7 MB 4096² baseColor, an 8.7 MB 4096² normal, and a
+126-byte metallicRoughness. In the capture browser the two big ones fail and `GLTFLoader` hands
+back a material with **no map at all** — a sharp, settled, entirely plausible photograph of a
+WHITE bird. Reproduced 3 runs of 3.
+
+**What was eliminated, each by measurement rather than by argument:**
+
+| suspect | result |
+|---|---|
+| truncated copy in `dist/` | md5 identical to the source, both 32,741,172 bytes |
+| the PNGs themselves | decoded in the same browser: 4096² in 154 ms and 370 ms |
+| blob URLs | a blob-backed `Image` and `createImageBitmap` both load fine |
+| three's `colorSpaceConversion:'none'` path | decodes fine |
+| path prefixing of the blob URL | `LoaderUtils.resolveURL` has the `blob:` guard |
+| a CSP or a failed request | no CSP; the only 404 is `favicon.ico` |
+| machine memory | 1.5 GB free and 2 stray browsers swept; still fails |
+
+**The boundary is the asset size.** Same code, same browser, same boot, one run apart:
+
+    models/kea_bill.glb                          (2.2 MB, 512² texture)   -> MAP 512
+    models/astra_incoming/approved/kea_animated.glb (32 MB, 4096²)        -> NO MAP
+
+**The pinned set is NOT affected and that was checked, not assumed** — the bird region of the
+pinned frames measures 140,116,68 on `03_kea_plate`, a warm brown. The textures decoded during the
+four re-pin sweeps and the held-out sweep. So the baselines are right; what is broken is the
+ability to RESHOOT them, which is worse in a different way: the set cannot currently be reproduced.
+
+**The rig now refuses rather than pinning one.** `webrig.assertBirdDressed()` runs after the boot
+evaluate in `capture.mjs` and throws with the reason; `shotR` retakes three times and then gives
+up loudly. A white bird can no longer reach a baseline.
+
+**Three ways out, and the choice is Eric's:**
+1. **Re-export the textures smaller** — 2048² would be a quarter of the pixels, and a JPEG
+   baseColor smaller again. A new Astra drop, and the cleanest fix if it also helps real players.
+2. **Un-embed them** — ship the PNGs beside the GLB so they load as ordinary image requests
+   rather than through the blob path. No re-authoring, but it changes the package's shape.
+3. **Judge the bird only on a real GPU** and accept that the headless set cannot reshoot it,
+   which costs the gauntlet its whole photographic tripwire on every frame with a bird in it.
+
+Until one of those lands, **the five close-ups cannot be re-staged and the tail views cannot be
+shot**: both need frames this machine will not currently render correctly.
+
+## 8. WHAT IS STILL OPEN
 
 - **Task 2, the tail vanes** — still open, as section 3 records and as the package insists.
 - **Five close-up bird vantages want re-staging.** `03_kea_plate`, `13_idle_preen`,

@@ -376,6 +376,42 @@ export async function assertBooted(page, { biome, iblTimeout = 8000, matsTimeout
 /* Unchanged from capture.mjs, which has carried all three of these paths for months: bundled
    chromium first, the system Chrome channel when the bundled binary is unsigned (which it is on
    this Mac — `spawn Unknown system error -88`), and @sparticuz/chromium in a container. */
+/* ---- THE BIRD MUST BE DRESSED BEFORE THE SHUTTER — added 2026-09-21 ----
+   A WHITE BIRD IS A COMPLETE, PLAUSIBLE, WRONG PHOTOGRAPH, which is the only kind worth building a
+   gate for. kea_animated.glb carries two 4096-square PNGs (18.7 MB and 8.7 MB) embedded in 32 MB
+   of GLB, and when they fail to decode GLTFLoader logs one line and hands back a material with NO
+   MAP. The geometry, the rig, the clips and the morph are all fine; the bird is simply white. It
+   renders sharply, it settles, it passes every existing check, and nothing downstream can tell.
+   IT CANNOT LIVE IN assertBooted, which is where the first cut put it and where it did nothing:
+   capture.mjs calls that BEFORE startGame, so there are no keas yet, the model has not attached,
+   and the check reported "nothing to wait for" every time. It has to run after the boot evaluate,
+   which is why it is its own export and why capture.mjs calls it there.
+   THREE STATES, NOT TWO: `off` (the model tier is not on — nothing to check), `dressed`, and the
+   two failures, which are named separately because they want different responses. `attaching` is
+   a slow 32 MB fetch and is worth waiting for; `undressed` is the decode having failed and no
+   amount of waiting fixes it. */
+export async function assertBirdDressed(page, { timeout = 30000 } = {}) {
+  const read = () => page.evaluate(() => {
+    const G = (globalThis.KEAGAME || {}).G || {};
+    const B = G.bird || {};
+    if (B.mode !== 'model') return 'off';
+    const k = (G.keas || [])[0];
+    if (!k || !k._model) return 'attaching';
+    const m = k._model.sk && k._model.sk.material;
+    const im = m && m.map && m.map.image;
+    return (im && (im.width || im.videoWidth)) ? 'dressed' : 'undressed';
+  });
+  const t0 = Date.now();
+  let st = await read();
+  while ((st === 'attaching' || st === 'undressed') && Date.now() - t0 < timeout) {
+    await new Promise(r => setTimeout(r, 250));
+    st = await read();
+  }
+  if (st === 'off' || st === 'dressed') return st;
+  throw new Error('webrig: the bird model is ' + st + ' after ' + timeout + 'ms — its texture did ' +
+    'not load, so a frame taken now would show an untextured WHITE bird. Refusing to shoot.');
+}
+
 export async function launch() {
   try {
     const p = await import('puppeteer');

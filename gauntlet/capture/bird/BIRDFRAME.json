@@ -1,0 +1,112 @@
+[
+  {
+    "id": "03_kea_plate",
+    "bird": "primitive",
+    "n": 18995,
+    "wpx": 295,
+    "hpx": 142,
+    "cx": 493,
+    "cy": 342,
+    "frac": 0.307,
+    "mode": "primitive"
+  },
+  {
+    "id": "03_kea_plate",
+    "bird": "approved",
+    "n": 1005,
+    "wpx": 112,
+    "hpx": 157,
+    "cx": 498,
+    "cy": 340,
+    "frac": 0.117,
+    "mode": "model"
+  },
+  {
+    "id": "13_idle_preen",
+    "bird": "primitive",
+    "n": 18995,
+    "wpx": 229,
+    "hpx": 144,
+    "cx": 447,
+    "cy": 341,
+    "frac": 0.239,
+    "mode": "primitive"
+  },
+  {
+    "id": "13_idle_preen",
+    "bird": "approved",
+    "n": 1005,
+    "wpx": 104,
+    "hpx": 115,
+    "cx": 505,
+    "cy": 356,
+    "frac": 0.108,
+    "mode": "model"
+  },
+  {
+    "id": "18_rear_close",
+    "bird": "primitive",
+    "n": 18995,
+    "wpx": 240,
+    "hpx": 168,
+    "cx": 469,
+    "cy": 429,
+    "frac": 0.25,
+    "mode": "primitive"
+  },
+  {
+    "id": "18_rear_close",
+    "bird": "approved",
+    "n": 1005,
+    "wpx": 100,
+    "hpx": 152,
+    "cx": 459,
+    "cy": 453,
+    "frac": 0.104,
+    "mode": "model"
+  },
+  {
+    "id": "20_dead_rear",
+    "bird": "primitive",
+    "n": 18995,
+    "wpx": 37,
+    "hpx": 52,
+    "cx": 478,
+    "cy": 327,
+    "frac": 0.038,
+    "mode": "primitive"
+  },
+  {
+    "id": "20_dead_rear",
+    "bird": "approved",
+    "n": 1005,
+    "wpx": 20,
+    "hpx": 41,
+    "cx": 478,
+    "cy": 333,
+    "frac": 0.02,
+    "mode": "model"
+  },
+  {
+    "id": "25_preen_follow",
+    "bird": "primitive",
+    "n": 18995,
+    "wpx": 38,
+    "hpx": 46,
+    "cx": 475,
+    "cy": 332,
+    "frac": 0.04,
+    "mode": "primitive"
+  },
+  {
+    "id": "25_preen_follow",
+    "bird": "approved",
+    "n": 1005,
+    "wpx": 22,
+    "hpx": 35,
+    "cx": 477,
+    "cy": 337,
+    "frac": 0.023,
+    "mode": "model"
+  }
+]
