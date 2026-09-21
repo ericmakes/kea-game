@@ -5685,3 +5685,37 @@ fault. It is not; this piece adds a row rather than a gap.
 ## THE LOCK
 
 Taken over from a dead session at the start, released as the final act.
+
+## 39b/3 — ERIC JUDGED THE THREE, THEN THE RE-PIN THE CUMULUS PIECE OWED
+
+Eric: *"Three frames judged — pin 44, 28 and 29. Then take the whole-set re-pin the cumulus piece
+owes."* Both done in one sitting.
+
+**The three are accepted and unflagged.** Before writing the consensus, one thing was checked that
+a careless re-pin would not have: does the new medoid move the photographs he just judged? It does
+not — 29 came back byte-identical, 28 at 0.9938 and 44 at 0.9955, which are each vantage's own
+take-to-take noise measured earlier in the session. He judged the frames that are pinned.
+
+**The re-pin: 43 vantages, 4 sweeps, BATCH=6, shoot-then-select.** Four separate `SHOOT=` commands
+and then `DIRS=`, which is what repin.mjs's own header asks for — one long job is a fragile job,
+and it also means the 172 frames the pins came from are still on disk to be audited. Every sweep 43
+of 43, no dead batches, provenance run1 28 / run2 8 / run3 3 / run4 4. Nine of the ten
+cumulus-drifted carpark frames came back clean, three of them at 1.0000.
+
+**THE FLAGGED SET IS STILL NOT A SET, and this is the third session to learn it.** The held-out
+check flagged two frames; the next sweep flagged three, and not the same three. Reshot rather than
+reasoned about: `21_night_camp` reads 0.9634 / 0.9996 / 0.9636 on three consecutive takes — it
+flips — while `25_preen_follow` sits consistently at 0.9603 and `03_kea_plate` was clean on one
+sweep and 0.9499 on the next. `stability.mjs` settles it: 0.9630 and 0.9605 take-to-take against a
+0.995 threshold, so these are not bad pins, they are vantages that do not reshoot the same twice.
+FLAKES 12 by name, parked under law 8, and written into BASELINE.md so the next session does not
+read their flag as fresh drift. Worth noting that 21 already carries law 12's fire staging and
+flips anyway, so the campfire is not what is left.
+
+`boxdiff` narrows the same finding usefully — 2 subjects changed of 12 and they are those same
+frames; every ski-field subject box is 0.9999 or better.
+
+**Two things left open and named, neither of them this piece's:** the three bimodal vantages above,
+and pxdiff's churn table, which is calibrated to 2026-09-03 and has no measured band at all for 15
+pinned vantages. A whole-set re-pin is the natural moment to redo that table; it is a piece of its
+own and was not smuggled into this one.

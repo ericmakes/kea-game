@@ -1080,3 +1080,62 @@ The sky, the lodge and the range are identical. Same shape as `44_tow_rack`'s bi
 pinned frames are the consensus state and every instrument passes, so nothing here is wrong — but
 the grass tier is the one live thing a capture pin does not currently hold, and law 12 says that is
 exactly what a pin is for.
+
+## RE-PIN 2026-09-21 — ALL 43 VANTAGES: the whole-set re-pin the cumulus outline owed
+
+Eric, after judging the three ski-field frames: *"Three frames judged — pin 44, 28 and 29. Then
+take the whole-set re-pin the cumulus piece owes."*
+
+**THE THREE JUDGED FRAMES ARE PINNED AND NO LONGER FLAGGED.** `44_tow_rack` (the migrated rack,
+first pin), `28_skifield_base` (gains the ski and the binding on the tow rack) and
+`29_lodge_deck` (two skis on the lodge rack where there were three) are accepted. They were
+re-pinned again as part of this sweep, and **the consensus did not move the photographs Eric
+judged**: 29 came back byte-identical (1.0000), 28 at 0.9938 and 44 at 0.9955 — each exactly its
+own measured take-to-take noise (0.9938 and 0.9955 respectively, recorded in the entry above), so
+the difference is the near-field grass and not the picture.
+
+**WHY IT WAS OWED.** `9a09e61` PIECE: the cumulus outline rebuilt the cloud lobes and the fringe
+after the last whole-set re-pin (`f644034`), re-pinned PRESEAM, and left every photograph behind.
+Ten carpark vantages were drifted from their pins by it. The evidence that it was that piece and
+not TODO 39b is in the entry above: the same ten drift by the same amount on the PRE-graduation
+tree.
+
+    sweeps      4 x 43, BATCH=6, per-vantage medoid, shoot-then-select (four SHOOT= runs, then DIRS=)
+    frames      172, every sweep 43 of 43, no dead batches, no orphans swept
+    provenance  run1 28, run2 8, run3 3, run4 4   (a run is disqualified per frame, never wholesale)
+    spread      0 on 10 vantages; the medoid rejected a clear single-run outlier on 14 more
+
+**WHAT IT FIXED.** Nine of the ten cumulus-drifted frames are clean against the new pins —
+`06_skyline`, `15_sign` and `16_trish` at 1.0000, `01_carpark_wide` 0.9994, `17_flight` 0.9999,
+`43_night_range` 1.0000, `23_paddock_gate` 0.9974, `19_roof_follow` 0.9914, `05_tussock_ground`
+0.9733. The tenth is `25_preen_follow`, which is below.
+
+### THE HELD-OUT CHECK, AND THE FLAGGED SET IS STILL NOT A SET
+
+A fresh sweep against pins it did not contribute to flagged **two** frames; the sweep after it
+flagged **three**, and not the same three. That is this file's oldest lesson about bimodal frames
+restated — they flip between takes, so the flagged set changes shape between sweeps. The three,
+each verified by reshooting rather than assumed:
+
+    21_night_camp     0.9634 / 0.9996 / 0.9636 on three consecutive takes — it FLIPS
+    25_preen_follow   0.9603 / 0.9605 / 0.9605 — consistently the far state from its pin
+    03_kea_plate      clean on one sweep, 0.9499 on the next — already recorded here as bimodal
+
+`stability.mjs`, four takes each, shot one at a time: **21_night_camp 0.9630 and 25_preen_follow
+0.9605 take-to-take**, against a 0.995 threshold. So neither is a bad pin — *they do not reshoot
+the same twice*, which is FLAKES law 12's case exactly: a vantage whose staging drifts reads as
+permanent drift no matter how often it is re-pinned. Classified and parked under law 8 rather than
+chased, and named here so the next session does not read their flag as fresh drift. 21 already
+carries the law-12 fire staging (`G.time` frozen, `_fireSpit` held) and still flips, so whatever is
+left is not the campfire.
+
+`boxdiff` agrees and narrows it: **2 subjects changed of 12, and they are the same two frames** —
+`03_kea_plate` 0.9246 and `25_preen_follow` 0.9338. Every other subject box is 0.9946 or better,
+including all four ski-field ones (28 at 0.9999, 29 and 30 at 1.0000).
+
+`pxdiff` reports 14 over band, and by its own header a warn there is a LOOK and never a verdict.
+Two things to know before reading that number: the bands were calibrated on 2026-09-03 and a
+whole-set re-pin is exactly when they go stale, and **15 pinned vantages have no measured band at
+all** and fall back to a deliberately loud DEFAULT of 200 (the selftest has said so since before
+this session — it is not new, and `44_tow_rack` shipped WITH a measured row rather than adding a
+sixteenth gap). Re-measuring the churn table is a piece of its own.

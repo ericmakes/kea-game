@@ -702,11 +702,26 @@ DONE 2026-09-21, in two pieces, on Eric's four rulings.
       is visible in it.
     Carpark 43 jobs and 8 pages -> 38 and 7; ski field 9 -> 10. sw_tow_shed's registry row retired
       with the shed. Gate CERTIFIED-SHIP.
-  WHAT THIS PIECE DID NOT DO, AND SOMEBODY OWES IT: ten carpark vantages are drifted from their
+  WHAT 39b/2 DID NOT DO, AND SOMEBODY OWED IT: ten carpark vantages were drifted from their
     pins by the CUMULUS OUTLINE piece (9a09e61), which shipped a visible sky after the last
     whole-set re-pin (f644034) and did not take one. Measured rather than assumed — the same ten
-    drift by the same amount on the PRE-graduation tree, and head-vs-now is 0.997 or better on
-    every one of them. It is a re-pin Eric judges, not this piece's to absorb.
+    drifted by the same amount on the PRE-graduation tree, and head-vs-now was 0.997 or better on
+    every one of them. It was a re-pin for Eric to judge, not 39b/2's to absorb.
+  39b/3 (2026-09-21) ERIC JUDGED THE THREE SKI-FIELD FRAMES AND ORDERED THAT RE-PIN, and it is
+    taken: all 43 vantages, 4 sweeps at BATCH=6, per-vantage medoid, provenance run1 28 run2 8
+    run3 3 run4 4. 44_tow_rack, 28_skifield_base and 29_lodge_deck are ACCEPTED and no longer
+    flagged — and the consensus did not move the frames Eric judged (29 byte-identical, 28 and 44
+    inside their own measured take-to-take noise). Nine of the ten cumulus frames came back clean;
+    the tenth is 25_preen_follow, which with 21_night_camp and 03_kea_plate is BIMODAL and does not
+    reshoot the same twice (stability 0.9605 and 0.9630 over four takes against a 0.995 threshold).
+    Classified under FLAKES 8 and 12 and named in BASELINE.md rather than chased.
+  STILL OPEN, BOTH WRITTEN UP IN BASELINE.md, NEITHER THIS PIECE'S: (a) three bimodal vantages
+    whose staging does not hold between takes — 03_kea_plate, 21_night_camp, 25_preen_follow;
+    (b) pxdiff's churn table is calibrated to 2026-09-03 and 15 pinned vantages have no measured
+    band at all, which a whole-set re-pin is the natural moment to redo. Also noted: the capture
+    rig does not hold the NEAR-FIELD GRASS during a settle, so a frame shot alone can differ from
+    the same frame shot later in a process (29_lodge_deck, 1.0000 against 0.9729). Law 12 says a
+    pin should hold anything live, and the grass tier is not held.
 
 ### 40. skifield-missions
 8-12 missions incl. the graduates. Signatures: tray-slide down the
