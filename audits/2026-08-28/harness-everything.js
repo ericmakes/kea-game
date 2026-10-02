@@ -4889,9 +4889,17 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
     X.boot({biome:'carpark'}); }
   { const src=require('fs').readFileSync(
       require('path').join(__dirname,'../../src/post.mjs'),'utf8');
-    ok(/noDepth\(ao\)/.test(src)&&/noDepth\(bokeh\)/.test(src)&&/postExclude/.test(src),
-       'and post.mjs really wraps BOTH of them — the AO pass and the depth-of-field pass each '+
-       'render their own prepass, so excluding one and not the other would leave half the fault'); }
+    /* PERF S1 (2026-10-02) REPLACED THE MECHANISM, so this checks the new one. The two passes no
+       longer render an override prepass at all: ScenePass draws the frame ONCE into a target that
+       owns the DepthTexture and both passes read it — a wisp that writes no depth is absent from it
+       by construction, which is what the per-pass wrapper used to fake. So the source must route
+       BOTH passes through the shared depth, and the wisps must really not write depth. */
+    ok(/class ScenePass/.test(src)&&/ao\.setGBuffer\(sp\.target\.depthTexture\)/.test(src)&&
+       /class SharedDepthBokehPass/.test(src)&&/new SharedDepthBokehPass/.test(src)&&!/noDepth\(/.test(src),
+       'and post.mjs routes BOTH the AO pass and the depth-of-field pass through the one shared scene '+
+       'depth, with no override prepass left to see a transparent quad as solid');
+    ok(wisps.length>0&&wisps.every(w=>w.material&&w.material.depthWrite===false),
+       'and every wisp writes no depth, so it is absent from that shared depth ('+wisps.length+' wisps)'); }
   /* THE ATLAS IS A FIRST-PARTY ASSET WITH A LEDGER ROW, checked the way every other asset is: no
      asset lands without its licence line. */
   { const led=require('fs').readFileSync(
@@ -6453,7 +6461,9 @@ C.section('REPLAT P4c: nature has no right angles');
      The fade was a pure function of distance from the camera, which is a perfect circle — the
      straight line's circular cousin, and it reads as a patch following the bird. */
   ok(GR.edgeVar>0,'the field edge is perturbed at all ('+GR.edgeVar+')');
-  ok(/float edge=1\.0\+\(keaFbm\(w\*[0-9.]+\)-0\.5\)\*2\.0\*uEdgeVar/.test(vs),
+  /* PERF S5b put an EXACT early-out in front of the noise (inside uLodNear*(1-uEdgeVar) the
+     smoothstep is 0 for any edge), so the expression is matched behind its guard */
+  ok(/float edge=\(d<uLodNear\*\(1\.0-uEdgeVar\)\)\?1\.0:1\.0\+\(keaFbm\(w\*[0-9.]+\)-0\.5\)\*2\.0\*uEdgeVar/.test(vs),
      'by noise in WORLD space, so the boundary wanders and stays put as the camera moves');
   ok(/smoothstep\(uLodNear\*edge,uLodFar\*edge,d\)/.test(vs),
      'and the perturbation is applied to BOTH thresholds, or the fade band itself changes width '+
@@ -6645,10 +6655,13 @@ C.section('TODO 82: the card tier — coverage to the horizon that geometry cann
     ok(Math.abs(c.density-CD.count/ringA)<1e-9,
        'its density is over the ring it actually occupies ('+c.density.toFixed(4)+
        ' cards/m2 over '+Math.round(ringA)+' m2), not over a disc');
-    ok(c.near>=X.GRASS.farLayer.near-3&&c.near<X.GRASS.farLayer.near,
-       'AND IT HANDS OVER FROM THE BLADE TIER RATHER THAN LEAVING A GAP — cards start at '+c.near+
-       ' m where the far blades reach '+X.GRASS.farLayer.near+' m, so the two overlap instead of '+
-       'meeting. A gap between tiers is a ring by another name.');
+    /* PERF S5 made the hand-over CAMERA-RELATIVE: the cards cover the whole disc and each grows in
+       past CD.camNear from the camera, so the overlap is measured there, not at a radius from the
+       world origin (c.near is 0 now). */
+    ok(CD.camNear>=X.GRASS.farLayer.near-3&&CD.camNear<X.GRASS.farLayer.near&&CD.camBand>0,
+       'AND IT HANDS OVER FROM THE BLADE TIER RATHER THAN LEAVING A GAP — cards grow in from '+CD.camNear+
+       ' m from the camera where the far blades reach '+X.GRASS.farLayer.near+' m, so the two overlap '+
+       'instead of meeting. A gap between tiers is a ring by another name.');
     ok(c.far>X.GRASS.farLayer.near*3,'and it reaches '+c.far+' m, '+
        (c.far/X.GRASS.farLayer.near).toFixed(1)+'x further than geometry does');
     ok(c.blades>=c.count*15,'and it carries at least the fifteen blades a card TODO 82 costed ('+

@@ -18,11 +18,12 @@
    targets disagree with the canvas produces a soft, subtly-wrong frame rather than an obvious one. */
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { CopyShader } from 'three/addons/shaders/CopyShader.js';
 
 /* THE LOOK, IN NAMED CONSTANTS. Tuned once, against the Birds of War wall, at a light model that
    is now physical. Subtle is the brief: this is a film camera on the same geometry, not a filter. */
@@ -52,7 +53,7 @@ export const FILM = {
   bloom:   { strength: 0.12, radius: 0.45, threshold: 2.0 },
   // AO darkens contact and crevice only; the scene already carries its own painted shade. Measured
   // at YAVG 154.5 against the plain renderer's 154.5 — it adds shade without lifting exposure.
-  ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45 },
+  ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45, res: 0.5, clip: 120 },   // res: PERF S2; clip: the AO box's half-width, m
   // a long focus and a narrow aperture: the far hills soften, everything you play in stays sharp
   /* MAXBLUR CAME DOWN FROM 0.003 TO 0.0008, and it is the range that asked for it. The original
      comment here read "a long focus and a narrow aperture: the far hills soften, everything you
@@ -73,45 +74,91 @@ for (const [k, v] of Object.entries(globalThis.__KEA_FILM__ || {})) {
   if (FILM[k] && v && typeof v === 'object') Object.assign(FILM[k], v);
 }
 
+/* PERF S1 — ONE DEPTH FOR THE WHOLE CHAIN (2026-10-02).
+   GTAOPass and BokehPass each re-rendered the WHOLE SCENE for their own depth, with an override
+   material — so every frame drew the scene three times, grass included, and the two prepasses drew
+   the grass WRONG besides: an override material has none of the blade vertex shader, so the field
+   reached the AO and the depth of field as undisplaced blades piled at the lattice. frameablate's
+   non-additive table (post, shadows, grass or half the pixels each halve the frame) was this.
+   Now SCENEPASS draws the scene ONCE into its own target, which owns the DepthTexture, copies the
+   colour into the chain, and hands the depth to both passes before they run. ITS OWN TARGET, NOT
+   THE COMPOSER'S: the first cut hung the depth on the composer's ping-pong pair, and three passes
+   later that same target was Bokeh's WRITE buffer while its depth was being sampled — a WebGL
+   feedback loop, which draws nothing and logs nothing: a black frame. GTAO reconstructs its normals from it (NORMAL_VECTOR_TYPE 0); Bokeh samples it raw
+   (DEPTH_PACKING 0). A transparent quad with depthWrite off — the cloud wisps G.postExclude exists
+   for — is now absent from the depth by construction, which is what the exclusion was faking. */
+class ScenePass extends Pass {
+  constructor(scene, camera, w, h, consumers) {
+    super(); this.scene = scene; this.camera = camera; this.consumers = consumers; this.needsSwap = true;
+    this.target = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType,
+      depthTexture: new THREE.DepthTexture(w, h, THREE.UnsignedIntType) });
+    this.copy = new THREE.ShaderMaterial({ uniforms: THREE.UniformsUtils.clone(CopyShader.uniforms),
+      vertexShader: CopyShader.vertexShader, fragmentShader: CopyShader.fragmentShader, depthTest: false, depthWrite: false });
+    this.quad = new FullScreenQuad(this.copy);
+  }
+  setSize(w, h) { this.target.setSize(w, h); }
+  render(renderer, writeBuffer) {
+    renderer.setRenderTarget(this.target);
+    renderer.clear();
+    renderer.render(this.scene, this.camera);
+    for (const f of this.consumers) f(this.target.depthTexture);
+    this.copy.uniforms.tDiffuse.value = this.target.texture;
+    renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+    this.quad.render(renderer);
+  }
+  dispose() { this.target.dispose(); this.copy.dispose(); this.quad.dispose(); }
+}
+class SharedDepthBokehPass extends BokehPass {
+  constructor(scene, camera, params) {
+    super(scene, camera, params);
+    this.materialBokeh.defines.DEPTH_PACKING = 0;   // a raw DepthTexture, not RGBA-packed
+    this.materialBokeh.needsUpdate = true;
+  }
+  render(renderer, writeBuffer, readBuffer) {
+    this.uniforms.tColor.value = readBuffer.texture;
+    this.uniforms.nearClip.value = this.camera.near;
+    this.uniforms.farClip.value = this.camera.far;
+    renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+    if (!this.renderToScreen) renderer.clear();
+    this._fsQuad.render(renderer);
+  }
+}
+
 function build(renderer, scene, camera, w, h) {
   const c = new EffectComposer(renderer);
   c.setSize(w, h);
-  c.addPass(new RenderPass(scene, camera));
+  const consumers = [];
+  const sp = new ScenePass(scene, camera, w, h, consumers);
+  c.addPass(sp);
 
-  /* HIDE G.postExclude FOR THE DEPTH-BASED PASSES, AND ONLY FOR THEM.
-     GTAOPass and BokehPass each render their own depth and normal prepass of the whole scene with
-     an OVERRIDE material, and an override material does not care that a material is transparent or
-     that it has depthWrite off. So a blended quad occludes as though it were a solid plate, and the
-     occlusion comes back in the shape of the quad — measured on the cloud wisp tier as faint dark
-     rectangles over the sky beside every cloud, which survived making the atlas's borders zero,
-     turning mipmaps off and adding an alphaTest, and did not budge when the wisp material was made
-     to glow. It is the passes, not the material.
-     WRAPPED RATHER THAN PATCHED. Neither pass offers an exclusion list and both are library code,
-     so their render is wrapped: hide, delegate, restore in a finally. The RenderPass has already
-     drawn the real frame by the time these run, so the wisps are in the picture and merely absent
-     from the occlusion estimate — which is what a semi-transparent margin should contribute to it.
-     THE LIST IS READ FRESH EVERY FRAME, not captured: buildSky runs once but a future tier might
-     add to it on a world build, and a stale array would silently stop excluding. */
-  const noDepth = (pass) => {
-    const inner = pass.render.bind(pass);
-    pass.render = (renderer, writeBuffer, readBuffer, deltaTime, maskActive) => {
-      const ex = (KEAGAME.G && KEAGAME.G.postExclude) || [];
-      const was = [];
-      for (let i = 0; i < ex.length; i++) { was.push(ex[i].visible); ex[i].visible = false; }
-      try { return inner(renderer, writeBuffer, readBuffer, deltaTime, maskActive); }
-      finally { for (let i = 0; i < ex.length; i++) ex[i].visible = was[i]; }
-    };
-    return pass;
-  };
-
+  /* G.postExclude (the cloud wisps) used to be hidden here around each depth prepass, because an
+     override material ignores depthWrite and the wisps occluded as solid quads. With ONE shared
+     depth from the real frame there is no override and the wisps, which write no depth, are absent
+     from it by construction — so the wrapper is gone. See PERF S1 above. */
   const ao = new GTAOPass(scene, camera, w, h);
   ao.output = GTAOPass.OUTPUT.Default;
+  ao.setGBuffer(sp.target.depthTexture);           // no normal texture: reconstructed from depth
+  consumers.push(d => { ao.gtaoMaterial.uniforms.tDepth.value = d; ao.pdMaterial.uniforms.tDepth.value = d; });
+  /* AO ONLY WHERE THERE IS CONTACT TO SHADE. The sky dome is geometry 210 m out and writes depth, so
+     the pass computed occlusion on it — invisible at full resolution, and at half resolution its
+     normals, reconstructed from depth quantised at 210 m, came out noisy and painted dark blotches
+     and scan lines across open sky (12_seal_midpeel, S2). The clip box keeps AO to the play area and
+     its near country; every sky pixel is now skipped, which is cheaper as well as clean. */
+  ao.setSceneClipBox(new THREE.Box3(new THREE.Vector3(-FILM.ao.clip, -20, -FILM.ao.clip), new THREE.Vector3(FILM.ao.clip, 60, FILM.ao.clip)));
   if (ao.updateGtaoMaterial) {
     ao.updateGtaoMaterial({ distanceExponent: 1.0, radius: FILM.ao.distance,
       thickness: FILM.ao.thickness, scale: FILM.ao.scale });
   }
   ao.blendIntensity = FILM.ao.blend;
-  c.addPass(noDepth(ao));
+  /* PERF S2 — AO AT HALF RESOLUTION. Occlusion is a low-frequency term, and the pass's own Poisson
+     denoise already blurs it; computing it on a quarter of the pixels and letting the blend upsample
+     it bilinearly is the standard trade. The pass reads the FULL-resolution shared depth (so its
+     samples are still placed on true geometry); only its own AO and denoise targets are halved.
+     Wrapped rather than set once because EffectComposer.addPass and every resize call setSize with
+     the full size. */
+  { const full = ao.setSize.bind(ao), F = FILM.ao.res;
+    ao.setSize = (sw, sh) => full(Math.max(1, Math.round(sw * F)), Math.max(1, Math.round(sh * F))); }
+  c.addPass(ao);
 
   c.addPass(new UnrealBloomPass(new THREE.Vector2(w, h),
     FILM.bloom.strength, FILM.bloom.radius, FILM.bloom.threshold));
@@ -121,9 +168,10 @@ function build(renderer, scene, camera, w, h) {
      effect was being tuned off. A pass that does nothing should not be in the chain. */
   let bokeh = null;
   if (FILM.bokeh.maxblur > 0 && FILM.bokeh.aperture > 0) {
-    bokeh = new BokehPass(scene, camera, {
+    bokeh = new SharedDepthBokehPass(scene, camera, {
       focus: FILM.bokeh.focus, aperture: FILM.bokeh.aperture, maxblur: FILM.bokeh.maxblur });
-    c.addPass(noDepth(bokeh));
+    consumers.push(d => { bokeh.uniforms.tDepth.value = d; });
+    c.addPass(bokeh);
   }
 
   // OutputPass owns tone mapping and the sRGB encode once the chain is composited, so the
@@ -165,10 +213,16 @@ export function installPost(KEAGAME) {
     return { vw, vh };
   };
 
+  /* PERF S3 — DEPTH OF FIELD ONLY ON A CINEMATIC CAMERA. At maxblur 0.0008 the bokeh is a trace of
+     far softening that a player chasing a bird cannot see and pays a full-frame resample for. It
+     stays on where the frame is LOOKED AT rather than played through: photo mode, the title orbit,
+     a map-travel blend, and anything that sets G.cinematic. EffectComposer skips a disabled pass. */
+  const cinematic = () => !!(G.cinematic || G.photo || !G.running || (G.travel && G.travel.phase));
   const post = {
-    FILM, get eyes() { return eyes.length; },
+    FILM, cinematic, get eyes() { return eyes.length; }, _eyesList: () => eyes,   // _eyesList: for frameablate
     render(split, w, h) {
       ensure(split, w, h);
+      { const cin = cinematic(); for (const e of eyes) if (e.bokeh) e.bokeh.enabled = cin; }
       renderer.toneMapping = toneMapping;   // OutputPass reads it off the renderer
       renderer.toneMappingExposure = exposure;
       if (split) {

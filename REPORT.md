@@ -1,4 +1,46 @@
-**IN PROGRESS (2026-10-02c):** render fix PINNED by Eric; feet + trample shipped (see gauntlet-log 2026-10-02c); perf piece next.
+# REPORT — bird pinned, feet + trample, and the PERFORMANCE PIECE; STOPPED for frames (2026-10-02, Opus 5.5)
+
+Branch `replat-b`. **CERTIFIED-SHIP** at specimen `54b3bfae55bf070f4a4b7e4594d0abcf`. **Stopped before
+Piece 2 (colour) as ordered: Eric looks at the perf frames first.**
+
+## SHIPPED
+
+| commit | one line |
+|---|---|
+| `a42fd27` FEET + TRAMPLE | The bird was on groundHeightAt all along; the DRAWN ground is 10-28 cm higher (seal, groomed run, relief). Kea drawn at logic y + drawnLift (render-only). Trample: zero blade pixels over the bird at the play camera. 26 vantages re-pinned. |
+| (this) PERF | **63.5 ms -> 14.4 ms** on AC, live, bird flying; 15.8 ms at Retina 1512x982@2. No key-six property left its band. Meter is a gate battery. Whole set re-pinned (43, 4-run consensus). |
+
+## THE PERF PIECE, IN ONE TABLE (details: gauntlet-log 2026-10-02d)
+
+| step | ms | | step | ms |
+|---|---|---|---|---|
+| shipped | 63.5 | | far grass 28->22 m, cards camera-relative | 26.1 |
+| shared depth for GTAO + Bokeh | 34.1 | | exact shader early-outs | 21.5 |
+| GTAO half res (+ clip box) | 29.1 | | shadow proxies + cascade tuning | 19.2 |
+| bokeh cinematic-only | 28.3 | | render scale auto (1.5 Mpx) + thinner grass | 14.4 |
+| 3 fitted, texel-snapped cascades | 32.9 (slower, until the proxies) | | | |
+
+## LOOK CHANGES ERIC SHOULD JUDGE
+
+- **Render scale 'auto' renders a 1080p window at 85% and upscales.** F8 cycles auto/100/85/75/60%. At 100% the frame is ~19 ms.
+- **Shadows are cascades now:** sharper and finer near the camera (3 cm texels against 5.7), coarser past 31 m, and the far cascade refreshes every other frame. Small casters (<0.2 m) shadow only within 14 m.
+- **Depth of field is off in play**, on only in photo mode, the title orbit and travel.
+- **Mid-distance grass:** blades end at 22 m and the cards take over, thinned 20% in cover and far.
+- **The trampled patch** round the bird (0.6-1.2 m, ragged edge).
+
+## FRAMES TO EYEBALL
+- `gauntlet/capture/proofs/PERF_key6_before_after.jpg`: the six key vantages, shipped (left) against now (right).
+- `gauntlet/capture/proofs/PERF_bird_vantages_after.jpg`: 03, 13, 18, 14, 21, 28, the bird on its feet and out of the tussock.
+- 11_trailhead's hillside banding is gone (it was the old shadow map aliasing on the slope).
+
+## FOUND, NOT FIXED
+- Cars, humans and sheep stand at logic height: car wheels are 14 cm inside the seal.
+- Instruments that were wrong and are now fixed: BIRDSKY's scarlet rule (recalibrated to its own data; the control still red); webrig now refuses uncompiled shaders.
+
+## NEXT: PIECE 2 (colour), scoped, not started
+ColorManagement on, CSS saturate removed, re-grade to the plates, tone-mapper check, bird-vs-approved-render colour property in framescore, its own re-pin, under the no-regression rule (framemeter is in the gate).
+
+---
 
 # REPORT — spike adoption, pieces 0 and 1; STOPPED at the frame budget (2026-10-02, Opus 5.5)
 

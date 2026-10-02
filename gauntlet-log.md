@@ -6050,3 +6050,49 @@ RE-PINNED 26 vantages by 4-run consensus: every frame where new-vs-HEAD (same ma
 back) beat its pxdiff band, each checked to be the bird or the grass round it.
 FOUND, NOT FIXED: cars stand on y=0 too, so their wheels are 14 cm inside the seal; humans and sheep
 are not lifted; the range mesh's chords sit up to 0.5 m off terrainHeightAt at its inner edge.
+
+## 2026-10-02d — PERFORMANCE PIECE, option 1: the look made affordable (Opus 5.5) — certified 54b3bfae
+
+Live meter, AC, 1920x1080 window, everything live and the bird flying (framebudget.mjs unlocked,
+median of two means; gauntlet/capture/perf/<step>.json holds every reading and the six frames):
+
+| step | ms/frame | key six in band (01 02 06 11 12 07) |
+|---|---|---|
+| s0  shipped | 63.5 | 2 4 2 3 3 1 |
+| S1  one shared depth (ScenePass) for GTAO + Bokeh | 34.1 | 2 4 3 3 3 1 |
+| S2  GTAO at half resolution | 29.1 | 2 4 3 3 3 1 |
+| S3  bokeh only on cinematic cameras | 28.3 | 2 4 3 4 3 1 |
+| S2b AO clip box (half-res AO painted blotches on the sky dome) | 28.4 | 2 4 2 3 3 1 — see below |
+| S4  3 cascades fitted + texel-snapped, replacing the fixed +/-58 m map | 32.9 | (slower: see the draw calls) |
+| S5  far blades 28 -> 22 m, cards camera-relative from 19 m | 26.1 | 2 4 2 3 3 1 |
+| S5b exact shader early-outs (cut noise, edge noise, dead blades) | 21.5 | 2 4 2 3 3 1 |
+| S4b shadow proxies (one draw per prop per cascade), small casters near-only, far cascade every 2nd frame, grass + range out of the VSM pass | 19.2 | 2 4 2 3 3 1 |
+| S6  render scale 'auto' (1.5 Mpx: 85% at 1080p) + S5c grass thinned for headroom | 14.4 | 2 4 2 4 3 1 |
+
+THE FRAME WAS NEVER WHERE IT LOOKED. frameablate's table (each system "costs" ~30 ms, all four
+14) was non-additive because three things re-rendered the whole scene — GTAO's and Bokeh's own
+prepasses, and three's VSM pass, which draws every RECEIVER too: the grass went into the sun map
+every frame, undisplaced, stacked at the origin (2.6 M triangles, framecount.mjs). After S1-S3 the
+frame was DRAW-CALL bound on ANGLE/Metal (65-78% of main-thread time blocked in uniformMatrix4fv;
+render scale did not move the median): 1,983 calls a frame, 1,766 of them shadow casters re-sent per
+cascade. Proxies took it to 439. Only then did render scale bite.
+REFUSALS, NAMED. s3b was refused on 06 and 11 luma against s3 — but both were OUT at s0; they had
+"entered" the band because AO on the 210 m sky dome was darkening the sky, which the clip box
+removed. Accepted against s0, said so here. S5 at 18 m was refused on 06 edge density and doubling
+the cards did not bring it back; 22 m holds it.
+THINGS THAT WERE WRONG ON THE WAY, each caught: a depth texture on the composer's ping-pong pair is a
+feedback loop three passes later (black frame, no error); layers cannot keep the grass out of the
+shadow pass (three tests layers against the MAIN camera); dropping every receive-only mesh from
+the VSM pass lost the big tree's shadow and painted a false one by the caravan (VSM needs its
+receivers — so proxies merge receivers too); a scene-level proxy is itself a scene child and keyed
+a rebuild every frame; a full rebuild on child-count change re-merged 650 meshes every few seconds.
+BIRDSKY's scarlet rule (r>2g) was looser than its own calibration: every one of 15,480 canonical
+scarlet pixels has g/r <= 0.475; one cascade-lit pixel of orange feather edging read 0.497. Now
+g < 0.48 r; the loose count is still printed; CONTROL=1 (the unfixed BLEND bird) still red on 3 of 4
+angles (227/723/530 px).
+THE METER IS A BATTERY: framemeter.mjs, 3 runs, median mean <= 16.67, FAILS CLOSED on battery power.
+In the gate, last. 14.55 and 14.72 ms in the two certifying gates.
+RETINA, MEASURED: the old ratio cap rendered ~4.8 Mpx full-screen on Eric's Mac; 'auto' caps it at
+1.5 Mpx. framebudget at W=1512 H=982 DPR=2: 15.76 ms, IN BUDGET (buffer 1518x986).
+RE-PIN: all 43 vantages, 4-run consensus; 15 agree to 0 px across all four runs (the global
+G.clockPin fix, S0), worst spread 17_flight 5013.

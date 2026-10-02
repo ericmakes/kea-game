@@ -1,0 +1,240 @@
+{
+ "label": "s6_final",
+ "at": "2026-10-02T15:50:52.148Z",
+ "cost": {
+  "runs": [
+   {
+    "meanMs": 14.4,
+    "medianMs": 16.1,
+    "p95Ms": 31.9,
+    "fps": 69.4,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.32,
+    "medianMs": 15.8,
+    "p95Ms": 32.4,
+    "fps": 69.8,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   }
+  ],
+  "meanMs": 14.36
+ },
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 2,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1666,
+     "ok": false,
+     "miss": 0.29
+    },
+    "ridgeP10": {
+     "gv": 0.3205,
+     "ok": false,
+     "miss": 0.13
+    },
+    "snowPatch": {
+     "gv": 0.1011,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5617,
+     "ok": false,
+     "miss": 0.16
+    },
+    "hue": {
+     "gv": 56.9574,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0932,
+     "ok": false,
+     "miss": 1.67
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3721,
+     "ok": false,
+     "miss": 0.31
+    },
+    "ridgeP10": {
+     "gv": 0.2693,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1335,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4788,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 48.79,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1858,
+     "ok": false,
+     "miss": 0.26
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 2,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1969,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3933,
+     "ok": false,
+     "miss": 1.24
+    },
+    "snowPatch": {
+     "gv": 0.0977,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5405,
+     "ok": false,
+     "miss": 0.01
+    },
+    "hue": {
+     "gv": 179.658,
+     "ok": false,
+     "miss": 3.42
+    },
+    "sat": {
+     "gv": 0.065,
+     "ok": false,
+     "miss": 1.93
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.344,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3771,
+     "ok": false,
+     "miss": 1
+    },
+    "snowPatch": {
+     "gv": 0.0883,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5698,
+     "ok": false,
+     "miss": 0.22
+    },
+    "hue": {
+     "gv": 46.2859,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3221,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 3,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1736,
+     "ok": false,
+     "miss": 0.21
+    },
+    "ridgeP10": {
+     "gv": 0.1761,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1311,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5051,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 143.8684,
+     "ok": false,
+     "miss": 2.23
+    },
+    "sat": {
+     "gv": 0.0381,
+     "ok": false,
+     "miss": 2.17
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 1,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1618,
+     "ok": false,
+     "miss": 0.36
+    },
+    "ridgeP10": {
+     "gv": 0.3698,
+     "ok": false,
+     "miss": 0.89
+    },
+    "snowPatch": {
+     "gv": 0.1099,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5558,
+     "ok": false,
+     "miss": 0.12
+    },
+    "hue": {
+     "gv": 196.9139,
+     "ok": false,
+     "miss": 4
+    },
+    "sat": {
+     "gv": 0.1102,
+     "ok": false,
+     "miss": 1.52
+    }
+   }
+  }
+ },
+ "ac": true,
+ "prev": "s0_base",
+ "refusals": []
+}

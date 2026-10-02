@@ -1,0 +1,219 @@
+{
+ "label": "x_far22",
+ "at": "2026-10-02T15:20:00.193Z",
+ "cost": null,
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 2,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1747,
+     "ok": false,
+     "miss": 0.19
+    },
+    "ridgeP10": {
+     "gv": 0.32,
+     "ok": false,
+     "miss": 0.12
+    },
+    "snowPatch": {
+     "gv": 0.1005,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.559,
+     "ok": false,
+     "miss": 0.15
+    },
+    "hue": {
+     "gv": 56.9205,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0934,
+     "ok": false,
+     "miss": 1.67
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3843,
+     "ok": false,
+     "miss": 0.47
+    },
+    "ridgeP10": {
+     "gv": 0.2688,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1323,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4782,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 48.825,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1849,
+     "ok": false,
+     "miss": 0.28
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 2,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2023,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3921,
+     "ok": false,
+     "miss": 1.22
+    },
+    "snowPatch": {
+     "gv": 0.0976,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5401,
+     "ok": false,
+     "miss": 0.01
+    },
+    "hue": {
+     "gv": 179.8681,
+     "ok": false,
+     "miss": 3.43
+    },
+    "sat": {
+     "gv": 0.065,
+     "ok": false,
+     "miss": 1.93
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 3,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3489,
+     "ok": false,
+     "miss": 0.02
+    },
+    "ridgeP10": {
+     "gv": 0.3765,
+     "ok": false,
+     "miss": 0.99
+    },
+    "snowPatch": {
+     "gv": 0.082,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5702,
+     "ok": false,
+     "miss": 0.23
+    },
+    "hue": {
+     "gv": 46.3492,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3209,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 3,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1762,
+     "ok": false,
+     "miss": 0.17
+    },
+    "ridgeP10": {
+     "gv": 0.1762,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1304,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5048,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 143.3713,
+     "ok": false,
+     "miss": 2.21
+    },
+    "sat": {
+     "gv": 0.0379,
+     "ok": false,
+     "miss": 2.17
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 1,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1723,
+     "ok": false,
+     "miss": 0.22
+    },
+    "ridgeP10": {
+     "gv": 0.3664,
+     "ok": false,
+     "miss": 0.84
+    },
+    "snowPatch": {
+     "gv": 0.1083,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5567,
+     "ok": false,
+     "miss": 0.13
+    },
+    "hue": {
+     "gv": 196.7204,
+     "ok": false,
+     "miss": 3.99
+    },
+    "sat": {
+     "gv": 0.1035,
+     "ok": false,
+     "miss": 1.58
+    }
+   }
+  }
+ },
+ "ac": true,
+ "refusals": []
+}

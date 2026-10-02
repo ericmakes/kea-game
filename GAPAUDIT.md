@@ -82,3 +82,12 @@ GPU-bound and spread across four systems; no single cut brings it to 16.7 ms. Me
 after ~40 minutes of sustained capture sweeps — thermal state moves the absolute figure (the same
 state read 65.7 then 40.0 in one session), not the conclusion. The spike's 11–14 ms for one static
 carpark was the warning; the game is already three to five times that.
+
+### UPDATE 2026-10-02d — the budget is met (PERF piece, option 1)
+
+On AC, 1920x1080 window, the game live and the bird flying: **63.5 ms -> 14.4 ms** (framebudget.mjs,
+median of unlocked means), with every property of the six key vantages that was in band at s0 still
+in band (11_trailhead gained luma). The step table, the refusals and what each instrument got wrong
+are in gauntlet-log.md 2026-10-02d; every step's frames and numbers are in gauntlet/capture/perf/.
+The meter is now a gate battery (gauntlet/verify/framemeter.mjs). The table above is pre-piece and
+is left as the record of where it started.

@@ -37,7 +37,8 @@ try {
          on the river stands on its surface rather than vanishing under it */
       const meshes = []; G.scene.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !o.isSkinnedMesh && !own.has(o)
           && o.material && !Array.isArray(o.material) && o.material.visible !== false
-          && o.material.depthWrite !== false) {                          // a shadow blob or decal is not a floor
+          && o.material.depthWrite !== false                             // a shadow blob or decal is not a floor
+          && !o.userData.shadowProxy) {                                   // nor a shadow proxy (src/shadows.mjs): never drawn
         let vis = true, p = o; while (p) { if (!p.visible) vis = false; p = p.parent; } if (vis) meshes.push(o); } });
       const RANGE_R0 = R0;
       /* ITS OWN VERTICAL RAY, NOT three's Raycaster: measured, Mesh.raycast hit and missed the same

@@ -26,13 +26,22 @@ try{
       noshadow:()=>{ G.renderer.shadowMap.enabled=false; G.scene.traverse(o=>{ if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true);} }); },
       nograss:()=>{ for(const k of ['grassMesh','grassCoverMesh','grassFarMesh','grassCards'])if(G[k])G[k].visible=false; G.scene.traverse(o=>{ if(o.isInstancedMesh)o.visible=false; }); },
       halfres:()=>{ G.renderer.setPixelRatio(0.5); },
+      noclump:()=>{ if(G.grassMesh)G.grassMesh.visible=false; },
+      nocover:()=>{ G.scene.traverse(o=>{ if(o.name==='grass_cover')o.visible=false; }); },
+      nofar:()=>{ G.scene.traverse(o=>{ if(o.name==='grass_far')o.visible=false; }); },
+      nocards:()=>{ if(G.grassCards)G.grassCards.visible=false; },
+      noao:()=>{ const e=G.post&&G.post.__eyes; G.__ao=G.__ao||[]; (G.post._eyesList?G.post._eyesList():[]).forEach(e=>{ if(e.ao){e.ao.enabled=false;} }); },
+      nobloom:()=>{ (G.post._eyesList?G.post._eyesList():[]).forEach(e=>{ e.composer.passes.forEach(p=>{ if(p.constructor.name.includes('Bloom'))p.enabled=false; }); }); },
+      scale75:()=>{ G.renderer.setPixelRatio(0.75); },
       sceneonly:()=>{ G.__post=G.__post||G.post; G.post=null; G.renderer.shadowMap.enabled=false; G.scene.traverse(o=>{ if(o.isInstancedMesh)o.visible=false; if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true);} }); G.renderer.setPixelRatio(0.5); },
     };
     window.__restore=()=>{ if(G.__post)G.post=G.__post; G.renderer.shadowMap.enabled=true; G.renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
+      if(G.grassMesh)G.grassMesh.visible=true; if(G.grassCards)G.grassCards.visible=true; G.scene.traverse(o=>{ if(/^grass_/.test(o.name||'')&&o!==G.grassCards)o.visible=true; });
+      (G.post&&G.post._eyesList?G.post._eyesList():[]).forEach(e=>{ if(e.ao)e.ao.enabled=true; e.composer.passes.forEach(p=>{ if(p.constructor.name.includes('Bloom'))p.enabled=true; }); });
       G.scene.traverse(o=>{ if(o.isInstancedMesh)o.visible=true; if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true);} }); };
   })()`);
   await sleep(3000);
-  for(const s of ['base','nopost','noshadow','nograss','halfres','sceneonly','base']){
+  for(const s of (process.env.STATES||'base,nopost,noshadow,nograss,halfres,sceneonly,base').split(',')){
     await pg.evaluate(s=>{ window.__restore(); window.__abl[s](); },s); await sleep(SETTLE*1000);
     const r=await pg.evaluate('window.__ms()');
     const calls=await pg.evaluate(()=>{ const r=KEAGAME.G.renderer; return r.info.render.frame; });

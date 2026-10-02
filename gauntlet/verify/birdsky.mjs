@@ -45,7 +45,16 @@ const OUT = process.argv[2] || path.join(ROOT, 'gauntlet/capture/birdsky');
 fs.mkdirSync(OUT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const AT = [17, 19], BIOME = 'skifield';
-export const RED = (r, g, b) => r > 140 && r > 2 * g && r > 2 * b;
+/* SCARLET, CALIBRATED ON THE CANONICAL RENDERS. The first cut was r>140, r>2g, r>2b — green under half
+   the red. Re-measured 2026-10-02 (PERF S4) when a cascade's finer self-shadow lit ONE pixel of the
+   folded wing's authored ORANGE feather edging (147,73,31: g/r 0.497, over r>2g by one unit): every one
+   of the 15,480 scarlet pixels in canonical_renders/wings_open.png has g/r <= 0.475 (median 0.318, p99
+   0.369). So the green bound is now 0.48 of the red — above every calibrated scarlet pixel, below the
+   orange edging. RED_LOOSE is the old rule, still counted and printed so the change is visible, and
+   CONTROL=1 (the unfixed BLEND material) must still be caught by the new one. */
+export const RED = (r, g, b) => r > 140 && g < 0.48 * r && b < 0.48 * r;
+export const RED_LOOSE = (r, g, b) => r > 140 && r > 2 * g && r > 2 * b;
+const CONTROL = process.env.CONTROL === '1';
 
 /* the shipped url, read from the specimen so this cannot drift from what the game loads */
 const SRC = fs.readFileSync(path.join(ROOT, 'src/game.mjs'), 'utf8');
@@ -107,6 +116,10 @@ try {
     return { transparent: m.transparent, depthWrite: m.depthWrite, alphaTest: m.alphaTest, alphaHash: !!m.alphaHash,
              side: m.side, frustumCulled: M.sk.frustumCulled };
   }, { P: POSE, w: W0, at: AT });
+  /* CONTROL: put back the material the render fix replaced — BLEND, no depth write, no alpha test,
+     culled against bind-pose bounds — and the verdict must be red */
+  if (CONTROL) await page.evaluate(() => { const S = window.__birdM.sk, m = S.material;
+    m.transparent = true; m.depthWrite = false; m.alphaTest = 0; m.needsUpdate = true; S.frustumCulled = true; });
   const GY = await page.evaluate(`KEAGAME.groundHeightAt(${AT[0]},${AT[1]},1)`);
   const shoot = async (haze, bird) => {
     await page.evaluate(([h, b]) => { const G = KEAGAME.G; if (G.haze) G.haze.visible = h; window.__birdM.root.visible = b; }, [haze, bird]);
@@ -149,18 +162,19 @@ try {
     const interior = j => { if (!M[j]) return false; const x = j % W, y = (j / W) | 0;
       if (x < 2 || y < 2 || x >= W - 2 || y >= Hh - 2) return false;
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (!M[j + dy * W + dx]) return false; return true; };
-    let mask = 0, contam = 0, red = 0, noise = 0; const vis = Buffer.alloc(n * 3);
+    let mask = 0, contam = 0, red = 0, redLoose = 0, noise = 0; const vis = Buffer.alloc(n * 3);
     for (let j = 0; j < n; j++) { const i = j * 3;
       vis[i] = vis[i + 1] = vis[i + 2] = A.data[i + 1] >> 2;
       if (!interior(j)) continue; mask++;
       if (dif(A.data, A2.data, i) > 6) noise++;
       const c = dif(A.data, B.data, i) > 6, r = RED(A.data[i], A.data[i + 1], A.data[i + 2]) && !RED(D.data[i], D.data[i + 1], D.data[i + 2]);
       if (c) contam++; if (r) red++;
+      if (RED_LOOSE(A.data[i], A.data[i + 1], A.data[i + 2]) && !RED_LOOSE(D.data[i], D.data[i + 1], D.data[i + 2])) redLoose++;
       vis[i] = c ? 80 : A.data[i]; vis[i + 1] = c ? 160 : A.data[i + 1]; vis[i + 2] = c ? 255 : A.data[i + 2];
       if (r) { vis[i] = 255; vis[i + 1] = 0; vis[i + 2] = 255; } }
     await sharp(A.data, { raw: { width: A.info.width, height: A.info.height, channels: 3 } }).png().toFile(path.join(OUT, `angle${deg}.png`));
     await sharp(vis, { raw: { width: A.info.width, height: A.info.height, channels: 3 } }).png().toFile(path.join(OUT, `angle${deg}_mask.png`));
-    results.push({ deg, mask, contam, contamPct: mask ? +(100 * contam / mask).toFixed(2) : null, red, noise });
+    results.push({ deg, mask, contam, contamPct: mask ? +(100 * contam / mask).toFixed(2) : null, red, redLoose, noise });
   }
 } finally { await browser.close().catch(() => {}); await srv.close(); }
 
@@ -175,8 +189,8 @@ if (material.transparent) fails.push('the bird material is transparent (BLEND) �
 if (!material.depthWrite) fails.push('the bird material writes no depth');
 if (!(material.alphaTest > 0) && !material.alphaHash) fails.push('the bird material has neither alphaTest nor alphaHash');
 if (material.frustumCulled) fails.push('the skinned mesh is frustum-culled against stale bind-pose bounds');
-console.log('BIRDSKY ' + GLBREL + '   material ' + JSON.stringify(material));
-for (const r of results) console.log(`  angle ${String(r.deg).padStart(3)}   bird ${String(r.mask).padStart(6)} px   haze on bird ${String(r.contam).padStart(6)} (${r.contamPct}%)   red ${r.red}   noise(A vs A2) ${r.noise}`);
+console.log('BIRDSKY ' + (CONTROL ? '[CONTROL: the unfixed BLEND material] ' : '') + GLBREL + '   material ' + JSON.stringify(material));
+for (const r of results) console.log(`  angle ${String(r.deg).padStart(3)}   bird ${String(r.mask).padStart(6)} px   haze on bird ${String(r.contam).padStart(6)} (${r.contamPct}%)   red ${r.red} (loose rule ${r.redLoose})   noise(A vs A2) ${r.noise}`);
 /* THE GATE'S CONTRACT (gate.sh): an ALL PASS line and exit 0, or FINDINGS with a cross per finding and exit 1. */
 console.log(fails.length ? fails.map(f => '    ✗ ' + f).join('\n') + '\nBIRDSKY: ' + fails.length + ' FINDINGS'
                          : 'BIRDSKY: ALL PASS — solid against the sky from four angles, no haze, no red, never culled');

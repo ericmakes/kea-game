@@ -92,6 +92,20 @@ if (!cfg.nopropmodels && !globalThis.__KEA_NOPROPMODELS__) {
   }
 }
 
+/* PERF S4: THE SUN'S SHADOWS IN CASCADES FITTED TO THE CAMERA — see src/shadows.mjs. Browser-only
+   for the same reasons as everything above; if it cannot install, the authored sun keeps its one
+   fixed map and the game plays on. __KEA_NOCSM__ forces the old map for a like-for-like frame. */
+try {
+  const { installCascades, excludeFromShadowPass } = await import('./shadows.mjs');
+  excludeFromShadowPass(KEAGAME);
+  if (!cfg.nocsm && !globalThis.__KEA_NOCSM__) {
+    try { installCascades(KEAGAME); }
+    catch (e) { console.error('shadows: cascades failed to install, keeping the fixed sun map —', e); }
+  }
+} catch (e) {
+  console.error('shadows: the shadow module failed to load —', e);
+}
+
 /* THE FILM CAMERA goes on after boot, because it attaches to the renderer the boot creates.
    Wired HERE and not in game.mjs so that file keeps the single import the gauntlet's specimen
    loader asserts — see src/post.mjs. If the post stack cannot build, the game keeps playing on the

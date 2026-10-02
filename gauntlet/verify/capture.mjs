@@ -149,7 +149,11 @@ const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getEle
      collapse every frame into one purse", so the defensive work was done before the pin existed.
      12.0 is the value the four local pins already use. nightT is a separate driver, so the night
      vantages are unaffected. */
-  { const _cl=()=>{ try{ KEAGAME.G.time=12.0; }catch(e){} requestAnimationFrame(_cl); };
+  /* 2026-10-02 (PERF S0): AND THE PIN IS NOW G.clockPin, WHERE THE CLOCK IS WRITTEN. Holding G.time
+     from this rAF renders every frame at 12 + one real dt, so a frame that sits near a vsync boundary
+     photographs two wind states (21_night_camp: 20k px, one run in three). Piece 0 moved 03/13/18 to
+     clockPin locally; this is the same fix applied once, for every shot. */
+  { const _cl=()=>{ try{ KEAGAME.G.time=12.0; KEAGAME.G.clockPin=12.0; }catch(e){} requestAnimationFrame(_cl); };
     requestAnimationFrame(_cl); }
   { const fd0=document.getElementById('feed'); if(fd0)fd0.textContent='';
     const _pf=()=>{ try{ if(!window.__keaFeedKeep){ const fd=document.getElementById('feed');

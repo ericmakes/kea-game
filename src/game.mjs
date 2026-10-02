@@ -896,7 +896,7 @@ const GRASS={
      geometry solves it: what reads as naked sand at that range is THE GROUND'S OWN COLOUR, which
      measured out at #9b9787 — a desaturated grey-beige. `groundTint` below is the fix for the
      distance; this layer is the fix for the foreground, where it genuinely works and is cheap. */
-  cover:{count:150000, near:10, h:[0.055,0.130], w:[0.013,0.026], lean:[0.28,0.66],
+  cover:{count:120000, near:10, h:[0.055,0.130], w:[0.013,0.026], lean:[0.28,0.66],   // count, PERF S5c: was 150,000
          bare:0.0, clumpM:0.55, clumpPull:0.10, clumpPullVar:0.06, taper:0.45, lodFrac:0.88, seg:2},
   /* ---- THE FAR TIER — REPLAT P4e ----
      WHY IT IS GEOMETRY AND NOT PAINT, WHICH IS THE MEASUREMENT THAT DECIDED THIS PIECE. The
@@ -941,9 +941,25 @@ const GRASS={
      NO SHARED-STREAM DRAWS. Placement comes from a positional hash, like the terrain's, so the
      tier can sit anywhere in the builder without relocating a single later seeded draw — TODO 47's
      law is the reason this is not a rnd() loop. */
-  cards:{near:26.0, far:112.0, count:26000, w:1.15, hMul:1.35, yaw:true,
-         alphaTest:0.42, grid:4, tilt:0.06, sink:0.04},
-  farLayer:{count:225000, near:28, rMin:0.24,
+  /* PERF S5 — THE CARDS TAKE THE FAR FIELD, AND THE LOD IS RELATIVE TO THE CAMERA.
+     The cards were a static ring 26-112 m round the WORLD ORIGIN and the far blade tier a 225,000-
+     blade disc to 28 m round the CAMERA; the far tier alone was ~7.5 ms of a 29 ms frame
+     (frameablate.mjs). Now the cards cover the whole disc (near 0) and each one grows in only past
+     camNear from the CAMERA, over camBand — so wherever the bird is, blades stand near it and cards
+     beyond — and the far tier ends at 22 m. Same inner edge (rMin x near = 6.7 m) and the same
+     blades per square metre: 225,000 over its old annulus is 134,000 over the new one.
+     22, NOT 18, AND framescore SAID SO: at 18 m 06_skyline's edge density left its band (0.234 ->
+     0.186) and doubling the cards did not bring it back — the cards are a horizon, they do not
+     carry blade-scale edges at 18-28 m. 22 m holds it (0.202, in band); 24 m holds it more (0.213)
+     for ~28k more blades.
+     PERF S5c: THEN THINNED, for headroom. At 16.0 ms the meter battery had 0.67 ms of margin on a
+     thermally drifting machine; cover 150k -> 120k and far 134k -> 110k read 14.7 ms with all six
+     key vantages still in band (11 gained one) and 03/05/14 indistinguishable by eye.
+     A card inside the play area keeps out of the grass cut-outs (the carpark, the roads, the slabs)
+     exactly as a blade does, and stands on the same relief the blades stand on. */
+  cards:{near:0.0, far:112.0, count:44000, w:1.15, hMul:1.35, yaw:true,
+         alphaTest:0.42, grid:4, tilt:0.06, sink:0.04, camNear:19.0, camBand:5.0},
+  farLayer:{count:110000, near:22, rMin:0.305,   // PERF S5c: 134,000 (iso-density) -> 110,000
             h:[0.22,0.52], w:[0.012,0.028], lean:[0.10,0.36],
             bare:0.22, clumpM:1.60, clumpPull:0.44, clumpPullVar:0.28,
             taper:0.55, lodFrac:0.08, seg:2, shadow:false, fadeBand:0.55},
@@ -5394,6 +5410,10 @@ float keaCutK(vec4 c, vec2 w, float soft){
   if(c.w<=0.0) return 1.0;
   vec2 d=abs(w-c.xy)-c.zw;
   float sd=min(max(d.x,d.y),0.0)+length(max(d,0.0));
+  /* PERF S5b: EXACT EARLY-OUT. n is in [-1,1], so the ramp is never wider than soft*1.6; a blade
+     further out than that is at smoothstep's 1.0 whatever the noise says, and skips two noise
+     octaves per box per vertex — which was most of the field, most of the time. */
+  if(sd>=max(0.05,soft*1.6)) return 1.0;
   float n=(keaFbm(w*0.22)-0.5)*2.0;
   return smoothstep(0.0, max(0.05, soft*(1.0+n*0.6)), sd);
 }
@@ -5449,6 +5469,17 @@ void keaGrass(inout vec3 t){
      rather than N hand-written multiplies — same arithmetic, and the count is GRASS.cuts. A
      disabled box (w<=0) contributes exactly 1.0, so padding costs nothing but the iteration. */
   for(int ci=0;ci<GRASS_CUTS;ci++) alive*=keaCutK(uCuts[ci],w,uCutSoft);
+  /* PERF S5b: A DEAD BLADE STOPS HERE. Bare, cut out, or thinned to nothing by distance, it would
+     be scaled to a point below (p*=live) and dropped by the rasteriser — after paying for its pose,
+     its wind and its colour. The same live test, made early, and the same point it would have
+     collapsed to: exact. */
+  { float d0=length(w-cameraPosition.xz);
+    float e0=(d0<uLodNear*(1.0-uEdgeVar))?1.0:1.0+(keaFbm(w*0.085)-0.5)*2.0*uEdgeVar;
+    float k0=(1.0+uBand)*(1.0-smoothstep(uLodNear*e0,uLodFar*e0,d0));
+    if(alive*clamp((k0-keaGH(w*2.3))/max(uBand,1e-4),0.0,1.0)<=0.0){
+      t=vec3(w.x,sin(w.x*uHmul.x)*cos(w.y*uHmul.y)*uHamp,w.y);
+      vGrassT=0.0; vGrassW=t; vGrassTint=vec3(0.0); vGrassBase=vec3(0.0); vGrassTip=vec3(0.0); vGrassSeed=0.0;
+      return; } }
 
   /* ---- THIS BLADE'S POSE, all of it hashed from the world position ---- */
   vec2 h1=keaGH2(w*0.911), h2=keaGH2(w*1.703+11.7);
@@ -5483,7 +5514,9 @@ void keaGrass(inout vec3 t){
      reads as a patch following the bird. The radius is perturbed by noise in WORLD space, so the
      boundary wanders and stays put as the camera moves through it. */
   float d=length(w-cameraPosition.xz);
-  float edge=1.0+(keaFbm(w*0.085)-0.5)*2.0*uEdgeVar;
+  /* PERF S5b: EXACT EARLY-OUT. edge is in [1-uEdgeVar, 1+uEdgeVar]; inside uLodNear*(1-uEdgeVar)
+     the smoothstep below is 0 for any edge, so the noise is not needed there. */
+  float edge=(d<uLodNear*(1.0-uEdgeVar))?1.0:1.0+(keaFbm(w*0.085)-0.5)*2.0*uEdgeVar;
   float keep=(1.0+uBand)*(1.0-smoothstep(uLodNear*edge,uLodFar*edge,d));
   float live=alive*clamp((keep-keaGH(w*2.3))/max(uBand,1e-4),0.0,1.0);
   float comp=mix(1.0,inversesqrt(clamp(keep,0.25,1.0)),uComp);
@@ -5809,6 +5842,15 @@ function grassLayer(biome,L,name){
      paying for a lookup nobody can resolve at thirty metres. Measured, not assumed; the table is in
      ARTBIBLE. `shadow:false` is a layer-spec key, so the clump and cover layers are untouched. */
   mesh.frustumCulled=false; mesh.receiveShadow=(L.shadow!==false);
+  /* PERF S4: THE FIELD IS KEPT OUT OF THE SHADOW PASS. three's VSM pass draws every RECEIVER into
+     the shadow map as well as every caster, so with receiveShadow on, all of this layer's blades
+     were drawn into the sun's map every frame — through the depth material, which has none of
+     keaGrass(), so undisplaced and stacked at the world origin: 2.58 M of the shadow pass's 2.79 M
+     triangles over two frames (gauntlet/verify/framecount.mjs), writing nothing but junk depth near
+     0,0. src/shadows.mjs turns receiveShadow off on everything listed here for the length of the
+     shadow pass only; the blades still receive shadow in the frame. (Layers cannot do it: three's
+     shadow pass tests an object's layers against the MAIN camera, not the shadow camera.) */
+  G.noShadowPass.push(mesh);
   /* NOT A SHADOW CASTER, and that is a budget decision rather than an oversight: a shadow pass
      over this many blades is a second full vertex pass for a contribution the transmission term
      and the ground's ambient occlusion already stand in for. */
@@ -5864,6 +5906,7 @@ function buildGrass(biome){
   /* THE COVER GOES DOWN FIRST so the clumps are drawn over it — not that depth testing cares, but
      the reading order of the code should match the reading order of the ground. The FAR tier goes
      down before both, for the same reason: it is behind them. */
+  G.noShadowPass=[];                         // PERF S4: rebuilt with the field, see grassLayer
   const cd=grassCards(biome);
   const fr=grassLayer(biome,far,'far');
   const cv=grassLayer(biome,cover,'cover');
@@ -5907,6 +5950,7 @@ function grassCards(biome){
   inst.visible=false;
   inst.name='grass_cards';
   const uv=geo.attributes.uv, cell=1/CD.grid;
+  const cuts=grassCuts(biome), RH=biome==='skifield'?{mul:[0.13,0.11],amp:0.14}:{mul:[0.15,0.13],amp:0.18};
   /* PER-INSTANCE ATLAS CELL, carried in an instanced attribute rather than by cloning geometry:
      one draw call for the whole tier is the entire point of the tier. */
   const off=new Float32Array(CD.count*2);
@@ -5926,7 +5970,8 @@ function grassCards(biome){
     /* AND IT KEEPS OFF THE ROAD AND THE PADS, by asking the same flatten masks the terrain asks —
        a card standing in the middle of the carriageway is the kind of thing a ring hides. */
     if(terrainFlatAt(biome,x,z)>0.35)continue;
-    const y=terrainHeightAt(x,z);
+    if(cuts.some(c=>c[3]>0&&Math.abs(x-c[0])<c[2]+CD.w&&Math.abs(z-c[1])<c[3]+CD.w))continue;
+    const y=terrainHeightAt(x,z)+Math.sin(x*RH.mul[0])*Math.cos(z*RH.mul[1])*RH.amp;
     e.set((_thash(i,3)-0.5)*CD.tilt, CD.yaw?_thash(i,29)*Math.PI*2:0, (_thash(i,5)-0.5)*CD.tilt);
     q.setFromEuler(e);
     const s=0.82+_thash(i,11)*0.5;
@@ -5940,9 +5985,13 @@ function grassCards(biome){
   inst.count=n;
   geo.setAttribute('aCell',new THREE.InstancedBufferAttribute(off,2));
   m.onBeforeCompile=(sh)=>{
+    /* the card grows in with its distance from the CAMERA (CD.camNear, camBand): degenerate, and so
+       dropped by the rasteriser, where blades stand */
     sh.vertexShader=sh.vertexShader
       .replace('#include <common>','#include <common>\nattribute vec2 aCell;\nvarying vec2 vCell;')
-      .replace('#include <uv_vertex>','#include <uv_vertex>\n  vCell=aCell;');
+      .replace('#include <uv_vertex>','#include <uv_vertex>\n  vCell=aCell;')
+      .replace('#include <begin_vertex>','#include <begin_vertex>\n  { vec3 cw=(modelMatrix*instanceMatrix*vec4(0.0,0.0,0.0,1.0)).xyz;\n'+
+        '    transformed*=smoothstep('+CD.camNear.toFixed(3)+','+(CD.camNear+CD.camBand).toFixed(3)+',length(cw.xz-cameraPosition.xz)); }');
     sh.fragmentShader=sh.fragmentShader
       .replace('#include <common>','#include <common>\nvarying vec2 vCell;')
       .replace('#include <map_fragment>',
@@ -12190,14 +12239,46 @@ function flashTodo(){
 /* ============================================================
    CAMERAS · LOOP · BOOT
    ============================================================ */
+/* PERF S6 — THE RENDER SCALE (2026-10-02). The drawing buffer is the window times the pixel ratio,
+   and the ratio was min(devicePixelRatio,1.8) — on a Retina Mac at full screen that is ~4.8 M
+   pixels, 2.3x the 1920x1080 the frame budget is measured at, for detail a player cannot see
+   behind a film camera that already softens the frame. The scale is one of:
+     'auto'   the pixel ratio is lowered until the buffer fits RENDER.maxPx (never raised above
+              the old ratio)
+     a number, 0.5..1, a fixed fraction of the old ratio, for a player who wants it sharper or
+              faster than auto picks
+   Set with KEAGAME.setRenderScale(v) or F8 (auto -> 1 -> 0.85 -> 0.75 -> 0.6 -> auto), kept in
+   localStorage; __KEA_SCALE__ (the rig's KEASCALE) overrides both. The DOM HUD is not scaled. */
+/* maxPx IS THE MEASURED BUDGET, not a round number: at 1920x1080 with everything live and the bird
+   flying, full scale read 19.4 ms, 0.85 (1632x918) 16.0, 0.75 14.5 (framebudget.mjs, AC, after
+   PERF S1-S5). So auto renders a 1080p window at 85% and a Retina one at the same 1.5 Mpx. */
+const RENDER={scale:'auto', maxPx:1632*918, steps:['auto',1,0.85,0.75,0.6]};
+function renderRatio(){
+  const base=Math.min(devicePixelRatio||1,1.8), sc=RENDER.scale;
+  if(sc==='auto'){ const px=innerWidth*innerHeight*base*base; return base*Math.min(1,Math.sqrt(RENDER.maxPx/Math.max(1,px))); }
+  return base*Math.max(0.5,Math.min(1,+sc||1));
+}
+function applyRenderScale(){
+  if(!G.renderer)return;
+  G.renderer.setPixelRatio(renderRatio()); G.renderer.setSize(innerWidth,innerHeight);
+  G.renderScale={scale:RENDER.scale, ratio:+G.renderer.getPixelRatio().toFixed(4),
+    px:G.renderer.domElement.width+'x'+G.renderer.domElement.height};
+}
+function setRenderScale(v){
+  RENDER.scale=(v==='auto'||v==null)?'auto':Math.max(0.5,Math.min(1,+v||1));
+  try{ localStorage.setItem('kea.renderScale',String(RENDER.scale)); }catch(e){}
+  applyRenderScale(); return G.renderScale;
+}
 function initRenderer(){
   const cv=document.getElementById('c');
+  { let v=null; try{ v=localStorage.getItem('kea.renderScale'); }catch(e){}
+    if(globalThis.__KEA_SCALE__!=null)v=globalThis.__KEA_SCALE__;
+    if(v!=null&&v!=='')RENDER.scale=(v==='auto')?'auto':Math.max(0.5,Math.min(1,+v||1)); }
   G.renderer=new THREE.WebGLRenderer({preserveDrawingBuffer:true,canvas:cv,antialias:true});
   G.renderer.outputColorSpace=THREE.SRGBColorSpace;
   G.renderer.toneMapping=THREE.ACESFilmicToneMapping;
   G.renderer.toneMappingExposure=0.95;
-  G.renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
-  G.renderer.setSize(innerWidth,innerHeight);
+  applyRenderScale();
   G.renderer.shadowMap.enabled=true;
   /* REPLAT P2: SOFT SHADOWS ARE A SHADOW-MAP CHOICE, not a radius. See the SKY block — PCFSoft
      ignores shadow.radius outright, so 'vsm' is what actually buys a wide penumbra. The constant
@@ -12216,7 +12297,7 @@ function initRenderer(){
     const eqt=new THREE.CanvasTexture(ec); eqt.mapping=THREE.EquirectangularReflectionMapping;
     const pm=new THREE.PMREMGenerator(G.renderer); G.scene.environment=pm.fromEquirectangular(eqt).texture; pm.dispose();
     if(G.ibl){ G.ibl.mode='painted'; G.ibl.pmrem=true; } }
-  addEventListener('resize',()=>{ G.renderer.setSize(innerWidth,innerHeight); setCamAspect(); });
+  addEventListener('resize',()=>{ applyRenderScale(); setCamAspect(); });   // auto re-fits the budget to the new window
 }
 function setCamAspect(){
   const a=innerWidth/innerHeight;
@@ -12558,6 +12639,7 @@ function boot(opts){
     if(e.code==='Tab'&&G.running){ const t=document.getElementById('todo'); G.todoPinned=!t.classList.contains('open'); t.classList.toggle('open'); }
     if(e.code==='Backspace'&&!G.running){ SAVE.wipe(); const h=document.getElementById('hint2p'); if(h)h.innerHTML='<b>save wiped</b> — fresh beak, fresh crimes'; }
     if(e.code==='KeyO'&&G.running){ G.photo=!G.photo; document.body.classList.toggle('photo',G.photo); }
+    if(e.code==='F8'){ const S=RENDER.steps, i=S.indexOf(RENDER.scale); setRenderScale(S[(i+1)%S.length]); }   // PERF S6
     if(e.code==='KeyC'&&G.running){ G.bandIdx=((G.bandIdx||0)+1)%4;
       for(const k of G.keas){ if(k.band&&k.band.material){ k.band.material=mat(k.band._cols[G.bandIdx]); } }
       SAVE.write(); }
@@ -12575,7 +12657,7 @@ function boot(opts){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,drawnGroundAt,drawnLift,drawnGroundState,drawnGroundExplain,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,setRenderScale,RENDER,drawnGroundAt,drawnLift,drawnGroundState,drawnGroundExplain,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
     STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
            rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
            snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit,

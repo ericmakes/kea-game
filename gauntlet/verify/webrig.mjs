@@ -252,6 +252,13 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
       if (mt) globalThis.__KEA_MATS__ = mt;
       if (gr) globalThis.__KEA_GRASS__ = gr;
     }, nopost, film, nosky, sky, nomats, mats, grass, bird, props, nopropmodels, terrain);
+  /* PERF S4: NOCSM=1 shoots the fixed sun map instead of the cascades; KEACASCADE='{...}' overrides
+     src/shadows.mjs's CASCADE (cascades, size, maxFar, radius, blurSamples...). PERF S6: KEASCALE=<f>
+     sets the render scale. All three for like-for-like A/Bs at the vantage. */
+  { let cas = null; if (process.env.KEACASCADE) { try { cas = JSON.parse(process.env.KEACASCADE); } catch (e) { throw new Error('webrig: KEACASCADE is not valid JSON — ' + e.message); } }
+    const nocsm = !!process.env.NOCSM, scale = process.env.KEASCALE ? +process.env.KEASCALE : null;
+    if (nocsm || cas || scale) await page.evaluateOnNewDocument((n, c, sc) => {
+      if (n) globalThis.__KEA_NOCSM__ = true; if (c) globalThis.__KEA_CASCADE__ = c; if (sc) globalThis.__KEA_SCALE__ = sc; }, nocsm, cas, scale); }
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);
