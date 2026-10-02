@@ -1,3 +1,41 @@
+# REPORT — spike adoption, pieces 0 and 1; STOPPED at the frame budget (2026-10-02, Opus 5.5)
+
+Branch `replat-b`. **CERTIFIED-SHIP** at specimen `a3c791ab355316f6485a8d3b069f88ac`.
+Two pieces shipped and pushed. **Stopped before Piece 2 on a ruling only Eric can make.**
+
+## SHIPPED
+
+| piece | one line |
+|---|---|
+| `91cfe0d` PIECE 0 | Bird on 2048 textures (images only, byte-proved, CC BY 4.0), 1024 WebP runtime fallback, guard hole fixed, 03/13/18 re-staged and stable, `G.clockPin` rig fix. The 4096 red did not reproduce (21/21 dressed) — no fix claimed against it. |
+| `954d562` PIECE 1 | `framescore.mjs` in the gauntlet (reproduces the spike exactly); GAPAUDIT.md: six key vantages 1–4 of 6 vs ref_bow, saturation the consistent gap. |
+
+## WHY IT STOPPED — THE BUDGET IS ALREADY BROKEN
+
+The ruling is 60 fps with the full game running, refusing any piece that breaks it. Measured
+headful on Metal with the game live, **the shipped game is 40–70 ms/frame at 1080p (15–25 fps)
+before any spike piece lands.** Post, VSM shadows, grass and fill each cost ~25–35 ms; all four
+off reaches 13.8 ms (GAPAUDIT.md). So, read literally, every remaining piece is refused on day one,
+and Pieces 3–5 all ADD GPU cost. The choices, which are Eric's:
+1. **A performance piece first** — cuts to post (GTAO res, DOF), the shadow map (VSM blur, map
+   size) and grass tiers until the live game holds 16.7 ms. Each cut is a LOOK change and a
+   whole-set re-pin, so it should land before Piece 2's whole-set re-pin, not after.
+2. **A no-regression rule instead** — each piece must not ADD measurable ms/frame. Piece 2 passes
+   that (colour pipeline is free); Pieces 3–5 would each need a cost line.
+3. **A different target** — 60 fps at a lower internal resolution (half-res measured 28 ms) or 30 fps.
+
+## FRAMES TO EYEBALL
+- `gauntlet/capture/baseline/03_kea_plate.png`, `13_idle_preen.png`, `18_rear_close.png` — the new close-up framing.
+- `29_lodge_deck` — its pin is a grass state this machine no longer reshoots (pre-existing, inside threshold, NOT re-pinned).
+
+## READY FOR THE NEXT SESSION
+- Piece 2 scoped: 57 hand conversions become plain `new Color(hex)` with identical values; what actually shifts is fog, hemi, sun, fill, rim, torch, fire light, 8 raw Colors, 5 raw material colours.
+- Piece 3: 7 `mkTree` call sites (the 39 is an instance count); must keep the seeded rnd draws (FLAKES 15) — swap at the model tier, as P6A does. The pruned spike tree is 194k tris; 39 of them is 7.5M — LOD/impostor mandatory.
+- Piece 5: the WebGL stochastic anti-tiling already exists (P3b); what is missing is the spike's PLACED WEAR.
+- `sharp` and `@gltf-transform/*` are devDependencies but NOT vendored into the tracked node_modules (18 MB of native binaries); `npm install` before re-running `tools/derive_kea_textures.mjs`.
+
+---
+
 # REPORT — the terrain pass, closed against the plates (session 35, 2026-09-08)
 
 Branch `replat-b`. **CERTIFIED-SHIP** at specimen `b7d4fc7993c2b0d6c718c398812fdec8`,
