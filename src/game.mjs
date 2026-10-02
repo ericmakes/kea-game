@@ -1333,7 +1333,19 @@ const KEABIRD={
      THE ANIMATED FILE IS THE ONE LOADED, not kea_approved.glb, because they carry byte-identical
      geometry and only this one carries the clips. Verified rather than assumed: POSITION, NORMAL,
      UV, JOINTS, WEIGHTS and the index buffer hash identically between the two. */
-  url:'models/astra_incoming/approved/kea_animated.glb',
+  /* THE SHIPPED FILE IS THE APPROVED CHARACTER WITH ITS TEXTURES AT 2048, 2026-10-02 (SPIKE ADOPTION
+     piece 0). Same geometry, rig, clips and morph BYTE FOR BYTE — tools/derive_kea_textures.mjs
+     splices only the two image payloads and proves every other bufferView identical, and the
+     battery re-proves it with glbdiff against `approvedUrl`. 32.7 MB -> 12.7 MB, and at a 0.83 m
+     portrait 2048 vs 4096 differs by 10 pixels. The 4096 original is `approvedUrl`, kept as the
+     reference the derivation is checked against, and is not loaded.
+     `fallbackUrl` is the spike's 1024 WebP slimming, at 4.9 MB: if the primary resolves WITHOUT its
+     baseColor map — the exact failure BIRD_STATE.md section 7 met with the 4096 PNGs in the capture
+     browser — bird.mjs loads this instead and says so in G.bird.tier, rather than shipping a white
+     bird. A load error falls back the same way. */
+  url:'models/kea/kea_animated_2048png.glb',
+  fallbackUrl:'models/kea/kea_animated_1024webp.glb',
+  approvedUrl:'models/astra_incoming/approved/kea_animated.glb',
   /* Posed scene box is 54.44 model units tall in the APPROVED REST POSE. It was 96.5 for
      kea_bill.glb, and the difference is almost all wing: that number was read off a bird whose
      rest came from a legacy clip with a half-open wing. The loader MEASURES this after evaluating
@@ -12144,7 +12156,13 @@ function update(dt){
     if(G.camIdleT>3&&G.camYaw){ G.camYaw*=Math.max(0,1-dt*1.6); if(Math.abs(G.camYaw)<0.02)G.camYaw=0; }
   }
   if(G.needHydrate){ G.needHydrate=false; applySave(); }
-  G.time+=dt; G.frames=(G.frames||0)+1;
+  /* G.clockPin — THE CAPTURE CLOCK PIN, HONOURED WHERE THE CLOCK IS WRITTEN (2026-10-02). The rig
+     used to hold the clock by setting G.time=12.0 from its own rAF callback, which runs AFTER this
+     frame has updated and rendered — so every G.time reader (the grass wind, the water, the tow
+     wheel) saw 12 + one real dt, and dt is bimodal whenever frame cadence is. Found re-staging
+     03_kea_plate, whose held-out take split ~32k px of grass from its pin with the bird identical.
+     Undefined in play and in every battery, so nothing outside a capture stage can see it. */
+  G.time=(G.clockPin!=null)?G.clockPin:G.time+dt; G.frames=(G.frames||0)+1;
   updateRiver(dt);    // the floes drift, and they carry whatever is standing on them
   updateStation(dt);  // the dog barks, and a sheep carries whatever is standing on it
   travelUpdate(dt);   // TODO 38: outside the running gate, because a beat can play with no run on

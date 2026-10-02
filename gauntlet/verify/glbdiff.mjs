@@ -98,19 +98,53 @@ function jsonDiff(a,b,path,out){
 }
 /* CONTAINER BOOKKEEPING: the paths a texture swap is ALLOWED to move. Named narrowly on purpose —
    `buffers.*.byteLength` and the byteOffset/byteLength of a bufferView that an IMAGE uses. */
+/* A RELOCATED VIEW IS BOOKKEEPING ONLY IF IT CARRIES THE SAME BYTES. Added 2026-10-02 (SPIKE
+   ADOPTION piece 0). The rule above was written for a texture pass that APPENDS its new PNGs, so
+   only the image views move. A pass that SPLICES them in place — which is the only way to make a
+   file smaller rather than larger, because the old 27 MB of PNG goes away — shifts the offset of
+   every view laid out after the images, and the old rule called each of those a real change. It is
+   admitted here on the strongest evidence available and no weaker: same byteLength, and the
+   sha256 of the view's own bytes identical in both files. A moved view whose bytes differ, or whose
+   length changed, is still real. (The accessor value compare would catch most of that anyway; this
+   also covers views no accessor reads, such as an image the pass was not meant to touch.)
+   AND AN IMAGE FORMAT CHANGE IS AN IMAGE CHANGE. A PNG re-encoded as WebP changes images[i].mimeType,
+   adds EXT_texture_webp to the texture pointing at the SAME source, and lists the extension. Those
+   are classified `imageFormat`, separately from bookkeeping, so the report names them and only
+   `--expect images` accepts them. Any other extension edit, or a webp source pointing somewhere
+   new, stays real. */
+const viewSha=(g,i)=>{ const v=g.json.bufferViews[i];
+  return crypto.createHash('sha256').update(g.bin.slice(v.byteOffset||0,(v.byteOffset||0)+v.byteLength)).digest('hex'); };
 function classifyJson(diffs,base,cand){
   const imgViews=new Set();
   for(const g of [base,cand])for(const im of (g.json.images||[]))
     if(im.bufferView!==undefined)imgViews.add(im.bufferView);
-  const book=[], real=[];
+  const changedImg=new Set((base.json.images||[]).map((im,i)=>i).filter(i=>{
+    const a=imageBytes(base,i), b=imageBytes(cand,i); return a.md5!==b.md5; }));
+  const book=[], fmt=[], real=[];
   for(const d of diffs){
     let m;
     if(/^buffers\.\d+\.byteLength$/.test(d.path)){ book.push(d); continue; }
     if((m=d.path.match(/^bufferViews\.(\d+)\.(byteOffset|byteLength)$/))&&imgViews.has(+m[1])){
       book.push(d); continue; }
+    if((m=d.path.match(/^bufferViews\.(\d+)\.byteOffset$/))){
+      const i=+m[1], va=base.json.bufferViews[i], vb=cand.json.bufferViews[i];
+      if(va&&vb&&va.byteLength===vb.byteLength&&viewSha(base,i)===viewSha(cand,i)){ book.push(d); continue; }
+    }
+    if((m=d.path.match(/^images\.(\d+)\.mimeType$/))&&changedImg.has(+m[1])&&
+       /^image\/(png|jpeg|webp)$/.test(d.to||'')){ fmt.push(d); continue; }
+    if((m=d.path.match(/^textures\.(\d+)\.extensions(\.EXT_texture_webp(\.source)?)?$/))){
+      const t=(cand.json.textures||[])[+m[1]]||{}, x=(t.extensions||{}).EXT_texture_webp;
+      const onlyWebp=t.extensions&&Object.keys(t.extensions).length===1&&x;
+      if(onlyWebp&&x.source===t.source&&changedImg.has(t.source)){ fmt.push(d); continue; }
+    }
+    if(/^extensions(Used|Required)(\.\d+)?$/.test(d.path)){
+      const list=g=>(g.json[d.path.split('.')[0]]||[]).slice().sort();
+      const a=list(base), b=list(cand), extra=b.filter(e=>!a.includes(e));
+      if(a.every(e=>b.includes(e))&&extra.length&&extra.every(e=>e==='EXT_texture_webp')){ fmt.push(d); continue; }
+    }
     real.push(d);
   }
-  return {book,real};
+  return {book,fmt,real};
 }
 
 export function diffGLB(basePath,candPath){
@@ -152,8 +186,8 @@ export function diffGLB(basePath,candPath){
   }
   const all=jsonDiff(A.json,B.json,'',[]);
   const cls=classifyJson(all,A,B);
-  rep.json={total:all.length,bookkeeping:cls.book.length,
-            real:cls.real.slice(0,60),realTotal:cls.real.length};
+  rep.json={total:all.length,bookkeeping:cls.book.length,imageFormat:cls.fmt.length,
+            fmt:cls.fmt.slice(0,20),real:cls.real.slice(0,60),realTotal:cls.real.length};
   return rep;
 }
 
@@ -164,6 +198,8 @@ export function verdict(rep,expect){
   if(rep.structure.length)fails.push('STRUCTURE MOVED: '+rep.structure.join('; '));
   if(rep.json.realTotal)fails.push(rep.json.realTotal+' JSON change(s) outside container '+
     'bookkeeping: '+rep.json.real.slice(0,6).map(d=>d.path).join(', '));
+  if(rep.json.imageFormat&&expect!=='images')fails.push(rep.json.imageFormat+' image FORMAT change(s) — '+
+    'only "expect images" admits a re-encode: '+rep.json.fmt.slice(0,4).map(d=>d.path).join(', '));
   if(expect==='images'){
     if(accChanged.length)fails.push('ACCESSOR VALUES MOVED (a texture pass must not touch geometry): '+
       accChanged.map(a=>a.role+' ['+a.elemsChanged+' elems]').join(', '));
@@ -196,7 +232,9 @@ if((_a[1]||'').endsWith('glbdiff.mjs')){
     console.log('        md5 '+rep.cand.md5+'  '+rep.cand.bytes.toLocaleString('en-US')+' bytes');
     console.log('  counts identical: '+(rep.structure.length?'NO — '+rep.structure.join('; '):'yes'));
     console.log('  JSON changes: '+rep.json.total+' total, '+rep.json.bookkeeping+
-      ' container bookkeeping, '+rep.json.realTotal+' other');
+      ' container bookkeeping, '+rep.json.imageFormat+' image format, '+rep.json.realTotal+' other');
+    for(const d of rep.json.fmt.slice(0,6))
+      console.log('      [format] '+d.path+'   '+JSON.stringify(d.from)+' -> '+JSON.stringify(d.to));
     for(const d of rep.json.real.slice(0,10))
       console.log('      '+d.path+'   '+JSON.stringify(d.from)+' -> '+JSON.stringify(d.to));
     const ac=rep.accessors.filter(a=>a.changed);

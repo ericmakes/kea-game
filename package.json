@@ -13,7 +13,13 @@
     "three-r128": "npm:three@0.128.0"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "sharp": "^0.35.5",
     "vite": "^7.1.14"
   },
-  "optionalDependencies": { "puppeteer": "^22.0.0" }
+  "optionalDependencies": {
+    "puppeteer": "^22.0.0"
+  }
 }

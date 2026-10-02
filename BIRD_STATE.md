@@ -216,9 +216,32 @@ up loudly. A white bird can no longer reach a baseline.
 Until one of those lands, **the five close-ups cannot be re-staged and the tail views cannot be
 shot**: both need frames this machine will not currently render correctly.
 
+### 7a. RESOLVED IN-HOUSE 2026-10-02 (SPIKE ADOPTION piece 0) — and what that does and does not prove
+
+**The red did not reproduce.** `gauntlet/verify/birddress.mjs` boots the built bundle exactly as
+capture.mjs does and reports whether the bird came out of GLTFLoader with its map. On 2026-10-02 the
+4096 file dressed **21 of 21** loads: 7 sequential, 8 in parallel browsers, 6 through capture.mjs
+itself. So the 2026-09-21 failure was a machine state, not a property of the file, and the fix
+below is NOT proven against it — it is proven against everything else.
+**The one red that DID reproduce was the guard.** `assertBirdDressed` read `G.bird`, which
+installBird writes only after the 32 MB fetch resolves — so mid-fetch it said 'off' and passed
+vacuously (run 1 of the first batch). It now reads intent from `KEAGAME.KEABIRD.model` and refuses
+'attaching', 'undressed' and a fallen-back 'primitive' alike.
+**What ships:** `models/kea/kea_animated_2048png.glb` (12.7 MB, 2048 PNG, alpha preserved) as
+`KEABIRD.url`; `kea_animated_1024webp.glb` (4.9 MB, the spike's slimming) as `fallbackUrl`, loaded
+by bird.mjs if the primary resolves with no baseColor map or fails outright; the 4096 approved file
+as `approvedUrl`, the reference every derived file is proved against. `tools/derive_kea_textures.mjs`
+splices only the two image payloads; every other bufferView is byte-identical (verified by hash
+and by `glbdiff --expect images`, 0 accessors changed), and a battery re-proves it every gate.
+At a 0.83 m portrait 2048 vs 4096 differs by 10 px; frame cost is unchanged within noise.
+Licence: CC BY 4.0, modified Rockatoo character by Macauley.B — `assets/LICENCES.md`.
+
 ## 8. WHAT IS STILL OPEN
 
 - **Task 2, the tail vanes** — still open, as section 3 records and as the package insists.
+- **THREE OF THE FIVE CLOSE-UPS ARE RE-STAGED (2026-10-02)** — 03, 13, 18, framed to give the
+  approved bird the primitive's frame area back (BASELINE.md 2026-10-02). 20 and 25 stay as they
+  are, deliberately: they are real player cameras. The text below is the 2026-09-21 state.
 - **Five close-up bird vantages want re-staging.** `03_kea_plate`, `13_idle_preen`,
   `18_rear_close`, `20_dead_rear` and `25_preen_follow` were framed for the primitive bird, which
   is 1.084 m wide with its wings splayed; the approved bird is 0.626 m wide with them folded. The

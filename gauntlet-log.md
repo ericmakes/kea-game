@@ -5946,3 +5946,38 @@ that before `startGame`, so there are no keas, the model has not attached, and i
 reads as cover.
 
 Nothing was pinned, and the three re-staged cameras were REVERTED rather than shipped unjudged.
+
+## 2026-10-02 — SPIKE ADOPTION, PIECE 0: THE BIRD UNBLOCKED IN-HOUSE (Opus 5.5)
+
+Eric's ruling: adopt the render spike piece by piece, each certified, each at 60 fps WITH the full
+game running. Piece 0 was the bird's 4096 textures.
+
+**THE RED DID NOT REPRODUCE, AND I AM NOT CLAIMING A FIX FOR IT.** birddress.mjs, 21 of 21 loads
+dressed at 4096 (sequential, 8 parallel browsers, and capture.mjs itself). What did reproduce was a
+hole in the guard: assertBirdDressed passed vacuously while the 32 MB model was still in flight,
+because G.bird is only written when the load resolves. Fixed; it now reads intent off KEABIRD.
+
+**SHIPPED.** 2048 PNG tier as the bird, 1024 WebP (the spike's slimming) as a runtime fallback on a
+missing map, both spliced so only the two image payloads change — every other bufferView
+byte-identical, glbdiff ACCEPTS with 0 accessors changed, a battery re-proves it each gate, CC BY
+4.0 rows crediting Macauley.B. 32.7 MB -> 12.7 MB.
+glbdiff learned to accept a SPLICED texture pass (a moved view is bookkeeping only if its bytes
+hash identical) and to classify a PNG->WebP re-encode as an image-format change; four new selftest
+controls, all sabotages red. The battery row that matched the approved FILENAME now requires
+glbdiff proof plus a ledger row instead — three sabotages red.
+
+**RE-STAGED 03 / 13 / 18**, area-matched to the primitive, and the magnification exposed a real rig
+bug: the capture clock pin ran after the frame, so grass wind rendered at 12 + one dt. G.clockPin
+is now honoured in update(); battery proof added, sabotage red. All three stable (1.0000 / 0.9991 /
+1.0000). The 2048 texture moved no other vantage — proved with a 4096 control sweep.
+
+**THE FRAME BUDGET — THE FINDING THAT MATTERS MOST.** framebudget.mjs (headful system Chrome, Metal,
+bird flying, everything live) puts the SHIPPED GAME, before any spike piece, at **40-70 ms per
+frame at 1920x1080 — 15-25 fps — 2.4x to 4x over the 16.7 ms budget.** frameablate.mjs, one live
+session: post off 30.5 ms, shadows off 32.4, grass hidden 39.7, half-res 28.1, all four off 13.8.
+GPU-bound, spread across post, VSM shadows, grass and fill. Piece 0 itself is cost-neutral (2048 vs
+4096 within ±6 ms noise). Measured on battery after ~40 min of sweeps; thermal state moves the
+absolute number (40 vs 65 ms for the same state in one session), not the conclusion.
+
+FLAGGED FOR ERIC: 03/13/18 at the new framing; 29_lodge_deck's pin is a grass state this machine
+no longer reshoots (pre-existing, inside threshold, not re-pinned); the budget, above.

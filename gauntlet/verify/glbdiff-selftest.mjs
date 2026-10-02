@@ -140,5 +140,54 @@ function chunks(buf){
      'offsets/lengths and buffer byteLength) and NOTHING else — if those counted as defects, no '+
      'legitimate texture swap could ever pass');
 }
+/* ---- 4. A SPLICED TEXTURE PASS, added 2026-10-02 with the relocation rule in glbdiff.mjs ----
+   The derived kea (tools/derive_kea_textures.mjs) shrinks two images IN PLACE, so every view laid
+   out after them moves. The rule admits a moved view only on identical length and identical bytes;
+   these controls prove both directions on the real files, then sabotage each half of the rule. */
+const APPROVED='assets/models/astra_incoming/approved/kea_approved.glb';
+const SPLICED='assets/models/kea/kea_approved_2048png.glb', WEBP='assets/models/kea/kea_approved_1024webp.glb';
+function rewrite(src,dst,mutJson,mutBin){
+  const g=parseGLB(src), json=structuredClone(g.json), bin=Buffer.from(g.bin);
+  if(mutJson)mutJson(json); if(mutBin)mutBin(bin,json);
+  const pad=(b,c)=>b.length%4?Buffer.concat([b,Buffer.alloc(4-b.length%4,c)]):b;
+  const j=pad(Buffer.from(JSON.stringify(json)),0x20), B=pad(bin,0);
+  const h=Buffer.alloc(12); h.writeUInt32LE(0x46546C67,0); h.writeUInt32LE(2,4); h.writeUInt32LE(28+j.length+B.length,8);
+  const ch=(l,t)=>{ const x=Buffer.alloc(8); x.writeUInt32LE(l,0); x.writeUInt32LE(t,4); return x; };
+  fs.writeFileSync(dst,Buffer.concat([h,ch(j.length,0x4E4F534A),j,ch(B.length,0x004E4942),B]));
+  return dst;
+}
+if(fs.existsSync(SPLICED)&&fs.existsSync(WEBP)){
+  const r=diffGLB(APPROVED,SPLICED);
+  ok(verdict(r,'images').ok&&r.json.bookkeeping>800&&r.json.realTotal===0,
+     'the real SPLICED 2048 pass ACCEPTS under "expect images" ('+r.json.bookkeeping+' relocated '+
+     'fields, every one with identical bytes) — without the relocation rule no pass that makes a file '+
+     'SMALLER could ever be accepted');
+  ok(!verdict(r,'posnorm').ok,'and it still REJECTS under "expect posnorm", because its images moved');
+  /* sabotage 1: same offsets, one byte flipped inside a view that RELOCATED. Chosen by measurement,
+     not by attribute: the UVs sit before the images and never move, so flipping one of those would
+     leave no offset entry to reclassify — the first cut of this control did exactly that. */
+  const g=parseGLB(SPLICED), A0=parseGLB(APPROVED), imgV=new Set(g.json.images.map(im=>im.bufferView));
+  const bvI=g.json.bufferViews.findIndex((v,i)=>!imgV.has(i)&&v.byteOffset!==A0.json.bufferViews[i].byteOffset&&v.byteLength>8);
+  const p1=rewrite(SPLICED,TMP+'/spliced_uvbyte.glb',null,(bin,json)=>{ const o=json.bufferViews[bvI].byteOffset+3; bin[o]^=0x01; });
+  const r1=diffGLB(APPROVED,p1);
+  ok(!verdict(r1,'images').ok&&r1.json.real.some(d=>d.path==='bufferViews.'+bvI+'.byteOffset'),
+     'ONE flipped byte in a relocated view (bufferView '+bvI+') makes that view\'s move REAL, not bookkeeping — the rule '+
+     'admits a move on identical bytes and nothing weaker');
+  /* sabotage 2: the webp re-encode is a FORMAT change and only "expect images" admits it */
+  const rw=diffGLB(APPROVED,WEBP);
+  ok(verdict(rw,'images').ok&&rw.json.imageFormat===6,
+     'the real WebP pass ACCEPTS under "expect images", its six format edits named ('+rw.json.imageFormat+')');
+  ok(verdict(rw,'posnorm').fails.some(f=>/image FORMAT change/.test(f)),
+     'and REJECTS under "expect posnorm", naming the format change');
+  /* sabotage 3: EXT_texture_webp pointed at a DIFFERENT image is a rewiring, not a re-encode */
+  const p3=rewrite(WEBP,TMP+'/webp_rewired.glb',json=>{ json.textures[0].extensions.EXT_texture_webp.source=1; });
+  const r3=diffGLB(APPROVED,p3);
+  ok(!verdict(r3,'images').ok&&r3.json.real.some(d=>/textures\.0\.extensions/.test(d.path)),
+     'a webp source pointing at a different image is REAL — the format class covers a re-encode, never a re-wire');
+  /* sabotage 4: a second, unrelated extension smuggled in beside the webp one */
+  const p4=rewrite(WEBP,TMP+'/webp_extra_ext.glb',json=>{ json.extensionsUsed.push('KHR_materials_unlit'); });
+  ok(!verdict(diffGLB(APPROVED,p4),'images').ok,
+     'and an unrelated extension added beside EXT_texture_webp is REAL');
+} else ok(false,'the derived kea files are missing — run node tools/derive_kea_textures.mjs');
 console.log(bad?('GLBDIFF SELFTEST: '+bad+' FINDINGS'):'GLBDIFF SELFTEST: ALL PASS');
 process.exit(bad?1:0);

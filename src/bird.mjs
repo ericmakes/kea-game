@@ -173,17 +173,35 @@ function keaBeat(K,kea,name,at){
 export async function installBird(K){
   const B=K.KEABIRD;
   if(!B||!B.model){ K.G.bird={mode:'primitive',why:'KEABIRD.model is off'}; return; }
-  let gltf;
-  try{
-    gltf=await new Promise((res,rej)=>new GLTFLoader().load(B.url,res,undefined,rej));
-  }catch(e){
-    K.G.bird={mode:'primitive',why:'load failed: '+(e&&e.message||e)};
-    console.error('bird: the model did not load, staying on the primitive bird —',e);
+  /* A FILE THAT LOADS WITHOUT ITS PAINT IS A FAILED LOAD. GLTFLoader resolves happily when an
+     embedded image fails to decode — it logs one line and hands back a material with no map — so a
+     resolve is not evidence of a bird. Checked on the decoded baseColor, and on failure the
+     fallback tier (SPIKE ADOPTION piece 0) is tried before the primitive bird is. */
+  const load=url=>new Promise((res,rej)=>new GLTFLoader().load(url,res,undefined,rej));
+  const painted=g=>{ let ok=false; g.scene.traverse(o=>{ const im=o.isSkinnedMesh&&o.material&&o.material.map&&o.material.map.image;
+    if(im&&(im.width||im.videoWidth))ok=true; }); return ok; };
+  let gltf=null, url=null, tier=null; const tried=[];
+  for(const [t,u] of [['primary',B.url],['fallback',B.fallbackUrl]]){
+    if(!u)continue;
+    try{
+      const g=await load(u);
+      if(painted(g)){ gltf=g; url=u; tier=t; break; }
+      tried.push(t+' '+u+': loaded with no baseColor map');
+      console.error('bird: '+u+' loaded with NO baseColor map —',t==='primary'&&B.fallbackUrl?'trying the fallback tier':'no tier left');
+    }catch(e){
+      tried.push(t+' '+u+': '+(e&&e.message||e));
+      console.error('bird: '+u+' did not load —',e);
+    }
+  }
+  if(!gltf){
+    K.G.bird={mode:'primitive',why:'load failed: '+tried.join(' | ')};
+    console.error('bird: no tier of the model loaded painted, staying on the primitive bird');
     return;
   }
   /* ONE LOAD, MANY BIRDS. SkeletonUtils.clone is the only correct way to copy a SkinnedMesh —
      Object3D.clone() shares the skeleton, so two birds would pose as one. */
-  K.G.bird={mode:'model',url:B.url,birds:0,bones:0};
+  K.G.bird={mode:'model',url,tier,birds:0,bones:0};
+  if(tried.length)K.G.bird.fellBack=tried;
   const attach=(kea)=>{
     const root=skeletonClone(gltf.scene);
     let sk=null; root.traverse(o=>{ if(o.isSkinnedMesh)sk=o; });

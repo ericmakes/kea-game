@@ -7248,10 +7248,39 @@ C.section('REPLAT P5b: the rig adapter');
        chain rather than the shipped file. Both claims are asserted, because the chain is what the
        CC-BY attribution rests on: the shipped file must be the approved one, AND the link it was
        derived through must still be in the tree with its ledger row. */
-    ok(/approved\/kea_animated\.glb/.test(B.url),
-       'the recipe points at the approved animated character ('+B.url+')');
+    /* SPIKE ADOPTION piece 0 (2026-10-02): THE SHIPPED FILE MAY BE A DERIVED TEXTURE TIER, AND IT
+       MUST PROVE IT IS STILL THE APPROVED CHARACTER. This row used to match the approved FILENAME.
+       Its intent was always "the bird we ship is the bird Eric approved", and a filename was the
+       cheapest evidence of that while the approved file was the only candidate. Now the url is the
+       2048 tier and the fallback the 1024 WebP, so the evidence is the real thing: glbdiff
+       --expect images against approvedUrl, which ACCEPTS only if image payloads are the ONLY thing
+       that moved — every accessor (geometry, UVs, joints, weights, indices, clips, morph) identical.
+       Stronger than the old row, not weaker: a renamed copy of some other bird would have passed a
+       filename match and fails this. Each file must also carry its own CC-BY ledger row with the
+       right md5, because a derived file is still Macauley.B's work. */
+    ok(/approved\/kea_animated\.glb$/.test(B.approvedUrl||''),
+       'the recipe names the approved animated character as its reference ('+B.approvedUrl+')');
     ok(led.indexOf('models/astra_incoming/approved/kea_animated.glb')>0,
        'with a ledger row, as CC-BY requires');
+    { const cp=require('child_process'), cryptox=require('crypto');
+      for(const [role,u] of [['shipped url',B.url],['fallbackUrl',B.fallbackUrl]]){
+        if(!u){ ok(role!=='shipped url','the recipe names a '+role); continue; }
+        const f=pathx.join(ROOT,'assets',u);
+        if(!fsx.existsSync(f)){ ok(false,'the '+role+' file is in the tree ('+u+')'); continue; }
+        if(u===B.approvedUrl){ ok(true,'the '+role+' IS the approved file'); continue; }
+        const r=cp.spawnSync(process.execPath,[pathx.join(ROOT,'gauntlet/verify/glbdiff.mjs'),
+          pathx.join(ROOT,'assets',B.approvedUrl||''),f,'--expect','images'],{encoding:'utf8',cwd:ROOT});
+        const acc=((r.stdout||'').match(/accessors changed: (\d+) of (\d+)/)||[]);
+        ok(r.status===0&&/EXPECT images -> ACCEPT/.test(r.stdout||''),
+           'the '+role+' ('+u+') differs from the approved character in IMAGES ONLY — glbdiff '+
+           (/ACCEPT/.test(r.stdout||'')?'ACCEPTS':'REJECTS: '+((r.stdout||'')+(r.stderr||'')).split('\n').filter(l=>/✗/.test(l)).join(' ').slice(0,200))+
+           ', accessors changed '+(acc[1]||'?')+' of '+(acc[2]||'?'));
+        const md5=cryptox.createHash('md5').update(fsx.readFileSync(f)).digest('hex');
+        const row=led.match(new RegExp('<!-- ASSET file='+u.replace(/[.\/]/g,'\\$&')+' md5=([0-9a-f]{32})[^>]*-->'));
+        ok(!!row&&row[1]===md5&&/attrib=required/.test(row[0])&&/CC-BY-4\.0/.test(row[0])&&/Macauley\.B/.test(row[0]),
+           'and the '+role+' carries its own CC-BY ledger row crediting Macauley.B, md5 matching the file ('+
+           (row?row[1].slice(0,8):'no row')+' vs '+md5.slice(0,8)+')');
+      } }
     { const f=pathx.join(ROOT,'assets/models','kea_bill.glb');
       ok(fsx.existsSync(f),'and the reshaped-bill link is still in the tree to re-derive from');
       ok(led.indexOf('models/kea_bill.glb')>0,'with its own ledger row naming that change'); }
@@ -10109,5 +10138,19 @@ C.section('THE HIGH STATION - the last map, the drafting cascade, and riding a s
 
   X.setSeed(20260828); X.boot({biome:'carpark'}); X.startGame(1); tick(4); park();
 }
+
+/* ---- G.clockPin — THE CAPTURE CLOCK PIN IS HONOURED WHERE THE CLOCK IS WRITTEN (2026-10-02) ----
+   The rig used to hold G.time from its own rAF callback, AFTER the game's frame, so every G.time
+   reader rendered at 12 + one real dt and the close-up vantages split with frame cadence. The pin
+   must hold the clock EXACTLY through an update of any dt, and in play (pin unset) the clock must
+   still advance by dt — the second half is what proves the pin cannot leak into the game. */
+{ const was=G.clockPin;
+  G.clockPin=undefined; const t0=G.time; X.update(1/60); X.update(1/30);
+  ok(Math.abs(G.time-(t0+1/60+1/30))<1e-9,'with no pin the clock advances by dt, exactly as in play ('+
+     (G.time-t0).toFixed(5)+' s over two updates)');
+  G.clockPin=12.0; X.update(1/60); const a=G.time; X.update(1/23); const b=G.time;
+  ok(a===12.0&&b===12.0,'with the pin set the clock HOLDS through updates of any dt ('+a+', '+b+') — '+
+     'the renderer sees the pinned time, not the pin plus a frame');
+  G.clockPin=was; }
 
 process.exitCode=C.report()?1:0;

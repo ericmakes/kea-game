@@ -740,6 +740,34 @@ nothing missing and nothing unlisted; and all seven files in `APPROVED_CHARACTER
 
 <!-- ASSET file=models/astra_incoming/approved/kea_animated.glb md5=c5bb3f2764b8962dd7ca2796339547ca attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
 
+### the derived texture tiers — `models/kea/`  (2026-10-02, SPIKE ADOPTION piece 0)
+
+**CC BY 4.0, NOT CC0, AND THE CREDIT TRAVELS WITH THEM.** These four files are the two approved
+GLBs above with their textures made smaller, which makes them modified copies of a modified copy of
+Macauley.B's **Rockatoo character** (https://sketchfab.com/Macauley.B). Attribution: *"modified
+Rockatoo character by Macauley.B, licensed CC BY 4.0"*. They inherit the whole chain recorded in
+this section, including the AI-generated edits by OpenAI GPT-6 Astra, and THIS project's change on
+top is stated here as the licence requires: **textures resized; nothing else.**
+
+| field | value |
+|---|---|
+| what changed | the 4096-square baseColor and normal PNGs, re-encoded smaller. The 126-byte metallicRoughness is untouched. Nothing else |
+| tiers | `2048png` (PRIMARY, shipped) — 2048-square PNG, alpha preserved. `1024webp` (FALLBACK) — 1024-square WebP q90, lossless alpha, `EXT_texture_webp` |
+| how | `tools/derive_kea_textures.mjs`, deterministic (re-run gives identical md5s). baseColor resized in linear light with premultiplied alpha; normal resized as data and renormalised. The GLB is SPLICED, not re-exported, so every other byte is the source's own |
+| verified here | every non-image bufferView **byte-identical** to its source (902 of 902 for `kea_approved`, 3,348 of 3,348 for `kea_animated`), JSON identical outside offsets/lengths and the WebP format fields; `glbdiff.mjs --expect images` ACCEPTS all four with **0 accessors changed**: geometry, UVs, joints, weights, indices, the 11 clips and the morph are the approved bytes |
+
+| file | bytes | md5 | sha256 (first 16) |
+|---|---|---|---|
+| `models/kea/kea_animated_2048png.glb` | 12740212 | `e2ee92c2c87ccb4eecd04c7186f555cd` | `b6d3cea4854f8dad…` |
+| `models/kea/kea_animated_1024webp.glb` | 4887532 | `81664a490f83346f716964e355840488` | `458519638e860f00…` |
+| `models/kea/kea_approved_2048png.glb` | 9909392 | `6693b0cb64292d09ea7442302594ca46` | `815e081ab2c535cd…` |
+| `models/kea/kea_approved_1024webp.glb` | 2058820 | `16c8aeb66466ab50194a543a53968c79` | `ee936a4bf52a3f0e…` |
+
+<!-- ASSET file=models/kea/kea_animated_2048png.glb md5=e2ee92c2c87ccb4eecd04c7186f555cd attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+<!-- ASSET file=models/kea/kea_animated_1024webp.glb md5=81664a490f83346f716964e355840488 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+<!-- ASSET file=models/kea/kea_approved_2048png.glb md5=6693b0cb64292d09ea7442302594ca46 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+<!-- ASSET file=models/kea/kea_approved_1024webp.glb md5=16c8aeb66466ab50194a543a53968c79 attrib=required author="Macauley.B" title="Rockatoo character" licence="CC-BY-4.0" -->
+
 ### the 3q source shape and the rest of the provenance — MOVED OUT OF THE TREE 2026-09-21
 
 `model/`, `tools/` and `previews/` were moved to **`astra_archive/approved/`** at the repo root,

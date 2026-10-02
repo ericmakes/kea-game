@@ -394,7 +394,16 @@ export async function assertBirdDressed(page, { timeout = 30000 } = {}) {
   const read = () => page.evaluate(() => {
     const G = (globalThis.KEAGAME || {}).G || {};
     const B = G.bird || {};
-    if (B.mode !== 'model') return 'off';
+    /* 'off' MEANS THE BUILD ASKED FOR NO MODEL, NOT "G.bird IS NOT WRITTEN YET". installBird only
+       writes G.bird AFTER the GLB resolves, so for the whole of a 32 MB fetch this read 'off' and
+       the guard passed vacuously — found 2026-10-02 by birddress.mjs, run 1 of 3, which shot while
+       the model was still in flight. Intent is read off the build's own KEABIRD; the outcome off
+       G.bird. A load that FAILED writes mode 'primitive' with a reason, and that is a refusal too
+       when the build asked for the model. */
+    const want = !!(((globalThis.KEAGAME || {}).KEABIRD || {}).model);
+    if (!want) return 'off';
+    if (!G.bird) return 'attaching';
+    if (B.mode !== 'model') return 'failed:' + (B.why || B.mode);
     const k = (G.keas || [])[0];
     if (!k || !k._model) return 'attaching';
     const m = k._model.sk && k._model.sk.material;
@@ -408,6 +417,9 @@ export async function assertBirdDressed(page, { timeout = 30000 } = {}) {
     st = await read();
   }
   if (st === 'off' || st === 'dressed') return st;
+  if (st.startsWith('failed:'))
+    throw new Error('webrig: the build asked for the bird model and installBird fell back — ' + st.slice(7) +
+      '. Refusing to shoot the primitive bird as though it were the model.');
   throw new Error('webrig: the bird model is ' + st + ' after ' + timeout + 'ms — its texture did ' +
     'not load, so a frame taken now would show an untextured WHITE bird. Refusing to shoot.');
 }

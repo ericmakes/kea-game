@@ -1178,3 +1178,43 @@ camera on each, re-measured for stability, re-pinned and judged.
 The flight frames need nothing. `04_flight_underwing` and `17_flight` are better than they were —
 the authored flight clip gives a genuinely spread wing where the procedural rig could not, and the
 scarlet underwing reads.
+
+## RE-PIN 2026-10-02 — SPIKE ADOPTION piece 0: three close-ups re-staged; the bird's textures at 2048
+
+**Three vantages pinned, by consensus, and nothing else.** `03_kea_plate`, `13_idle_preen`,
+`18_rear_close` — re-staged for the approved bird, on Eric's instruction per BIRD_STATE.md §8.
+`20_dead_rear` and `25_preen_follow` were deliberately NOT re-staged: both are real player
+cameras (the clamp-limited follow and the post-ejection follow), per the 2026-09-21c entry.
+
+**THE FRAMING IS DERIVED, NOT EYEBALLED.** Each camera's whole rig (eye and target) is scaled
+about the bird's centre by sqrt(primitive area / approved area), measured by birdframe.mjs at the
+old camera, so the approved bird gets the primitive's frame AREA back in the same screen place:
+
+    vantage        primitive    approved (old cam)  factor   approved (new cam)
+    03_kea_plate   295x142 px   112x157 px          1.54     175x245 px
+    13_idle_preen  229x145 px   104x115 px          1.67     175x196 px
+    18_rear_close  240x168 px   100x152 px          1.63     153x226 px  (camera pitched ~13 deg
+                                                                         down so the feet clear
+                                                                         the frame edge and HUD)
+
+**MAGNIFYING THEM EXPOSED THREE LIVE THINGS, all FLAKES law 12, all fixed rather than pinned
+around.** 13 split four sweeps 2/2 at ~36k px; 03's held-out take missed its pin at 0.9354; 18 read
+0.9931 take to take. The causes: (1) the rig's `G.time=12.0` pin runs AFTER the game's frame, so
+every G.time reader — the grass wind above all — rendered at 12 + one real dt, bimodal with frame
+cadence. Fixed at the source: `G.clockPin`, honoured in update() where the clock is written;
+undefined in play and in every battery. (2) 13's preen phase advanced on real dt through the
+settle — now held at idleAct.t 1.6. (3) 18 was a one-shot stage — now held each frame.
+After: stability.mjs, 3 takes each — 03 1.0000, 13 0.9991, 18 1.0000. Held-out diff 1.0000 /
+0.9998 / 0.9926 (the 0.9926 is the pre-hold 18 take; the held 18 re-pinned from four takes that
+agree to 1 px).
+
+**THE 2048 TEXTURE MOVED NO OTHER VANTAGE, AND THAT WAS PROVED WITH A CONTROL.** Four whole-set
+sweeps flagged 17_flight on frame SSIM and 04's subject box, and pxdiff 14 vantages over band.
+A control sweep with ONLY KEABIRD.url pointed back at the 4096 file reproduced every one of them:
+  29_lodge_deck   4096 control 18,846 px from pin; 2048 vs control: 1 px. Grass wind, and
+                  PRE-EXISTING drift — the pin is from a state this machine does not reshoot
+                  (one run in four lands at 209 px). Inside SSIM threshold. NOT re-pinned: it is
+                  not a vantage this piece was aiming at. Flagged for a deliberate look.
+  42 / 22 / 04 / 17   bimodal in the CONTROL too (up to 22k px take to take) — the vantages'
+                  own variance, not the texture.
+Provenance: 03 run4 (sweeps), 13 run2 (clockPin takes), 18 run1 (held takes).

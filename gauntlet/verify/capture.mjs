@@ -166,9 +166,15 @@ const QUIET=`KEAGAME.CASEFILES.forEach(c=>c.seen=true); const td=document.getEle
    therefore a judged re-pin, so it is filed rather than fixed. audits/2026-09-03/audit-stage-marks.js */
 await shotR('01_carpark_wide',`const k=KEAGAME.G.keas[0];k.x=4;k.z=16;k.y=0;k.grounded=true;k.ry=2.4; ${CAM(11,4.2,25,3.5,0.8,15.5)}`);
 await shotR('02_hut_snow',`const k=KEAGAME.G.keas[0];k.x=-24;k.z=-2.5;k.y=0;k.grounded=true;k.ry=Math.PI; ${CAM(-16,4.5,3,-24,2.6,-8)}`);
+/* RE-STAGED 2026-10-02 (SPIKE ADOPTION piece 0, on Eric's instruction per BIRD_STATE.md section 8).
+   Framed for the primitive bird, 1.084 m wide with its wings splayed; the approved bird folds them
+   and is 0.626 m. birdframe.mjs at the old camera: primitive 295x142 px, approved 112x157 px. The
+   new camera gives the approved bird the primitive's frame AREA back: sqrt of the area ratio is 1.54,
+   and the WHOLE RIG (eye and target) is scaled by 1/f about the bird's centre (its xz, 0.25 m up),
+   so the bird is magnified in place: same screen position, same elevation angle, same light. */
 await shotR('03_kea_plate',`const k=KEAGAME.G.keas[0];k.preenT=99;k.idleT=0;KEAGAME.G.poseLock=true;
-  ${PIN('k.preenT=99;k.idleT=0;k.idleAct=null;k.x=0;k.z=0;k.y=KEAGAME.groundHeightAt(0,0,1);k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0;KEAGAME.G.time=12.0;')}
-  ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
+  ${PIN('k.preenT=99;k.idleT=0;k.idleAct=null;k.x=0;k.z=0;k.y=KEAGAME.groundHeightAt(0,0,1);k.vy=0;k.grounded=true;k.ry=1.9;k.stun=0;KEAGAME.G.time=12.0;KEAGAME.G.clockPin=12.0;')}
+  ${CAM(0.877,0.705,0.747,0.0,0.445,0.0)}`);
 // the bird sat above the HUD band, behind the chaos chip. Pin it mid-air at the top of the
 // upstroke: flapPh PI/2 gives sst=1, which is both max stroke and open=1.0, and open above
 // 0.25 is the only thing that makes the scarlet underwing panel (oPan) visible at all.
@@ -307,7 +313,20 @@ await shotR('19_roof_follow',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${CAM(-24-Math.sin(2.6)*4.2, 7.2, -7.4-Math.cos(2.6)*4.2, -24+Math.sin(2.6)*1.6, 5.92, -7.4+Math.cos(2.6)*1.6)}`);
 // TODO 71: (-9.2, 10.6) is inside the caravan by 0.274 on the collider own z, so the bird is
 // photographed at -9.14552, 10.86876. Small, deterministic, and it is why this mark resists nudging.
-await shotR('18_rear_close',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;k.x=-9.2;k.z=10.6;k.y=0;k.grounded=true;k.ry=5.8;k.stun=0;k.idleT=0;k.idleAct=null; ${CAM(-8.6,1.5,12.4,-9.6,0.5,9.4)}`);
+/* RE-STAGED 2026-10-02 (SPIKE ADOPTION piece 0, on Eric's instruction per BIRD_STATE.md section 8).
+   Framed for the primitive bird, 1.084 m wide with its wings splayed; the approved bird folds them
+   and is 0.626 m. birdframe.mjs at the old camera: primitive 240x168 px, approved 100x152 px. The
+   new camera gives the approved bird the primitive's frame AREA back: sqrt of the area ratio is 1.63,
+   and the WHOLE RIG (eye and target) is scaled by 1/f about the bird's centre (its xz, 0.25 m up),
+   so the bird is magnified in place: same screen position, same elevation angle, same light.
+   EXCEPT HERE: this bird sat low in frame (centre 453 px of 540), so magnifying it in place put its
+   feet ~54 px below the bottom edge and under the TAB hint. The eye stays put and the TARGET drops
+   to y -0.13, pitching the camera ~13 degrees further down, which lifts the bird to sit in frame.
+   AND IT IS HELD NOW (FLAKES law 12): the stage was one-shot, so the clock ran and an idle could start
+   during the settle; magnified, stability.mjs read 0.9931 take to take. The bird's x/z are NOT
+   pinned, because pushOut moves it off the caravan collider on the first frame (TODO 71 above) and
+   that resting place is part of the photograph. */
+await shotR('18_rear_close',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;k.x=-9.2;k.z=10.6;k.y=0;k.grounded=true;k.ry=5.8;k.stun=0;k.idleT=0;k.idleAct=null; ${PIN('KEAGAME.G.clockPin=12.0;k.idleT=0;k.idleAct=null;k.vy=0;k.grounded=true;k.ry=5.8;k.stun=0;')} ${CAM(-8.811,1.017,11.808,-9.425,-0.13,9.968)}`);
 // same escape as 04. flapPh 1.1 sits just past the top of the stroke so the wings read
 // mid-beat rather than pinned at a limit.
 /* TODO 53, AND THE SESSION-7 DIAGNOSIS IT WAS FILED ON WAS WRONG. That report said the fix was to
@@ -358,7 +377,21 @@ const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
   ${CAM(13.2,1.75,-8.2,15,1.15,-10.6)}`);
 await shotR('14_player_view',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=true; ${CAM(-4.38,2.3,3.18,0,0.9,0)}`);
 await shotR('15_sign',`const k=KEAGAME.G.keas[0];const sg=KEAGAME.G.signG; k.x=sg.position.x-0.6;k.z=sg.position.z+2.2;k.y=0;k.grounded=true;k.ry=2.9;KEAGAME.G.poseLock=true; ${CAM('sg.position.x','2.0','sg.position.z+3.4','sg.position.x','1.8','sg.position.z')}`);
-await shotR('13_idle_preen',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=false;k.idleT=99;k.idleAct={kind:'preen',t:0.7,dur:3.5,side:1};k._idleEver=true; ${CAM(1.35,0.95,1.15,0,0.55,0)}`);
+/* RE-STAGED 2026-10-02 (SPIKE ADOPTION piece 0, on Eric's instruction per BIRD_STATE.md section 8).
+   Framed for the primitive bird, 1.084 m wide with its wings splayed; the approved bird folds them
+   and is 0.626 m. birdframe.mjs at the old camera: primitive 229x145 px, approved 104x115 px. The
+   new camera gives the approved bird the primitive's frame AREA back: sqrt of the area ratio is 1.67,
+   and the WHOLE RIG (eye and target) is scaled by 1/f about the bird's centre (its xz, 0.25 m up),
+   so the bird is magnified in place: same screen position, same elevation angle, same light.
+   AND THE CLOCK AND THE PREEN PHASE ARE PINNED NOW (FLAKES law 12). At the old, wider camera this
+   frame's live parts hid inside the threshold; magnified, four sweeps split 2 against 2 (~1.8k px
+   within a mode, ~36k across). Two live things, found in that order:
+     the grass wind reads G.time, which this stage never froze — pinning G.time ALONE left it split
+       2/2, because the pin runs after the game's own frame, so the renderer sees 12 + one real dt;
+     the preen advances idleAct.t on real dt through the 900 ms settle, so its phase was cadence.
+   Holding both every frame (idleAct.t 1.6, mid-preen, head into the wing) brought four takes to a
+   pairwise worst of 335 px. 03 has pinned G.time=12.0 all along for the first of the two reasons. */
+await shotR('13_idle_preen',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.grounded=true;k.ry=2.2;k.stun=0;k.landFlare=0;k.vy=0;KEAGAME.G.poseLock=false;k.idleT=99;k.idleAct={kind:'preen',t:0.7,dur:3.5,side:1};k._idleEver=true; ${PIN("KEAGAME.G.time=12.0; KEAGAME.G.clockPin=12.0; if(k.idleAct)k.idleAct.t=1.6; else k.idleAct={kind:'preen',t:1.6,dur:3.5,side:1}; k.idleT=99;")} ${CAM(0.808,0.669,0.689,0.0,0.43,0.0)}`);
 /* TODO 71: THE BIRD IS NOT AT THE SEAL. This line stands it at the strip own getPos(), y 1.62,
    grounded=false - a bird mid-peel, which is the act the vantage is named for. The mark is inside
    the caravan: the first frame pushes it 0.632 m out and it falls, and the browser reads
