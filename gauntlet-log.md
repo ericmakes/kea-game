@@ -6011,3 +6011,42 @@ budget is the perf piece's job).
 FOUND, NOT FIXED: subjects.mjs fails 9 checks on pins that predate this session — its kea window
 is the primitive's olive (h52-80), the approved bird is brown (~h40). 03/13/18 pass because they
 are close enough to catch the green wing. A recalibration is its own piece.
+
+## 2026-10-02c — FEET ON THE DRAWN GROUND, AND THE TRAMPLE (Opus 5.5) — certified cbdc01c5
+
+Eric, on the render fix's frames: 18_rear_close "sunk, flat-bottomed, no legs or feet"; blades
+through the bird in 03 and 13. Both fixed, both render-only, both proved with a control that fails.
+FEET. birdfeet.mjs measured the soles EXACTLY on groundHeightAt (0.0 mm, approved_idle and eight
+walk phases) and the bird still sunk: the carpark seal is a 0.14 m box resting ON y=0, so its top is
+14 cm above the logic ground and the legs were inside the tarmac. Not the rest clip (approved_idle,
+verified) and not groundLift. groundtruth.mjs, a survey of every map, found the CLASS: every seal,
+groomed run, road and path is a 0.10-0.28 m box on y=0; every map's 240 m plane carries +-0.1-0.2 m
+of display relief; the snow mounds are 0.4-0.7 m rings; the river bed and lake are displaced; the
+range mesh is triangles where terrainHeightAt is bilinear. Fix: the kea GROUP is drawn at logic
+y + drawnLift(x,z), from drawnGroundAt — a per-map table of the drawn floors (exact triangles,
+found not listed; movers excluded, floes live, water at its still surface, shadow blobs ignored).
+Logic, anchors and every headless digest untouched (harness-everything asserts lift == 0 headless).
+groundtruth: 0.0 mm worst on every walkable cell of all six maps; CONTROL (flat 0) 45,225 findings.
+birdfeet: 0 mm over the drawn floor at five spots (tarmac +140, relief +171, groomed run +100);
+pre-fix source -100..-171 mm SUNK.
+TRAMPLE. GRASS.trample {r0 0.60, r1 1.20, floor 0.01, lift 0.6}: the whole blade scales down round
+each grounded kea, ragged edge, in the shader every tier already runs (four distances per vertex;
+the noise only within reach of a bird). trample.mjs, the play camera at 1920x1080, 3 tussock spots x
+4 headings, key-green grass vs grass-hidden vs bird-hidden: 0 blade px over the bird on all 12;
+CONTROL (trample off) 12-52% of the bird under blades. Height-only flattening left 1-2% (flat
+slivers at foot level) — that is why the blade scales whole.
+THE INSTRUMENTS WERE WRONG SEVEN TIMES, each caught: birdfeet measured groundHeightAt, not the drawn
+floor; its ray hit a car roof over 20's ejected bird; trample's mask took in the bird's shadow;
+groundtruth counted the range as "above a kea" (curY), capped heights at 0.4 m, read the sky dome
+(BackSide) as a floor (a VACUOUS PASS — now refused below half the grid), and trusted three's
+Mesh.raycast, which hits and misses the same mound face by ray start height alone (3.0 hit, 2.5
+missed, 2.0 hit) — both sides now sample triangles themselves.
+A GLSL COMMENT OUTSIDE ITS DELIMITERS BLANKED THE WHOLE FIELD and nothing could see it: webrig
+.assertBooted now refuses any shader program that failed to compile (proved on the broken build);
+trample.mjs refuses a frame whose keyed field covers <10%.
+21_night_camp WENT BIMODAL (20k px, 1 run in 3): its pin held G.time from the rig, not G.clockPin;
+fixed on 21/23/25. NINETEEN SHOTS STILL USE THE OLD IDIOM — first step of the perf piece.
+RE-PINNED 26 vantages by 4-run consensus: every frame where new-vs-HEAD (same machine, back to
+back) beat its pxdiff band, each checked to be the bird or the grass round it.
+FOUND, NOT FIXED: cars stand on y=0 too, so their wheels are 14 cm inside the seal; humans and sheep
+are not lifted; the range mesh's chords sit up to 0.5 m off terrainHeightAt at its inner edge.

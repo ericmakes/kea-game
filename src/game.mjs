@@ -1029,6 +1029,14 @@ const GRASS={
                   pattern is on a grid" from "the plane is on a grid". */
   ground:{ segs:48, maskScale:1.0 },
   tier:'mid', snap:0.5,
+  /* THE TRAMPLE — 2026-10-02. Eric, on 03 and 13 after the render fix: blades drawn straight through
+     the bird's body, "a player will lose the bird in tussock". Each kea flattens the field around
+     its feet: a blade ROOTED within r0 of a bird falls to `floor` of its height, ramping back to
+     full by r1, and a bird `lift` metres off the ground flattens nothing. Height only — no new
+     geometry, no CPU pass: one distance per kea per vertex in the shader every tier already runs.
+     r0/r1 are not taste: gauntlet/verify/trample.mjs measures blade pixels inside the bird's
+     silhouette at the play camera, and these are the smallest that hold it at zero. */
+  trample:{r0:0.60, r1:1.20, floor:0.01, lift:0.6, n:4},
   tiers:{
     low:  {count: 60000, near:14},
     mid:  {count:120000, near:14},
@@ -4869,6 +4877,195 @@ function groundHeightAt(x,z,curY){
   }
   return h;
 }
+/* THE DRAWN GROUND — 2026-10-02, the feet piece. groundHeightAt is the ground the GAME stands on and
+   it is flat at 0 across every map's play area; the ground that is DRAWN is not. Each map's 240 m
+   plane carries a display relief of +-0.1..0.2 m, and every tarmac seal, groomed run, road and path
+   is a 0.10..0.28 m box resting ON y=0 — so its top stands above the logic ground by its own
+   thickness. A kea at logic y 0 on the carpark stood 14 cm inside the tarmac with its legs buried:
+   Eric's "sunk, flat-bottomed, no legs or feet" in 18_rear_close. gauntlet/verify/groundtruth.mjs
+   is the survey that found the class; gauntlet/verify/birdfeet.mjs is the assertion.
+   THE FIX IS RENDER-ONLY ON PURPOSE. Logic heights, anchors, missions and every headless digest are
+   untouched: the kea GROUP is drawn at logic y + drawnLift, so it stands on what is drawn — on the
+   base, on the range's own triangles, on a slab or a snow mound; never on a collider top, where
+   the drawn prop already IS the logic. Built
+   once per map in buildWorld, never in HEADLESS. The floors are FOUND, not listed, so a map that
+   adds a path gets it for free: every displaced ground plane (sampled on its own triangles) and
+   every flat slab — box, disc, ring or flat plane lying level, <= 0.35 m thick, resting on the
+   ground or on another slab, >= 0.25 m^2 in plan. The answer is the highest of them. Where the logic ground is a collider top or the range (> 2 cm),
+   the drawn prop IS the logic and the lift is 0. */
+let DRAWN=null;
+function drawnGroundBuild(){
+  G.scene.updateMatrixWorld(true);
+  const up=new THREE.Vector3(), inv=new THREE.Matrix4(), bb=new THREE.Box3();
+  const planes=[], slabs=[], cast=[], live=[];
+  /* MOVERS ARE NOT BAKED: the table is built once per map, so anything that walks, drives or drifts
+     would leave its footprint behind. Found by groundtruth.mjs: a river floe's 1.15 m disc answering
+     0.005 m where it no longer was. People, sheep, cars and keas are not floors and are skipped;
+     the FLOES ARE floors that move, so their discs are kept LIVE — their few triangles transformed
+     by the current matrix at the moment of asking. */
+  const movers=new Set(), floes=new Set(), rootOf=e=>e&&(e.g||e.mesh||e.group||(e.p&&(e.p.g||e.p.group||e.p.mesh)));
+  for(const L of [G.humans,G.sheep,G.cars,G.keas])for(const e of (L||[])){ const r=rootOf(e); if(r&&r.isObject3D)movers.add(r); }
+  for(const e of (G.rivFloes||[])){ const r=rootOf(e); if(r&&r.isObject3D)floes.add(r); }
+  const under=(o,S)=>{ for(let p=o;p;p=p.parent)if(S.has(p))return true; return false; };
+  G.scene.traverse(o=>{
+    if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||!o.geometry||under(o,movers))return;
+    if(under(o,floes)){ if(/^(Circle|Cylinder|Box)Geometry$/.test(o.geometry.type))live.push(o); return; }
+    const gt=o.geometry.type, prm=o.geometry.parameters||{};
+    /* a mesh that writes no depth — a contact-shadow blob, a decal — is drawn ON a floor, not one */
+    const m=o.material; if(!m||Array.isArray(m)||m.visible===false||m.depthWrite===false)return;
+    let vis=true; for(let p=o;p;p=p.parent)if(!p.visible)vis=false; if(!vis)return;
+    o.geometry.computeBoundingBox(); bb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+    const ht=bb.max.y-bb.min.y, area=(bb.max.x-bb.min.x)*(bb.max.z-bb.min.z);
+    /* ANYTHING ELSE LOW AND BROAD — the snow mounds are displaced rings 0.4-0.7 m high — is BAKED:
+       its upward triangles, in world space, bucketed once by half-metre cell. Not raycast:
+       measured, three's Mesh.raycast hits and misses the same mound face depending only on the ray's
+       starting height (3.0 m hit, 2.5 m missed, 2.0 m hit), and a floor cannot flicker. */
+    const tris=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3;
+    const castable=bb.min.y<=0.15&&bb.max.y>-0.6&&bb.max.y<=1.0&&area>=0.25&&tris<=4000&&!/Sphere|Cone|Torus|Capsule|Tube|Extrude/.test(gt);
+    if(!/^(Box|Cylinder|Circle|Ring|Plane)Geometry$/.test(gt)){ if(castable)cast.push(drawnBake(o,bb)); return; }
+    inv.copy(o.matrixWorld).invert(); up.set(0,1,0).transformDirection(inv);
+    /* A DISPLACED PLANE — every map's 240 m ground, the river's bed — is sampled on its own grid */
+    if(gt==='PlaneGeometry'&&(prm.widthSegments>1||prm.heightSegments>1)){
+      if(Math.abs(up.z)<0.99||area<4)return;                     // lying flat, ground-sized
+      const pos=o.geometry.attributes.position, H=new Float32Array(pos.count);
+      /* WATER RIPPLES EVERY FRAME (updateWater, +-26 mm from w.base). A walker stands on the still
+         surface, so the table is built from the base and does not go stale as the ripple runs */
+      const wb=(G.water||[]).find(w=>w.m===o);
+      /* THE GRID SAMPLER IS ONLY TRUE FOR AN UNTOUCHED LATTICE. The river's bed plane has its x/y
+         moved to follow the channel, and sampling it as a regular grid answered 15 cm high; a plane
+         whose lattice has been moved is baked as triangles like any other floor. */
+      { let moved=false; const n=prm.widthSegments+1, cx=prm.width/prm.widthSegments, cy=prm.height/prm.heightSegments;
+        for(let i=0;i<pos.count&&!moved;i++){ const ix=i%n, iy=(i/n)|0;
+          if(Math.abs(pos.getX(i)-(ix*cx-prm.width/2))>1e-4||Math.abs(pos.getY(i)-(prm.height/2-iy*cy))>1e-4)moved=true; }
+        if(moved){ cast.push(drawnBake(o,bb)); return; } }
+      for(let i=0;i<pos.count;i++)H[i]=wb?wb.base[i]:pos.getZ(i);
+      planes.push({inv:inv.clone(),mw:o.matrixWorld.clone(),H,nx:prm.widthSegments,ny:prm.heightSegments,hw:prm.width/2,hh:prm.height/2,
+        cx:prm.width/prm.widthSegments,cy:prm.height/prm.heightSegments,x0:bb.min.x,x1:bb.max.x,z0:bb.min.z,z1:bb.max.z,
+        isGround:prm.width===240&&o.parent===G.scene});
+      return; }
+    /* A FLAT SLAB: low, resting on the ground or on another slab, at least half a metre square */
+    const ax=[Math.abs(up.x),Math.abs(up.y),Math.abs(up.z)], thin=ax.indexOf(Math.max(...ax));
+    /* a disc, ring or plane is flat only if it IS flat: the snow mounds are rings displaced into a crown */
+    const lbb=o.geometry.boundingBox, lthin=lbb.max.getComponent(thin)-lbb.min.getComponent(thin);
+    const bent=gt!=='BoxGeometry'&&gt!=='CylinderGeometry'&&lthin>0.005;
+    if(ht>0.35||ax[thin]<0.99||bent){ if(castable)cast.push(drawnBake(o,bb)); return; }
+    if(bb.min.y>0.15||bb.max.y<-0.6||bb.max.y>0.45||area<0.25)return;
+    /* a disc, cylinder or ring is its own polygon, not an ellipse: at the rim the two disagree by
+       the chord, which groundtruth.mjs measured at 5 cm. Exact triangles, like the mounds. */
+    if(gt!=='BoxGeometry'&&gt!=='PlaneGeometry'){ cast.push(drawnBake(o,bb)); return; }
+    const [a,b]=[0,1,2].filter(i=>i!==thin), lb=o.geometry.boundingBox;
+    slabs.push({inv:inv.clone(),a,b,lo:[lb.min.getComponent(a),lb.min.getComponent(b)],hi:[lb.max.getComponent(a),lb.max.getComponent(b)],
+      kind:gt==='BoxGeometry'||gt==='PlaneGeometry'?'rect':(gt==='RingGeometry'?'ring':'round'),
+      inner:gt==='RingGeometry'?prm.innerRadius/prm.outerRadius:0,
+      top:bb.max.y,x0:bb.min.x,x1:bb.max.x,z0:bb.min.z,z1:bb.max.z});
+  });
+  return {planes,slabs,cast,live,v:new THREE.Vector3(),bb:new THREE.Box3()};
+}
+/* a low, broad, non-analytic floor (a snow mound) as its own upward triangles in world space,
+   bucketed by DRAWNCELL so a lookup tests the handful under one point, exactly */
+const DRAWNCELL=0.5;
+function drawnBake(o,bb){
+  const C=DRAWNCELL, x0=bb.min.x, z0=bb.min.z, nx=Math.max(1,Math.ceil((bb.max.x-x0)/C)), nz=Math.max(1,Math.ceil((bb.max.z-z0)/C));
+  const cells=Array.from({length:nx*nz},()=>[]), g=o.geometry, P=g.attributes.position, I=g.index;
+  const W=new Float32Array(P.count*3), v=new THREE.Vector3();
+  const wb=(G.water||[]).find(w=>w.m===o);                       // water: the still surface
+  for(let i=0;i<P.count;i++){ v.fromBufferAttribute(P,i); if(wb)v.z=wb.base[i]; v.applyMatrix4(o.matrixWorld); W[i*3]=v.x; W[i*3+1]=v.y; W[i*3+2]=v.z; }
+  const nt=(I?I.count:P.count)/3, id=k=>I?I.getX(k):k, sd=o.material.side;
+  for(let t=0;t<nt;t++){
+    const a=id(t*3)*3, b=id(t*3+1)*3, c=id(t*3+2)*3;
+    const ax=W[a],az=W[a+2], bx=W[b],bz=W[b+2], cx=W[c],cz=W[c+2], ay=W[a+1],by=W[b+1],cy=W[c+1];
+    const ny=(bz-az)*(cx-ax)-(bx-ax)*(cz-az);
+    const ux=(by-ay)*(cz-az)-(bz-az)*(cy-ay), uz=(bx-ax)*(cy-ay)-(by-ay)*(cx-ax), nl=0.3*Math.hypot(ux,ny,uz);
+    /* seen from above, by the side three draws */
+    if(!(sd===THREE.BackSide?-ny>nl:sd===THREE.DoubleSide?Math.abs(ny)>nl:ny>nl)||Math.abs(ny)<1e-12)continue;
+    const T=[ax,ay,az,bx,by,bz,cx,cy,cz,ny];
+    const i0=Math.max(0,Math.floor((Math.min(ax,bx,cx)-x0)/C)), i1=Math.min(nx-1,Math.floor((Math.max(ax,bx,cx)-x0)/C));
+    const j0=Math.max(0,Math.floor((Math.min(az,bz,cz)-z0)/C)), j1=Math.min(nz-1,Math.floor((Math.max(az,bz,cz)-z0)/C));
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)cells[j*nx+i].push(T); }
+  return {cells,nx,nz,x0,z0,top:bb.max.y,x1:bb.max.x,z1:bb.max.z};
+}
+function drawnBakedAt(c,px,pz){
+  const i=Math.floor((px-c.x0)/DRAWNCELL), j=Math.floor((pz-c.z0)/DRAWNCELL);
+  if(i<0||j<0||i>=c.nx||j>=c.nz)return -Infinity;
+  let best=-Infinity;
+  for(const T of c.cells[j*c.nx+i]){ const [ax,ay,az,bx,by,bz,cx,cy,cz,A]=T;
+    const w0=((bz-pz)*(cx-px)-(bx-px)*(cz-pz))/A, w1=((cz-pz)*(ax-px)-(cx-px)*(az-pz))/A, w2=1-w0-w1;
+    if(w0<-1e-6||w1<-1e-6||w2<-1e-6)continue;
+    const y=w0*ay+w1*by+w2*cy; if(y>best)best=y; }
+  return best;
+}
+/* a displaced plane's own triangles, interpolated exactly as PlaneGeometry indexes them (a,b,d)+(b,c,d) */
+function drawnPlaneAt(D,P,x,z){
+  const v=D.v.set(x,0,z).applyMatrix4(P.inv);
+  const fx=(v.x+P.hw)/P.cx, fy=(P.hh-v.y)/P.cy;
+  if(fx<0||fy<0||fx>P.nx||fy>P.ny)return -Infinity;
+  const ix=Math.min(P.nx-1,Math.floor(fx)), iy=Math.min(P.ny-1,Math.floor(fy));
+  const u=fx-ix, w=fy-iy, n=P.nx+1, H=P.H;
+  const ha=H[iy*n+ix], hb=H[(iy+1)*n+ix], hc=H[(iy+1)*n+ix+1], hd=H[iy*n+ix+1];
+  const h=(u+w<=1)?ha+(hd-ha)*u+(hb-ha)*w:hc+(hb-hc)*(1-u)+(hd-hc)*(1-w);
+  return D.v.set(v.x,v.y,h).applyMatrix4(P.mw).y;
+}
+/* THE RANGE ON ITS OWN TRIANGLES. terrainHeightAt is the BILINEAR of the field the range mesh is
+   built from; the mesh itself is that field on a polar grid split (a,b,c)+(b,d,c) into straight
+   triangles, and the two disagree by up to 0.5 m where the grid is coarse — measured by
+   groundtruth.mjs at the range's inner edge. A walker there stands on the triangles. */
+function drawnRangeAt(x,z){
+  const T=G.terrain; if(!T||!G.terrainMesh)return -Infinity;
+  const r=Math.hypot(x,z); if(r<T.r0*Math.cos(Math.PI/T.nTheta)-0.01||r>=T.r1)return -Infinity;
+  let ang=Math.atan2(z,x); if(ang<0)ang+=Math.PI*2;
+  const n=T.nTheta, F=T.field, fi=ang/(Math.PI*2)*n, i=Math.floor(fi)%n, i1=(i+1)%n;
+  const fj=(r-T.r0)/T.dR, j0=Math.max(0,Math.min(T.nR-2,Math.floor(fj)));
+  /* the cell's own straight-edged triangles in world space — the mesh is chords, not arcs, and a
+     point just inside a chord can belong to the ring below: try that cell too */
+  const vx=(j,k)=>Math.cos(k/n*Math.PI*2)*(T.r0+T.dR*j), vz=(j,k)=>Math.sin(k/n*Math.PI*2)*(T.r0+T.dR*j);
+  for(const j of [j0,Math.max(0,j0-1),Math.min(T.nR-2,j0+1)]){
+    const A=[vx(j,i),F[j*n+i],vz(j,i)], B=[vx(j,i1),F[j*n+i1],vz(j,i1)], C=[vx(j+1,i),F[(j+1)*n+i],vz(j+1,i)], D=[vx(j+1,i1),F[(j+1)*n+i1],vz(j+1,i1)];
+    for(const [a,b,c] of [[A,B,C],[B,D,C]]){
+      const ar=(b[2]-a[2])*(c[0]-a[0])-(b[0]-a[0])*(c[2]-a[2]); if(Math.abs(ar)<1e-12)continue;
+      const w0=((b[2]-z)*(c[0]-x)-(b[0]-x)*(c[2]-z))/ar, w1=((c[2]-z)*(a[0]-x)-(c[0]-x)*(a[2]-z))/ar, w2=1-w0-w1;
+      if(w0>=-1e-7&&w1>=-1e-7&&w2>=-1e-7)return w0*a[1]+w1*b[1]+w2*c[1]; } }
+  return -Infinity;
+}
+/* the highest drawn floor at x,z: what a walker's feet meet when seen from above */
+function drawnGroundAt(x,z){
+  const D=DRAWN; if(!D)return 0;
+  let h=drawnRangeAt(x,z);
+  for(const P of D.planes){ if(x<P.x0||x>P.x1||z<P.z0||z>P.z1)continue; const y=drawnPlaneAt(D,P,x,z); if(y>h)h=y; }
+  for(const s of D.slabs){ if(x<s.x0||x>s.x1||z<s.z0||z>s.z1||s.top<=h)continue;
+    const v=D.v.set(x,s.top,z).applyMatrix4(s.inv), p=v.getComponent(s.a), q=v.getComponent(s.b);
+    if(s.kind!=='rect'){ const ca=(s.lo[0]+s.hi[0])/2, cb=(s.lo[1]+s.hi[1])/2, ra=(s.hi[0]-s.lo[0])/2, rb=(s.hi[1]-s.lo[1])/2;
+      const e=((p-ca)/ra)**2+((q-cb)/rb)**2; if(e>1||e<s.inner*s.inner)continue; }
+    else if(p<s.lo[0]||p>s.hi[0]||q<s.lo[1]||q>s.hi[1])continue;
+    h=s.top; }
+  for(const c of D.cast){ if(x<c.x0||x>c.x1||z<c.z0||z>c.z1||c.top<=h)continue;
+    const y=drawnBakedAt(c,x,z); if(y>h)h=y; }
+  for(const o of D.live){ if(!o.parent)continue; const b=D.bb.copy(o.geometry.boundingBox||(o.geometry.computeBoundingBox(),o.geometry.boundingBox)).applyMatrix4(o.matrixWorld);
+    if(x<b.min.x||x>b.max.x||z<b.min.z||z>b.max.z||b.max.y<=h)continue;
+    const c=drawnBake(o,b), y=drawnBakedAt(c,x,z); if(y>h)h=y; }
+  return h===-Infinity?0:h;
+}
+/* which floor answers at x,z, for a battery that has to say WHY it disagrees */
+function drawnGroundExplain(x,z){ const D=DRAWN; if(!D)return null; const out=[];
+  const r=drawnRangeAt(x,z); if(r>-Infinity)out.push(['range',+r.toFixed(4)]);
+  D.planes.forEach((P,i)=>{ if(x<P.x0||x>P.x1||z<P.z0||z>P.z1)return; out.push(['plane'+i+(P.isGround?'(ground)':''),+drawnPlaneAt(D,P,x,z).toFixed(4)]); });
+  D.slabs.forEach((s,i)=>{ if(x<s.x0||x>s.x1||z<s.z0||z>s.z1)return; const v=D.v.set(x,s.top,z).applyMatrix4(s.inv), p=v.getComponent(s.a), q=v.getComponent(s.b);
+    let inside; if(s.kind!=='rect'){ const ca=(s.lo[0]+s.hi[0])/2, cb=(s.lo[1]+s.hi[1])/2, ra=(s.hi[0]-s.lo[0])/2, rb=(s.hi[1]-s.lo[1])/2; const e=((p-ca)/ra)**2+((q-cb)/rb)**2; inside=e<=1&&e>=s.inner*s.inner; }
+    else inside=!(p<s.lo[0]||p>s.hi[0]||q<s.lo[1]||q>s.hi[1]);
+    if(inside)out.push(['slab'+i+':'+s.kind,+s.top.toFixed(4)]); });
+  D.cast.forEach((c,i)=>{ const y=drawnBakedAt(c,x,z); if(y>-Infinity)out.push(['baked'+i,+y.toFixed(4)]); });
+  D.live.forEach((o,i)=>{ const b=new THREE.Box3().copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld); const y=drawnBakedAt(drawnBake(o,b),x,z); if(y>-Infinity)out.push(['live'+i,+y.toFixed(4)]); });
+  return out; }
+/* what the lookup found, for the batteries (null in HEADLESS) */
+function drawnGroundState(){ const D=DRAWN; return D?{planes:D.planes.length,slabs:D.slabs.length,cast:D.cast.length,live:D.live.length,
+  castAt:D.cast.map(c=>[+((c.x0+c.x1)/2).toFixed(2),+((c.z0+c.z1)/2).toFixed(2),+c.top.toFixed(3)])}:null; }
+/* how far to draw a walker above its logic y so it stands on the drawn ground (0 in HEADLESS) */
+function drawnLift(x,z,y){
+  if(!DRAWN)return 0;
+  /* standing on a collider top, the drawn prop IS the logic: no lift. On the base or on the range
+     (logic = terrainHeightAt), stand on what is drawn. */
+  const L=groundHeightAt(x,z,y+0.4); if(L>0.02&&Math.abs(L-terrainHeightAt(x,z))>1e-6)return 0;
+  return drawnGroundAt(x,z)-L;
+}
 function pushOut(k,rad){ // horizontal separation from solid boxes below their top; rotation-aware
   const R=(rad!==undefined?rad:0.28*(k.size||1));
   for(const c of G.colliders){ if(!c.solid||c.kind!=='box')continue;
@@ -5154,6 +5351,8 @@ uniform vec4 uCuts[GRASS_CUTS];               // xz centre, xz half-extent; w<=0
 uniform vec2 uHrange, uWrange, uLrange;
 uniform vec3 uTintA, uTintB, uTintC, uTintBase, uTintTip;
 uniform float uSeed;
+uniform vec4 uKea[4];                         // xz of each kea, w = how grounded it is (0 = no trample)
+uniform vec3 uTrample;                        // r0, r1, floor
 varying float vGrassT;
 varying vec3 vGrassW;
 varying vec3 vGrassTint;
@@ -5255,6 +5454,19 @@ void keaGrass(inout vec3 t){
   vec2 h1=keaGH2(w*0.911), h2=keaGH2(w*1.703+11.7);
   float cw=keaGH(cell*0.37+7.7);                       // the mound's own weight: a mound agrees
   float hgt=mix(uHrange.x,uHrange.y,h1.x)*(0.72+cw*0.56);
+  /* ---- THE TRAMPLE: a kea flattens the blades rooted round its feet (GRASS.trample) ----
+     The WHOLE blade scales, not its height alone: a zero-height blade keeps its width and lies flat
+     at foot level, and from the play camera those slivers were exactly the pixels left over the
+     legs. Scaled whole it degenerates and the rasteriser drops it — the same saving 'live' buys.
+     A RAGGED EDGE, as the field's own: the radius wanders with world-space noise so the patch is not
+     a mown circle. The noise only ever WIDENS it (rag >= 1), so the measured r0/r1 still hold.
+     CHEAP BY CONSTRUCTION: four distances per vertex, and the noise is evaluated only for a blade
+     inside the widest the patch can reach (r1 x 1.45) — a handful of blades round each bird. */
+  float trm=1.0;
+  for(int ki=0;ki<4;ki++){ if(uKea[ki].w>0.0){ float dk=length(w-uKea[ki].xy);
+    if(dk<uTrample.y*1.45){ float rag=1.0+keaFbm(w*2.6)*0.45;
+      float tk=mix(uTrample.z,1.0,smoothstep(uTrample.x*rag,uTrample.y*rag,dk));
+      trm=min(trm,mix(1.0,tk,uKea[ki].w)); } } }
   float wid=mix(uWrange.x,uWrange.y,h1.y);
   float yaw=h2.x*3.14159265;
   float lean=mix(uLrange.x,uLrange.y,0.5+0.5*sin(w.x*0.031-w.y*0.047))+h2.y*0.06;
@@ -5297,7 +5509,7 @@ void keaGrass(inout vec3 t){
   vec3 ax=vec3(sin(dir),0.0,-cos(dir));
   float cl=cos(lean), sl=sin(lean);
   p=p*cl+cross(ax,p)*sl+ax*dot(ax,p)*(1.0-cl);          // Rodrigues, about the fall axis
-  p*=live;
+  p*=live*trm;
 
   /* the terrain is two sines inside the flat disc, so a blade can sit ON it rather than at y=0 */
   float gy=sin(w.x*uHmul.x)*cos(w.y*uHmul.y)*uHamp;
@@ -5434,6 +5646,7 @@ function grassCuts(biome){
 /* THE ONE PLACE THE CUT COUNT REACHES THE GLSL. Asserted rather than assumed: a source that still
    carries the token after substitution would compile to a syntax error at a point three swallows
    into a shader-compile warning, so it is caught here where the message can say what happened. */
+const GRASSKEA_U={value:[0,1,2,3].map(()=>new THREE.Vector4(0,0,0,0))};
 function grassSub(src){
   const out=src.split('GRASS_CUTS').join(String(GRASS.cuts|0));
   if(out.indexOf('GRASS_CUTS')>=0)throw new Error('grassSub: GRASS_CUTS survived substitution');
@@ -5451,6 +5664,9 @@ function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or
   const V3=h=>{ const c=lin(h); return new THREE.Vector3(c.r,c.g,c.b); };
   const U=m.userData.keaG={
     uTime:{value:0}, uAnchor:{value:new THREE.Vector2(0,0)},
+    /* ONE uniform object shared by every layer, so the trample is written once a frame and no tier
+       can be left half-connected */
+    uKea:GRASSKEA_U, uTrample:{value:new THREE.Vector3(GRASS.trample.r0,GRASS.trample.r1,GRASS.trample.floor)},
     /* the mean spacing of this layer's own scatter, which is what the anchor snaps to */
     uSnap:{value:GRASS.snap},
     uNear:{value:tier.near}, uLodNear:{value:tier.lodNear}, uLodFar:{value:tier.lodFar},
@@ -5639,7 +5855,7 @@ function buildGrass(biome){
     G.grass={tier:GRASS.tier,instances:0,perBladeTris:2*GRASS.seg-1,headless:true,
              ignored:GRASSIGNORED.slice(), shader:GRASS_OK===true?true:GRASS_OK,
              lodNear:T.lodNear,lodFar:T.lodFar,near:T.near,count:T.count,density:T.density,
-             clumpM:B.clumpM,bare:B.bare,biome:biome,
+             clumpM:B.clumpM,bare:B.bare,biome:biome,trample:Object.assign({},GRASS.trample),
              cover:{count:cover.count,near:cover.near,bare:cover.bare,
                     density:cover.count/(Math.PI*cover.near*cover.near),
                     hi:cover.h[1],instances:0},
@@ -5658,7 +5874,7 @@ function buildGrass(biome){
            ignored:GRASSIGNORED.slice(), perBladeTris:cl.tris,
            tris:cl.count*cl.tris+cv.count*cv.tris+fr.count*fr.tris,
            near:T.near, density:cl.density,
-           lodNear:T.lodNear, lodFar:T.lodFar, clumpM:B.clumpM, bare:B.bare, biome:biome,
+           lodNear:T.lodNear, lodFar:T.lodFar, clumpM:B.clumpM, bare:B.bare, biome:biome, trample:Object.assign({},GRASS.trample),
            cover:{count:cv.count,near:cover.near,bare:cover.bare,density:cv.density,
                   hi:cover.h[1],instances:cv.count},
            cards:cardState(cd.count),
@@ -6114,6 +6330,7 @@ function buildWorld(biome){
   for(const k in WORLDFLAGS)G[k]=WORLDFLAGS[k];
   b.build();
   matUVSweep();
+  DRAWN=HEADLESS?null:drawnGroundBuild();          // the feet piece: the ground as drawn, for walkers
   /* REPLAT P6A: the prop seam reports what it placed, rebuilt per build for the same reason G.mats
      is — a state block that is mutated rather than rebuilt drifts from the registry. */
   G.propsState=propsState();
@@ -10554,7 +10771,7 @@ class Kea{
         if(kind==='hop'){ this.vy=1.5; this.grounded=false; this.ry+=rnd(-0.55,0.55); if(!HEADLESS&&AU.ctx&&AU.chirp)AU.chirp(); }
       }
     } else { this.idleT=0; if(this.idleAct)this.idleAct=null; }
-    const g=this.g; g.position.set(this.x,this.y,this.z);
+    const g=this.g; g.position.set(this.x,this.y+drawnLift(this.x,this.z,this.y),this.z);  // stand on the DRAWN ground
     this.peckAnim=Math.max(0,(this.peckAnim||0)-dt);
     this.squash=Math.max(0,(this.squash||0)-dt*1.8);
     this.landFlare=Math.max(0,(this.landFlare||0)-dt);
@@ -10897,6 +11114,11 @@ function updateFX(dt){
      anchor at (0,0) — a static disc round the world origin — and its wind frozen, which reads as
      "the far grass does not follow" and is precisely the failure the anchor note below describes.
      One list, every layer, so adding a tier cannot half-connect it. */
+  { const KU=GRASSKEA_U.value, TR=GRASS.trample;
+    for(let i=0;i<4;i++){ const k=G.keas&&G.keas[i];
+      if(!k||!k.g||!k.g.parent){ KU[i].set(0,0,0,0); continue; }
+      const off=Math.max(0,k.y-groundHeightAt(k.x,k.z,k.y+0.4));
+      KU[i].set(k.x,k.z,0,1-clamp(off/TR.lift,0,1)); } }
   for(const _gm of [G.grassMat,G.grassCoverMat,G.grassFarMat]) if(_gm&&_gm.userData.keaG){ const U=_gm.userData.keaG;
     U.uTime.value=G.time;
     if(G.sun)U.uSunDir.value.copy(G.sun.position).normalize();
@@ -12353,7 +12575,7 @@ function boot(opts){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
+  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,drawnGroundAt,drawnLift,drawnGroundState,drawnGroundExplain,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
     STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
            rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
            snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit,

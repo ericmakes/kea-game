@@ -370,6 +370,18 @@ export async function assertBooted(page, { biome, iblTimeout = 8000, matsTimeout
       '. Wind, thinning and transmission are all off, so this pass would photograph a dead field.');
   if (process.env.NOMATS && state.mats.mode !== 'none')
     throw new Error('webrig: NOMATS=1 asked for the palette look but G.mats.mode is "' + state.mats.mode + '"');
+  /* EVERY SHADER THAT WAS DRAWN COMPILED — added 2026-10-02, the trample piece. A GLSL error in an
+     onBeforeCompile patch does not throw: three logs it, marks the program unrunnable, and the mesh
+     simply does not draw. The grass.shader check above validates the SUBSTITUTION and is blind to
+     this; a stray comment in the blade GLSL blanked the whole field and the frames read as a mown
+     lawn. renderer.info.programs carries diagnostics for every program that failed. */
+  const broken = await page.evaluate(() => {
+    const R = ((globalThis.KEAGAME || {}).G || {}).renderer; if (!R) return null;
+    return (R.info.programs || []).filter(p => p.diagnostics && !p.diagnostics.runnable)
+      .map(p => p.name + ': ' + String((p.diagnostics.vertexShader || {}).log || (p.diagnostics.fragmentShader || {}).log || p.diagnostics.programLog || '').slice(0, 160));
+  });
+  if (broken && broken.length)
+    throw new Error('webrig: ' + broken.length + ' shader program(s) failed to compile, so their meshes draw nothing — ' + broken.join(' | '));
   return state;
 }
 

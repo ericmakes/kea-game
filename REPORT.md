@@ -1,3 +1,5 @@
+**IN PROGRESS (2026-10-02c):** render fix PINNED by Eric; feet + trample shipped (see gauntlet-log 2026-10-02c); perf piece next.
+
 # REPORT — spike adoption, pieces 0 and 1; STOPPED at the frame budget (2026-10-02, Opus 5.5)
 
 Branch `replat-b`. **CERTIFIED-SHIP** at specimen `a3c791ab355316f6485a8d3b069f88ac`.

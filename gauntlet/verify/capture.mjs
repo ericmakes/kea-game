@@ -248,9 +248,13 @@ await shotR('09_colossal',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
    THE NUMBER IS NOT REUSED. A vantage id is how four sessions of logs refer to a photograph, so 10
    stays retired rather than being handed to something else; the new one takes the next free id. */
 await shotR('11_trailhead',`const k=KEAGAME.G.keas[0];k.x=42;k.z=-37;k.y=0;k.grounded=true;k.ry=0.8; ${CAM(33,4.5,-30,44,1.8,-40)}`);
+/* 2026-10-02 (FEET + TRAMPLE): 21, 23 and 25 PIN THE CLOCK WHERE IT IS WRITTEN (G.clockPin), as 03/13/18
+   have since piece 0. Holding G.time from the rig's rAF renders at 12 + one real dt, and with the
+   trample's few extra ALU per blade 21 sat on a vsync boundary: two wind states, 20k px apart, one
+   run in three. The other nineteen G.time-only shots are left for the perf piece's whole-set re-pin. */
 await shotR('21_night_camp',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
   const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=true;
-  ${PIN('k.x=34.7;k.z=-5.3;k.y=0;k.vy=0;k.grounded=true;k.ry=2.7;k.stun=0;KEAGAME.G.time=12.0;KEAGAME.G._fireSpit=5;')}
+  ${PIN('k.x=34.7;k.z=-5.3;k.y=0;k.vy=0;k.grounded=true;k.ry=2.7;k.stun=0;KEAGAME.G.time=12.0;KEAGAME.G.clockPin=12.0;KEAGAME.G._fireSpit=5;')}
   ${CAM(38.2,1.7,-3.2,34.6,0.7,-6.4)}`);
 await shotR('22_torch_beam',`KEAGAME.G.night=true;KEAGAME.G.nightManual=true;KEAGAME.G.nightT=1;KEAGAME.nightApply(1);
   const G=KEAGAME.G,k=G.keas[0];G.poseLock=true;
@@ -401,7 +405,7 @@ await shotR('13_idle_preen',`const k=KEAGAME.G.keas[0];k.x=0;k.z=0;k.y=0;k.groun
 await shotR('12_seal_midpeel',`{const t=KEAGAME.G.inter.find(x=>x.strip&&/DOOR SEAL/.test(x.label)); for(let i=0;i<6;i++)t.onDone(t.getPos());
 const k=KEAGAME.G.keas[0], p=t.getPos(); k.x=p.x-0.35; k.y=p.y-0.15; k.z=p.z+0.55; k.grounded=false; k.vy=0; k.ry=2.4;} ${CAM(-6.6,1.9,11.2,-9.7,1.3,8.4)}`);
 await shotR('23_paddock_gate',`const k=KEAGAME.G.keas[0];
-  ${PIN('k.x=-41.4;k.z=6.4;k.y=0;k.vy=0;k.grounded=true;k.ry=-1.1;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;')}
+  ${PIN('k.x=-41.4;k.z=6.4;k.y=0;k.vy=0;k.grounded=true;k.ry=-1.1;k.stun=0;k.idleT=0;k.idleAct=null;KEAGAME.G.time=12.0;KEAGAME.G.clockPin=12.0;')}
   ${CAM(-45.0,1.5,8.6,-41.6,0.7,3.2)}`);
 await shotR('24_verge_paddle',`const k=KEAGAME.G.keas[0];k.x=6.2;k.z=28.4;k.y=0;k.grounded=true;k.ry=0.5; ${CAM(3.6,1.7,26.2,7.4,1.05,29.4)}`);
 // 25 (2026-09-01): piece 6 fixed the preen head read and was certified against a metric, but the
@@ -420,7 +424,7 @@ await shotR('24_verge_paddle',`const k=KEAGAME.G.keas[0];k.x=6.2;k.z=28.4;k.y=0;
 const F_RY=2.2, F_DIST=0.6, F_BACK=5.2*(0.62+0.42)*F_DIST, F_H=2.15*(0.62+0.45);
 await shotR('25_preen_follow',`const k=KEAGAME.G.keas[0];KEAGAME.G.poseLock=false;
   ${PIN("k.x=0;k.z=0;k.y=0;k.vy=0;k.grounded=true;k.ry="+F_RY+";k.stun=0;k.landFlare=0;"+
-        "k.idleT=99;k._idleEver=true;k.idleAct={kind:'preen',t:1.60,dur:3.5,side:-1};KEAGAME.G.time=12.0;")}
+        "k.idleT=99;k._idleEver=true;k.idleAct={kind:'preen',t:1.60,dur:3.5,side:-1};KEAGAME.G.time=12.0;KEAGAME.G.clockPin=12.0;")}
   ${CAM(-Math.sin(F_RY)*F_BACK, F_H, -Math.cos(F_RY)*F_BACK, 0, 0.72, 0)}`);
 /* 26 (TODO 37): THE BROCHURE, which is the one part of that piece with a look, and the brief hands
    the look to Eric. STAGED WITH A CAREER IN PROGRESS rather than a virgin save, because every pin

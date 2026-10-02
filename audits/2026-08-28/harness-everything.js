@@ -10153,4 +10153,16 @@ C.section('THE HIGH STATION - the last map, the drafting cascade, and riding a s
      'the renderer sees the pinned time, not the pin plus a frame');
   G.clockPin=was; }
 
+/* ---- THE FEET AND THE TRAMPLE ARE RENDER-ONLY, AND HEADLESS SAYS SO (2026-10-02) ----
+   The bird stands on the DRAWN ground by drawing its group at logic y + drawnLift, and the grass
+   flattens round each kea in the blade shader. Neither may move a logic height, an anchor or a
+   digest: in HEADLESS the lift is exactly 0 and the trample is a recipe the shader reads, nothing
+   more. The browser half is gauntlet/verify/birdfeet.mjs, groundtruth.mjs and trample.mjs. */
+{ ok(typeof X.drawnLift==='function'&&X.drawnLift(-9.2,10.6,0)===0&&X.drawnLift(0,0,0)===0&&X.drawnGroundAt(-9.2,10.6)===0,
+     'in HEADLESS the drawn-ground lift is exactly 0, so no logic height and no digest can move with it');
+  ok(X.drawnGroundState()===null,'and HEADLESS builds no drawn-ground table at all');
+  const T=G.grass&&G.grass.trample;
+  ok(!!T&&T.r0>0&&T.r1>T.r0&&T.floor>=0&&T.floor<=0.05&&T.lift>0&&T.n===4,
+     'the trample is declared: blades rooted inside r0 fall to near nothing, back to full by r1, four keas ('+JSON.stringify(T)+')'); }
+
 process.exitCode=C.report()?1:0;

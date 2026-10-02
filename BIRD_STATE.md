@@ -246,6 +246,19 @@ BIRDFIX_03_13_18_vs_approved.png` is the before / after / approved sheet. What s
 the canonical renders is LIGHT, not the asset: the game bird reads lighter, warmer and flatter —
 Piece 2, the colour pipeline.
 
+### 7c. THE BIRD STANDS ON THE DRAWN GROUND, AND FLATTENS THE GRASS (2026-10-02c)
+
+**Feet.** The bird was never sunk relative to the game: its soles sit exactly on groundHeightAt in
+every pose. It was sunk relative to the DRAWING — the carpark seal is a 14 cm box on y=0, the groomed
+run 10 cm, the ground plane carries display relief. The kea group is now drawn at logic y +
+`drawnLift`, from `drawnGroundAt` (src/game.mjs, built once per map, never in HEADLESS). Proofs:
+`gauntlet/verify/birdfeet.mjs` (soles on the drawn floor at every bird vantage's spot, approved_idle
+and eight walk phases) and `groundtruth.mjs` (the lookup is the drawn floor on every walkable cell of
+all six maps). Both in the gate.
+**Trample.** `GRASS.trample` flattens blades rooted within 0.6-1.2 m of a grounded kea, ragged edge.
+`gauntlet/verify/trample.mjs`: zero blade pixels inside the bird at the play camera. In the gate.
+**Not done:** cars, humans and sheep still stand at logic height (car wheels are inside the seal).
+
 ## 8. WHAT IS STILL OPEN
 
 - **Task 2, the tail vanes** — still open, as section 3 records and as the package insists.

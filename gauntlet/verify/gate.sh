@@ -1,5 +1,5 @@
 #!/bin/bash
-# THE GATE — nine batteries and one browser check, all green or no ship. Usage: bash gauntlet/verify/gate.sh
+# THE GATE — nine batteries and four browser checks, all green or no ship. Usage: bash gauntlet/verify/gate.sh
 # THIS FILE HAS ITS OWN CONTRACT TEST: gauntlet/verify/gate-selftest.sh. Run it whenever this file
 # changes. Against the pre-2026-09-02 gate it reports four findings, one per class of dead battery
 # that used to certify: a throw, a battery that prints nothing, one that passes then exits 1, and a
@@ -21,6 +21,11 @@ cd "$(dirname "$0")/../.."
 # showed through its chest, and stale bounds culled it — none of which a node battery can see,
 # because headless never loads the model. It speaks the same contract (ALL PASS + exit 0, or
 # FINDINGS + exit 1), so the positive-verdict counting below covers it unchanged. ~40 s.
+# 2026-10-02 (FEET + TRAMPLE): THREE MORE BROWSER CHECKS, same contract. birdfeet.mjs — the bird's
+# soles on the DRAWN ground at every bird vantage's spot, at approved_idle and eight walk phases.
+# groundtruth.mjs — drawnGroundAt agrees with the drawn triangles on every walkable cell of all six
+# maps (the carpark seal was a 14 cm box the logic never saw). trample.mjs — no blade pixel inside
+# the bird's silhouette at the play camera. Each has a CONTROL that must fail. ~5 min together.
 # THE BUNDLE MUST BUILD BEFORE ANYTHING IS CERTIFIED — REPLAT P1 step 5. The gate says
 # CERTIFIED-SHIP, and since the re-platform what ships is dist/, not a file you can open. A green
 # logic gate over a bundle that does not build certifies nothing. ~1s, and it also keeps the
@@ -28,7 +33,7 @@ cd "$(dirname "$0")/../.."
 # are always looking at the same artefact.
 if ! npm run build >/tmp/gate-build.txt 2>&1; then
   echo "CERT-FAIL: npm run build failed"; tail -20 /tmp/gate-build.txt; exit 1; fi
-BATS="harness-smoke.js audits/2026-08-26/harness-flow.js audits/2026-08-26/harness-couch.js audits/2026-08-26/harness-adversarial.js audits/2026-08-26/harness-systems.js audits/2026-08-26/harness-colossal.js audits/2026-08-27/harness-newbuilds-audit.js audits/2026-08-27/harness-audit-pass2.js audits/2026-08-28/harness-everything.js gauntlet/verify/birdsky.mjs"
+BATS="harness-smoke.js audits/2026-08-26/harness-flow.js audits/2026-08-26/harness-couch.js audits/2026-08-26/harness-adversarial.js audits/2026-08-26/harness-systems.js audits/2026-08-26/harness-colossal.js audits/2026-08-27/harness-newbuilds-audit.js audits/2026-08-27/harness-audit-pass2.js audits/2026-08-28/harness-everything.js gauntlet/verify/birdsky.mjs gauntlet/verify/birdfeet.mjs gauntlet/verify/groundtruth.mjs gauntlet/verify/trample.mjs"
 NOISE="THREE.Material|ExperimentalWarning|trace-warnings"
 : > /tmp/gate.txt
 N=0; DIRTY=0
