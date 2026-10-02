@@ -1218,3 +1218,25 @@ A control sweep with ONLY KEABIRD.url pointed back at the 4096 file reproduced e
   42 / 22 / 04 / 17   bimodal in the CONTROL too (up to 22k px take to take) — the vantages'
                   own variance, not the texture.
 Provenance: 03 run4 (sweeps), 13 run2 (clockPin takes), 18 run1 (held takes).
+
+## RE-PIN 2026-10-02b — BIRD RENDER FIX: the cutout alpha drawn as a MASK; 13 bird vantages
+
+The approved kea's material arrives as glTF BLEND over an alpha that is 96% at its ends. Drawn as
+BLEND it writes no depth and cannot sort itself: the folded scarlet underwing showed through chest
+and face (measured 7-804 px at approved_idle, four angles) and a later-sorted transparent washes it
+(17.9% / 24.8% of the interior where open sky is behind it). src/alphamode.mjs measures the alpha and
+draws a cutout as a MASK (alphaTest 0.5, opaque, depth-writing, still double-sided), for the bird
+and for any prop model; the bird's SkinnedMesh is never frustum-culled. gauntlet/verify/birdsky.mjs
+is in the gate and proves it both ways (unfixed: FINDINGS; fixed: zero haze, zero red, zero noise).
+
+PINNED, by four-sweep consensus: the nine bird-subject vantages 03, 04, 07, 09, 13, 17, 18, 20, 25,
+and 24, 28, 35, 40, where the measured change sits entirely on the (small) bird.
+NOT PINNED, AND WHY:
+  21_night_camp   the known bimodal frame; medoid took its far mode (0.9628). Its own variance.
+  23, 29, 41, 11, 06, 22, 19   a run in four lands within a few hundred px of the pin: variance.
+  32_camp_sites   the fix moved its FOREGROUND GRASS (9.3k px, all four runs; unfixed control
+                  matches the pin at 26-125 px) and not its bird. The vantage does not pin the
+                  clock, so its wind phase rides on boot timing, which the alpha measurement (one
+                  256-square canvas read at install) shifts. Inside SSIM threshold; a candidate for
+                  the same G.clockPin hold 03/13/18 got. Flagged, not pinned.
+Provenance: run1 7, run2 3, run3 1, run4 2.

@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { maskCutouts } from './alphamode.mjs';
 
 /* ---- WHICH PART OF THE BIRD IS THIS VERTEX? — REPLAT P5d ----
    The recolour needs regions and the model has one material for the whole animal, so the regions
@@ -202,10 +203,18 @@ export async function installBird(K){
      Object3D.clone() shares the skeleton, so two birds would pose as one. */
   K.G.bird={mode:'model',url,tier,birds:0,bones:0};
   if(tried.length)K.G.bird.fellBack=tried;
+  /* THE CUTOUT IS A MASK, NOT A BLEND (BIRD RENDER FIX, 2026-10-02 — src/alphamode.mjs says why at
+     length). The glTF says BLEND; the alpha is 96% at its ends. Done ONCE on the loaded scene,
+     before any clone, because SkeletonUtils.clone shares the material by reference. */
+  K.G.bird.alpha=maskCutouts(gltf.scene);
   const attach=(kea)=>{
     const root=skeletonClone(gltf.scene);
     let sk=null; root.traverse(o=>{ if(o.isSkinnedMesh)sk=o; });
     if(!sk){ K.G.bird={mode:'primitive',why:'no SkinnedMesh in the glb'}; return false; }
+    /* NEVER FRUSTUM-CULLED. A SkinnedMesh is culled against its BIND-POSE bounds, and the clips move
+       the bird far from that pose — so it was culled while in view (6 of 41 frames, measured by the
+       render spike). One small mesh; drawing it when it might be off-screen costs nothing. */
+    sk.frustumCulled=false;
     const by={}; sk.skeleton.bones.forEach(b=>by[b.name]=b);
     const bones={}; let missing=[];
     for(const [k,n] of Object.entries(B.bones)){ if(by[n])bones[k]=by[n]; else missing.push(k+'='+n); }

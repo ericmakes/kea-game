@@ -18,6 +18,8 @@
    has no reference to the arrays that decide those things. */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { maskCutouts } from './alphamode.mjs';
+const ALPHASEEN=new Map();
 
 /* ONE FETCH PER URL, however many props share it — four wheelie bins are one download. Keyed on
    the resolved url, and the PROMISE is cached rather than the result, so two props asking at the
@@ -106,6 +108,9 @@ export async function installModels(K){
       console.error('models: '+p.id+' did not load, staying on the primitive —',e);
       continue;
     }
+    /* THE SAME ALPHA RULE AS THE BIRD (src/alphamode.mjs): a BLEND material over a measured cutout
+       is drawn as a MASK. On the shared gltf.scene, before the clone, so every copy inherits it. */
+    const alpha=maskCutouts(gltf.scene, ALPHASEEN);
     try{
       const root=gltf.scene.clone(true);
       const n=normalise(root,p.entry.fit);
@@ -118,7 +123,7 @@ export async function installModels(K){
       p.model={root,yaw:n.yaw,url,scale:n.scale,lift:n.lift,measured:n.measured};
       p.mode='model';
       K.G.models.swapped.push(p.id);
-      K.G.models.detail[p.id]={url,scale:+n.scale.toFixed(6),lift:n.lift,measured:n.measured,
+      K.G.models.detail[p.id]={url,alpha,scale:+n.scale.toFixed(6),lift:n.lift,measured:n.measured,
                                modelSize:n.size,materials:mat.materials,
                                tinted:mat.tinted,overridden:mat.overridden,
                                hidden:p.body.length,colliders:p.colliders.length,

@@ -5991,3 +5991,23 @@ as gauntlet/reference/spike/01_carpark_wide.png (md5 5508e114…) so the score c
 spike folder. Six key vantages scored against ref_bow_00/04/06 and against the spike frame:
 01 2/6, 02 4/6, 06 2/6, 11 3/6, 12 3/6, 07 1/6 (bow). Saturation is out on 5 of 6 — Piece 2.
 No runtime change; ms/frame is piece 0's. GAPAUDIT.md carries both tables and the budget finding.
+
+## 2026-10-02b — BIRD RENDER FIX: the cutout is a MASK (Opus 5.5)
+
+Reproduced first, on the game's renderer, with a new gate instrument (birdsky.mjs: approved_idle,
+four low angles, haze-on / haze-off / bird-off takes). Unfixed: 7-804 scarlet px through the folded
+bird, haze over 17.9% and 24.8% of the interior where open sky is behind, BLEND / no depth write /
+no alpha test / frustum-culled. Fixed (src/alphamode.mjs, used by bird.mjs AND models.mjs; the alpha
+is MEASURED — 96% at its ends — not trusted): zero on every count, post on and off, repeatedly.
+THE INSTRUMENT WAS WRONG FIVE TIMES BEFORE IT WAS RIGHT, each caught by a control: the clip mixer
+still owned the bones (two identical takes differed by 5k px); a red sign behind the silhouette
+counted as bird; the shipped haze band hides behind the ridge line so the UNFIXED bird read 0%
+(now a stretched, camera-centred band — a mechanism check, said so in the file); anti-aliased edge
+pixels and one sub-pixel bill tip (2 px erosion); and a HUD caption fading over the bird turned one
+gate run red at 73.9% (all overlays now hidden every frame; the noise control now brackets the
+haze-off take). Gate red on the unfixed bird, green twice running on the fix.
+Re-pinned 13 bird vantages by consensus. Frame cost unchanged (60.9 ms unlocked, on battery — the
+budget is the perf piece's job).
+FOUND, NOT FIXED: subjects.mjs fails 9 checks on pins that predate this session — its kea window
+is the primitive's olive (h52-80), the approved bird is brown (~h40). 03/13/18 pass because they
+are close enough to catch the green wing. A recalibration is its own piece.

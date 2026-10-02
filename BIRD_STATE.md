@@ -236,6 +236,16 @@ and by `glbdiff --expect images`, 0 accessors changed), and a battery re-proves 
 At a 0.83 m portrait 2048 vs 4096 differs by 10 px; frame cost is unchanged within noise.
 Licence: CC BY 4.0, modified Rockatoo character by Macauley.B — `assets/LICENCES.md`.
 
+### 7b. THE BIRD RENDERS AS A SOLID ANIMAL NOW (2026-10-02b)
+
+The material arrived as glTF BLEND over a cutout alpha. It is drawn as a MASK (src/alphamode.mjs,
+alphaTest 0.5, opaque, depth-writing, double-sided kept) and the SkinnedMesh is never frustum-
+culled. gauntlet/verify/birdsky.mjs, in the gate, holds it: zero haze over the bird and zero
+scarlet on the folded wing at approved_idle from four angles. `gauntlet/capture/proofs/
+BIRDFIX_03_13_18_vs_approved.png` is the before / after / approved sheet. What still differs from
+the canonical renders is LIGHT, not the asset: the game bird reads lighter, warmer and flatter —
+Piece 2, the colour pipeline.
+
 ## 8. WHAT IS STILL OPEN
 
 - **Task 2, the tail vanes** — still open, as section 3 records and as the package insists.
