@@ -5981,3 +5981,13 @@ absolute number (40 vs 65 ms for the same state in one session), not the conclus
 
 FLAGGED FOR ERIC: 03/13/18 at the new framing; 29_lodge_deck's pin is a grass state this machine
 no longer reshoots (pre-existing, inside threshold, not re-pinned); the budget, above.
+
+## 2026-10-02 — SPIKE ADOPTION, PIECE 1: THE WHOLE-FRAME PLATESCORE, AND GAPAUDIT.md
+
+framescore.mjs lifted from the spike into gauntlet/verify, calling platescore.mjs's exports
+unchanged (same md5 as the spike's copy). Proved before use: it reproduces the spike's 2/6 and 5/6
+on the spike's own inputs, and the spike frame scores 6/6 against itself. The spike frame is pinned
+as gauntlet/reference/spike/01_carpark_wide.png (md5 5508e114…) so the score cannot drift with the
+spike folder. Six key vantages scored against ref_bow_00/04/06 and against the spike frame:
+01 2/6, 02 4/6, 06 2/6, 11 3/6, 12 3/6, 07 1/6 (bow). Saturation is out on 5 of 6 — Piece 2.
+No runtime change; ms/frame is piece 0's. GAPAUDIT.md carries both tables and the budget finding.
