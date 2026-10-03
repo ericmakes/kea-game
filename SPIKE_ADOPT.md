@@ -53,7 +53,7 @@ SHOTS=01_carpark_wide node gauntlet/verify/capture.mjs
 | measured | shipped (5a-5b) | candidate |
 |---|---|---|
 | key six against the bow trio | 23/36 | 27/36 |
-| 01 against the spike frame | 2/6 (pins) | 5/6 |
+| 01 against the spike frame | 3/6 (2/6 before) | 5/6 |
 | the range against nz_alps_01/02 (platescore) | 7/7 | 7/7 |
 | the sky against the sky plates | 9/11 (painted) | 8/11 (cloud underside out) |
 | the bird against its approved render | sat 0.50 (out by 0.02) | sat 0.43-0.46 (in) |
@@ -62,6 +62,9 @@ SHOTS=01_carpark_wide node gauntlet/verify/capture.mjs
 
 The whole-frame "snow" in 06 is its brightest pixels — the cumulus against the sky — so 06's refusal is the
 clouds' contrast against the photographed sky, the same fault the sky plates see as the underside.
+
+Proof sheets: `gauntlet/capture/proofs/LIGHT1_key6_before_shipped_candidate.jpg`,
+`LIGHT1_carpark_spike_shipped_candidate.jpg`, `LIGHT1_bird_approved_shipped_candidate.jpg`.
 
 ## The test frame
 
