@@ -27,6 +27,8 @@ try{
       nograss:()=>{ for(const k of ['grassMesh','grassCoverMesh','grassFarMesh','grassCards'])if(G[k])G[k].visible=false; G.scene.traverse(o=>{ if(o.isInstancedMesh)o.visible=false; }); },
       halfres:()=>{ G.renderer.setPixelRatio(0.5); },
       noclump:()=>{ if(G.grassMesh)G.grassMesh.visible=false; },
+      noseal:()=>{ K.SEALU.uSealOn.value=0; },                                             // SPIKE_ADOPT 4's wear off
+      notussock:()=>{ G.scene.traverse(o=>{ if(o.name==='tussockClumps'){ o.userData._v=o.visible; o.visible=false; } }); },   // SPIKE_ADOPT 9's clumps
       nocover:()=>{ G.scene.traverse(o=>{ if(o.name==='grass_cover')o.visible=false; }); },
       nofar:()=>{ G.scene.traverse(o=>{ if(o.name==='grass_far')o.visible=false; }); },
       nocards:()=>{ if(G.grassCards)G.grassCards.visible=false; },
@@ -40,7 +42,7 @@ try{
       treenoshadow:()=>{ for(const r of G.treeReg||[]) if(r.model)r.model.traverse(o=>{ if(o.isMesh){ o.userData._cs=o.castShadow; o.castShadow=false; } }); },
       sceneonly:()=>{ G.__post=G.__post||G.post; G.post=null; G.renderer.shadowMap.enabled=false; G.scene.traverse(o=>{ if(o.isInstancedMesh)o.visible=false; if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true);} }); G.renderer.setPixelRatio(0.5); },
     };
-    window.__restore=()=>{ if(G.__post)G.post=G.__post; G.renderer.shadowMap.enabled=true; G.renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
+    window.__restore=()=>{ if(K.SEALU)K.SEALU.uSealOn.value=G.seal?1:0; if(G.__post)G.post=G.__post; G.renderer.shadowMap.enabled=true; G.renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
       for(const r of G.treeReg||[]) if(r.model){ r.model.visible=true; r.model.traverse(o=>{ if(o.isMesh&&o.userData._cs!==undefined)o.castShadow=o.userData._cs; }); }
       G.scene.traverse(o=>{ if(o.userData._m){ o.material=o.userData._m; delete o.userData._m; } if(o.userData._v!==undefined){ o.visible=o.userData._v; delete o.userData._v; } });
       if(G.grassMesh)G.grassMesh.visible=true; if(G.grassCards)G.grassCards.visible=true; G.scene.traverse(o=>{ if(/^grass_/.test(o.name||'')&&o!==G.grassCards)o.visible=true; });

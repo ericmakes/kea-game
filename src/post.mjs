@@ -72,7 +72,11 @@ export const FILM = {
      now catches what is actually a light — the torch beam measures +3.2 YAVG on 22_torch_beam —
      and never a brightly lit wall or a snowfield. It is deliberately quiet. Raise it at the
      vantage with __KEA_FILM__ / KEAFILM= rather than by guessing here. */
-  bloom:   { strength: 0.12, radius: 0.45, threshold: 2.0 },
+  /* dayOff (2026-10-03, budget recovery before the per-map pass): the pass is SKIPPED while the night blend is under
+     nightOn. By day the 2.0 threshold catches almost nothing but clear-coat glints, and its mip chain cost ~1.1 ms at
+     100% (perfstep 15.13 -> 14.03 with it off, the key six unchanged); at night it is what makes a torch or a lamp
+     glow (22_torch_beam), so it comes back with the dark. The pass is kept built, so nightfall costs no recompile. */
+  bloom:   { strength: 0.12, radius: 0.45, threshold: 2.0, dayOff: true, nightOn: 0.02 },
   // AO darkens contact and crevice only; the scene already carries its own painted shade. Measured
   // at YAVG 154.5 against the plain renderer's 154.5 — it adds shade without lifting exposure.
   ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45, res: 0.5, clip: 120, samples: 8, pdSamples: 16 },   // samples: 2026-10-03, 16 -> 8 for the 100% budget. pdSamples STAYS 16: at 8 the denoise left a halo round the bird that trample.mjs read as 5 blade pixels over it   // res: PERF S2; clip: the AO box's half-width, m
@@ -183,8 +187,8 @@ function build(renderer, scene, camera, w, h) {
     ao.setSize = (sw, sh) => full(Math.max(1, Math.round(sw * F)), Math.max(1, Math.round(sh * F))); }
   c.addPass(ao);
 
-  c.addPass(new UnrealBloomPass(new THREE.Vector2(w, h),
-    FILM.bloom.strength, FILM.bloom.radius, FILM.bloom.threshold));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), FILM.bloom.strength, FILM.bloom.radius, FILM.bloom.threshold);
+  c.addPass(bloom);
 
   /* Only added when it would actually do something: BokehPass resamples the whole frame even at
      maxblur 0, which cost ~0.005 SSIM of pure softness for no visible depth of field while the
@@ -201,7 +205,7 @@ function build(renderer, scene, camera, w, h) {
   // renderer must NOT also do it — doing both tone maps the frame twice and washes it out.
   c.addPass(new OutputPass());
   if (FILM.grade.on) c.addPass(gradePass());
-  return { composer: c, ao, bokeh, w, h, camera };
+  return { composer: c, ao, bokeh, bloom, w, h, camera };
 }
 
 function gradePass() {
@@ -270,6 +274,7 @@ export function installPost(KEAGAME) {
     render(split, w, h) {
       ensure(split, w, h);
       { const cin = cinematic(); for (const e of eyes) if (e.bokeh) e.bokeh.enabled = cin; }
+      { const on = !FILM.bloom.dayOff || (G.nightT || 0) >= FILM.bloom.nightOn; for (const e of eyes) if (e.bloom) e.bloom.enabled = on; }
       renderer.toneMapping = toneMapping;   // OutputPass reads it off the renderer
       renderer.toneMappingExposure = exposure;
       if (split) {

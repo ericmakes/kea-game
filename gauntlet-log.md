@@ -6249,3 +6249,15 @@ COST: the spike's clump mix (1,400 a map) measured ~1.2 ms for little that read 
 the two tufts, 300-650 a map, ~0.35 ms. perfstep g2b_verge 15.13 ms (15.19 / 15.05 / 15.13), ACCEPTED.
 THE GATE'S METER READ 16.53 ms — 0.14 inside the budget, run last on a warm machine (16.92 on the first attempt,
 which also carried the refused cut). The next piece that adds draw cost has to bring its own recovery.
+
+## 2026-10-03h — BUDGET RECOVERY: bloom off by day (Opus 5.5) — certified c40f3003
+
+The verge left the gate's meter 0.14 ms inside the budget, and the wheel-stop piece after it read 16.81 and was
+refused — four concrete blocks cost nothing, so that was the edge meeting run-to-run spread. An idle machine read
+16.20 on the committed verge: the real frame, not heat. frameablate in one session was too noisy to rank sub-ms
+items (base 14.4-16.9); its large items held: shadows ~3 ms, the post chain ~2.3, the blade field ~1.7.
+Bloom (threshold 2.0) catches almost nothing by day but clear-coat glints, and its mip chain cost ~1.1 ms
+(perfstep 15.13 -> 14.03 with it off, the key six unchanged). FILM.bloom.dayOff skips the pass while the night
+blend is under 0.02; the pass stays built, so nightfall recompiles nothing. 21_night_camp / 22_torch_beam /
+43_night_range read mean diff 0.00 / 0.05 / 0.03 against their pins; 01 by day 0.88 (the glints).
+perfstep r1_bloom_dayoff 14.40 ms, ACCEPTED; gate meter 15.46. frameablate gains noseal / notussock states.

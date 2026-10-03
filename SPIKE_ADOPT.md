@@ -78,6 +78,9 @@ Proof sheets: `gauntlet/capture/proofs/LIGHT1_key6_before_shipped_candidate.jpg`
 | + trees | auto holds the budget by settling at 70% (1344x756); 20.3-20.7 ms fixed at 100%, so trees cost ~2 ms, all leaf fill |
 | + the budget at 100% (row 0) | **14.41 ms fixed at 100%** (perfstep b2, 3 runs: 14.16 / 14.41 / 14.44); the gate's meter, run last on a warm machine, 16.17. Auto scale now sits at 100% |
 | + ColorManagement ON, CSS filter off (5a-5b) | **14.12 ms** at 100% (perfstep l1_colour_managed: 13.93 / 14.44 / 14.12); gate meter 15.57. The refused light-and-grade candidate measured 14.25 |
+| + seal wear (4) | 14.59 ms (perfstep g2a); gate meter 15.96 |
+| + verge (9) | 15.13 ms (perfstep g2b); gate meter 16.53 — 0.14 inside; the wheel-stop piece then read 16.81 and was REFUSED |
+| + bloom off by day (budget recovery) | **14.40 ms** (perfstep r1, 14.44 / 14.40 / 14.19); gate meter 15.46. Bloom's mip chain cost ~1.1 ms for clear-coat glints by day; it is skipped while the night blend is under 0.02, so 21 / 22 / 43 are unchanged (mean diff 0.00-0.05) |
 
 ## Done before this file existed (spike adoption pieces 0-1, the bird fix, the perf piece)
 
