@@ -6261,3 +6261,12 @@ Bloom (threshold 2.0) catches almost nothing by day but clear-coat glints, and i
 blend is under 0.02; the pass stays built, so nightfall recompiles nothing. 21_night_camp / 22_torch_beam /
 43_night_range read mean diff 0.00 / 0.05 / 0.03 against their pins; 01 by day 0.88 (the glints).
 perfstep r1_bloom_dayoff 14.40 ms, ACCEPTED; gate meter 15.46. frameablate gains noseal / notussock states.
+
+## 2026-10-03i — SPIKE_ADOPT 10: concrete wheel stops (Opus 5.5) — certified 2da43efe
+
+Step 2, piece 3 of 3, and the end of step 2. A precast stop (concrete, 1.6 m x 12 cm, receives shadow) at the head of
+each of the carpark's four occupied bays, under the parked noses — browser-only, like the bay paint, so the batteries'
+world is unchanged. On the way: the village's two parked cars stood at y 0 inside the street's 16 cm seal (mkCar's y
+omitted); they now stand on it (VSTOP 0.16). This piece was refused once at 16.81 ms on the gate meter before the
+bloom recovery; on the recovered frame the gate meter read 14.80 and perfstep g2c_stops 14.74 ms
+(14.74 / 14.94 / 13.79), key six in band, ACCEPTED.

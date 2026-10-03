@@ -6901,6 +6901,11 @@ function buildCarpark(){
   /* the bay lines are PAINT now, moved +2.5 m z to frame the cars (SEAL.maps.carpark). Headless keeps the boxes:
      no texture reaches node, and the batteries' world is the world they were pinned on. */
   if(HEADLESS) for(let i=0;i<5;i++){ const bay=box(0.25,0.14,5.4,PAL.roadLine,-12+i*6.6,0.16,13.4,null,{noshadow:true}); bay.receiveShadow=!HEADLESS; }
+  /* WHEEL STOPS (SPIKE_ADOPT 10): a precast concrete stop at the head of each bay, 1.6 m x 0.16 m x 12 cm, between
+     the painted bay head (z 13.6) and the parked noses (z ~14.4) — the cars face -z. Concrete family, so it wears the
+     scan; the drawn ground reads it as a 12 cm step. Browser-only like the paint: a 12 cm cosmetic that would move the
+     batteries' pinned world digest for nothing a battery tests. */
+  if(!HEADLESS) for(const bx of [-8.7,-2.1,4.5,11.1]){ const ws=box(1.6,0.12,0.16,0xA9A7A2,bx,CARSLAB+0.06,14.05,null,{noshadow:false}); ws.receiveShadow=true; }
   for(const [px,pz,pr] of [[-8,24.5,1.3],[14,10,1.0],[-2,20,0.8]]){ const pd=cyl(pr,pr,0.03,0,px,0.145,pz,null,16); pd.material=bmat(0xC6DCE8); } // puddles
   G.gravel=[]; // carpark grit, named: vantage 18 caught one behind the bird and nothing could say what it was
   for(let i=0;i<26;i++){ const grr=rnd(0.05,0.12), gcol=i%2?0x9AA0A6:PAL.gravel, gx=2+rnd(-19,19), gz=17+rnd(-10,10);
@@ -8250,8 +8255,11 @@ function buildVillage(){
   buildNest(G.nestPos.x,G.nestPos.z);
 
   /* ---- ANGLE-PARKED CARS. Placeholders through the registry, like everything else. ---- */
-  G.cars.push(mkCar(-19.5,-3.6,0.42, PAL.white,'hatch'));
-  G.cars.push(mkCar(2.6,-3.6,0.42, PAL.blue,'hatch'));
+  /* ON THE STREET, NOT IN IT: mkCar's y was omitted, so both stood at 0 with the street's top at 0.16 (found by the ground
+     survey for SPIKE_ADOPT 9-10 — vehicles.mjs checks the carpark only) */
+  const VSTOP=0.16;
+  G.cars.push(mkCar(-19.5,-3.6,0.42, PAL.white,'hatch',VSTOP));
+  G.cars.push(mkCar(2.6,-3.6,0.42, PAL.blue,'hatch',VSTOP));
 
   /* ---- THE TEACHING ---- */
   addHint('v_verandah',0,VILLVER.h+0.6,VILLVER.z,7,'that verandah runs the whole row, and it is flat');
