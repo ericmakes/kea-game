@@ -1,0 +1,71 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+</head><body><script type="module">
+/* KEA LAB — renders one kea GLB, posed BY CLIP NAME, under a warm low sun with soft shadow.
+   Query: ?glb=<url>&clip=approved_idle&t=0&view=side|preen|rear|top&w=900&h=900&debug=tail&morph=0 */
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const Q = new URLSearchParams(location.search), W = +(Q.get('w') || 900), H = +(Q.get('h') || 900);
+THREE.ColorManagement.enabled = true;
+const R = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+R.setSize(W, H); R.outputColorSpace = THREE.SRGBColorSpace; R.toneMapping = THREE.AgXToneMapping; R.toneMappingExposure = +(Q.get('ev') || 1.0);
+R.shadowMap.enabled = true; R.shadowMap.type = THREE.VSMShadowMap; document.body.appendChild(R.domElement);
+const S = new THREE.Scene();
+/* sky: a vertical gradient dome, warm at the horizon */
+{ const g = new THREE.SphereGeometry(500, 32, 16), c = [], p = g.attributes.position, top = new THREE.Color(0x6f95c4), low = new THREE.Color(0xe8d6b8);
+  for (let i = 0; i < p.count; i++) { const y = Math.max(0, p.getY(i) / 500); const k = new THREE.Color().lerpColors(low, top, Math.pow(y, 0.6)); c.push(k.r, k.g, k.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); S.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide }))); }
+const hemi = new THREE.HemisphereLight(0xbcd2ee, 0x6b5a3e, 0.9); S.add(hemi);
+const sun = new THREE.DirectionalLight(0xffc88a, 3.2); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.radius = 6; sun.shadow.blurSamples = 16; sun.shadow.bias = -0.0005; S.add(sun, sun.target);
+const ground = new THREE.Mesh(new THREE.CircleGeometry(400, 64), new THREE.MeshStandardMaterial({ color: 0x8a7a5c, roughness: 0.95 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; S.add(ground);
+const gltf = await new GLTFLoader().loadAsync(Q.get('glb'));
+const root = gltf.scene; S.add(root);
+let sk = null; root.traverse(o => { if (o.isSkinnedMesh) { sk = o; o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
+  const m = o.material; if (m.transparent || m.alphaTest === 0) { m.transparent = false; m.alphaTest = 0.5; m.depthWrite = true; } } });
+const clip = gltf.animations.find(a => a.name === (Q.get('clip') || 'approved_idle'));
+const mixer = new THREE.AnimationMixer(root); if (clip) { mixer.clipAction(clip).play(); mixer.setTime(+(Q.get('t') || 0)); }
+if (sk.morphTargetInfluences) sk.morphTargetInfluences[0] = +(Q.get('morph') || 0);
+root.updateMatrixWorld(true); sk.skeleton.update();
+/* posed vertices, for the bbox, the facing and the debug colouring */
+const pos = sk.geometry.attributes.position, v = new THREE.Vector3(), box = new THREE.Box3();
+for (let i = 0; i < pos.count; i++) { sk.getVertexPosition(i, v); v.applyMatrix4(sk.matrixWorld); box.expandByPoint(v); }
+/* sit it on the ground, centred */
+const c0 = box.getCenter(new THREE.Vector3()); root.position.set(-c0.x, -box.min.y, -c0.z); root.updateMatrixWorld(true);
+box.translate(new THREE.Vector3(-c0.x, -box.min.y, -c0.z));
+const size = box.getSize(new THREE.Vector3()), Hb = size.y;
+/* FACING: the head joint against the tail joint, in the posed world */
+const bone = n => sk.skeleton.bones.find(b => b.name.includes(n));
+const hp = bone('Head').getWorldPosition(new THREE.Vector3()), tp = bone('TailEnd').getWorldPosition(new THREE.Vector3());
+const fwd = hp.clone().sub(tp).setY(0).normalize(), side = new THREE.Vector3(0, 1, 0).cross(fwd).normalize();
+const ctr = box.getCenter(new THREE.Vector3());
+/* sun: low (18 deg), from the front-left quarter so the side view gets raking light */
+const sunDir = fwd.clone().multiplyScalar(0.55).add(side.clone().multiplyScalar(0.84)).normalize(); sunDir.y = Math.tan(18 * Math.PI / 180); sunDir.normalize();
+sun.position.copy(ctr).addScaledVector(sunDir, Hb * 8); sun.target.position.copy(ctr);
+const sc = sun.shadow.camera; sc.left = sc.bottom = -Hb * 2; sc.right = sc.top = Hb * 2; sc.near = 0.1; sc.far = Hb * 20; sc.updateProjectionMatrix();
+/* THE THREE VIEWS. Directions are relative to the bird, distances to its posed height. */
+const cam = new THREE.PerspectiveCamera(+(Q.get('fov') || 30), W / H, Hb * 0.01, Hb * 100);
+const V = { side: [side, 0.10, 3.4], preen: [fwd.clone().multiplyScalar(0.75).add(side.clone().multiplyScalar(0.66)), 0.30, 3.2],
+            rear: [fwd.clone().multiplyScalar(-1).add(side.clone().multiplyScalar(0.55)), 0.30, 3.2], top: [new THREE.Vector3(0, 1, 0).add(fwd.clone().multiplyScalar(-0.3)), 0, 3.6],
+            head: [side.clone().add(fwd.clone().multiplyScalar(0.35)), 0.05, 0.75], headfront: [fwd.clone().add(side.clone().multiplyScalar(0.5)), 0.0, 0.8],
+            tailside: [side, 0.05, 1.6], tailunder: [fwd.clone().multiplyScalar(-1).add(side.clone().multiplyScalar(0.8)), -0.08, 1.3], tailrear: [fwd.clone().multiplyScalar(-1).add(side.clone().multiplyScalar(0.25)), 0.35, 1.7] };
+const [dir, lift, dist] = V[Q.get('view') || 'side'];
+/* the head's own posed bounds: every vertex dominated by Head or a bill bone */
+const hbox = new THREE.Box3(); { const Jx = sk.geometry.attributes.skinIndex, Wx = sk.geometry.attributes.skinWeight, nm = sk.skeleton.bones.map(b => b.name);
+  for (let i = 0; i < pos.count; i++) { let b = 0; for (let k = 1; k < 4; k++) if (Wx.getComponent(i, k) > Wx.getComponent(i, b)) b = k;
+    if (/Head|Mandible|Bone047/.test(nm[Jx.getComponent(i, b)])) { sk.getVertexPosition(i, v); v.applyMatrix4(sk.matrixWorld); hbox.expandByPoint(v); } } }
+const hdp = hbox.getCenter(new THREE.Vector3()), hsz = hbox.getSize(new THREE.Vector3()).length();
+const look = Q.get('view')?.startsWith('head') ? hdp : Q.get('view')?.startsWith('tail') ? tp.clone().add(new THREE.Vector3(-c0.x, -box.min.y, -c0.z)).addScaledVector(fwd, -Hb * 0.25) : ctr;
+cam.position.copy(look).addScaledVector(dir.clone().normalize(), Q.get('view')?.startsWith('head') ? hsz * 2.3 : Hb * dist); cam.position.y += Hb * lift; cam.lookAt(look);
+if (Q.get('debug') === 'tail') {
+  /* paint every triangle whose first vertex is dominated by a Tail* joint */
+  const J = sk.geometry.attributes.skinIndex, Wt = sk.geometry.attributes.skinWeight, names = sk.skeleton.bones.map(b => b.name);
+  const col = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) { let b = 0; for (let k = 1; k < 4; k++) if (Wt.getComponent(i, k) > Wt.getComponent(i, b)) b = k;
+    const nm = names[J.getComponent(i, b)]; const t = /Tail/.test(nm); col.set(t ? [1, 0, 1] : [0.6, 0.6, 0.6], i * 3); }
+  sk.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3)); sk.material = sk.material.clone(); sk.material.vertexColors = true; }
+R.render(S, cam);
+window.__done = { posedHeight: Hb, size: size.toArray(), fwd: fwd.toArray(), tail: tp.toArray() };
+</script></body></html>

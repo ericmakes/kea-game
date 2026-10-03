@@ -1,0 +1,128 @@
+{
+ "source": "assets/models/astra_incoming/approved/kea_animated.glb",
+ "sourceSha256": "4efcc6daa3471d7c339fe7f0a23bddfec41e8f84e97dc884398ee16c52d3117a",
+ "fan": {
+  "n": 12,
+  "origin": [
+   -0.2,
+   9,
+   -23.5
+  ],
+  "length": 15,
+  "graduate": 0.05,
+  "droop0": 8,
+  "droop1": 11,
+  "spreadDeg": 2.5,
+  "firstDeg": 1.2,
+  "baseW": 0.9,
+  "tipW": 2.8,
+  "thick0": 0.5,
+  "thick1": 0.1,
+  "stack": 0.26,
+  "rollDeg": 1.6,
+  "band": 0.88,
+  "notch": 0.1,
+  "notchLen": 0.05,
+  "uvTop": [
+   0.04,
+   0.0125,
+   0.01,
+   0.205,
+   0.075
+  ],
+  "uvBot": [
+   0.3,
+   0.008,
+   0.01,
+   0.215,
+   0.085
+  ],
+  "uvBand": [
+   0.029,
+   0.055,
+   0.036,
+   0.062
+  ]
+ },
+ "tail": {
+  "dropped": 786,
+  "keptRump": 102,
+  "newVertices": 2808,
+  "newTriangles": 3048
+ },
+ "variants": {
+  "B": {
+   "params": {
+    "head": 1.12,
+    "billLen": 0.8035714285714285,
+    "billDepth": 0.9821428571428571,
+    "body": 1.08,
+    "asked": "head and eye +12%, bill 10% shorter and deeper, body 8% plumper"
+   },
+   "changedVertices": 1195,
+   "tailVerticesChanged": 0
+  },
+  "C": {
+   "params": {
+    "head": 1.2,
+    "billLen": 0.7083333333333334,
+    "billDepth": 1,
+    "body": 1.15,
+    "asked": "head and eye +20%, bill 15% shorter, body 15% plumper"
+   },
+   "changedVertices": 1195,
+   "tailVerticesChanged": 0
+  }
+ },
+ "files": {
+  "A": {
+   "bytes": 32329960,
+   "md5": "24fa5ebb1577b146312d49748023b69c",
+   "sha256": "2d7ea14cd73e6a91e12892b36a018cec6ed77e22850ed54af504993f1d03d12a"
+  },
+  "B": {
+   "bytes": 32329960,
+   "md5": "037f0e8c88ceed66e5dd168cfa47c8ef",
+   "sha256": "3fd647af5f3d111c9a7550299ae9a5a9622252f9cfb757b61d9ac6a0b04b43ca"
+  },
+  "C": {
+   "bytes": 32329960,
+   "md5": "d1302e11d6fba572f7442439959fe4b5",
+   "sha256": "3a23514f92bd3be644e5740e4eecd8b65eada9f1aae8449ad0c4dea0fce617aa"
+  }
+ },
+ "pivots": {
+  "head": [
+   -0.23001953115702212,
+   51.567919070938096,
+   -5.104824231431534
+  ],
+  "bill": [
+   -2.714801551577813,
+   56.71712226147516,
+   10.998728633252322
+  ],
+  "headForward": [
+   -0.07620493960389209,
+   0,
+   0.9970921758693965
+  ],
+  "billRear": [
+   -2.435002655734329,
+   56.71712226147516,
+   7.3377416773859405
+  ],
+  "billLength": 10.914304636272682,
+  "billMidHeight": -15.475278079164763,
+  "bodyAxisFrom": [
+   -0.390878490634045,
+   16.8453855970497,
+   -23.325008692005493
+  ],
+  "bodyAxisTo": [
+   -0.5113800815324013,
+   40.55316626849377,
+   -7.285967404057523
+  ]
+ }
+}

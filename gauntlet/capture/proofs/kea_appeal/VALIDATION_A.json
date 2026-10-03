@@ -1,0 +1,89 @@
+{
+ "file": "kea_animated_A.glb",
+ "sha256": "2d7ea14cd73e6a91e12892b36a018cec6ed77e22850ed54af504993f1d03d12a",
+ "bytes": 32329960,
+ "against": "approved kea_animated.glb",
+ "gate": {
+  "viewsDiffering": [
+   2,
+   3,
+   4,
+   5,
+   296,
+   297,
+   298,
+   299
+  ],
+  "viewsAllowed": [
+   296,
+   297,
+   2,
+   3,
+   4,
+   5,
+   298,
+   299
+  ],
+  "jsonDiffOutsideAllowed": [],
+  "onlyAllowedViewsDiffer": true,
+  "jsonIdenticalOutsideAllowed": true,
+  "imagesIdentical": true,
+  "jsonChunkByteIdentical": false
+ },
+ "originalRowsByteIdentical": {
+  "POSITION": true,
+  "NORMAL": true,
+  "TEXCOORD_0": true,
+  "JOINTS_0": true,
+  "WEIGHTS_0": true,
+  "morph POSITION": true,
+  "morph NORMAL": true
+ },
+ "newRows": {
+  "count": 2808,
+  "weightedOnlyToTailBones": true,
+  "weightsSumToOne": true,
+  "morphDeltasZero": true
+ },
+ "triangles": {
+  "approved": 4927,
+  "kept": 4141,
+  "dropped": 786,
+  "added": 3048,
+  "total": 7189,
+  "keptInOriginalOrder": true
+ },
+ "joints": 101,
+ "clips": 11,
+ "morphTargets": 1,
+ "sanity": {
+  "nan": 0,
+  "nonUnitNormals": 0
+ },
+ "measured": {
+  "headSize": 22.003,
+  "billLength": 10.914,
+  "billDepth": 8.455,
+  "eyeSpan": 2.364,
+  "eyeVertices": 92,
+  "bodyGirth": 7.277,
+  "tail": {
+   "spanX": 8.14,
+   "dropY": 3.83,
+   "lengthZ": 14.97,
+   "rearmostZ": -38.33
+  }
+ },
+ "tailClipping": {
+  "approved_idle": 389,
+  "walk_loop": 381,
+  "flight_loop": 87,
+  "beak_tear": 390,
+  "flight_glide": 87,
+  "flight_bank_left": 92,
+  "flight_bank_right": 95,
+  "watch_idle": 389,
+  "carry_walk": 381,
+  "carry_idle": 389
+ }
+}

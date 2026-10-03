@@ -14,3 +14,7 @@ gauntlet/reference/*.zip
 # dist/ on every build. The files are still on disk here and their hashes are still recorded in
 # assets/LICENCES.md and PACKAGE_HASHES.json, so the chain stays auditable.
 astra_archive/
+
+# tools/kea_lab/build_variants.mjs output: rebuilt from the approved kea, ~33 MB each
+kea_variants_local/
+assets/models/kea_variants/

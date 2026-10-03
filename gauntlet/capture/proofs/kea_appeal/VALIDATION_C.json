@@ -1,0 +1,69 @@
+{
+ "file": "kea_animated_C.glb",
+ "sha256": "3a23514f92bd3be644e5740e4eecd8b65eada9f1aae8449ad0c4dea0fce617aa",
+ "bytes": 32329960,
+ "against": "kea_animated_A.glb",
+ "gate": {
+  "viewsDiffering": [
+   296,
+   297
+  ],
+  "viewsAllowed": [
+   296,
+   297
+  ],
+  "jsonDiffOutsideAllowed": [],
+  "onlyAllowedViewsDiffer": true,
+  "jsonIdenticalOutsideAllowed": true,
+  "imagesIdentical": true,
+  "jsonChunkByteIdentical": false
+ },
+ "changedVertices": 1195,
+ "params": {
+  "head": 1.2,
+  "billLen": 0.7083333333333334,
+  "billDepth": 1,
+  "body": 1.15,
+  "asked": "head and eye +20%, bill 15% shorter, body 15% plumper"
+ },
+ "joints": 101,
+ "clips": 11,
+ "morphTargets": 1,
+ "sanity": {
+  "nan": 0,
+  "nonUnitNormals": 0
+ },
+ "measured": {
+  "headSize": 26.403,
+  "billLength": 9.277,
+  "billDepth": 10.146,
+  "eyeSpan": 2.836,
+  "eyeVertices": 92,
+  "bodyGirth": 8.356,
+  "tail": {
+   "spanX": 8.14,
+   "dropY": 3.83,
+   "lengthZ": 14.97,
+   "rearmostZ": -38.33
+  }
+ },
+ "tailClipping": {
+  "approved_idle": 389,
+  "walk_loop": 381,
+  "flight_loop": 87,
+  "beak_tear": 390,
+  "flight_glide": 87,
+  "flight_bank_left": 92,
+  "flight_bank_right": 95,
+  "watch_idle": 389,
+  "carry_walk": 381,
+  "carry_idle": 389
+ },
+ "ratiosToA": {
+  "headSize": 1.2,
+  "eyeSpan": 1.2,
+  "billLength": 0.85,
+  "billDepth": 1.2,
+  "bodyGirth": 1.148
+ }
+}
