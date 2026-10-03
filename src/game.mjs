@@ -6057,6 +6057,10 @@ function mkTree(x,z,s){
     cm.castShadow=!HEADLESS; g.add(cm);
   }
   addBoxCollider(x,z,0.7*s,0.7*s,2.4*s,true);
+  /* SPIKE_ADOPT 3: every tree is registered, so src/trees.mjs can stand the spike's Poly Haven
+     island_tree_01 in its place. The primitive is still BUILT — its rnd() draws are what keep the rest of
+     the country where it is (FLAKES 15) — and only hidden. The collider stays the primitive's. */
+  (G.treeReg=G.treeReg||[]).push({g,x,z,s});
   return g;
 }
 function buildTrees(){
@@ -6437,6 +6441,7 @@ function buildWorld(biome){
   for(const h of WORLDHANDLES)G[h]=null;                 // TODO 62: and the handles, above the biome
   for(const l of WORLDLISTS)G[l]=[];
   for(const k in WORLDFLAGS)G[k]=WORLDFLAGS[k];
+  G.treeReg=[];                                // SPIKE_ADOPT 3: rebuilt with the world, read by src/trees.mjs
   b.build();
   matUVSweep();
   DRAWN=HEADLESS?null:drawnGroundBuild();          // the feet piece: the ground as drawn, for walkers

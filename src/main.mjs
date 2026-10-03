@@ -92,6 +92,13 @@ if (!cfg.nopropmodels && !globalThis.__KEA_NOPROPMODELS__) {
   }
 }
 
+/* SPIKE_ADOPT 3: THE SPIKE'S TREES, stood in for every mkTree — see src/trees.mjs. Same contract as the
+   prop models: a failed load leaves the sphere canopies standing. */
+if (!cfg.notrees && !globalThis.__KEA_NOTREES__) {
+  try { const { installTrees } = await import('./trees.mjs'); await installTrees(KEAGAME); }
+  catch (e) { console.error('trees: the spike trees failed to install, staying on the primitive canopies —', e); }
+}
+
 /* PERF S4: THE SUN'S SHADOWS IN CASCADES FITTED TO THE CAMERA — see src/shadows.mjs. Browser-only
    for the same reasons as everything above; if it cannot install, the authored sun keeps its one
    fixed map and the game plays on. __KEA_NOCSM__ forces the old map for a like-for-like frame. */

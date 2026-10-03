@@ -919,3 +919,14 @@ EXT_meshopt_compression + KHR_mesh_quantization. The derived file has neither (m
 three's own MeshoptDecoder, every attribute dequantized to float, normals at full precision) and its
 four bounding boxes match the source to a millimetre — the tool asserts it. No textures: the paint,
 dust, grime and panel gaps are shader work in `src/vehicles.mjs`, and the wheels are built there.
+
+## TREES  (SPIKE_ADOPT 3 — the render spike's tree, 2026-10-03)
+
+| file | asset | author(s) | licence | source | md5 |
+|---|---|---|---|---|---|
+| `models/trees/island_tree_01_spike.glb` | Island Tree 01 (`island_tree_01`), leaf mesh pruned by island (16% kept, survivors x2.5; 1.6 M -> 194 k triangles), wood simplified, textures 1K WebP | Rob Tuytel, Rico Cilliers | **CC0 1.0** | https://polyhaven.com/a/island_tree_01 | `b7dfb3a945bbdf78d55c861f47c1639f` |
+
+Built by the render spike (`~/kea-render-spike/tools/build.mjs`; the publisher md5s of every source file
+are in the spike's LICENCES.md line 15), from `public/assets/models/tree.glb` (md5 `da0b21a9bb140c715c550d5c79abd723`, meshopt +
+quantization). Re-exported by `tools/derive_tree.mjs`: geometry decoded to float, WebP textures kept
+as the spike encoded them, bounds and triangle count asserted identical.

@@ -67,6 +67,13 @@ try {
     for (const sh of G.sheep || []) { if (!sh.g || (sh.mode && sh.mode !== 'graze')) continue;
       const x = sh.g.position.x, z = sh.g.position.z; if (KEAGAME.groundHeightAt(x, z, 0.4) > 0.02) continue;
       out.walkers.push({ who: 'sheep', d: +(low(sh.g) - KEAGAME.drawnGroundAt(x, z)).toFixed(4), raised: KEAGAME.drawnGroundAt(x, z) > 0.05, at: [+x.toFixed(1), +z.toFixed(1)] }); }
+    /* TREES (SPIKE_ADOPT 3): the spike's tree stands in for every mkTree, the primitive hidden, the trunk
+       base on the drawn ground */
+    out.trees = { mode: (G.trees || {}).mode || null, rows: [] };
+    for (const t of G.treeReg || []) {
+      const hid = t.g.children.every(o => o === t.model || !o.visible);
+      let lo = Infinity; if (t.model) { t.model.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(t.model); lo = b.min.y; }
+      out.trees.rows.push({ at: [+t.x.toFixed(1), +t.z.toFixed(1)], model: !!t.model, hid, d: t.model ? +(lo - KEAGAME.drawnGroundAt(t.x, t.z)).toFixed(4) : null, h: t.h }); }
     return out;
   }, TOL);
 } finally { await browser.close().catch(() => {}); await srv.close(); }
@@ -87,11 +94,16 @@ const WTOL = TOL;
 if (!r.walkers.length) fails.push('no walkers standing to check');
 if (!r.walkers.some(w => w.raised)) fails.push('no walker stands on a raised drawn floor, so this check cannot see a sunk one');
 for (const w of r.walkers) if (Math.abs(w.d) > WTOL) fails.push(`${w.who} at ${w.at}: lowest point ${(w.d * 1000).toFixed(1)} mm from the drawn ground`);
+if (r.trees.mode !== 'spike') fails.push('the spike trees did not install (G.trees.mode ' + r.trees.mode + ')');
+if (!r.trees.rows.length) fails.push('no mkTree registered');
+for (const t of r.trees.rows) { if (!t.model) fails.push(`tree at ${t.at}: still the primitive`); else if (!t.hid) fails.push(`tree at ${t.at}: the primitive canopy is still drawn`);
+  else if (Math.abs(t.d) > 0.03) fails.push(`tree at ${t.at}: its lowest point is ${(t.d * 1000).toFixed(0)} mm from the drawn ground`); }
 if (!r.traffic) fails.push('no traffic car spawned to check');
 else if (!r.traffic.dressed || !r.traffic.hidden) fails.push('a traffic car spawned after load does not wear the spike hatch');
 console.log(`VEHICLES  models ${r.mode}  ${r.rows.length} spike vehicles  tolerance ${(TOL * 1000).toFixed(0)} mm`);
 for (const w of r.rows) console.log(`  ${w.id.padEnd(11)} swapped ${w.swapped}  ${String(w.tris).padStart(6)} tris  tyre ${w.tyreOverGround == null ? '-' : (w.tyreOverGround * 1000).toFixed(1) + ' mm'} over the drawn ground (${w.ground})`);
 console.log(`  traffic ${JSON.stringify(r.traffic)}`);
+for (const t of r.trees.rows) console.log(`  tree ${String(t.at).padEnd(12)} ${t.h ? t.h.toFixed(1) + ' m' : '-'}  lowest point ${t.d == null ? '-' : (t.d * 1000).toFixed(1) + ' mm'} from the drawn ground`);
 for (const w of r.walkers) console.log(`  ${w.who.padEnd(12)} at ${w.at}  lowest point ${(w.d * 1000).toFixed(1)} mm from the drawn ground`);
 console.log(fails.length ? fails.map(f => '    ✗ ' + f).join('\n') + `\nVEHICLES: ${fails.length} FINDINGS` : 'VEHICLES: ALL PASS — every spike vehicle loaded and drawn, vehicles and walkers on the drawn ground');
 process.exit(fails.length ? 1 : 0);

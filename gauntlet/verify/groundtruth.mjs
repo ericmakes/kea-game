@@ -105,7 +105,11 @@ try {
            it is a collider question, not a drawn-ground one */
         const ob = new THREE.Box3().copy((h.object.geometry.computeBoundingBox(), h.object.geometry.boundingBox)).applyMatrix4(h.object.matrixWorld);
         const oarea = (ob.max.x - ob.min.x) * (ob.max.z - ob.min.z);
-        if (!/^(Box|Cylinder|Circle|Ring|Plane|Buffer)Geometry$/.test(h.object.geometry.type) || ob.min.y > 0.15 || oarea < 0.25 || (ob.max.y > 1.0 && oarea < 4)) { props++; continue; }
+        /* and a surface more than 1 m over the base with no collider under it is overhead, not a floor:
+           the spike tree's limbs (SPIKE_ADOPT 3) are one ground-rooted mesh over 4 m^2 in plan, and their
+           tops at 3.4 m read as a floor over open ground. Nothing the game lets a bird stand on without
+           a collider is that high — the lookup's own floors stop at 1 m. */
+        if (!/^(Box|Cylinder|Circle|Ring|Plane|Buffer)Geometry$/.test(h.object.geometry.type) || ob.min.y > 0.15 || oarea < 0.25 || (ob.max.y > 1.0 && oarea < 4) || h.y > base + 1.0) { props++; continue; }
         cells++;
         const d = h.y - (CTL ? 0 : KEAGAME.drawnGroundAt(x + 1e-4, z + 1e-4)); if (Math.abs(d) > worst) { worst = Math.abs(d); worstAt = [x, z, h.object.geometry.type]; }
         if (Math.abs(d) <= TOL) continue;

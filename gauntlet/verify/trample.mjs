@@ -70,7 +70,9 @@ try {
     for (let i = G.cars.length - 1; i >= 0; i--) { const c = G.cars[i]; if (!c.traffic) continue;
       G.scene.remove(c.g); const ci = G.colliders.indexOf(c.collider); if (ci >= 0) G.colliders.splice(ci, 1);
       for (let q = G.inter.length - 1; q >= 0; q--) if (G.inter[q].car === c) G.inter.splice(q, 1); G.cars.splice(i, 1); }
-    { const _tr = () => { try { G.trafT.a = 999; G.trafT.b = 999; } catch (e) {} requestAnimationFrame(_tr); }; requestAnimationFrame(_tr); }
+    { const _tr = () => { try { G.trafT.a = 999; G.trafT.b = 999;
+        /* and the sheep, as the batteries park them: they walk home every frame */
+        for (const sh of G.sheep || []) { sh.x = -48; sh.z = -48; sh.home = { x: -48, z: -48 }; if (sh.g) sh.g.position.set(-48, sh.g.position.y, -48); } } catch (e) {} requestAnimationFrame(_tr); }; requestAnimationFrame(_tr); }
     const _pk = () => { try { G.humans.forEach(h => { h.x = 46; h.z = 46; h.home = { x: 46, z: 46 }; h.patrol = null; h.state = 'idle'; if (h.g) h.g.position.set(46, 0, 46); }); } catch (e) {} requestAnimationFrame(_pk); }; requestAnimationFrame(_pk);
     const by = {}; M.sk.skeleton.bones.forEach(b => by[b.name] = b);
     k._model = null; k._anim = null; window.__birdM = M; window.__at = { x: 0, z: 0, ry: 0 };

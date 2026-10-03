@@ -19,7 +19,7 @@ Status: **LANDED** · **IN PROGRESS** · **NEXT** (queued, in order) · **BLOCKE
 | 1d | — every car mission anchor still resolves (wipers, aerial, caravan mirrors, door seal, step, drawbar, DOC-ute cage, latch, keys, radio); **seal 12/12** | LANDED | the driven matrix completes wiper and keys; the seal comes off 12/12, redrawn round the spike caravan's real door. The caged kea now sits in the crate on the tray, not at the old hard-coded offset. **There are no number-plate or wheel-nut missions** |
 | 1e | — licence row | LANDED | `assets/LICENCES.md` VEHICLES: first-party, both md5s recorded |
 | 2 | **Props on the drawn ground**: cars, humans and sheep at drawn height (they stood 14 cm inside the seal), per prop class, mission anchors untouched, sole/wheel check extended | LANDED | cars stand on the seal by their placement (CARSLAB), traffic by its lane `y`. Humans and sheep are lifted round their update (render-only, headless untouched), and the humans' 31 mm boot depth is added. `vehicles.mjs` holds walkers to 12 mm: HEAD reads Rex at -236 mm on the apron. Re-pin folded into the trees' |
-| 3 | **Trees**: Poly Haven `island_tree_01`, leaf-island pruned (1.6 M -> 194 k tris, 3.2 MB), replacing every `mkTree` | NEXT | the 7 call sites keep their seeded `rnd()` draws (FLAKES 15). Swapped at the model tier |
+| 3 | **Trees**: Poly Haven `island_tree_01`, leaf-island pruned (1.6 M -> 194 k tris, 3.2 MB), replacing every `mkTree` | LANDED | every mkTree in every map: 6 per map, 15 at the station. The four the spike placed keep its heights and turns, others h = 2.1 + 4.4 s. The primitive is still built (seeded draws) and hidden; the collider is unchanged. `tools/derive_tree.mjs` (meshopt decoded, WebP kept, asserted); `vehicles.mjs` checks trunks on the drawn ground (0.0 mm). The **ski field's beech** are clump cones, not mkTree, and stay. A far LOD was built and measured OFF: 0.4 ms and visibly thinner at 40 m, because the leaves cost fill, not triangles |
 | 4 | **Asphalt tiling breakup**: stochastic tile offsets (Quilez), 12 m / 40 m macro field, placed wear (oil under engines, tyre polish, repair patches, crack sealant, tracked gravel), worn bay paint | NEXT | the spike is TSL; this is a WebGL `onBeforeCompile` rewrite. The game already has P3b stochastic anti-tiling; the missing part is the placed wear |
 | 5 | **Colour pipeline**: ColorManagement ON, CSS `saturate(1.22) contrast(1.06)` removed, re-grade to the plates (the spike's warm WB + 1.5x sat + 1.22 contrast after the tone map) | NEXT (PIECE 2) | the bird's bronze and dark rims are the test case, via a bird-vs-approved-render framescore property |
 | 6 | **Tone mapper**: the spike's finding is that Khronos Neutral crushes sky-lit shade, so AgX was chosen; check shade lit only by sky before choosing | NEXT (with 5) | the game is ACES 0.95 today |
@@ -39,6 +39,7 @@ Status: **LANDED** · **IN PROGRESS** · **NEXT** (queued, in order) · **BLOCKE
 | after | live meter, AC, 1920x1080 window, bird flying |
 |---|---|
 | cars + props on ground | 15.4 ms at auto (settled 80%); 18.8 ms fixed at 100%, the same as before the cars |
+| + trees | auto holds the budget by settling at 70% (1344x756); 20.3-20.7 ms fixed at 100%, so trees cost ~2 ms, all leaf fill |
 
 ## Done before this file existed (spike adoption pieces 0-1, the bird fix, the perf piece)
 

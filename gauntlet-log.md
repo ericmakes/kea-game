@@ -6128,3 +6128,20 @@ glints bloomed between identical takes). PECK THE UTE moved to the driver's door
 Rex's keys are, and the old middle point is under the cab).
 COST: live meter 15.4 ms at auto (80%); fixed 100% 18.8 ms, unchanged by the cars. camp_van stays
 primitive (no motorhome in the spike). Re-pin deferred to after the trees, as ordered.
+
+## 2026-10-03b — SPIKE_ADOPT 3: the spike's trees (Opus 5.5) — certified 2b3b92a0
+
+Poly Haven island_tree_01 (CC0, Rob Tuytel / Rico Cilliers) as the spike pruned it (leaf islands, 194 k
+triangles), re-exported by tools/derive_tree.mjs (meshopt decoded, WebP kept, asserted), stood in for
+every mkTree in every map by src/trees.mjs — 6 a map, 15 at the station — with the spike's heights and
+turns for the four it placed and h = 2.1 + 4.4 s elsewhere, leaves as an alpha MASK, on the drawn ground.
+The primitive is still built (its rnd() draws hold the country; FLAKES 15) and hidden; colliders
+unchanged; headless untouched. vehicles.mjs now checks every tree (0.0 mm). The ski field's beech are
+clump cones, not mkTree, and stay.
+COST, AND WHERE: ~2 ms at fixed 100% (18.8 -> 20.3-20.7), all leaf FILL — frameablate: trees off -2.4 ms,
+tree shadows off -0.3. A far LOD (the spike's own island pruning one step further, 35% kept, scaled to
+keep cover) saved 0.4 ms and read thinner at 40 m, so it ships OFF. Auto render scale holds the budget
+(settles 70% at 1080p).
+INSTRUMENTS: groundtruth read the tree's ground-rooted limb mesh (>4 m^2 in plan) as a 3.4 m floor —
+anything >1 m over the base with no collider is overhead now; control still red (45,145). trample
+parks the sheep too (one more live source of take-to-take noise under gate load).
