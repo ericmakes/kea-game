@@ -94,7 +94,12 @@ const SKY={
      VSM IS ALSO WHY THE BIAS IS ZERO. Variance shadow maps compare moments, not depths, so a
      negative constant bias does not fix acne, it opens light leaks under thin geometry; the
      normal-offset bias is the one that belongs here and it is doing the work alone. */
-  shadowType:'vsm', shadowMap:2048, shadowRadius:4.2, shadowBlur:14,
+  /* 2026-10-03 (BUDGET AT 100%): PCF, not VSM. With the cascades (src/shadows.mjs) the near texel is
+     3 cm, so PCF's fixed kernel gives a crisp contact shadow — which is the spike's, the look of record —
+     and it costs no blur pass per cascade and, unlike VSM, needs no RECEIVERS in the map: the ground,
+     the slabs and every receive-only mesh leave the shadow pass (CASCADE.recvOnly). Measured together
+     with the rest of the budget piece. */
+  shadowType:'pcf', shadowMap:2048, shadowRadius:4.2, shadowBlur:14,
   shadowBias:0.0, shadowNormalBias:0.022, shadowExtent:58, shadowFar:170,
 
   /* IMAGE-BASED LIGHT. The file is fetched at runtime and convolved by PMREMGenerator; see
@@ -1066,7 +1071,7 @@ const GRASS={
      only narrows near the tip — that is what makes it catch the light along its whole edge — where
      0.72 tapered almost from the base and read as a strand of hair. P4b widened both the taper
      exponent and the width range toward a leaf. */
-  seg:4, bend:0.34,
+  seg:3, bend:0.34,   // 4 -> 3, 2026-10-03: -1.1 ms at 100%, the arc reads the same at play distance
   /* CLUMPING. The country in nz_tussock_01 is not a carpet: it is discrete tussock mounds with
      open ground between them, and that is the single biggest reason the old triangle carpet read
      as a lawn. Blades are scattered around clump centres drawn on a jittered grid, `bare` of the
@@ -5446,6 +5451,15 @@ void keaGrass(inout vec3 t){
      the anchor snaps and a blade lands on a new patch of ground, it takes on that patch's blade
      instead of carrying its own appearance across the world. */
   vec2 w=uAnchor+aOff*uNear;
+  /* PERF (2026-10-03): A BLADE OUTSIDE THE VIEW STOPS HERE. The field is a full disc round the camera
+     and a play camera sees about a third of it; every blade behind or beside the view ran the whole
+     shader — the nine-cell mound search included — to land off screen. The grass casts no shadow and
+     the AO reads only the visible depth, so a blade outside the frustum contributes nothing anywhere:
+     this is exact for every pixel. The margin covers the mound pull (<= 0.9 x clumpM), lean and height. */
+  { vec4 vq=viewMatrix*vec4(w.x,0.0,w.y,1.0); float M=2.5, tx=1.0/projectionMatrix[0][0];
+    if(vq.z>M || abs(vq.x)>(-vq.z)*tx+M){
+      t=vec3(w.x,0.0,w.y); vGrassT=0.0; vGrassW=t; vGrassTint=vec3(0.0); vGrassBase=vec3(0.0); vGrassTip=vec3(0.0); vGrassSeed=0.0;
+      return; } }
 
   /* ---- CLUMPING ----
      nz_tussock_01 is discrete mounds with open ground between them, and a uniform scatter cannot
@@ -12390,7 +12404,10 @@ function initRenderer(){
   { let v=null; try{ v=localStorage.getItem('kea.renderScale'); }catch(e){}
     if(globalThis.__KEA_SCALE__!=null)v=globalThis.__KEA_SCALE__;
     if(v!=null&&v!=='')RENDER.scale=(v==='auto')?'auto':Math.max(0.5,Math.min(1,+v||1)); }
-  G.renderer=new THREE.WebGLRenderer({preserveDrawingBuffer:true,canvas:cv,antialias:true});
+  /* NO MSAA ON THE CANVAS (2026-10-03, the 100% budget: -0.5 ms). Every frame reaches it as ONE
+     full-screen quad from the composer, whose own targets carry no MSAA, so the backbuffer resolved
+     nothing but that quad. Only the no-post fallback draws real edges into it. __KEA_AA__=true restores. */
+  G.renderer=new THREE.WebGLRenderer({preserveDrawingBuffer:true,canvas:cv,antialias:globalThis.__KEA_AA__===true});
   G.renderer.outputColorSpace=THREE.SRGBColorSpace;
   G.renderer.toneMapping=THREE.ACESFilmicToneMapping;
   G.renderer.toneMappingExposure=0.95;

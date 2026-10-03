@@ -28,11 +28,12 @@ Status: **LANDED** · **IN PROGRESS** · **NEXT** (queued, in order) · **BLOCKE
 | 9 | **Grass and ground look where it differs**: 4,400 instanced golden tussock clumps (`grass_medium_01`) + 1,250 wiry clumps (`grass_medium_02`); terrain in paint mode (`sparse_grass` value, colour matched to what is behind it; `aerial_grass_rock` 15 m field); gravel margin round the slab | NEXT | the game's blade field is P4's and kept. The clumps and the paint-mode terrain are additions, each measured against the budget |
 | 10 | **Concrete wheel stops** at the head of every bay; bay lines moved +2.5 m z so a real 4 m car sits in its bay | NEXT | the bay move touches a pinned layout |
 | 11 | **Poly Haven picnic table**, **hut in corrugated_iron_02 paint mode**, **wheelie bin**, **DOC sign** | NEXT | small props, P6A seam |
+| 0 | **The budget at 100% render scale** (Eric, 2026-10-03: "under the 16.7 ms budget at 100% render scale on this Mac; auto scale is a safety net only") | LANDED | measured by ablation at a FIXED 100% (grass ~12.7 ms, shadows 5.6, AO 3.4, cars 2.6, trees 2.2). PCF shadows (crisp contact, the spike's) with every receive-only mesh out of the map; mid/far cascades every 2nd/4th frame; GTAO 8 samples (denoise kept at 16: at 8 its halo read as blades over the bird); a blade outside the view frustum stops in the vertex shader; 3 blade segments, not 4; the tree leaves on Standard, not Physical; no MSAA on a canvas that only ever receives the composer's quad. Alpha-to-coverage for the leaves was not usable: the composer's targets carry no MSAA. framemeter now measures at 100% |
 | 12 | **12-bit normals** in any GLB derived with gltf-transform (8-bit bands a clear coat) | LANDED | the vehicle re-export keeps float normals |
 | 13 | **TRAA + RCAS sharpening** | BLOCKED | TRAA is TSL / WebGPURenderer-only and ghosts in flight (SPIKE.md "could not adopt" 1, 5). RCAS alone could be a WebGL pass and is a candidate after 5 |
-| 14 | **Photographic far field** (8K alps_field backplate, image-based fog dissolve 90-320 m) | NOT APPLICABLE | Swiss valley with a church; the game's range is a 64-190 m heightfield with real parallax and the bird flies (SPIKE.md "could not adopt" 4). Needs a real NZ HDRI |
-| 15 | **WebGPURenderer / TSL node materials** | NOT APPLICABLE | a port of every material and post pass, not a setting (SPIKE.md "could not adopt" 1). Each look is re-expressed in WebGL instead |
-| 16 | **Kea slimmed to 1K WebP** | NOT APPLICABLE | the game already ships 2048 PNG + 1024 WebP fallback (BIRD_STATE 7a); 1K is too soft for 03 / 18 (SPIKE.md's own caveat) |
+| 14 | **Photographic far field** (8K alps_field backplate, image-based fog dissolve 90-320 m) | NEXT (step 1) | Eric, 2026-10-03: "a CC0 alpine or NZ HDRI matched to the plates for the far field, not the Swiss one". Poly Haven has no NZ HDRI; 11 CC0 candidates scored at the strip lens against nz_alps_01/02 (platescore), lago_disola best (5/6, snow peaks over dark forest). The game's range is a 64-190 m heightfield with real parallax and the bird flies, so the dissolve must give way to geometry as the camera climbs |
+| 15 | **WebGPURenderer / TSL node materials** | BLOCKED | a port of every material, every onBeforeCompile and every post pass in the game, not a setting (SPIKE.md "could not adopt" 1), and TRAA, its main payoff, ghosts in flight (row 13). Each LOOK the spike got from it is re-expressed in WebGL instead and tracked in its own row (1b paint, 4 asphalt, 5 grade) |
+| 16 | **Kea slimmed to 1K WebP** | BLOCKED | 1K is too soft for the close bird vantages 03 and 18 (SPIKE.md's own caveat), and the game already ships the 2048 PNG with a 1024 WebP fallback (BIRD_STATE 7a), so the download saving it bought is already had |
 
 ## The test frame
 
@@ -44,6 +45,7 @@ Status: **LANDED** · **IN PROGRESS** · **NEXT** (queued, in order) · **BLOCKE
 |---|---|
 | cars + props on ground | 15.4 ms at auto (settled 80%); 18.8 ms fixed at 100%, the same as before the cars |
 | + trees | auto holds the budget by settling at 70% (1344x756); 20.3-20.7 ms fixed at 100%, so trees cost ~2 ms, all leaf fill |
+| + the budget at 100% (row 0) | **14.41 ms fixed at 100%** (perfstep b2, 3 runs: 14.16 / 14.41 / 14.44); the gate's meter, run last on a warm machine, 16.17. Auto scale now sits at 100% |
 
 ## Done before this file existed (spike adoption pieces 0-1, the bird fix, the perf piece)
 

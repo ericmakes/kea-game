@@ -53,7 +53,7 @@ export const FILM = {
   bloom:   { strength: 0.12, radius: 0.45, threshold: 2.0 },
   // AO darkens contact and crevice only; the scene already carries its own painted shade. Measured
   // at YAVG 154.5 against the plain renderer's 154.5 — it adds shade without lifting exposure.
-  ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45, res: 0.5, clip: 120 },   // res: PERF S2; clip: the AO box's half-width, m
+  ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45, res: 0.5, clip: 120, samples: 8, pdSamples: 16 },   // samples: 2026-10-03, 16 -> 8 for the 100% budget. pdSamples STAYS 16: at 8 the denoise left a halo round the bird that trample.mjs read as 5 blade pixels over it   // res: PERF S2; clip: the AO box's half-width, m
   // a long focus and a narrow aperture: the far hills soften, everything you play in stays sharp
   /* MAXBLUR CAME DOWN FROM 0.003 TO 0.0008, and it is the range that asked for it. The original
      comment here read "a long focus and a narrow aperture: the far hills soften, everything you
@@ -147,8 +147,9 @@ function build(renderer, scene, camera, w, h) {
   ao.setSceneClipBox(new THREE.Box3(new THREE.Vector3(-FILM.ao.clip, -20, -FILM.ao.clip), new THREE.Vector3(FILM.ao.clip, 60, FILM.ao.clip)));
   if (ao.updateGtaoMaterial) {
     ao.updateGtaoMaterial({ distanceExponent: 1.0, radius: FILM.ao.distance,
-      thickness: FILM.ao.thickness, scale: FILM.ao.scale });
+      thickness: FILM.ao.thickness, scale: FILM.ao.scale, samples: FILM.ao.samples });
   }
+  if (ao.updatePdMaterial) ao.updatePdMaterial({ samples: FILM.ao.pdSamples });
   ao.blendIntensity = FILM.ao.blend;
   /* PERF S2 — AO AT HALF RESOLUTION. Occlusion is a low-frequency term, and the pass's own Poisson
      denoise already blurs it; computing it on a quarter of the pixels and letting the blend upsample

@@ -49,6 +49,10 @@ export async function installTrees(K) {
   if (req.length) throw new Error('trees: ' + TREEURL + ' requires ' + req.join(', ') + ' — run tools/derive_tree.mjs');
   let tris = 0;
   gltf.scene.traverse(o => { if (!o.isMesh) return; const g = o.geometry; tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    /* STANDARD, NOT PHYSICAL (2026-10-03): the GLB's IOR/specular extensions make three build a
+       MeshPhysicalMaterial, and for leaf fill that heavier shader was ~0.5-0.8 ms; at foliage range the
+       specular tint it buys is not visible */
+    if (o.material.isMeshPhysicalMaterial) { const sm = new THREE.MeshStandardMaterial(); THREE.MeshStandardMaterial.prototype.copy.call(sm, o.material); o.material = sm; }
     const m = o.material; m.transparent = false; m.alphaTest = 0.5; m.side = THREE.DoubleSide; m.depthWrite = true;
     o.castShadow = o.receiveShadow = true; });
   if (!tris) throw new Error('trees: the tree decoded to no triangles');

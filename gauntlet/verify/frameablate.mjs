@@ -33,12 +33,16 @@ try{
       noao:()=>{ const e=G.post&&G.post.__eyes; G.__ao=G.__ao||[]; (G.post._eyesList?G.post._eyesList():[]).forEach(e=>{ if(e.ao){e.ao.enabled=false;} }); },
       nobloom:()=>{ (G.post._eyesList?G.post._eyesList():[]).forEach(e=>{ e.composer.passes.forEach(p=>{ if(p.constructor.name.includes('Bloom'))p.enabled=false; }); }); },
       scale75:()=>{ G.renderer.setPixelRatio(0.75); },
+      treestd:()=>{ for(const r of G.treeReg||[]) if(r.model)r.model.traverse(o=>{ if(o.isMesh&&o.material&&o.material.isMeshPhysicalMaterial){ o.userData._m=o.material; const m=new THREE.MeshStandardMaterial(); THREE.MeshStandardMaterial.prototype.copy.call(m,o.material); m.alphaTest=0.5; m.side=THREE.DoubleSide; o.material=m; } }); },
+      nocars:()=>{ G.scene.traverse(o=>{ if(o.name&&o.name.startsWith('vehicle_')){ o.userData._v=o.visible; o.visible=false; } }); },
+      carstd:()=>{ G.scene.traverse(o=>{ if(o.isMesh&&o.material&&o.material.isMeshPhysicalMaterial&&!(o.parent&&o.parent.parent&&o.parent.parent.isLOD)){ let v=false; for(let p=o;p;p=p.parent)if(p.name&&p.name.startsWith('vehicle_'))v=true; if(!v)return; o.userData._m=o.material; const m=new THREE.MeshStandardMaterial(); THREE.MeshStandardMaterial.prototype.copy.call(m,o.material); o.material=m; } }); },
       notrees:()=>{ for(const r of G.treeReg||[]) if(r.model)r.model.visible=false; },
       treenoshadow:()=>{ for(const r of G.treeReg||[]) if(r.model)r.model.traverse(o=>{ if(o.isMesh){ o.userData._cs=o.castShadow; o.castShadow=false; } }); },
       sceneonly:()=>{ G.__post=G.__post||G.post; G.post=null; G.renderer.shadowMap.enabled=false; G.scene.traverse(o=>{ if(o.isInstancedMesh)o.visible=false; if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true);} }); G.renderer.setPixelRatio(0.5); },
     };
     window.__restore=()=>{ if(G.__post)G.post=G.__post; G.renderer.shadowMap.enabled=true; G.renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.8));
       for(const r of G.treeReg||[]) if(r.model){ r.model.visible=true; r.model.traverse(o=>{ if(o.isMesh&&o.userData._cs!==undefined)o.castShadow=o.userData._cs; }); }
+      G.scene.traverse(o=>{ if(o.userData._m){ o.material=o.userData._m; delete o.userData._m; } if(o.userData._v!==undefined){ o.visible=o.userData._v; delete o.userData._v; } });
       if(G.grassMesh)G.grassMesh.visible=true; if(G.grassCards)G.grassCards.visible=true; G.scene.traverse(o=>{ if(/^grass_/.test(o.name||'')&&o!==G.grassCards)o.visible=true; });
       (G.post&&G.post._eyesList?G.post._eyesList():[]).forEach(e=>{ if(e.ao)e.ao.enabled=true; e.composer.passes.forEach(p=>{ if(p.constructor.name.includes('Bloom'))p.enabled=true; }); });
       G.scene.traverse(o=>{ if(o.isInstancedMesh)o.visible=true; if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.needsUpdate=true);} }); };

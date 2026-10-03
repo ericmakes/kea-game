@@ -1,0 +1,221 @@
+{
+ "label": "b0_pins",
+ "at": "2026-10-03T01:47:09.723Z",
+ "cost": null,
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 5,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1955,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2945,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1232,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5361,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 54.1652,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0775,
+     "ok": false,
+     "miss": 1.81
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3733,
+     "ok": false,
+     "miss": 0.33
+    },
+    "ridgeP10": {
+     "gv": 0.2685,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1335,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4785,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 48.615,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1859,
+     "ok": false,
+     "miss": 0.25
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 2,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2009,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3917,
+     "ok": false,
+     "miss": 1.21
+    },
+    "snowPatch": {
+     "gv": 0.0978,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5402,
+     "ok": false,
+     "miss": 0.01
+    },
+    "hue": {
+     "gv": 180.268,
+     "ok": false,
+     "miss": 3.44
+    },
+    "sat": {
+     "gv": 0.0642,
+     "ok": false,
+     "miss": 1.94
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3424,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3819,
+     "ok": false,
+     "miss": 1.07
+    },
+    "snowPatch": {
+     "gv": 0.0875,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5726,
+     "ok": false,
+     "miss": 0.24
+    },
+    "hue": {
+     "gv": 46.3127,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3224,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2337,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2342,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0813,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4936,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 126.5361,
+     "ok": false,
+     "miss": 1.65
+    },
+    "sat": {
+     "gv": 0.0281,
+     "ok": false,
+     "miss": 2.26
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 1,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1707,
+     "ok": false,
+     "miss": 0.24
+    },
+    "ridgeP10": {
+     "gv": 0.3516,
+     "ok": false,
+     "miss": 0.61
+    },
+    "snowPatch": {
+     "gv": 0.1199,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5486,
+     "ok": false,
+     "miss": 0.07
+    },
+    "hue": {
+     "gv": 203.845,
+     "ok": false,
+     "miss": 4.23
+    },
+    "sat": {
+     "gv": 0.0646,
+     "ok": false,
+     "miss": 1.93
+    }
+   }
+  }
+ },
+ "ac": false,
+ "refusals": [
+  "the machine is on battery — the target is an AC figure"
+ ]
+}

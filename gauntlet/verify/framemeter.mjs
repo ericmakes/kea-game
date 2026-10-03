@@ -10,7 +10,9 @@
    Plug in to certify. A run the meter itself calls INVALID (software renderer, hidden window, frames
    not drawn) is a finding too.
    It speaks the gate's contract: ALL PASS + exit 0, or FINDINGS + exit 1.
-   Usage: node gauntlet/verify/framemeter.mjs     env: RUNS (3)  BUDGET_MS (16.67) */
+   AT 100% RENDER SCALE (Eric, 2026-10-03: "under the 16.7 ms budget at 100% render scale on this Mac;
+   auto scale is a safety net only"). KEASCALE=1 is set for every run unless the caller overrides it.
+   Usage: node gauntlet/verify/framemeter.mjs     env: RUNS (3)  BUDGET_MS (16.67)  KEASCALE */
 import { execFileSync } from 'child_process';
 import path from 'path'; import url from 'url';
 const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '..', '..');
@@ -21,7 +23,7 @@ if (!ac) fails.push('the machine is on battery power — the frame budget is an 
 const runs = [];
 if (ac) for (let i = 0; i < RUNS; i++) {
   let txt = '';
-  try { txt = execFileSync('node', ['gauntlet/verify/framebudget.mjs'], { cwd: ROOT, encoding: 'utf8', env: { ...process.env, MODES: 'unlocked', JSON: '1' }, maxBuffer: 16 << 20 }); }
+  try { txt = execFileSync('node', ['gauntlet/verify/framebudget.mjs'], { cwd: ROOT, encoding: 'utf8', env: { KEASCALE: '1', ...process.env, MODES: 'unlocked', JSON: '1' }, maxBuffer: 16 << 20 }); }
   catch (e) { txt = String(e.stdout || ''); }                 // OVER BUDGET exits 1 and still prints its JSON
   let j = null; try { j = JSON.parse(txt.slice(txt.indexOf('{'))); } catch (e) { fails.push(`run ${i + 1}: the meter printed no verdict`); continue; }
   const u = j.out.find(r => r.mode === 'unlocked');
@@ -31,8 +33,8 @@ if (ac) for (let i = 0; i < RUNS; i++) {
 const means = runs.map(r => r.mean).sort((a, b) => a - b);
 const med = means.length ? (means.length % 2 ? means[means.length >> 1] : (means[means.length / 2 - 1] + means[means.length / 2]) / 2) : null;
 if (med != null && med > BUDGET) fails.push(`median unlocked mean ${med.toFixed(2)} ms is over the ${BUDGET.toFixed(2)} ms budget (runs ${means.join(', ')})`);
-console.log(`FRAMEMETER ${ac ? 'AC' : 'BATTERY'}  ${runs.length} runs  ${runs[0] ? runs[0].px + '  ' + runs[0].gpu : ''}`);
+console.log(`FRAMEMETER ${ac ? 'AC' : 'BATTERY'}  render scale ${process.env.KEASCALE || '1 (fixed)'}  ${runs.length} runs  ${runs[0] ? runs[0].px + '  ' + runs[0].gpu : ''}`);
 for (const [i, r] of runs.entries()) console.log(`  run ${i + 1}: mean ${r.mean} ms  median ${r.median}  p95 ${r.p95}`);
 console.log(fails.length ? fails.map(f => '    ✗ ' + f).join('\n') + `\nFRAMEMETER: ${fails.length} FINDINGS`
-                         : `FRAMEMETER: ALL PASS — ${med.toFixed(2)} ms a frame, live game, bird flying, inside ${BUDGET.toFixed(2)}`);
+                         : `FRAMEMETER: ALL PASS — ${med.toFixed(2)} ms a frame at ${process.env.KEASCALE ? 'scale ' + process.env.KEASCALE : '100%'}, live game, bird flying, inside ${BUDGET.toFixed(2)}`);
 process.exit(fails.length ? 1 : 0);

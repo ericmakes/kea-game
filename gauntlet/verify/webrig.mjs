@@ -256,9 +256,9 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
      src/shadows.mjs's CASCADE (cascades, size, maxFar, radius, blurSamples...). PERF S6: KEASCALE=<f>
      sets the render scale. All three for like-for-like A/Bs at the vantage. */
   { let cas = null; if (process.env.KEACASCADE) { try { cas = JSON.parse(process.env.KEACASCADE); } catch (e) { throw new Error('webrig: KEACASCADE is not valid JSON — ' + e.message); } }
-    const nocsm = !!process.env.NOCSM, scale = process.env.KEASCALE ? +process.env.KEASCALE : null;
-    if (nocsm || cas || scale) await page.evaluateOnNewDocument((n, c, sc) => {
-      if (n) globalThis.__KEA_NOCSM__ = true; if (c) globalThis.__KEA_CASCADE__ = c; if (sc) globalThis.__KEA_SCALE__ = sc; }, nocsm, cas, scale); }
+    const nocsm = !!process.env.NOCSM, scale = process.env.KEASCALE ? +process.env.KEASCALE : null, noaa = !!process.env.NOAA;
+    if (nocsm || cas || scale || noaa) await page.evaluateOnNewDocument((n, c, sc, na) => {
+      if (n) globalThis.__KEA_NOCSM__ = true; if (c) globalThis.__KEA_CASCADE__ = c; if (sc) globalThis.__KEA_SCALE__ = sc; if (na) globalThis.__KEA_AA__ = false; }, nocsm, cas, scale, noaa); }
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);

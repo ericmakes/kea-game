@@ -44,12 +44,12 @@ export const CASCADE = {
      not move the median frame at all. So: a caster smaller than smallR casts into the NEAR cascade
      only (338 of 810 casters — gravel, bolts, handles — whose shadows are centimetres wide), and the
      cascades past the first re-render every `every[i]` frames, holding still between. */
-  smallR: 0.2, every: [1, 1, 2], proxies: true,
+  smallR: 0.2, every: [1, 2, 4], proxies: true,   // every: 2026-10-03, mid cascade every 2nd frame, far every 4th
   /* recvOnly: ALSO drop every receive-only mesh (ground, slabs) from the shadow pass. OFF, and
      measured off: three's VSM needs its receivers in the map — without them 01_carpark_wide lost the
      big tree's shadow and 12_seal_midpeel grew a dark slab of false shadow right of the caravan. The
      grass and the range stay out (G.noShadowPass): the grass was junk depth at the origin anyway. */
-  recvOnly: false,
+  recvOnly: true,   // ON since PCF (2026-10-03): only VSM needed its receivers in the map
 };
 
 /* SHADOW PROXIES — one draw call per prop per cascade instead of one per part. PERF S4.

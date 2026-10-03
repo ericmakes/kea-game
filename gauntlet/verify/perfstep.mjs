@@ -43,8 +43,10 @@ if (!process.env.SKIPCOST) {
   rec.cost = { runs, meanMs: +med.toFixed(2) };
 }
 if (!process.env.SKIPLOOK) {
-  run(['gauntlet/verify/capture.mjs'], { SHOTS: KEY6.join(',') });
-  const frames = KEY6.map(v => { const src = path.join(ROOT, 'gauntlet/capture', v + '.png'), dst = path.join(OUT, LABEL, v + '.png'); fs.copyFileSync(src, dst); return dst; });
+  /* FROMPINS=1 scores the PINNED frames instead of shooting — the "before" of a piece is the set it starts from */
+  if (!process.env.FROMPINS) run(['gauntlet/verify/capture.mjs'], { SHOTS: KEY6.join(',') });
+  const from = process.env.FROMPINS ? 'gauntlet/capture/baseline' : 'gauntlet/capture';
+  const frames = KEY6.map(v => { const src = path.join(ROOT, from, v + '.png'), dst = path.join(OUT, LABEL, v + '.png'); fs.copyFileSync(src, dst); return dst; });
   const fsj = JSON.parse(run(['gauntlet/verify/framescore.mjs', ...frames], { JSON: '1', WALL: 'bow' }));
   rec.look = {};
   for (const r of fsj) { const v = path.basename(r.frame, '.png'); rec.look[v] = { inCount: r.inCount, rows: Object.fromEntries(r.rows.map(x => [x.k, { gv: +x.gv.toFixed(4), ok: x.ok, miss: +(x.miss || 0).toFixed(2) }])) }; }

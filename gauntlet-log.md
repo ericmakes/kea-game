@@ -6145,3 +6145,31 @@ keep cover) saved 0.4 ms and read thinner at 40 m, so it ships OFF. Auto render 
 INSTRUMENTS: groundtruth read the tree's ground-rooted limb mesh (>4 m^2 in plan) as a 3.4 m floor —
 anything >1 m over the base with no collider is overhead now; control still red (45,145). trample
 parks the sheep too (one more live source of take-to-take noise under gate load).
+
+## 2026-10-03c — SPIKE_ADOPT 0: the budget at 100% render scale (Opus 5.5) — certified b31bbf62
+
+Eric's standing ruling: the spike's frame is the look of record for the whole game, every piece under
+16.7 ms AT 100% RENDER SCALE on this Mac; auto scale is a safety net only. Fixed 100% read 20.3-20.7 ms
+after the trees. FRAMEABLATE AT A FIXED 100% (auto off, so the scale cannot hide a cost): grass ~12.7 ms,
+shadows 5.6, AO 3.4, cars 2.6, trees 2.2. What landed, each measured and each looked at on 01 12 05 14 03
+13 against the pins:
+  PCF shadows, not VSM (crisp contact, the spike's), which lets every receive-only mesh leave the map
+  (CASCADE.recvOnly: VSM needed its receivers, PCF does not); mid and far cascades every 2nd / 4th frame.
+  GTAO 8 samples, its denoise kept at 16 — at 8 the denoise halo round the bird read as 5 blade pixels.
+  THE GRASS: a blade whose anchor is outside the view frustum (+2.5 m margin for the mound pull, lean and
+  height) stops in the vertex shader — exact, the grass casts nothing and AO reads only visible depth —
+  about -2.5 ms; 3 blade segments, not 4, -1.1 ms.
+  Tree leaves on MeshStandard, not the MeshPhysical their IOR/specular extensions build.
+  No MSAA on the canvas: it only ever receives the composer's one full-screen quad (-0.5 ms). Alpha-to-
+  coverage for the leaves was therefore not available either — the composer's targets carry no MSAA.
+COST: 14.41 ms at 100% on AC (perfstep b2_budget100_ac, median of 14.16 / 14.41 / 14.44 — shot with the
+camp_van change also in the tree; the meter flies the carpark, where camp_van is not built); look on the six
+key vantages identical to the pins (01 5/6 02 4/6 06 2/6 11 4/6 12 4/6 07 1/6), ACCEPTED against b0_pins.
+The gate's meter now runs at 100% (framemeter KEASCALE=1) and read 16.17 ms — LAST in the gate, on a
+machine 15 minutes into browser work. The margin there is thin and every later piece is measured against it.
+INSTRUMENT FAULT FOUND AND FIXED: trample.mjs's body mask was B-vs-D (bird shown minus bird hidden),
+which also takes the post chain's halo round the body. Same take, three runs: 1130 / 1130 / 1114 px of
+mask, and the 16 extra were the head's halo over blades BEHIND it — 2 "blades over the bird". The mask is
+now a keyed take (the bird drawn flat magenta): 1477 px at every heading, every run. Control still red
+(trample off: 37-136 blade px over the bird). The step was certified once with the camp_van change in the
+tree (684c6708, 15.90 / 16.36 ms) and again without it for this commit.

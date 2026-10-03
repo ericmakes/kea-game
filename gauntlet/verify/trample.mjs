@@ -8,9 +8,9 @@
    At each heading the chase camera settles behind the bird, then four takes differing ONLY in
    visibility and in the grass's colour:
      K  everything, every grass tier tinted a pure KEY GREEN       K2  K again, after B (noise bracket)
-     B  grass hidden                                               D   grass AND bird hidden
-   mask     = pixels where B and D differ (the bird with no grass in front of it), eroded 2 px;
-              the bird casts no shadow and its blob is hidden for every take, so the mask is the body
+     B  grass hidden                                               Q   grass hidden, the bird keyed flat magenta
+   mask     = the magenta pixels of Q (the bird's body exactly, with no post-chain halo), eroded 2 px;
+              the bird casts no shadow and its blob is hidden for every take
    blades   = mask pixels KEY GREEN in K and not in B: a blade drawn over the bird
    noise    = mask pixels where K and K2 differ; must be 0 or the measurement refuses itself
    VERDICT: blades == 0 and noise == 0 and a non-empty mask at every spot and heading, and the keyed
@@ -94,13 +94,16 @@ try {
   }, { P: POSE, w: W0, CONTROL });
   if (!state.layers) throw new Error('trample: no grass layers carry the blade shader');
   const grassMeshes = `[KEAGAME.G.grassMesh, ...KEAGAME.G.scene.children.filter(o=>o.isInstancedMesh && window.__grassMats.includes(o.material))]`;
-  const shoot = async (grass, bird, key) => {
-    await page.evaluate(([g, b, key, GM]) => {
+  const shoot = async (grass, bird, key, birdKey = false) => {
+    await page.evaluate(([g, b, key, GM, bk]) => {
       for (const o of eval(GM)) if (o) o.visible = g;
       window.__birdM.root.visible = b;
+      window.__birdM.root.traverse(o => { if (!o.isMesh) return;
+        if (bk) { if (!o.userData.__m) { o.userData.__m = o.material; o.material = new THREE.MeshBasicMaterial({ color: 0xff00ff, side: THREE.DoubleSide }); } }
+        else if (o.userData.__m) { o.material = o.userData.__m; delete o.userData.__m; } });
       for (const m of window.__grassMats) { const U = m.userData.keaG; U.__save = U.__save || { a: U.uTintA.value.clone(), b: U.uTintB.value.clone(), c: U.uTintC.value.clone(), base: U.uTintBase.value.clone(), tip: U.uTintTip.value.clone() };
         for (const [n, s] of [['uTintA', 'a'], ['uTintB', 'b'], ['uTintC', 'c'], ['uTintBase', 'base'], ['uTintTip', 'tip']]) U[n].value.copy(key ? new THREE.Vector3(0, 1, 0) : U.__save[s]); }
-    }, [grass, bird, key, grassMeshes]);
+    }, [grass, bird, key, grassMeshes, birdKey]);
     await sleep(350);
     return sharp(await page.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   };
@@ -109,10 +112,15 @@ try {
     await sleep(1500);                                    // the chase camera settles behind the bird
     /* A REFUSED TAKE IS RETAKEN, up to three times (capture.mjs's shotR rule), never averaged in */
     for (let take = 1; take <= 3; take++) {
-    const K = await shoot(true, true, true), B = await shoot(false, true, false), K2 = await shoot(true, true, true), D = await shoot(false, false, false);
+    const K = await shoot(true, true, true), B = await shoot(false, true, false), K2 = await shoot(true, true, true), Q = await shoot(false, true, false, true);
     const W = K.info.width, Hh = K.info.height, n = W * Hh, M = new Uint8Array(n);
     const dif = (p, q, i) => Math.max(Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2]));
-    for (let j = 0; j < n; j++) M[j] = dif(B.data, D.data, j * 3) > 12 ? 1 : 0;
+    /* THE MASK IS THE BIRD KEYED FLAT MAGENTA (2026-10-03), not B-vs-D. B-vs-D also took in the post
+       chain's halo round the body (bloom, GTAO's contact shade): measured, the same take read a 1114 px
+       mask one run and 1130 the next, and the extra 16 were the head's halo over blades BEHIND it, which
+       then counted as 2 blades over the bird. The keyed take is the body and nothing else. */
+    const KEYB = (d, i) => d[i] > d[i + 1] + 25 && d[i + 2] > d[i + 1] + 25;
+    for (let j = 0; j < n; j++) M[j] = KEYB(Q.data, j * 3) ? 1 : 0;
     const interior = j => { if (!M[j]) return false; const xx = j % W, yy = (j / W) | 0;
       if (xx < 2 || yy < 2 || xx >= W - 2 || yy >= Hh - 2) return false;
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (!M[j + dy * W + dx]) return false; return true; };
