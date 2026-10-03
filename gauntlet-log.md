@@ -6351,3 +6351,12 @@ density is out for ship and candidate alike (0.354 / 0.367), so it is no longer 
 the sky (12 is 17% sky; its "snow" is the white caravan, whose highlight edges AgX softens). Grade contrast restores it,
 non-monotonically (1.25 0.0548, 1.30 0.0549, 1.35 0.0580): that is tuning Eric's ruled look to a metric, so it is
 HELD for Eric. Against the spike the candidate closes ridge p10 (0.282 -> 0.187) but not saturation (0.118 vs 0.222-0.319).
+
+## 2026-10-03n — SPIKE_ADOPT 20: Higgsfield requests for the bench, bin and DOC board (Opus 5.5) — src unchanged (c82287a9)
+
+Eric's ruling: the three go to Higgsfield image-to-3D. assets/models/higgsfield_requests/ holds a reference image each
+(gpt_image_2_5, 0.25 credits each; jobs a6eecf6f / 4d4d8751 / c13398b2) and REQUESTS.md with the one-line specs from
+MODEL_MANIFEST (dimensions, origin, budget, the colliders and anchors the models must fit). Found while writing the
+bin's: it is not a drop-in — PECK BIN LID tweens the primitive's own lid, so the model's lid must be its own node and
+models.mjs must bind it before the swap; recorded in the spec. The PNGs sit in Vite's publicDir (3.8 MB into dist) because
+that is the folder Eric named; REQUESTS.md says to move them out once the GLBs land.
