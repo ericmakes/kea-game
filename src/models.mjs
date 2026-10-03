@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { maskCutouts } from './alphamode.mjs';
+import { loadVehicles, buildVehicle } from './vehicles.mjs';
 const ALPHASEEN=new Map();
 
 /* ONE FETCH PER URL, however many props share it — four wheelie bins are one download. Keyed on
@@ -96,8 +97,33 @@ export async function installModels(K){
   const reg=(K.G.propReg||[]).filter(p=>p.source==='model');
   K.G.models={mode:reg.length?'loading':'none',want:reg.length,swapped:[],failed:[],detail:{}};
   if(!reg.length){ K.G.models.mode='none'; return K.G.models; }
+  /* SPIKE_ADOPT 1: TRAFFIC WEARS THE SPIKE'S HATCH TOO. Traffic is spawned mid-run and has no registry
+     row, so the dress is a hook mkCar calls; cars already on the road when the file lands are dressed
+     here. The primitive body is hidden, the wipers and aerial (added after it) stay. */
+  if(reg.some(p=>p.entry.vehicle)){
+    try{ const V=await loadVehicles(reg.find(p=>p.entry.vehicle).entry.url);
+      const TRAFFICPAINT=[0x24476b,0xe9e8e3,0xe0a91c,0x6b3f72,0x5d646b];
+      K.G.vehicleDress=(car,type,color)=>{ if(car.vehicleModel)return;
+        const v=buildVehicle(V,{node:type==='ute'?'ute':'hatch', paint:TRAFFICPAINT[Math.abs(Math.round((car.x||0)*7+(car.z||0)))%TRAFFICPAINT.length]});
+        for(const o of car.body||[])o.visible=false;
+        car.g.add(v); car.vehicleModel=v; };
+      for(const c of K.G.cars||[]) if(c.traffic) K.G.vehicleDress(c,c.type,null);
+    }catch(e){ console.error('models: traffic stays primitive —',e); }
+  }
   for(const p of reg){
     const url=p.entry.url;
+    if(p.entry.vehicle){
+      try{ const V=await loadVehicles(url); const v=buildVehicle(V,p.entry.vehicle);
+        for(const o of p.body)if(!o.userData.keepWithModel)o.visible=false;   // a mission object (the DOC crate) stays
+        p.group.add(v);
+        p.model={root:v,yaw:v,url,scale:1,lift:0,measured:null}; p.mode='model';
+        K.G.models.swapped.push(p.id);
+        K.G.models.detail[p.id]={url,vehicle:p.entry.vehicle.node,hidden:p.body.length,
+          colliders:p.colliders.length,anchors:Object.keys(p.entry.anchors).length};
+      }catch(e){ K.G.models.failed.push({id:p.id,url,why:String(e&&e.message||e)}); for(const o of p.body)o.visible=true;
+        console.error('models: '+p.id+' vehicle did not build, staying on the primitive —',e); }
+      continue;
+    }
     let gltf;
     try{ gltf=await loadGLB(url); }
     catch(e){

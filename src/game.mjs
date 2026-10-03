@@ -5074,6 +5074,27 @@ function drawnGroundExplain(x,z){ const D=DRAWN; if(!D)return null; const out=[]
 /* what the lookup found, for the batteries (null in HEADLESS) */
 function drawnGroundState(){ const D=DRAWN; return D?{planes:D.planes.length,slabs:D.slabs.length,cast:D.cast.length,live:D.live.length,
   castAt:D.cast.map(c=>[+((c.x0+c.x1)/2).toFixed(2),+((c.z0+c.z1)/2).toFixed(2),+c.top.toFixed(3)])}:null; }
+/* PROPS ON THE DRAWN GROUND — SPIKE_ADOPT 2 (2026-10-03). People and sheep stood at logic height, 14 cm
+   inside the carpark seal, like the bird did. Their update code writes their group's y in half a dozen
+   places (asleep, sprawled, on the ladder, launched), so the lift goes ROUND the update rather than into
+   it: last frame's lift is taken off before the update runs — so every write it makes is the logic
+   height it always was — and this frame's is added after. It cannot accumulate and no logic reads it.
+   Cars stand on the seal by their placement (CARSLAB); this is for things that walk. */
+/* the primitive people's boots reach 31 mm below their own origin at the stance — measured by
+   gauntlet/verify/vehicles.mjs, the same for every human on and off the seal — so they are drawn that
+   much higher too, or "on the ground" would still mean 3 cm into it */
+const HUMANFOOT=0.0314;
+function liftAround(o,fn){
+  const g=o.g; if(g)g.position.y-=(o._lift||0);
+  fn();
+  const L=(g&&!HEADLESS)?drawnLift(o.x!==undefined?o.x:g.position.x,o.z!==undefined?o.z:g.position.z,g.position.y)+HUMANFOOT:0;
+  if(g)g.position.y+=L; o._lift=L;
+}
+function liftSheep(fn){
+  const S=G.sheep||[]; for(const s of S)if(s.g)s.g.position.y-=(s._lift||0);
+  fn();
+  for(const s of S){ if(!s.g)continue; const L=HEADLESS?0:drawnLift(s.g.position.x,s.g.position.z,s.g.position.y); s.g.position.y+=L; s._lift=L; }
+}
 /* how far to draw a walker above its logic y so it stands on the drawn ground (0 in HEADLESS) */
 function drawnLift(x,z,y){
   if(!DRAWN)return 0;
@@ -6239,6 +6260,44 @@ const PROPDEFAULTS={
   material:{family:null,keepModelPBR:true,nightTint:false,color:null},
   build:null,
 };
+/* ---- THE SPIKE'S BODIES DECIDE WHERE A CAR'S PARTS ARE — SPIKE_ADOPT 1 (2026-10-03) ----
+   The parked four, the traffic and the DOC ute wear the render spike's real-sized SDF bodies
+   (src/vehicles.mjs, tools/derive_vehicles.mjs): a 3.95 m hatch and a 5.3 m ute where the primitive
+   was one 4.2 m box for both. So the points the missions and the bird use are re-declared HERE,
+   measured off the bodies (the zone bounds of vehicles_plain.glb), not carried over:
+     WIPERS sat at +z, on what was really the REAR window — the primitive's lamps say front is -z, and
+       traffic drives -z first. On the real body they sit on the cowl at the foot of the windscreen.
+     THE AERIAL goes on the rear roof, THE ROOF perch on the real roof.
+     THE COLLIDERS ARE THE REAL BODY, measured from the drawn tarmac: a bird perched at the old 1.35
+       stood inside a 1.49 m roof 0.14 m up the seal — and one roof-high box over the bonnet put a
+       bird reaching for a wiper half a metre above it. So a bonnet box and a cabin box, and the ute's
+       tray it can hop down into — and ONE SOLID ENVELOPE under them at the lowest top. Solid boxes side
+       by side trap a walker in their seam: pushOut shoves a sheep out of the cab into the tray and the
+       tray shoves it straight back (harness-newbuilds' sheep-in-the-ute found it). So the envelope
+       keeps everything below bonnet height out of the whole car, the bonnet and tray are perches, and
+       only the cab (or the hatch's cabin) blocks a bird walking along the bonnet or the tray. The
+       envelope is FIRST, so car.collider — what bunting moves — is the whole car.
+   CARSLAB is the carpark seal's drawn top, which every parked car now stands on (SPIKE_ADOPT 2,
+   props on the drawn ground): the placement's y, so the body, the wipers and every anchor come with
+   it and nothing reads it twice. */
+const CARSLAB=0.14;
+const CARKIND={
+  hatch:{collider:[{kind:'box',z:0,w:2.1,d:3.96,top:CARSLAB+0.98,solid:true},          // the envelope
+                   {kind:'box',z:-1.30,w:2.1,d:1.36,top:CARSLAB+0.98,solid:false},    // the bonnet (a perch)
+                   {kind:'box',z:0.68,w:2.1,d:2.60,top:CARSLAB+1.49,solid:true}],     // the cabin
+         anchors:{wiperL:{x:-0.38,y:0.99,z:-0.66}, wiperR:{x:0.38,y:0.99,z:-0.66},
+                  aerial:{x:0.55,y:1.40,z:1.15},  roof:{x:0,y:1.49,z:0.3}}},
+  ute:  {collider:[{kind:'box',z:0,w:2.25,d:5.30,top:CARSLAB+0.90,solid:true},         // the envelope
+                   {kind:'box',z:-1.785,w:2.25,d:1.73,top:CARSLAB+1.12,solid:false}, // the bonnet (a perch)
+                   {kind:'box',z:-0.285,w:2.25,d:1.27,top:CARSLAB+1.80,solid:true},  // the cab
+                   {kind:'box',z:1.50,w:2.25,d:2.30,top:CARSLAB+0.90,solid:false}],  // the tray FLOOR (a perch)
+         anchors:{wiperL:{x:-0.40,y:1.15,z:-0.96}, wiperR:{x:0.40,y:1.15,z:-0.96},
+                  aerial:{x:0.60,y:1.79,z:0.15},  roof:{x:0,y:1.80,z:-0.3}}},
+};
+/* the spike's paint for each of the four bays (src/main.js there), sRGB hex */
+const CARPAINT={car_red:{paint:0xa8261c}, car_blue:{paint:0x24476b,metal:0.45,rough:0.30},
+                car_white:{paint:0xe9e8e3,rough:0.30,alloy:0x8a8e92}, car_yellow:{paint:0xe0a91c}};
+const VEHICLEURL='models/vehicles/vehicles_plain.glb';
 function defineProp(id,e){
   if(PROPS[id])throw new Error('defineProp: '+id+' is already registered');
   const d=PROPDEFAULTS;
@@ -6251,6 +6310,7 @@ function defineProp(id,e){
     collider:(e.collider||d.collider).slice(),
     anchors:Object.assign({},e.anchors),
     material:Object.assign({},d.material,e.material),
+    vehicle:e.vehicle?Object.assign({},e.vehicle):null,   // SPIKE_ADOPT 1: a spike vehicle body (src/vehicles.mjs)
     build:e.build};
   if(typeof o.build!=='function')throw new Error('defineProp: '+id+' has no primitive builder');
   /* A MISSPELLED FAMILY MUST NOT LOOK LIKE A POLICY. 'corrugated' is not a family and 'metal' has
@@ -6602,7 +6662,9 @@ function buildCarpark(){
   addHint('jam',0,0.8,34,5,'stand your ground and see what the traffic does');
   addHint('q_median',0,0.4,34,4,'the centre line: stay on foot, collect a honk');
   addHint('airmail',0,4.5,30,8,'anything dropped from way up here counts as air mail');
-  addPeck({label:'PECK THE UTE',needHits:2,getPos:()=>({x:12,y:1.0,z:7}),range:1.25,
+  /* on the DOC ute's driver door (SPIKE_ADOPT 1): a fixed point at the ute's middle is under a 1.80 m
+     cab now, and the bonnet is where Rex leaves his keys */
+  addPeck({label:'PECK THE UTE',needHits:2,getPos:()=>{ const P=propPlaced('doc_ute'); return P?P.anchor('door'):{x:12,y:1.0,z:7}; },range:1.25,
     onDone(p){ award(12,'UTE: PECKED. IT HAD IT COMING.',p); done('q_peck'); AU.pop(); }});
 
   { // grunge-lite v2 (2026-08-28): the country is old, and the wear reads the surface it is worn into
@@ -6704,7 +6766,7 @@ function castCarpark(){
 }
 defineBiome('carpark',{label:'THE CARPARK',build:buildCarpark,cast:castCarpark,missions:missionsCarpark,
   anchor:{x:7,y:26,z:34, lx:7,ly:1,lz:-11},
-  traffic:{up:32.2,down:35.8,x:115}});      // the two lanes of the road along z 34, where they have always been
+  traffic:{up:32.2,down:35.8,x:115,y:0.12}});   // y: the road slab's drawn top (SPIKE_ADOPT 2)      // the two lanes of the road along z 34, where they have always been
 
 /* ---------- THE CLUB SKI FIELD (TODO 39, the first new map) ----------
    36 built the seam, 37 built the brochure and 38 built the flyover, and no player could reach any
@@ -7967,7 +8029,7 @@ defineBiome('village',{label:'THE VILLAGE',build:buildVillage,cast:castVillage,
   snow:VILLSNOW,
   /* THE FIRST NEW MAP THAT DECLARES ROAD LANES. The two lanes of the main street, at the z the
      street is actually built on, and the spawn distance the carpark uses. */
-  traffic:{up:VILLST.z-1.75, down:VILLST.z+1.75, x:115}});
+  traffic:{up:VILLST.z-1.75, down:VILLST.z+1.75, x:115, y:0.16}});
 
 
 /* ---------- THE BRAIDED RIVER (RIVER.md, the fifth map) ----------
@@ -9754,9 +9816,12 @@ function buildSignBody(g,P,text){
    the animation moves, an anchor is what the mission measures from, and the seam only guarantees
    the second. A model swap that brought no tarp mesh would lose the wobble and keep the mission,
    which is the right way round. */
+/* SPIKE_ADOPT 1: the spike's box trailer under its tarp, turned so its drawbar points -x as the
+   primitive's does; the tarp anchor is the middle of the spike's tarp either way. */
 defineProp('trailer',{
-  biome:'carpark', at:{x:-14,z:20},
-  collider:[{kind:'box',w:2.6,d:1.6,top:1.1,solid:true}],
+  biome:'carpark', at:{x:-14,y:CARSLAB,z:20},
+  source:'model', url:VEHICLEURL, vehicle:{node:'trailer',ry:Math.PI/2},
+  collider:[{kind:'box',w:2.6,d:1.6,top:CARSLAB+1.37,solid:true}],
   anchors:{tarp:{x:0,y:1.0,z:0},bed:{x:0,y:1.1,z:0}},
   material:{family:null,nightTint:false},
   build(g,p){
@@ -9778,6 +9843,9 @@ function buildTrailer(){
     keepMesh:true,
     onDone(p){ AU.whoosh(); AU.rip();
       (tarp.userData.straps||[]).forEach(st=>st.visible=false);
+      /* the spike's tarp, if the model is on: it comes off with the primitive's */
+      if(P.model&&P.model.root){ const mt=[]; P.model.root.traverse(o=>{ if(o.isMesh&&o.userData.zone==='tarp')mt.push(o); });
+        TW.add(0.7,u=>{ for(const o of mt)o.scale.y=Math.max(0.02,1-u); },()=>{ for(const o of mt)o.visible=false; }); }
       TW.add(0.7,u=>{ tarp.position.z=2.4*u; tarp.rotation.x=1.3*u; tarp.position.y=0.95+Math.sin(u*Math.PI)*0.9; },
         ()=>{ tarp.visible=false; burst({x:x,y:0.8,z:z+2.2},0x62A0A8,10); });
       spawnLoose('spanner',PB.keys,{x:x-0.5,y:1.0,z:z},{shiny:true});
@@ -9914,26 +9982,24 @@ function spawnLoose(name,builder,p,opts){
    worked only because addBoxCollider had just pushed it; the placement hands back its own colliders
    by identity, which is both clearer and immune to anything else pushing in between. */
 function carEntry(id,x,z,ry,color,type){
+  const K=CARKIND[type];
   return defineProp(id,{
-    biome:'carpark', at:{x,z,ry},
-    collider:[{kind:'box',w:2.2,d:4.3,top:1.35,solid:true}],
-    /* the two wiper roots and the aerial root, in the car's own frame — the anchors the RIP WIPER
-       and SNAP AERIAL missions have always measured from, named at last. `wsz` is the windscreen
-       set-back, which differs between a hatch and a ute. */
-    anchors:{wiperL:{x:-0.45,y:0.92,z:type==='ute'?0.35:0.85},
-             wiperR:{x: 0.45,y:0.92,z:type==='ute'?0.35:0.85},
-             aerial:{x:0.8,y:1.35,z:-1.3},
-             roof  :{x:0,y:1.42,z:type==='ute'?-0.7:-0.2}},
+    biome:'carpark', at:{x,y:CARSLAB,z,ry},
+    source:'model', url:VEHICLEURL, vehicle:Object.assign({node:type},CARPAINT[id]),
+    collider:K.collider.map(c=>Object.assign({},c)),
+    anchors:JSON.parse(JSON.stringify(K.anchors)),
     material:{family:null,nightTint:false},
     build(g,p){ p.car=mkCarBody(g,p,color,type); },
   });
 }
-function mkCar(x,z,ry,color,type){
-  const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=ry; G.scene.add(g);
+function mkCar(x,z,ry,color,type,y){
+  const g=new THREE.Group(); g.position.set(x,y||0,z); g.rotation.y=ry; G.scene.add(g);
   const car=mkCarBody(g,null,color,type);
   car.x=x; car.z=z; car.ry=ry;
+  car.body=g.children.slice();                   // what a spike body replaces (G.vehicleDress)
   addBoxCollider(x,z,2.2,4.3,1.35,true); car.collider=G.colliders[G.colliders.length-1];
-  mkCarTears(g,car);
+  mkCarTears(g,car,CARKIND[type]&&CARKIND[type].anchors);
+  if(G.vehicleDress)G.vehicleDress(car,type,color);
   return car;
 }
 function mkCarBody(g,P,color,type){
@@ -9959,11 +10025,13 @@ function mkCarBody(g,P,color,type){
   if(P){ P.collide(); car.collider=P.colliders[0]; }
   return car;
 }
-function mkCarTears(g,car){
-  // wipers ×2 at windscreen base
-  const wsz=car.type==='ute'?0.35:0.85;
+function mkCarTears(g,car,A){
+  /* wipers x2 and the aerial, at the car's DECLARED anchors (CARKIND) — the wipers on the cowl at the
+     foot of the real windscreen */
+  A=A||CARKIND[car.type]&&CARKIND[car.type].anchors;
   for(let i=0;i<2;i++){
-    const wg=new THREE.Group(); wg.position.set(-0.45+i*0.9,0.92,wsz); wg.rotation.z=0.5; g.add(wg); PB.wiper(wg);
+    const a=i?A.wiperR:A.wiperL;
+    const wg=new THREE.Group(); wg.position.set(a.x,a.y,a.z); wg.rotation.z=0.5; g.add(wg); PB.wiper(wg);
     const t=addTear({label:'RIP WIPER',need:1.4,mesh:wg,car,owner:'driver',mission:'wiper',range:1.6,air:true,fx:'snapoff',
       getPos:()=>{const v=new THREE.Vector3();wg.getWorldPosition(v);return v;},
       onDone(p){ G.stats.wipers++; spawnLoose('wiper',PB.wiper,p,{owner:null});
@@ -9971,7 +10039,7 @@ function mkCarTears(g,car){
     car.wipers.push(t);
   }
   // aerial on rear
-  const ag=new THREE.Group(); ag.position.set(0.8,1.35,-1.3); g.add(ag); cyl(0.02,0.03,0.8,PAL.metal,0,0.4,0,ag,6);
+  const ag=new THREE.Group(); ag.position.set(A.aerial.x,A.aerial.y,A.aerial.z); g.add(ag); cyl(0.02,0.03,0.8,PAL.metal,0,0.4,0,ag,6);
   addTear({label:'SNAP AERIAL',need:1.2,mesh:ag,car,owner:'driver',range:1.6,air:true,fx:'snapoff',
     getPos:()=>{const v=new THREE.Vector3();ag.getWorldPosition(v);v.y+=0.3;return v;},bendy:ag,
     onDone(p){ spawnLoose('aerial',PB.aerial,p,{shiny:true}); award(15,'AERIAL: SNAPPED',p); noise(p,7,'misdeed',null,car); }});
@@ -9984,7 +10052,8 @@ carEntry('car_white',  4.2,16.4,0,PAL.white, 'ute');
 carEntry('car_yellow',10.8,16.4,0,PAL.yellow,'hatch');
 function placeCar(id){
   const P=placeProp(id), car=P.car;
-  mkCarTears(P.group,car);
+  mkCarTears(P.group,car,P.entry.anchors);
+  car.colliders=P.colliders;                     // the ute has two: the cab and the tray
   return car;
 }
 
@@ -9998,24 +10067,33 @@ function placeCar(id){
    THE DRAWBAR COLLIDER STOPS BEING TRIGONOMETRY AT THE CALL SITE. It was
    addBoxCollider(x+Math.sin(0.2)*3.4, z+Math.cos(0.2)*3.4, ..., 0.2) — the van's own yaw written
    out by hand in two places. In the entry it is simply local z 3.4, and the placement rotates it. */
+/* SPIKE_ADOPT 1: THE CARAVAN IS THE SPIKE'S. Its drawbar is at -z, the game's at +z, so it is
+   MIRRORED in z (src/vehicles.mjs), which keeps its door on +x where the seal has always been. So the
+   door is where the MODEL'S door is — wall x 1.14, centre z -0.95, y 0.72..2.21 — and every point
+   here is re-declared off it. The primitive body is now a STAND-IN for the model, narrowed so its
+   skin lands at the model's wall (1.136) and with its door at the model's door, every wall-side
+   layer shifted by VANX: so headless, which never sees the model, still tests a door that is where
+   the drawn one is, by the same flush/stack/bead rules (harness-everything's van-door section). */
+const VANX=-0.34, VANDZ=-0.95, VANDY=1.46;
 defineProp('campervan',{
-  biome:'carpark', at:{x:-11,z:8,ry:0.2},
-  collider:[{kind:'box',w:2.8,d:5.8,top:2.5,solid:true},
-            {kind:'box',x:0,z:3.4,w:0.9,d:1.5,top:0.6,solid:true}],   // the drawbar
-  anchors:{door :{x:1.50,y:1.02,z:0.6},      // the door centre, in the wall plane the bead runs in
-           step :{x:1.61,y:0.28,z:0.6},
-           roof :{x:0,y:2.5,z:0},
-           mirrorL:{x:-1.3,y:1.8,z:-2.6}, mirrorR:{x:1.3,y:1.8,z:-2.6},
-           drawbar:{x:0,y:0.46,z:3.92}},
+  biome:'carpark', at:{x:-11,y:CARSLAB,z:8,ry:0.2},
+  source:'model', url:VEHICLEURL, vehicle:{node:'caravan',paint:0xeeede8,rough:0.30,coat:0.6,mirrorZ:true},
+  collider:[{kind:'box',w:2.28,d:5.0,top:CARSLAB+2.55,solid:true},   // 2.28: the model's wall, so the seal frontier is outside it
+            {kind:'box',x:0,z:3.3,w:0.9,d:1.4,top:CARSLAB+0.75,solid:true}],   // the drawbar
+  anchors:{door :{x:1.50+VANX,y:VANDY,z:VANDZ},   // the door centre, in the wall plane the bead runs in
+           step :{x:1.61+VANX,y:0.50,z:VANDZ},
+           roof :{x:0,y:2.55,z:0},
+           mirrorL:{x:-1.2,y:1.8,z:-2.45}, mirrorR:{x:1.2,y:1.8,z:-2.45},
+           drawbar:{x:0,y:0.45,z:3.92}},
   material:{family:null,nightTint:false},
   build(g,p){ p.van=mkCampervanBody(g,p); },
 });
 function mkCampervan(){
   const P=placeProp('campervan'), g=P.group, x=P.at.x, z=P.at.z;
-  G.vanTop={x,z,top:2.5,w:1.2,d:2.7};
+  G.vanTop={x,z,top:CARSLAB+2.55,w:1.14,d:2.5};
   // Registered the way G.wear and G.stones are: a data record with the meshes on it, so the gate
   // can read the door orientation off the scene instead of a reader projecting it out of dims.
-  G.vanDoor=Object.assign({axis:'x',wallAt:1.47,cz:0.6,cy:1.02,group:g},P.doorParts);
+  G.vanDoor=Object.assign({axis:'x',wallAt:1.47+VANX,cz:VANDZ,cy:VANDY,group:g},P.doorParts);
   // door rubber seal — worked off bit by bit with the beak, comes away intact
   { const pth=[]; // beading around the REORIENTED frame edges: up the handle edge, across the head, down the hinge edge
     // The path was ALREADY drawn in the wall plane (one x, varying y and z) - it was the slabs that
@@ -10025,15 +10103,18 @@ function mkCampervan(){
     // which puts it BETWEEN the frame face (1.495) and the door face (1.516) - a seam bead - and
     // 0.255 further from the van than before, so the tear reach (range 1.7) only gets easier.
     // Segment counts 5 + 3 + 4 are held deliberately: N = path.length-1 = 12 steps (FLAKES law 10).
-    for(let i=0;i<=5;i++)pth.push({x:1.50,y:0.27+i*0.30,z:0.12});
-    for(let i=1;i<=3;i++)pth.push({x:1.50,y:1.77,z:0.12+i*0.32});
-    for(let i=1;i<=4;i++)pth.push({x:1.50,y:1.77-i*0.375,z:1.08});
+    /* SPIKE_ADOPT 1: the same 5 + 3 + 4 around the MODEL's door (z -1.28..-0.62, y 0.72..2.21) */
+    const X0=1.50+VANX, ZA=VANDZ-0.30, ZB=VANDZ+0.30, YA=0.76, YB=2.16;
+    for(let i=0;i<=5;i++)pth.push({x:X0,y:YA+i*(YB-YA)/5,z:ZA});
+    for(let i=1;i<=3;i++)pth.push({x:X0,y:YB,z:ZA+i*(ZB-ZA)/3});
+    for(let i=1;i<=4;i++)pth.push({x:X0,y:YB-i*(YB-YA)/4,z:ZB});
     addStrip({group:g,path:pth,thick:{x:0.05,y:0.055,z:0.055},color:0x1A1D20,
       label:'WORK THE DOOR SEAL',need:0.55,range:1.7,owner:'trish',mission:'seal',
       propName:'door seal',propBuilder:PB.longSeal,points:45,doneText:'THE WHOLE SEAL. INTACT.',noiseAmt:9});
   }
   // wing mirrors ×2
-  for(const s of [-1,1]){ const mg=new THREE.Group(); mg.position.set(s*1.3,1.8,-2.6); g.add(mg); PB.mirror(mg);
+  for(const s of [-1,1]){ const ma=P.entry.anchors[s<0?'mirrorL':'mirrorR'];
+    const mg=new THREE.Group(); mg.position.set(ma.x,ma.y,ma.z); g.add(mg); PB.mirror(mg);
     addTear({label:'RIP MIRROR',need:1.6,mesh:mg,owner:'trish',range:1.6,air:true,fx:'snapoff',
       getPos:()=>{const v=new THREE.Vector3();mg.getWorldPosition(v);return v;},
       onDone(p){ spawnLoose('wing mirror',PB.mirror,p,{shiny:true,owner:'trish'}); award(20,'MIRROR, MIRROR, GONE',p); noise(p,8,'misdeed','trish'); }});
@@ -10041,14 +10122,14 @@ function mkCampervan(){
   return {g,x,z,parked:true,van:true};
 }
 function mkCampervanBody(g,P){
-  const shell=rbox(2.4,2.1,5.6,0.3,PAL.white,0,1.35,0,g); hull(shell,0.02);
-  rbox(2.56,0.6,5.7,0.2,0,0,0.85,0,g,{noshadow:true,mats:mat(0x1E2226)}); // Crusader black skirt
-  rbox(2.56,0.12,5.7,0.05,0,0,1.22,0,g,{noshadow:true,mats:mat(0x7BC043)}); // green accent stripe
-  rbox(2.565,0.05,5.7,0.02,0,0,1.33,0,g,{noshadow:true,mats:mat(0x2A2E33)}); // charcoal pinline
-  for(const wz of [-1.5,-0.3,1.8]){ rbox(0.06,0.7,0.9,0.04,0x3A4046,1.225,1.72,wz,g,{noshadow:true});
-    pane(0.05,0.56,0.76,0.03,0x9FB8C4,1.25,1.72,wz,g); }
-  for(const wz of [-1.3,0.3,1.7]){ rbox(0.06,0.7,0.9,0.04,0x3A4046,-1.225,1.72,wz,g,{noshadow:true});
-    pane(0.05,0.56,0.76,0.03,0x9FB8C4,-1.25,1.72,wz,g); }
+  const shell=rbox(1.72,2.1,5.6,0.3,PAL.white,0,1.62,0,g); hull(shell,0.02);
+  rbox(1.90,0.6,5.7,0.2,0,0,0.85,0,g,{noshadow:true,mats:mat(0x1E2226)}); // Crusader black skirt
+  rbox(1.90,0.12,5.7,0.05,0,0,1.22,0,g,{noshadow:true,mats:mat(0x7BC043)}); // green accent stripe
+  rbox(1.905,0.05,5.7,0.02,0,0,1.33,0,g,{noshadow:true,mats:mat(0x2A2E33)}); // charcoal pinline
+  for(const wz of [-1.5,-0.3,1.8]){ rbox(0.06,0.7,0.9,0.04,0x3A4046,1.225+VANX,1.72,wz,g,{noshadow:true});
+    pane(0.05,0.56,0.76,0.03,0x9FB8C4,1.25+VANX,1.72,wz,g); }
+  for(const wz of [-1.3,0.3,1.7]){ rbox(0.06,0.7,0.9,0.04,0x3A4046,-1.225-VANX,1.72,wz,g,{noshadow:true});
+    pane(0.05,0.56,0.76,0.03,0x9FB8C4,-1.25-VANX,1.72,wz,g); }
   pane(1.7,0.55,0.05,0.04,0x9FB8C4,0,1.75,2.79,g); // front window band
   { // the caravan silhouette: A-frame drawbar, coupling, jockey wheel, gas bottle
     const b1=cyl(0.045,0.045,1.3,PAL.metal,-0.42,0.42,3.32,g,7); b1.rotation.x=1.57; b1.rotation.y=0.32;
@@ -10069,24 +10150,26 @@ function mkCampervanBody(g,P){
   // band, and the 2.56-wide skirt reaches 1.464 over y 0.366..1.334. The outer skin at this door is
   // therefore x ~1.47, not 1.2, and the layering has to start from there or the door is inside the
   // van. Faces land at 1.495 frame, 1.516 door, 1.535 glass - each 0.02 proud of the one behind.
-  const dFrame=rbox(0.03,1.56,1.04,0.04,0x2E3338,1.467,1.02,0.6,g,{noshadow:true}); // door frame
-  const dDoor=rbox(0.04,1.48,0.96,0.045,0x23272B,1.478,1.02,0.6,g,{noshadow:true}); // the door itself — Crusader black
-  const dPane=pane(0.045,0.95,0.3,0.03,0x9FB8C4,1.493,1.22,0.6,g); // tall narrow door pane
-  const dGrip=sph(0.05,PAL.metal,1.52,0.98,0.24,g,6); // handle — proud of the glass face, on the door
+  const dFrame=rbox(0.03,1.56,1.04,0.04,0x2E3338,1.467+VANX,VANDY,VANDZ,g,{noshadow:true}); // door frame
+  const dDoor=rbox(0.04,1.48,0.96,0.045,0x23272B,1.478+VANX,VANDY,VANDZ,g,{noshadow:true}); // the door itself — Crusader black
+  const dPane=pane(0.045,0.95,0.3,0.03,0x9FB8C4,1.493+VANX,VANDY+0.20,VANDZ,g); // tall narrow door pane
+  const dGrip=sph(0.05,PAL.metal,1.52+VANX,VANDY-0.04,VANDZ-0.36,g,6); // handle — proud of the glass face, on the door
   rbox(1.6,0.14,2.6,0.05,PAL.white,0,2.48,0.4,g,{noshadow:true}); cyl(0.14,0.18,0.16,PAL.metal,-0.5,2.56,-1.2,g,8); // roof pod + vent
-  rbox(0.06,0.05,3.4,0.02,PAL.metal,1.23,2.34,0.2,g,{noshadow:true}); // awning rail
+  rbox(0.06,0.05,3.4,0.02,PAL.metal,1.23+VANX,2.34,0.2,g,{noshadow:true}); // awning rail
   for(const sdx of [-1,1]){ // tandem axles: two wheels under one long fender (Crusader)
-    for(const twz of [-1.15,-0.45]){
-      const wh=cyl(0.36,0.36,0.16,0x23262B,sdx*1.27,0.36,twz,g,14); wh.rotation.z=1.57;
-      const hub=cyl(0.13,0.13,0.17,0x1B1E22,sdx*1.27,0.36,twz,g,10); hub.rotation.z=1.57;
-      const hcap=cyl(0.045,0.045,0.18,PAL.metal,sdx*1.27,0.36,twz,g,8); hcap.rotation.z=1.57; }
-    rbox(0.2,0.1,1.0,0.04,PAL.white,sdx*1.27,0.82,-0.9,g,{noshadow:true});
-    const a1=rbox(0.2,0.1,0.5,0.04,PAL.white,sdx*1.27,0.66,-1.34,g,{noshadow:true}); a1.rotation.x=0.6;
-    const a2=rbox(0.2,0.1,0.5,0.04,PAL.white,sdx*1.27,0.66,-0.46,g,{noshadow:true}); a2.rotation.x=-0.6;
-    sph(0.045,0xE8A13A,sdx*1.2,1.05,2.7,g,6); sph(0.045,0xC0392B,sdx*1.2,1.05,-2.7,g,6); // clearance + tail lights
-    rbox(0.04,0.05,5.5,0.02,PAL.white,sdx*1.22,2.36,0,g,{noshadow:true}); // roof gutter trim
+    /* SPIKE_ADOPT 1: on the model's own axle (x +-1.0, z -0.35), under the narrowed skin — at x 1.27
+       the tandem stood out past the new wall right across the door band */
+    for(const twz of [-0.70,0.0]){
+      const wh=cyl(0.36,0.36,0.16,0x23262B,sdx*0.98,0.36,twz,g,14); wh.rotation.z=1.57;
+      const hub=cyl(0.13,0.13,0.17,0x1B1E22,sdx*0.98,0.36,twz,g,10); hub.rotation.z=1.57;
+      const hcap=cyl(0.045,0.045,0.18,PAL.metal,sdx*0.98,0.36,twz,g,8); hcap.rotation.z=1.57; }
+    rbox(0.2,0.1,1.0,0.04,PAL.white,sdx*0.9,0.82,-0.35,g,{noshadow:true});
+    const a1=rbox(0.2,0.1,0.5,0.04,PAL.white,sdx*0.9,0.66,-0.79,g,{noshadow:true}); a1.rotation.x=0.6;
+    const a2=rbox(0.2,0.1,0.5,0.04,PAL.white,sdx*0.9,0.66,0.09,g,{noshadow:true}); a2.rotation.x=-0.6;
+    sph(0.045,0xE8A13A,sdx*0.86,1.05,2.7,g,6); sph(0.045,0xC0392B,sdx*0.86,1.05,-2.7,g,6); // clearance + tail lights
+    rbox(0.04,0.05,5.5,0.02,PAL.white,sdx*0.88,2.36,0,g,{noshadow:true}); // roof gutter trim
   }
-  const dStep=rbox(0.34,0.09,0.5,0.03,PAL.metal,1.61,0.28,0.6,g,{noshadow:true}); // door step
+  const dStep=rbox(0.34,0.09,0.5,0.03,PAL.metal,1.61+VANX,0.50,VANDZ,g,{noshadow:true}); // door step
   pane(1.7,0.55,0.05,0.04,0x9FB8C4,0,1.62,-2.79,g); // rear window band
   box(2.3,0.16,0.14,PAL.metal,0,0.62,-2.83,g,{noshadow:true}); // rear bumper
   { const sw=cyl(0.34,0.34,0.12,PAL.rubber,-0.62,1.05,-2.85,g,12); sw.rotation.x=1.57; } // spare wheel
@@ -10106,12 +10189,18 @@ function mkCampervanBody(g,P){
    kea-transport crate bolted to the tray is part of the vehicle a modeller would deliver. If a
    future ute GLB arrives without one, the crate becomes its own entry parented to `tray` — which
    is a decision to make with the file in hand, not now. */
+/* SPIKE_ADOPT 1: THE DOC UTE IS THE SPIKE'S UTE, in DOC green, and the kea crate rides on its TRAY,
+   where the spike put it (0, 0.9 up, 1.6 back) — the primitive carried it on the cab roof, which the
+   real 1.80 m cab would have swallowed. The latch keeps its crate-local offset; the keys sit on the
+   real bonnet. Colliders are the ute's two boxes. */
 defineProp('doc_ute',{
-  biome:'carpark', at:{x:12,z:7,ry:-0.15},
-  collider:[{kind:'box',w:2.2,d:4.5,top:1.4,solid:true}],
-  anchors:{cage:{x:0,y:1.2,z:-1.1},          // the teaching hint, and the crate's own origin
-           latch:{x:0.44,y:1.76,z:-1.1},     // the jailbreak peck, crate-local 0.44/0.34/0 lifted out
-           bonnet:{x:-0.3,y:1.0,z:-2.0}, tray:{x:0.3,y:0.95,z:1.1}},
+  biome:'carpark', at:{x:12,y:CARSLAB,z:7,ry:-0.15},
+  source:'model', url:VEHICLEURL, vehicle:{node:'ute',paint:0x1f4632,rough:0.34,alloy:0x2a2c2e},
+  collider:CARKIND.ute.collider.map(c=>Object.assign({},c)),
+  anchors:{cage:{x:0,y:0.90,z:1.6},          // the teaching hint, and the crate's own origin
+           latch:{x:0.44,y:1.24,z:1.6},      // the jailbreak peck, crate-local 0.44/0.34/0 lifted out
+           bonnet:{x:-0.3,y:1.12,z:-2.0}, tray:{x:-0.4,y:0.95,z:2.3},
+           door:{x:1.20,y:0.95,z:-0.30}},     // PECK THE UTE: the driver's door, outside the body   // tray: at the tailgate, clear of the crate's latch
   material:{family:null,nightTint:false},
   build(g,p){ mkDocUteBody(g,p); },
 });
@@ -10128,8 +10217,9 @@ function mkDocUte(){
     locked:()=>!jailFull()||vsOn(),   // TODO 24: in a match nobody lets you out - mash your own way
     onDone(p){ const k=jailedKea(); if(k){ k.freeCage&&k.freeCage(); award(40,'JAILBREAK',p); } this.done=false; this.hits=0; }});
   // keys on the bonnet, radio on the tray — Rex's prized possessions
-  propAt('ute keys',x-0.3,1.0,z-2.0,PB.keys,{shiny:true,owner:'rex',mission:'keys'});
-  propAt('DOC radio',x+0.3,0.95,z+1.1,PB.radio,{shiny:true,owner:'rex',guarded:true,mission:'radio'});
+  { const kb=P.anchor('bonnet'), tr=P.anchor('tray');     // SPIKE_ADOPT 1: off the declared anchors now
+    propAt('ute keys',kb.x,kb.y,kb.z,PB.keys,{shiny:true,owner:'rex',mission:'keys'});
+    propAt('DOC radio',tr.x,tr.y,tr.z,PB.radio,{shiny:true,owner:'rex',guarded:true,mission:'radio'}); }
   return {g,x,z,parked:true};
 }
 function mkDocUteBody(g,P){
@@ -10155,7 +10245,9 @@ function mkDocUteBody(g,P){
   const doc=cyl(0.22,0.22,0.01,PAL.white,0.95,0.62,-0.9,g,12); doc.rotation.z=1.57; // door roundel
   blob(g,1.9,0.55);
   P.collide();
-  { const cg=new THREE.Group(); cg.position.set(0,1.42,-1.1); g.add(cg); // DOC kea-transport crate
+  { const ca=P.entry.anchors.cage;
+    const cg=new THREE.Group(); cg.position.set(ca.x,ca.y,ca.z); g.add(cg); // DOC kea-transport crate
+    cg.userData.keepWithModel=true;          // a mission object: it stays when a model replaces the body
     box(0.82,0.05,0.64,PAL.woodD,0,0.03,0,cg,{noshadow:true});
     box(0.82,0.05,0.64,0x8F8878,0,0.62,0,cg,{noshadow:true});
     for(const [cx,cz] of [[-0.38,-0.29],[0.38,-0.29],[-0.38,0.29],[0.38,0.29]]) box(0.05,0.6,0.05,0x8F8878,cx,0.32,cz,cg,{noshadow:true});
@@ -10176,7 +10268,7 @@ function spawnTraffic(dir){
   const T=biomeTraffic(); if(!T)return null;
   const z=dir>0?T.up:T.down, x=dir>0?-T.x:T.x;
   if(G.cars.some(c=>c.traffic&&c.dir===dir&&Math.abs(c.x-x)<7))return null; // never spawn into someone's boot
-  const c=mkCar(x,z,dir>0?0:Math.PI,pick([PAL.blue,PAL.white,PAL.yellow,0x9C5AA0,0x666E76]),'hatch');
+  const c=mkCar(x,z,dir>0?0:Math.PI,pick([PAL.blue,PAL.white,PAL.yellow,0x9C5AA0,0x666E76]),'hatch',T.y||0);
   c.parked=false; c.dir=dir; c.speed=8; c.traffic=true;
   c.g.rotation.y=dir>0?-Math.PI/2:Math.PI/2;           // body front is local -z
   c.collider.w=2.15; c.collider.d=1.1;                 // rotated footprint
@@ -10440,8 +10532,9 @@ class Kea{
     this._stunPrev=this.stun;
     if((this.caged||0)>0){ const coop=coopCell();
       if(!coop)this.caged-=dt;                                       // co-op: the sentence does not run itself down
-      const wp=new THREE.Vector3(0,1.7,-1.1); if(G.uteG)G.uteG.localToWorld(wp);
-      this.x=wp.x; this.y=wp.y-0.28; this.z=wp.z; this.vy=0; this.grounded=true; this.stun=0;
+      /* IN THE CRATE, wherever the doc_ute entry declares it (SPIKE_ADOPT 1 moved it onto the tray) */
+      const P=propPlaced('doc_ute'), wp=P?P.anchor('cage'):{x:this.x,y:this.y,z:this.z};
+      this.x=wp.x; this.y=wp.y; this.z=wp.z; this.vy=0; this.grounded=true; this.stun=0;
       if(coop)setPrompt(this.idx,'<b>'+keyName(this.map.grab)+'</b> SQUAWK - only a mate can peck you out');
       const gp=KEYS.has(this.map.grab);
       if(gp&&!this._cagePrev){ if(coop)squawkFire(this); else { this.caged-=0.5; AU.pop&&AU.pop(); } }
@@ -10490,7 +10583,7 @@ class Kea{
         c._buntCd=Math.max(0,(c._buntCd||0)-dt);
         if(Math.abs(this.x-c.x)<1.1+0.5*S&&Math.abs(this.z-c.z)<2.5&&c._buntCd<=0){
           const fx=Math.sin(this.ry)||Math.sign(this.x-c.x)||1;
-          c.x+=Math.sign(fx)*3.4; c.g.position.x=c.x; c.collider.x=c.x; c.speed=0; c.stopT=Math.max(c.stopT,1.2); c._buntCd=0.9;
+          { const dx=Math.sign(fx)*3.4; c.x+=dx; c.g.position.x=c.x; for(const cc of (c.colliders||[c.collider]))cc.x+=dx; } c.speed=0; c.stopT=Math.max(c.stopT,1.2); c._buntCd=0.9;
           AU.clang(); AU.honk(); G.shake=Math.max(G.shake,0.22); burst({x:c.x,y:1,z:c.z},0xC4CAD2,8);
           if(c.bodyG){const bg=c.bodyG;TW.add(0.45,u=>{bg.rotation.z=Math.sin(u*Math.PI*3)*0.09*(1-u);bg.position.y=Math.sin(u*Math.PI)*0.12;});}
           if(!c.bunted){ c.bunted=true; markMission('c_bunt'); award(30,'CAR: BUNTED',{x:c.x,y:1.6,z:c.z}); heat(1.4); }
@@ -12239,29 +12332,47 @@ function flashTodo(){
 /* ============================================================
    CAMERAS · LOOP · BOOT
    ============================================================ */
-/* PERF S6 — THE RENDER SCALE (2026-10-02). The drawing buffer is the window times the pixel ratio,
-   and the ratio was min(devicePixelRatio,1.8) — on a Retina Mac at full screen that is ~4.8 M
-   pixels, 2.3x the 1920x1080 the frame budget is measured at, for detail a player cannot see
-   behind a film camera that already softens the frame. The scale is one of:
-     'auto'   the pixel ratio is lowered until the buffer fits RENDER.maxPx (never raised above
-              the old ratio)
-     a number, 0.5..1, a fixed fraction of the old ratio, for a player who wants it sharper or
-              faster than auto picks
+/* THE RENDER SCALE — PERF S6 (2026-10-02), revised on Eric's ruling of 2026-10-03: "default render
+   scale to 100% with auto dropping only when over budget". The drawing buffer is the window times the
+   pixel ratio, min(devicePixelRatio,1.8). The scale is one of:
+     'auto'   (default) 100%, and it DROPS only while frames run over budget (renderScaleTick says
+              how that is judged), 10% a step, floor 50% (a Retina window at full ratio is 4.8 Mpx).
+              It PROBES back up after 4 s of clean frames, and a probe that overruns at once
+              blocks further probes for 30 s, so it does not saw at a boundary. Held at 100% under the
+              capture clock pin (G.clockPin) so a photograph never depends on how the machine felt.
+     a number, 0.5..1, a fixed fraction, for a player who wants it fixed.
    Set with KEAGAME.setRenderScale(v) or F8 (auto -> 1 -> 0.85 -> 0.75 -> 0.6 -> auto), kept in
    localStorage; __KEA_SCALE__ (the rig's KEASCALE) overrides both. The DOM HUD is not scaled. */
-/* maxPx IS THE MEASURED BUDGET, not a round number: at 1920x1080 with everything live and the bird
-   flying, full scale read 19.4 ms, 0.85 (1632x918) 16.0, 0.75 14.5 (framebudget.mjs, AC, after
-   PERF S1-S5). So auto renders a 1080p window at 85% and a Retina one at the same 1.5 Mpx. */
-const RENDER={scale:'auto', maxPx:1632*918, steps:['auto',1,0.85,0.75,0.6]};
+const RENDER={scale:'auto', steps:['auto',1,0.85,0.75,0.6], budget:1000/60,
+  dyn:{f:1, ema:1000/60, over:0, ok:0, lastUp:-1e9, block:-1e9}};
 function renderRatio(){
   const base=Math.min(devicePixelRatio||1,1.8), sc=RENDER.scale;
-  if(sc==='auto'){ const px=innerWidth*innerHeight*base*base; return base*Math.min(1,Math.sqrt(RENDER.maxPx/Math.max(1,px))); }
+  if(sc==='auto')return base*RENDER.dyn.f;
   return base*Math.max(0.5,Math.min(1,+sc||1));
+}
+/* called once a frame with the interval since the last one. JUDGED ON THE LAST 60 INTERVALS, two
+   numbers at once, because one number cannot tell the two cases apart: under vsync a healthy frame
+   reads 16.7 +/- jitter whatever it cost, and an EMA threshold tight enough to keep an unlocked mean
+   in budget dropped resolution at a steady 61 fps (measured: 1344x756 under vsync). So it drops only
+   when the MEAN is over budget AND fewer than 80% of frames landed within 10% of it — a healthy
+   vsync passes the second test, an overloaded one fails both — and it probes back up when the mean
+   is in budget and 95% of frames are clean for 4 s. */
+function renderScaleTick(ms,dt,now){
+  const D=RENDER.dyn, B=RENDER.budget;
+  if(RENDER.scale!=='auto'||G.clockPin!=null||HEADLESS){ if(D.f!==1&&RENDER.scale==='auto'){ D.f=1; applyRenderScale(); } return; }
+  if(!(ms>0)||ms>120)return;                                  // a hidden tab or a hitch is not a frame rate
+  const R=D.ring||(D.ring=[]); R.push(ms); if(R.length>60)R.shift(); if(R.length<30)return;
+  let sum=0, clean=0; for(const v of R){ sum+=v; if(v<=B*1.1)clean++; }
+  const mean=sum/R.length, cf=clean/R.length; D.ema=+mean.toFixed(2); D.clean=+cf.toFixed(2);
+  if(mean>B*1.01&&cf<0.8){ D.over+=dt; D.ok=0; } else { D.over=0; if(mean<=B*1.01&&cf>=0.95)D.ok+=dt; }
+  if(D.over>0.5&&D.f>0.5){ D.f=Math.max(0.5,+(D.f-0.1).toFixed(2)); D.over=0; R.length=0;
+    if(now-D.lastUp<3000)D.block=now+30000; applyRenderScale(); }
+  else if(D.ok>4&&D.f<1&&now>D.block){ D.f=Math.min(1,+(D.f+0.1).toFixed(2)); D.ok=0; D.lastUp=now; R.length=0; applyRenderScale(); }
 }
 function applyRenderScale(){
   if(!G.renderer)return;
   G.renderer.setPixelRatio(renderRatio()); G.renderer.setSize(innerWidth,innerHeight);
-  G.renderScale={scale:RENDER.scale, ratio:+G.renderer.getPixelRatio().toFixed(4),
+  G.renderScale={scale:RENDER.scale, dyn:RENDER.dyn.f, ratio:+G.renderer.getPixelRatio().toFixed(4),
     px:G.renderer.domElement.width+'x'+G.renderer.domElement.height};
 }
 function setRenderScale(v){
@@ -12297,7 +12408,7 @@ function initRenderer(){
     const eqt=new THREE.CanvasTexture(ec); eqt.mapping=THREE.EquirectangularReflectionMapping;
     const pm=new THREE.PMREMGenerator(G.renderer); G.scene.environment=pm.fromEquirectangular(eqt).texture; pm.dispose();
     if(G.ibl){ G.ibl.mode='painted'; G.ibl.pmrem=true; } }
-  addEventListener('resize',()=>{ applyRenderScale(); setCamAspect(); });   // auto re-fits the budget to the new window
+  addEventListener("resize",()=>{ applyRenderScale(); setCamAspect(); });
 }
 function setCamAspect(){
   const a=innerWidth/innerHeight;
@@ -12474,8 +12585,8 @@ function update(dt){
     G.actor=null;                                        // nothing outside the loop gets to be a bird by accident
     squawkUpdate(dt);   // after the loop: a prompt written inside it belongs to whoever updates last
     vsUpdate(dt);       // the match clock, after everything that could have paid a point this frame
-    for(const h of [...G.humans])h.update(dt);
-    updateTraffic(dt); updateSheep(dt); updateFX(dt);
+    for(const h of [...G.humans])liftAround(h,()=>h.update(dt));
+    updateTraffic(dt); liftSheep(()=>updateSheep(dt)); updateFX(dt);
     /* PROPS PHYSICS. A prop falls until groundHeightAt gives it something to stand on, and it has
        ALWAYS consulted the colliders - the sandwich has rested on the picnic table for weeks because
        that table has one. Nothing on a RAIL did: the ski rack, the boot rail and the clothesline are
@@ -12516,7 +12627,7 @@ function update(dt){
     if(lvl!==G.wanted){G.wanted=lvl;updWanted();}
     checkMisc(); checkFinale(); checkCaseFiles();
     styleDrain();       // every award for this frame has landed by now: judge the page that turned
-  } else if(!G.running){ updateFX(dt); updateSheep(dt); }
+  } else if(!G.running){ updateFX(dt); liftSheep(()=>updateSheep(dt)); }
   hudReflow();
   PRESSED=[];
 }
@@ -12650,7 +12761,8 @@ function boot(opts){
   });
   let last=performance.now();
   function frame(now){
-    const dt=clamp((now-last)/1000,0.001,0.05); last=now;
+    const ms=now-last, dt=clamp(ms/1000,0.001,0.05); last=now;
+    renderScaleTick(ms,dt,now);
     update(dt); updateCams(dt); updateUI(); render();
     requestAnimationFrame(frame);
   }

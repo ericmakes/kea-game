@@ -42,7 +42,9 @@ C.section('rotated tray-top: standing math');
 { const cx=12,cz=7,ry=-0.15, lx=0.9, lz=2.0;
   const wx=cx+lx*Math.cos(ry)+lz*Math.sin(ry), wz=cz-lx*Math.sin(ry)+lz*Math.cos(ry);
   const gh=X.groundHeightAt(wx,wz,2.0);
-  ok(Math.abs(gh-1.4)<0.05,'rotated ute corner reads top 1.4 ('+gh.toFixed(2)+')'); }
+  /* SPIKE_ADOPT 1: the corner at local (0.9, 2.0) is the spike ute's TRAY now, declared in the entry */
+  const trayTop=X.PROPS.ALL.doc_ute.collider[3].top;
+  ok(Math.abs(gh-trayTop)<0.05,'rotated ute corner reads the tray top '+trayTop.toFixed(2)+' ('+gh.toFixed(2)+')'); }
 
 C.section('detector quickfire — legit verbs only');
 G.trafT.a=999; G.trafT.b=999;
@@ -168,7 +170,7 @@ C.section('BEHIND BARS: caught, pinned, mash-out');
 rexN.x=kn.x; rexN.z=kn.z-0.3; rexN.state='chase'; rexN.chaseKea=kn; G.wanted=3;
 for(let i=0;i<40&&!(kn.caged>0);i++){ rexN.x=kn.x; rexN.z=kn.z-0.3; X.update(1/60); }
 ok(kn.caged>0,'the carrier claims a kea ('+(kn.caged||0).toFixed(1)+'s)');
-{ const wp=new THREE.Vector3(0,1.7,-1.1); G.uteG.localToWorld(wp);
+{ const wp=X.PROPS.anchor(X.PROPS.placed('doc_ute'),'cage');   // SPIKE_ADOPT 1: the crate is on the tray
   tick(2);
   ok(Math.hypot(kn.x-wp.x,kn.z-wp.z)<0.7,'pinned to the ute carrier'); }
 { const c0=kn.caged;

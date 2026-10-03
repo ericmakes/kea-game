@@ -6096,3 +6096,35 @@ RETINA, MEASURED: the old ratio cap rendered ~4.8 Mpx full-screen on Eric's Mac;
 1.5 Mpx. framebudget at W=1512 H=982 DPR=2: 15.76 ms, IN BUDGET (buffer 1518x986).
 RE-PIN: all 43 vantages, 4-run consensus; 15 agree to 0 px across all four runs (the global
 G.clockPin fix, S0), worst spread 17_flight 5013.
+
+## 2026-10-03 — SPIKE_ADOPT 1 + 2: the spike's cars, everything on the drawn ground; render scale 100% + auto (Opus 5.5) — certified 4a01e5bf
+
+Eric's perf verdict: render scale 100% by default, auto dropping only when over budget. renderScaleTick
+judges the last 60 intervals: drop 10% when the mean is over budget AND <80% of frames are within 10% of
+it (a healthy vsync passes; an EMA rule dropped resolution at a steady 61 fps), probe up after 4 s clean,
+floor 50% (Retina at full ratio is 4.8 Mpx). Held at 100% under the capture clock pin.
+CARS (SPIKE_ADOPT.md row 1): the spike's SDF hatch, ute, caravan and trailer, re-exported plain by
+tools/derive_vehicles.mjs (meshopt decoded, dequantized, float normals; asserted), painted in WebGL
+(src/vehicles.mjs: MeshPhysical clearcoat + the spike's dust, grime and fwidth panel gaps via
+onBeforeCompile), the spike's lathe tyres and five-spoke alloys merged to 3 meshes a car. Seven
+placements and all traffic. THE SPIKE'S ORIENTATION IS THE GAME'S OWN FRONT: the primitive's lamps and
+traffic say front is -z, but its wipers sat at +z, on the rear window. Anchors re-declared on the real
+bodies; 18 of 59 interactables moved, row-diffed against HEAD, 41 byte-identical. The caravan is
+mirrored in z (its drawbar to +z, its door still +x); the seal bead is redrawn 5+3+4 round the model's
+real door and comes off 12/12; the primitive caravan became a stand-in narrowed to the model's wall so
+headless still tests a flush door where the drawn one is. The DOC crate rides on the ute tray; the caged
+kea now sits in it (it used a hard-coded offset onto the old cab roof). COLLIDERS ARE THE REAL BODIES,
+and SIDE-BY-SIDE SOLID BOXES TRAP A WALKER IN THEIR SEAM (a sheep shuttled cab<->tray forever): one
+solid envelope at the lowest top, perch-only bonnet and tray, solid cab.
+PROPS ON THE DRAWN GROUND (row 2): cars by placement y (CARSLAB 0.14), traffic by lane y, humans and sheep
+lifted ROUND their update (render-only); humans' 31 mm boot depth added. vehicles.mjs (in the gate):
+7/7 loaded and drawn, tyres 0.0 mm (DOC ute 7.7 mm at the slab edge), walkers 0.0 mm; HEAD red (Rex
+-236 mm on the apron, no vehicle shipped).
+BATTERIES THAT MOVED, each for a stated geometry reason (none loosened): seal travel now 80% of the bead's
+own span (door 0.66 m wide, was 0.96); a completed seal segment counts as ripping; the ute corner reads
+the declared tray top; the carrier reads the cage anchor; "nothing ships swapped" now names the 7; two
+staging isolations (Rex caging bird two in the books test; trample now clears traffic, whose clear-coat
+glints bloomed between identical takes). PECK THE UTE moved to the driver's door (the bonnet is where
+Rex's keys are, and the old middle point is under the cab).
+COST: live meter 15.4 ms at auto (80%); fixed 100% 18.8 ms, unchanged by the cars. camp_van stays
+primitive (no motorhome in the spike). Re-pin deferred to after the trees, as ordered.

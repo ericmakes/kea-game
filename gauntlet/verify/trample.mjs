@@ -64,6 +64,13 @@ try {
     { const cv = document.querySelector('canvas'); const _hd = () => { try { for (const el of document.body.children) if (el !== cv && !el.contains(cv)) el.style.visibility = 'hidden'; } catch (e) {} requestAnimationFrame(_hd); }; requestAnimationFrame(_hd); }
     const G = KEAGAME.G, k = G.keas[0], M = k._model;
     G.humans.forEach(h => { h._park = true; });
+    /* NO TRAFFIC, as capture.mjs stages it: a passing spike hatch throws clear-coat highlights the bloom
+       spreads across the frame, and two identical takes then differ (805 bird px on one gate run) */
+    if (G.trafT) { G.trafT.a = 999; G.trafT.b = 999; }
+    for (let i = G.cars.length - 1; i >= 0; i--) { const c = G.cars[i]; if (!c.traffic) continue;
+      G.scene.remove(c.g); const ci = G.colliders.indexOf(c.collider); if (ci >= 0) G.colliders.splice(ci, 1);
+      for (let q = G.inter.length - 1; q >= 0; q--) if (G.inter[q].car === c) G.inter.splice(q, 1); G.cars.splice(i, 1); }
+    { const _tr = () => { try { G.trafT.a = 999; G.trafT.b = 999; } catch (e) {} requestAnimationFrame(_tr); }; requestAnimationFrame(_tr); }
     const _pk = () => { try { G.humans.forEach(h => { h.x = 46; h.z = 46; h.home = { x: 46, z: 46 }; h.patrol = null; h.state = 'idle'; if (h.g) h.g.position.set(46, 0, 46); }); } catch (e) {} requestAnimationFrame(_pk); }; requestAnimationFrame(_pk);
     const by = {}; M.sk.skeleton.bones.forEach(b => by[b.name] = b);
     k._model = null; k._anim = null; window.__birdM = M; window.__at = { x: 0, z: 0, ry: 0 };

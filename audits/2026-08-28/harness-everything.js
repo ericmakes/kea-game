@@ -789,12 +789,15 @@ C.section('THE CARAVAN DOOR IS ON ITS WALL, NOT FINNING OFF THE SIDE OF IT');
       if(x>best)best=x; }
     return best; };
   let SKIN=-Infinity, worstProud=99, worstY=0, n=0;
-  for(let Y=E.door.y0;Y<=E.door.y1+1e-9;Y+=0.05){ const sk=skinAt(Y,0.6); n++;
+  /* SPIKE_ADOPT 1 (2026-10-03): the door moved with the spike's caravan to z G.vanDoor.cz, and the
+     primitive narrowed to that model's wall — the scan follows the door, and the skin is compared with
+     the narrowed shell's nominal half width (0.86, shell 1.72 wide) where it was 1.2 */
+  for(let Y=E.door.y0;Y<=E.door.y1+1e-9;Y+=0.05){ const sk=skinAt(Y,d.cz); n++;
     if(sk>SKIN)SKIN=sk;
     if(E.frame.x1-sk<worstProud){ worstProud=E.frame.x1-sk; worstY=Y; } }
   ok(n>=28,'the whole door height got scanned ('+n+' slices)');
-  ok(SKIN>1.4,'and the skin is where the bevel says it is, not where the nominal dim says ('+
-     SKIN.toFixed(4)+', nominal half width 1.2)');
+  ok(SKIN>0.86+0.2,'and the skin is where the bevel says it is, not where the nominal dim says ('+
+     SKIN.toFixed(4)+', nominal half width 0.86)');
 
   // 4. FLUSH MEANS BOTH THINGS AT ONCE: the face stands OUT of the skin at every height, and the
   //    back of the frame is BEHIND the skin, so it is bedded into the wall with no gap to see under.
@@ -855,7 +858,10 @@ C.section('THE CARAVAN DOOR IS ON ITS WALL, NOT FINNING OFF THE SIDE OF IT');
   ok(M('seal'),'the seal mission credits on the last bit');
   ok(!!G.props.find(pp=>pp.name==='door seal'),'and the WHOLE seal drops as one intact prop');
   const p1=sealT.getPos(), travel=Math.hypot(p1.x-p0.x,p1.y-p0.y,p1.z-p0.z);
-  ok(travel>0.8,'the frontier travelled the frame rather than sitting still ('+travel.toFixed(2)+')');
+  /* SPIKE_ADOPT 1: the spike caravan's door is 0.66 m wide where the primitive's was 0.96, so the
+     frontier is held to 80% of the bead's own end-to-end span rather than to a fixed 0.8 m */
+  { const P0=st.path[0], PN=st.path[st.N], span=Math.hypot(PN.x-P0.x,PN.y-P0.y,PN.z-P0.z);
+    ok(travel>0.8*span,'the frontier travelled the frame rather than sitting still ('+travel.toFixed(2)+' of a '+span.toFixed(2)+' span)'); }
   ok(st.segs.every(sg=>!sg.m||sg.m.visible===false),'and the attached segments are all cleared');
 }
 
@@ -1673,6 +1679,12 @@ C.section('SCORE ATTRIBUTION - every point lands on exactly one book, and they a
   ok(d0===dS,'and every point of it went on bird one book ('+d0+' of '+dS+')');
   ok(d1===0&&dL===0,'with nothing on the partner book and nothing loose ('+d1+', '+dL+')');
 
+  /* ISOLATE THE SECOND TURN TOO (FLAKES law 3). Bird one's peck is a misdeed; with the spike's cars
+     (SPIKE_ADOPT 1) the humans' paths round the carpark changed, and Rex, carrying the warrant bird
+     one earned, reached bird two and caged it before its turn — so its peck never landed. The test is
+     about whose BOOK a point lands on, not about the ranger: calm the board between the two turns. */
+  G.wanted=0; for(const h of G.humans){ h.chaseKea=null; if(h.state==='chase')h.state='idle'; }
+  if(b.caged>0){ b.caged=0; b.freeCage&&b.freeCage(); tick(30); }
   far(a); const s1=G.score, k1=books();
   peckWith(b,P2,pecks[1]);
   const eS=G.score-s1, e0=L.of(0)-k1[0], e1=L.of(1)-k1[1];
@@ -2641,7 +2653,8 @@ C.section('A HINT BELONGS TO THE MAP THAT CAN ANSWER IT - and startGame no longe
     X.boot(); X.startGame(1); tick(8);
     const before=cageOf();
     ok(!!before,'the carpark still has its cage hint');
-    ok(!!before&&Math.abs(before.x-12.16)<0.01&&Math.abs(before.z-5.91)<0.01,
+    /* SPIKE_ADOPT 1: the crate rides on the spike ute's tray now — 12.16/5.91 became 11.76/8.58 */
+    ok(!!before&&Math.abs(before.x-11.76)<0.01&&Math.abs(before.z-8.58)<0.01,
        'at the same world coordinates it had when startGame placed it ('+
        (before?before.x.toFixed(2)+', '+before.z.toFixed(2):'none')+')');
     const nHints=(G.hints||[]).length;
@@ -8837,9 +8850,18 @@ C.section('REPLAT P6A: the model-swap seam');
                 unchanged in both worlds; teaching hints unchanged in both.
        carpark  mesh 3bb403a96e75d3f2, col 53fa4b6e2386e838, meshes 921, tris 301060
        skifield mesh a693bd96d8315e3f, col fc06ef03250ea1ed, meshes 328, tris 137488 */
+  /* RE-PINNED 2026-10-03 (SPIKE_ADOPT 1, the spike's cars) — carpark only, the ski field untouched.
+     WHY THE MESH DIGEST MOVED: the seven vehicle placements stand on the drawn seal (at.y 0.14), the
+     wipers and aerials moved onto the real windscreens and roofs, the DOC crate onto the ute tray, and
+     the caravan stand-in narrowed to the spike caravan's wall with its door at the model's door. Mesh
+     COUNT and TRIANGLES are unchanged (921 / 301060): nothing was added or removed, things moved.
+     WHY THE COLLIDERS MOVED: 27 -> 39. Each hatch is a solid envelope, a bonnet perch and a solid cabin;
+     each ute an envelope, bonnet and tray perches and a solid cab — each at the real body's height off
+     the drawn seal (solid boxes side by side trapped a sheep in their seam). Caravan and trailer
+     re-measured. Order is preserved: every body still calls p.collide() where it always did. */
   const PRESEAM={
-    carpark :{mesh:'3bb403a96e75d3f2', col:'53fa4b6e2386e838', meshes:921, tris:301060,
-              inter:58, props:16, colliders:27, cars:6, sheep:3, strips:2, hints:9, snow:10,
+    carpark :{mesh:'1170831b785f1ede', col:'ae5074aa53ffefd2', meshes:921, tris:301060,
+              inter:58, props:16, colliders:39, cars:6, sheep:3, strips:2, hints:9, snow:10,
               foodSrc:2, gravel:26, stones:26, wear:6, nightMats:8},
     skifield:{mesh:'a693bd96d8315e3f', col:'fc06ef03250ea1ed', meshes:328, tris:137488,
               inter:13, props:12, colliders:11, cars:0, sheep:0, strips:0, hints:4, snow:16,
@@ -8913,8 +8935,14 @@ C.section('REPLAT P6A: the model-swap seam');
     if(!e.fit||!(e.fit.standM===null||e.fit.standM>0)||!['x','y','z'].includes(e.fit.axis))badFit.push(id);
     if(!e.biome)badMat.push(id+'.biome');
   }
-  ok(shipsModel.length===0,'NOTHING SHIPS SWAPPED — every entry is source:primitive ('+
-     (shipsModel.join(', ')||'none is not')+')');
+  /* SPIKE_ADOPT 1 (2026-10-03): THE SPIKE'S VEHICLES SHIP AS MODELS, and only they do. This was
+     "nothing ships swapped" until the first real batch landed; it now names the batch, so a prop
+     that starts shipping a model by accident is still red. */
+  { const VEH=['campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer'];
+    ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH),'ONLY THE SPIKE VEHICLES SHIP SWAPPED ('+
+       (shipsModel.slice().sort().join(', ')||'none')+')');
+    ok(VEH.every(id=>{ const e=X.PROPS.ALL[id]; return e.url==='models/vehicles/vehicles_plain.glb'&&e.vehicle&&e.vehicle.node; }),
+       'and every one of them names the plain vehicle GLB and the body it wears'); }
   ok(noBuild.length===0,'every entry names a primitive builder, so a failed model always has '+
      'something to fall back to ('+(noBuild.join(', ')||'all do')+')');
   ok(badCol.length===0,'every declared collider is a shape groundHeightAt can read ('+
@@ -9063,7 +9091,12 @@ C.section('REPLAT P6A: the model-swap seam');
        diff was taken row by row, not by comparing two hashes: the carpark's fifty-nine surviving
        rows are byte-identical to fifty-nine of the old sixty-five, and the hill's twelve are
        byte-identical to its old twelve. */
-    const WANT={carpark :{n:59, inter:'38630baf79d8dc1e', hn:9, hints:'6e9458ae1276c86f'},
+    /* RE-PINNED 2026-10-03 (SPIKE_ADOPT 1), and diffed ROW BY ROW against HEAD, not by hash: of the
+       59 carpark interactables exactly 18 moved — 8 RIP WIPER, 4 SNAP AERIAL, 2 RIP MIRROR, PECK THE
+       LATCH, PECK THE UTE (onto its driver door), TUG TARP, WORK THE DOOR SEAL — every one onto the
+       spike body it now belongs to; the other 41 are byte-identical. Of the 9 hints only `cage` moved
+       (onto the ute tray). */
+    const WANT={carpark :{n:59, inter:'e50b5f115884ea18', hn:9, hints:'e3b9c84b26fe04e6'},
                 skifield:{n:13, inter:'e05cb36edca22de5', hn:4, hints:'1383d48400f14029'}};
     for(const b of ['carpark','skifield']){
       const r=digest(b), w=WANT[b];
@@ -9110,7 +9143,8 @@ C.section('REPLAT P6A: the model-swap seam');
        model would have to bring geometry for, and the entry records where they must land */
     for(const id of ['car_red','car_blue','car_white','car_yellow']){
       const p=P.placed(id);
-      ok(!!p&&p.colliders.length===1,id+' is a placement with exactly its declared collider');
+      ok(!!p&&p.colliders.length===p.entry.collider.length&&p.colliders.length>=2,
+         id+' is a placement with exactly its declared colliders (bonnet and cabin, and a ute tray: '+(p&&p.colliders.length)+')');
       ok(!!p.entry.anchors.wiperL&&!!p.entry.anchors.wiperR&&!!p.entry.anchors.aerial,
          'and it declares where a model must put its wipers and its aerial');
     }
@@ -9190,7 +9224,8 @@ C.section('REPLAT P6A: the model-swap seam');
     const st=G.propsState;
     ok(st&&st.placed>=20,'the carpark builds its prop tier through the registry ('+
        (st&&st.placed)+' placements)');
-    ok(st.model===0&&st.wantModel.length===0,'and not one of them is swapped');
+    ok(st.model===0&&JSON.stringify(st.wantModel.slice().sort())===JSON.stringify(['campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer']),
+       'and headless swaps none of them (no loader in node), while exactly the spike vehicles ask to be ('+st.wantModel.length+')');
     ok(st.ignored.length===0,'and no KEAPROPS path was refused on a plain boot');
     ok(st.anchors>=40,'the registry carries a real anchor table ('+st.anchors+' named points)');
     /* WHAT EACH BODY ACTUALLY WEARS IS MEASURED, so the census cannot drift from the world the way

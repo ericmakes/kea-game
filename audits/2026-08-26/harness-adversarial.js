@@ -30,7 +30,10 @@ tap(P1.grab); tick(2); // re-take the tossed item so the chain starts FROM a hol
 ok(k0.held===w,'re-holding for the chain test');
 { const sp2=seal.getPos(); k0.x=sp2.x;k0.z=sp2.z+0.3;k0.y=X.groundHeightAt(k0.x,k0.z,sp2.y);k0.grounded=true; tick(1); }
 hold(P1.grab); tick(45); un(P1.grab); // one sustained gesture: press drops, item tumbles clear, beak latches the seal
-ok(k0.held===null&&seal.progress>0.1,'sustained hold chains drop -> rip — v3 contract ('+seal.progress.toFixed(2)+')');
+/* SPIKE_ADOPT 1 (2026-10-03): the spike caravan's door is smaller, so the hold can now take a WHOLE
+   segment off and start the next — progress then reads the next segment's fraction (0.10 with f 1,
+   measured). A completed segment is more rip, not less, so it counts. */
+ok(k0.held===null&&(seal.progress>0.1||(seal.strip&&seal.strip.f>0)),'sustained hold chains drop -> rip — v3 contract (progress '+seal.progress.toFixed(2)+', segments off '+(seal.strip?seal.strip.f:'-')+')');
 seal.progress=0; tick(3);
 
 C.section('shoo mid-tug releases the tug');
