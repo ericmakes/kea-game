@@ -945,3 +945,11 @@ Built by the render spike (`~/kea-render-spike/tools/build.mjs`; the publisher m
 are in the spike's LICENCES.md line 15), from `public/assets/models/tree.glb` (md5 `da0b21a9bb140c715c550d5c79abd723`, meshopt +
 quantization). Re-exported by `tools/derive_tree.mjs`: geometry decoded to float, WebP textures kept
 as the spike encoded them, bounds and triangle count asserted identical.
+
+## TUSSOCK CLUMPS (SPIKE_ADOPT 9, 2026-10-03)
+
+`models/grass/tussock_clumps.glb` (md5 `ec85b70c100ff940efea1602e383341a`), derived by `tools/derive_clumps.mjs` from Poly Haven
+**grass_medium_01** (CC0, Rob Tuytel — photography, Rico Cilliers — modelling): the 1k glTF's `small_a` and `small_b` meshes, recentred, with the colour map
+replaced by the scan's own `grass_medium_01_dry_diff_1k.png` (md5 `6f5ae8d4f152542de30aad6b6a3ea327`, its alpha in the
+fourth channel), all maps at 512. CC0; derived work of a CC0 original.
+

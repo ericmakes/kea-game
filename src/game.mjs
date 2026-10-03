@@ -2095,7 +2095,7 @@ const MATFAR_PATCH=[
   ['color_fragment',[
     ['\tdiffuseColor *= vColor;',
      '\tdiffuseColor *= vColor;\n\tdiffuseColor.rgb = keaFarGrass( diffuseColor.rgb, '+
-     'vKeaWorld.xz, length(vKeaWorld - cameraPosition) );']]],
+     'vKeaWorld.xz, length(vKeaWorld - cameraPosition) );\n\tdiffuseColor.rgb = keaVerge( diffuseColor.rgb, vKeaWorld.xz );']]],
 ];
 const MATBREAK_OK=(()=>{
   const C=THREE.ShaderChunk||{};
@@ -2143,6 +2143,7 @@ const SEAL={
   },
 };
 const SEAL_N={oil:16,line:12,lane:6,rect:4};
+const VERGEU={value:0};
 const SEALU={
   uSealOn:{value:0}, uSealAmt:{value:new THREE.Vector4(SEAL.oilAmt,SEAL.laneAmt,SEAL.patchAmt,SEAL.crackAmt)},
   uSealPaint:{value:new THREE.Vector3(...SEAL.paint)},
@@ -2210,9 +2211,53 @@ const SEAL_PATCH=[
     'roughnessFactor = clamp(roughnessFactor,0.04,1.0);\n\troughnessFactor = clamp( mix(roughnessFactor, 0.58, KEA_SW.y) - KEA_SW.x * 0.25 - KEA_SW.z * 0.35 - KEA_SW.w * 0.08, 0.05, 1.0 );']]],
   ['normal_fragment_maps',[['vec3 mapN = keaBlendN( normalMap, KEA_G );','vec3 mapN = keaBlendN( normalMap, KEA_G );\n\tmapN.xy *= mix( 1.0, 0.25, KEA_SW.y );']]],
 ];
+/* ---- SPIKE_ADOPT 9: THE VERGE (2026-10-03) ----
+   The spike's verge (its src/materials.js terrainMaterial and src/main.js scatter): a GRAVEL MARGIN round the
+   seal where NZ carparks always have one, a dry/green PATCHWORK at 25 m ("the NZ valley floor in late summer"),
+   and instanced TUSSOCK CLUMPS (Poly Haven grass_medium_01, painted Lindis gold) densest at the margin and
+   thinning outwards. The margin and the patchwork are a block in the grass-family terrain shader (which
+   already carries the seal's uniforms, so the margin is OUTSIDE the same seal boxes the wear is inside);
+   the clumps are src/clumps.mjs, browser-only like the trees, scattered per map from VERGE.maps and kept
+   off every grass cut, flattened track, seal, slab and collider. */
+const VERGE={
+  margin:2.6, marginNoise:1.4, patchM:25, dry:0.45, wet:0.25,
+  gravel:[0.33,0.31,0.27],
+  /* clumps: count, centre and radius of the scatter, density fall-off from the centre (or from the seal
+     margin where a map has seal), scale range; tint multiplies the scan's lawn-green albedo toward gold */
+  clumps:{ url:'models/grass/tussock_clumps.glb', tint:[1,1,1], scale:[3.2,5.0], keepOff:0.6 },   // tint 1: the atlas is the scan's own DRY paint
+  maps:{
+    carpark:   { count:650, centre:[2,10], radius:45, fall:9,  fromSeal:true },
+    campground:{ count:550, centre:[0,4],  radius:40, fall:12 },
+    village:   { count:400, centre:[0,0],  radius:38, fall:10 },
+    river:     { count:450, centre:[0,4],  radius:40, fall:11 },
+    station:   { count:550, centre:[-6,4], radius:42, fall:12 },
+    skifield:  { count:300, centre:[0,46], radius:26, fall:10, zMin:36 },   // only its tussock band, below the snow
+  },
+};
+const VERGE_GLSL=`
+uniform float uVergeOn;
+vec3 keaVerge(vec3 rgb, vec2 xz){
+  if (uVergeOn < 0.5) return rgb;
+  /* patchwork: dry patches toward gold, wet ones greener, on a 25 m field */
+  float f = keaMacroField(xz / ${VERGE.patchM.toFixed(1)} + 31.0);
+  float dry = smoothstep(0.55, 0.85, f), wet = smoothstep(0.45, 0.15, f);
+  rgb = mix(rgb, rgb * vec3(1.15, 1.0, 0.72), dry * ${VERGE.dry.toFixed(2)});
+  rgb = mix(rgb, rgb * vec3(0.86, 1.06, 0.82), wet * ${VERGE.wet.toFixed(2)});
+  /* gravel margin OUTSIDE the union of the seal boxes, broken by noise */
+  if (uSealRectN > 0 && uSealOn > 0.5) { float depth = -1e3;
+    for (int i = 0; i < ${SEAL_N.rect}; i++) { if (i >= uSealRectN) break; vec4 r = uSealRect[i];
+      depth = max(depth, min(min(xz.x - r.x, r.z - xz.x), min(xz.y - r.y, r.w - xz.y))); }
+    float out_ = max(-depth, 0.0);
+    float gm = smoothstep(${VERGE.margin.toFixed(2)}, 0.6, out_ + (keaMacroField(xz * 0.7) - 0.5) * ${VERGE.marginNoise.toFixed(2)});
+    vec3 g = vec3(${VERGE.gravel.map(v=>v.toFixed(3)).join(', ')}) * (0.72 + 0.56 * keaMacroField(xz * 9.0 + 5.3));
+    rgb = mix(rgb, g, gm); }
+  return rgb;
+}
+`;
 /* sealConfigure(biome) — the end of every build: write this map's wear from the world just built */
 function sealConfigure(biome){
   const C=SEAL.maps[biome], U=SEALU;
+  VERGEU.value=VERGE.maps[biome]?1:0;
   if(!C){ U.uSealOn.value=0; U.uSealOilN.value=U.uSealLineN.value=U.uSealLaneN.value=U.uSealRectN.value=0; return null; }
   C.rects.slice(0,SEAL_N.rect).forEach((r,i)=>U.uSealRect.value[i].set(...r)); U.uSealRectN.value=Math.min(C.rects.length,SEAL_N.rect);
   C.lines.slice(0,SEAL_N.line).forEach((l,i)=>{ U.uSealLine.value[i].set(l[0],l[1],l[2],l[3]); U.uSealLineP.value[i].set(l[4],l[5],l[6]); }); U.uSealLineN.value=Math.min(C.lines.length,SEAL_N.line);
@@ -2277,6 +2322,7 @@ function matBreakup(m,F,far){
      only): every iso material then runs IDENTICAL source and shares one compiled program, which is what
      the battery on program cache keys asserts. A separate asphalt program would have needed its own key. */
   U.uSealFam={value:F===MATS.families.asphalt?1:0};
+  if(far) U.uVergeOn=VERGEU;          // one shared switch: sealConfigure turns it on per map
   m.onBeforeCompile=(sh)=>{
     Object.assign(sh.uniforms,SEALU,U);
     /* WORLD POSITION, NOT MODEL POSITION, and it matters. The macro field has to be continuous
@@ -2293,7 +2339,7 @@ function matBreakup(m,F,far){
       'uniform vec3 uKeaMeanA;\nuniform float uKeaMeanR;\nuniform float uKeaVar;\n'+MATBREAK_GLSL+
       /* THE FAR BLOCK CARRIES ITS OWN UNIFORMS, so a family without it compiles without them and
          cannot reference an identifier that was never declared. */
-      (far?MATFAR_GLSL:'')+SEAL_GLSL+
+      (far?MATFAR_GLSL:'')+SEAL_GLSL+(far?VERGE_GLSL:'')+
       'KeaTiles KEA_G;\n'+sh.fragmentShader;
     /* THE TAPS ARE COMPUTED ONCE, in the albedo chunk, and reused by the other two. The order is
        three's and is not an assumption: meshphysical_frag runs map_fragment, then
@@ -5923,7 +5969,7 @@ function grassCuts(biome){
   }
   return grassPad([
     [0,34,120,5.6],            // road
-    [2,17,21,11.5],            // carpark
+    [2,17,21,11.5],            // carpark. NOT widened for the gravel margin: tried (+1.2 m), 06_skyline's edge density left its band — the blades running onto the gravel are the verge
     [-24,-9,4.2,3.4],          // hut slab
     [28,-14,3.4,2.4]]);        // pen core
 }
@@ -13019,7 +13065,7 @@ function boot(opts){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,setRenderScale,RENDER,drawnGroundAt,drawnLift,drawnGroundState,drawnGroundExplain,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
+  globalThis.KEAGAME={VERGE,SEAL,grassCuts,terrainFlatAt,G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,setRenderScale,RENDER,drawnGroundAt,drawnLift,drawnGroundState,drawnGroundExplain,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
     STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
            rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
            snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit,

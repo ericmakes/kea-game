@@ -99,6 +99,13 @@ if (!cfg.notrees && !globalThis.__KEA_NOTREES__) {
   catch (e) { console.error('trees: the spike trees failed to install, staying on the primitive canopies —', e); }
 }
 
+/* SPIKE_ADOPT 9: THE SPIKE'S TUSSOCK CLUMPS on every map's verge — see src/clumps.mjs. Same contract: a failed
+   load leaves the blade field as it was. */
+if (!cfg.noclumps && !globalThis.__KEA_NOCLUMPS__) {
+  try { const { installClumps } = await import('./clumps.mjs'); await installClumps(KEAGAME); }
+  catch (e) { console.error('clumps: the tussock clumps failed to install, the blade field stands alone —', e); }
+}
+
 /* PERF S4: THE SUN'S SHADOWS IN CASCADES FITTED TO THE CAMERA — see src/shadows.mjs. Browser-only
    for the same reasons as everything above; if it cannot install, the authored sun keeps its one
    fixed map and the game plays on. __KEA_NOCSM__ forces the old map for a like-for-like frame. */

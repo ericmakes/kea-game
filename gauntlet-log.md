@@ -6232,3 +6232,20 @@ there now: it meets kerbs), and with no seal boxes the union depth's sentinel re
 One battery held me to its intent: every iso breakup material must share ONE compiled program, so the seal block
 is in every breakup shader behind a per-material uniform (asphalt only) rather than in a second program.
 perfstep g2a_seal_wear: 14.59 ms at 100% (14.45 / 14.59 / 14.65), key six unchanged, ACCEPTED; gate meter 15.96.
+
+## 2026-10-03g — SPIKE_ADOPT 9: the verge, every map (Opus 5.5) — certified ecfec18d
+
+Step 2, piece 2 of 3. In the grass-family terrain shader: a gravel margin within ~2 m OUTSIDE the same seal boxes
+the wear is inside, broken by noise; the spike's 25 m dry/green patchwork. src/clumps.mjs (browser-only): the
+spike's Poly Haven grass_medium_01 tussock clumps on every map's verge, kept off every cut, seal, slab, tree and
+solid collider, re-dressed on travel. Three faults found on the way:
+  - the 1k glTF drops the cards' alpha (blades on black): drawn as shipped every clump was a black stick, and the
+    spike's were too. The scan's own dry_diff carries the alpha and is the Lindis gold the spike tinted toward.
+  - the "raised ground" test compared the drawn ground with the logic height and read the terrain's own relief as
+    raised (13-18 of ~1,000 placed); now it asks drawnGroundExplain for a slab/deck/disc above the plane.
+  - widening the carpark's blade cut to clear the gravel took 06_skyline's edge density out of band (refused);
+    the cut stays, and the blades run onto the gravel's edge.
+COST: the spike's clump mix (1,400 a map) measured ~1.2 ms for little that read over the blade field; shipped are
+the two tufts, 300-650 a map, ~0.35 ms. perfstep g2b_verge 15.13 ms (15.19 / 15.05 / 15.13), ACCEPTED.
+THE GATE'S METER READ 16.53 ms — 0.14 inside the budget, run last on a warm machine (16.92 on the first attempt,
+which also carried the refused cut). The next piece that adds draw cost has to bring its own recovery.
