@@ -274,7 +274,8 @@ async function shootStrip(recipe){
     process.env.KEATERRAIN=JSON.stringify(Object.assign({},xtra,haze?{recipe,haze}:{recipe}));
     const browser=await launch(); const page=await browser.newPage();
     await page.setViewport({width:SW,height:SH});
-    await preparePage(page,{seed:GAUNTLETSEED,biome:'carpark'});
+    const restore=farOffFor(name);
+    await preparePage(page,{seed:GAUNTLETSEED,biome:'carpark'}); restore();
     await page.goto(srv.origin+'/',{waitUntil:'load'});
     await assertBooted(page);
     await page.evaluate('window.AudioContext=undefined;KEAGAME.startGame(1);');
@@ -974,6 +975,19 @@ export function skyPlateBand(im,inSky){
            screenshotting and squinting: the sprite sits at normalize(SKY.sunPosDay)*168, the
            camera at (0,9,-46) looking at (0,26,160), and the dot of those two directions is 0.598.
            So the sun gets its own frame with the camera turned to face it. */
+/* A FLAG FRAME IS GEOMETRY, NOT LOOK (SPIKE_ADOPT 5/6/14, 2026-10-03), so the flag take runs with the
+   look stood down and the ship take — the one scored — keeps all of it:
+     farOn:false        by day the dome draws the photograph and the range takes its haze colour from it,
+                        so painting either magenta through its own colour or haze uniform no longer shows
+     toneMapper 'aces'  AgX pulls a flat magenta toward grey (measured: g ~90 against isMag's g < 70, so
+                        the mask came back EMPTY and every property read None)
+     grade off          the display grade moves every colour, magenta included
+   None of the three moves a vertex, so the silhouette the flag reports is the ship frame's. */
+const farOffFor=(name)=>{ const prevS=process.env.KEASKY, prevF=process.env.KEAFILM;
+  if(name==='flag'){ const o=prevS?JSON.parse(prevS):{}; o.farOn=false; o.toneMapper='aces'; process.env.KEASKY=JSON.stringify(o);
+    const f=prevF?JSON.parse(prevF):{}; f.grade=Object.assign({},f.grade,{on:false}); process.env.KEAFILM=JSON.stringify(f); }
+  return ()=>{ if(prevS===undefined) delete process.env.KEASKY; else process.env.KEASKY=prevS;
+               if(prevF===undefined) delete process.env.KEAFILM; else process.env.KEAFILM=prevF; }; };
 async function shootSky(){
   const {ensureBuild,serve,preparePage,assertBooted,launch,GAUNTLETSEED}=await import('./webrig.mjs');
   ensureBuild(); const srv=await serve();
@@ -982,7 +996,8 @@ async function shootSky(){
   for(const name of ['ship','flag','sun']){
     const browser=await launch(); const page=await browser.newPage();
     await page.setViewport({width:SW,height:SH});
-    await preparePage(page,{seed:GAUNTLETSEED,biome:'carpark'});
+    const restore=farOffFor(name);
+    await preparePage(page,{seed:GAUNTLETSEED,biome:'carpark'}); restore();
     await page.goto(srv.origin+'/',{waitUntil:'load'});
     await assertBooted(page);
     await page.evaluate('window.AudioContext=undefined;KEAGAME.startGame(1);');

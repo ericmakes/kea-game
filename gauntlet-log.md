@@ -6185,3 +6185,35 @@ campground's relief, +50.7 mm). Measured on the campground: tyres -4.8 / -3.1 mm
 (the jockey wheel +34 mm, and it is not a wheel). harness-everything: the shipped-swapped list names it,
 and the campground's "all primitive" row now says all primitive except camp_van. Gate: CERTIFIED-SHIP
 684c6708 with step 0 in the tree (meter 16.36 ms at 100%; the campground is not on the meter's circuit).
+
+## 2026-10-03e — SPIKE_ADOPT 5a-5b: ColorManagement ON, the CSS grade off; the light-and-grade candidate refused (Opus 5.5) — certified 7209e142
+
+STEP (1) OF ERIC'S ORDER, LIGHT AND GRADE. What LANDED, measured and accepted:
+COLORMANAGEMENT ON. three converts in the Color constructor; the 59 hand convertSRGBToLinear sites became
+plain Colors. sRGB arithmetic stays in sRGB (srgbBytes: the sky's HSL knobs, nightApply's lerp); six
+night-light hexes that were TUNED as linear say so (linHex: torch lens/beam/spot, campfire flame/core/point).
+NEW INSTRUMENT colourdigest.mjs — every colour handed to the GPU on six maps (materials, uniforms, vertex
+and instance colours, lights, fog, background), diffable. Run-to-run 0 moved; ON vs OFF: every material
+and vertex colour identical, 61 values moved, all raw-hex sites: the day lights and fog AT BOOT (the r128
+seam where boot was raw and nightApply converted — now one value). Battery expectations were rewritten to
+be independent of the setting (setHex(h, Linear) for authored sRGB numbers, getHex(Linear) for stored
+values; the world digest spells stored values) — none loosened; the boot fog/sun assertions now assert
+the seam CLOSED. THE CSS saturate/contrast/brightness on the canvas is gone (the grade it did is now a
+measurable pass, off). perfstep l1_colour_managed: 14.12 ms at 100%, key six 20/36 -> 23/36, nothing out.
+BIRD COLOUR PROPERTY (framescore birdProps + birdcolour.mjs): hue, saturation, local dark-rim fraction on
+the body against canonical_renders/folded_rear.png scaled to the game bird. Instrument faults found on
+the way: tussock behind a bronze bird holes a visible-minus-hidden mask (now a keyed magenta take); the
+rim must be LOCAL (a body-median threshold read the sun's shade side as rims, 0.18-0.27 vs 0.06); the
+reference must be compared at the game bird's scale (rims are per-pixel). Shipped before: sat 0.54-0.58
+(out); now 0.50 (out by 0.02).
+REFUSED BY THE LOOK RULE, BUILT, OFF, FOR ERIC (SPIKE_ADOPT "the light-and-grade candidate"):
+AgX vs ACES scored (AgX 6/6 on the spike frame, ACES 3-4/6); the sun MEASURED off the 8K disc
+(tools/hdri.mjs: integrated, painted out of a sunless IBL whose ground is the game's ground lit); the
+display grade (spike arithmetic cooked the bird to sat 0.81-0.89 — a 'luma' form holds colour ratios);
+the photographic far field (11 CC0 HDRIs scored; pizzo_pernice: 99.7% clean sky above 8 deg, range 7/7 on
+the plates with photo-coloured haze at the tuned luminance). Together: key six 27/36, range 7/7, bird in
+band — and 06 edge density, 06 and 12 snow patchiness out by 0.06-0.34 half-widths. Fifteen variants of
+exposure, contrast, cloud albedo, fills and tone mapper each dropped something else. The rule is exact,
+so it is Eric's call. Instruments fixed for it: platescore's flag takes stand the look down (far field,
+AgX and grade move magenta; the flag is geometry); the far field's haze sample at 2 deg read ridges.
+THE 14c DISSOLVE IS BLOCKED on the geometry: the range is 64-190 m of real mountain the bird flies into.

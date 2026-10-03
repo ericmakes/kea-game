@@ -24,6 +24,7 @@ import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { CopyShader } from 'three/addons/shaders/CopyShader.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 /* THE LOOK, IN NAMED CONSTANTS. Tuned once, against the Birds of War wall, at a light model that
    is now physical. Subtle is the brief: this is a film camera on the same geometry, not a filter. */
@@ -32,6 +33,27 @@ import { CopyShader } from 'three/addons/shaders/CopyShader.js';
    Setting every effect to zero also gives the rig a like-for-like A/B against the plain renderer,
    which is how the tone-mapping chain below was verified rather than assumed. */
 export const FILM = {
+  /* THE DISPLAY GRADE — SPIKE_ADOPT row 5, 2026-10-03. The render spike graded AFTER its tone map, in
+     display space (its src/main.js): saturation about luma, a warm white-balance shift (+r, +0.35 g,
+     -b), contrast about mid-grey, a vignette, film grain. This is that grade as one WebGL pass after
+     OutputPass, reading the encoded frame and writing it straight to the canvas (a raw ShaderMaterial
+     carries no colour-space or tone-map chunk, so nothing is applied twice). It REPLACES the CSS
+     saturate/contrast/brightness filter index.html used to put on the canvas, which graded the
+     same way but outside anything the game could measure or a screenshot of the canvas could see.
+     on:false is the identity. Grain is a fixed per-pixel pattern, not animated: a capture must be
+     reproducible, and grain that moves between two takes of the same frame is noise in every diff.
+     TWO FORMS. 'spike' is the spike's arithmetic verbatim: contrast per channel about mid-grey and the
+     warmth ADDED. Both raise saturation as a side effect — per-channel contrast drives a dark
+     channel toward zero, and an added tint is a large relative chroma change on a dark pixel — and
+     the bird's bronze is a dark, low-chroma colour, so it is where that shows: measured by
+     birdcolour.mjs, the spike grade took the bird's saturation from 0.37 to 0.81-0.89 against the
+     approved render's 0.41. 'luma' does what the knobs say and nothing else: contrast on LUMINANCE
+     with the colour ratios held, warmth as white-balance GAINS (r x (1+w), g x (1+0.35w), b x (1-w)).
+     THE VALUES are the spike's knobs fitted under a constraint the spike did not have: the bird's bronze
+     must stay inside its approved render's band (framescore birdProps). Spike numbers (1.5 / 0.08 / 1.22)
+     took the bird's saturation to 0.59 even in luma form; 1.2 / 0.05 / 1.15 holds it at 0.43-0.46
+     (approved 0.335-0.483) and scores 27/36 on the bow trio and 5/6 against the spike frame. */
+  grade:   { on: false, form: 'luma', sat: 1.2, warm: 0.05, contrast: 1.15, lift: 0.0, vig: 0.22, grain: 0.018 },   // OFF as shipped: the values are the candidate's
   /* BLOOM RUNS ON LINEAR HDR, BEFORE TONE MAPPING, and that is why the threshold is above 1.
      The first tuning used 0.86 with strength 0.34 — sensible-looking numbers for a post-tonemap
      buffer, and wrong here: lit surfaces already exceed 1.0 in linear, so nearly every bright
@@ -178,7 +200,31 @@ function build(renderer, scene, camera, w, h) {
   // OutputPass owns tone mapping and the sRGB encode once the chain is composited, so the
   // renderer must NOT also do it — doing both tone maps the frame twice and washes it out.
   c.addPass(new OutputPass());
+  if (FILM.grade.on) c.addPass(gradePass());
   return { composer: c, ao, bokeh, w, h, camera };
+}
+
+function gradePass() {
+  const G = FILM.grade;
+  const sh = { uniforms: { tDiffuse: { value: null }, uSat: { value: G.sat }, uWarm: { value: G.warm }, uCon: { value: G.contrast },
+      uLift: { value: G.lift }, uVig: { value: G.vig }, uGrain: { value: G.grain }, uSpike: { value: G.form === 'spike' ? 1 : 0 } },
+    vertexShader: CopyShader.vertexShader,
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uSat, uWarm, uCon, uLift, uVig, uGrain; uniform int uSpike; varying vec2 vUv;
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main(){
+        vec4 t = texture2D(tDiffuse, vUv); vec3 d = t.rgb;
+        float l = dot(d, vec3(0.2126, 0.7152, 0.0722));
+        d = mix(vec3(l), d, uSat);
+        if (uSpike == 1) { d += vec3(uWarm, uWarm * 0.35, -uWarm) * 0.5; d = (d - 0.5) * uCon + 0.5 + uLift; }
+        else { d *= vec3(1.0 + uWarm, 1.0 + 0.35 * uWarm, 1.0 - uWarm);
+               float l1 = max(dot(d, vec3(0.2126, 0.7152, 0.0722)), 1e-4), l2 = max((l1 - 0.5) * uCon + 0.5 + uLift, 0.0);
+               d *= l2 / l1; }
+        float r = length((vUv - 0.5) * vec2(1.0, 0.75));
+        d *= 1.0 - smoothstep(0.25, 0.85, r) * uVig;
+        d += (hash(gl_FragCoord.xy) - 0.5) * uGrain;
+        gl_FragColor = vec4(clamp(d, 0.0, 1.0), t.a);
+      }` };
+  const p = new ShaderPass(sh); p.name = 'grade'; return p;
 }
 
 export function installPost(KEAGAME) {

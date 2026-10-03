@@ -27,7 +27,7 @@ function keaRegions(THREE,sk,P,upLocal){
     if(/Humerus/.test(n))return 'near';             // proximal wing: coverts territory
     if(/_Head_|Neck/.test(n))return 'crown';
     return 'body'; });
-  const col=(h)=>new THREE.Color(h).convertSRGBToLinear();
+  const col=(h)=>new THREE.Color(h);
   const C={body:col(P.body),crown:col(P.crown),covert:col(P.covert),flight:col(P.flight),
            bill:col(P.bill),foot:col(P.foot),wing:col(P.wing),chest:col(P.chest)};
   /* A PER-VERTEX TINT, BLENDED BY BONE WEIGHT — not a winner-take-all region id.
@@ -106,9 +106,9 @@ function keaRegions(THREE,sk,P,upLocal){
    a black cockatoo's texture has none and a kea's underwing is unmistakable without it. */
 function keaRecolour(THREE,mat,P){
   const U={
-    uCov :{value:new THREE.Color(P.covert).convertSRGBToLinear()},
-    uFli :{value:new THREE.Color(P.flight).convertSRGBToLinear()},
-    uBar :{value:new THREE.Color(P.bar).convertSRGBToLinear()},
+    uCov :{value:new THREE.Color(P.covert)},
+    uFli :{value:new THREE.Color(P.flight)},
+    uBar :{value:new THREE.Color(P.bar)},
     uBarN:{value:P.barN}, uBarW:{value:P.barW}, uMean:{value:P.mean},
     uDetail:{value:P.detail}, uShLo:{value:P.shadeLo}, uShHi:{value:P.shadeHi},
     uOpen:{value:0},
@@ -322,9 +322,9 @@ export async function installBird(K){
         const latHalf=Math.abs(lat.x)*ext.x/2+Math.abs(lat.y)*ext.y/2+Math.abs(lat.z)*ext.z/2;
         const R=B.plume.eyeR*ext.length()*0.1;
         const ringM=new THREE.MeshStandardMaterial({
-          color:new THREE.Color(B.plume.eyeRing).convertSRGBToLinear(),roughness:0.55,metalness:0});
+          color:new THREE.Color(B.plume.eyeRing),roughness:0.55,metalness:0});
         const darkM=new THREE.MeshStandardMaterial({
-          color:new THREE.Color(B.plume.eyeDark).convertSRGBToLinear(),roughness:0.20,metalness:0});
+          color:new THREE.Color(B.plume.eyeDark),roughness:0.20,metalness:0});
         const ringG=new THREE.TorusGeometry(R,R*B.plume.eyeW,8,18);
         const discG=new THREE.SphereGeometry(R*0.95,12,10);
         kea._eyes=[];

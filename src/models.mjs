@@ -81,7 +81,7 @@ function dress(root,entry,K){
       if(!pol.keepModelPBR){
         c.map=null; c.normalMap=null; c.roughnessMap=null; c.metalnessMap=null; c.aoMap=null;
         if(pol.color!==null&&pol.color!==undefined)
-          c.color.copy(new THREE.Color(pol.color).convertSRGBToLinear());
+          c.color.copy(new THREE.Color(pol.color));
         c.needsUpdate=true; out.overridden++;
       }
       if(pol.nightTint&&K.nightTint){ K.nightTint(c); out.tinted++; }

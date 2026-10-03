@@ -215,7 +215,7 @@ await shotR('07_jam',`const G=KEAGAME.G;
   // linear, so convert to match.
   for(const c of held){ const bg=c.bodyG; if(!bg||!bg.children.length)continue;
     const src=bg.children[0].material; if(!src)continue;
-    const body=new THREE.MeshStandardMaterial({color:new THREE.Color(0x3E6484).convertSRGBToLinear(),
+    const body=new THREE.MeshStandardMaterial({color:new THREE.Color().setHex(0x3E6484,THREE.LinearSRGBColorSpace).convertSRGBToLinear(),
       roughness:src.roughness, metalness:src.metalness, envMapIntensity:src.envMapIntensity});
     bg.traverse(o=>{ if(o.isMesh&&o.material===src)o.material=body; }); }
   const cone=G.props.find(p=>p.cone&&!p.heldBy); if(cone){cone.x=1.2;cone.z=34.0;cone.y=0.06;cone.mesh.position.set(cone.x,cone.y,cone.z);}

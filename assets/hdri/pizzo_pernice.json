@@ -1,0 +1,44 @@
+{
+ "source": "pizzo_pernice_8k.hdr (Poly Haven, CC0)",
+ "size": [
+  8192,
+  4096
+ ],
+ "mirroredAboutSun": false,
+ "sun": {
+  "azimuthRad": 0.6327,
+  "elevationRad": 0.9273,
+  "elevationDeg": 53.13,
+  "irradiance": [
+   5.6499,
+   5.2278,
+   4.8139
+  ],
+  "peak": 92992
+ },
+ "band": {
+  "elevationDeg": [
+   -4,
+   30
+  ],
+  "width": 8192,
+  "height": 774,
+  "scale": 1.03879,
+  "encoding": "sRGB of linear L x scale"
+ },
+ "skyMeanRadiance": 0.2616,
+ "energyBooks": 1,
+ "ground": {
+  "albedo": [
+   0.325,
+   0.2,
+   0.054
+  ],
+  "radiance": [
+   0.51981,
+   0.31207,
+   0.0856
+  ],
+  "fadeDeg": 3
+ }
+}

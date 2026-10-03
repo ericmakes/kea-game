@@ -35,6 +35,25 @@ export function skyURL(KEAGAME) {
   return new URL(SKY.hdri, document.baseURI).href;
 }
 
+/* THE FAR FIELD'S TEXTURES (SKY.farOn). The band is an sRGB JPEG of radiance x farBandScale (tools/
+   hdri.mjs), read as sRGB so the sampler hands back linear; no mipmaps — at any play lens the band is
+   magnified (8192 texels round 360 degrees against ~1900 px across ~70), and a mip chain would only add
+   the derivative seam where atan wraps. G.farU.uFarOn goes to 1 only when BOTH textures are in, so a
+   band that fails to load leaves the painted dome, which is the same law the HDRI itself follows. */
+function installFarField(KEAGAME, skyTex) {
+  const G = KEAGAME.G, SKY = KEAGAME.SKY, U = G.farU;
+  skyTex.generateMipmaps = false; skyTex.minFilter = THREE.LinearFilter; skyTex.needsUpdate = true;
+  U.uFarSky.value = skyTex;
+  const url = new URL(SKY.farBand, document.baseURI).href;
+  new THREE.TextureLoader().load(url, band => {
+    band.colorSpace = THREE.SRGBColorSpace; band.generateMipmaps = false; band.minFilter = THREE.LinearFilter;
+    band.wrapS = THREE.RepeatWrapping; band.needsUpdate = true;
+    U.uFarBand.value = band; U.uFarOn.value = 1;
+    G.farField = { mode: 'photo', band: SKY.farBand, sky: SKY.hdri, width: band.image.width, height: band.image.height };
+  }, undefined, err => { G.farField = { mode: 'painted', error: String(err && err.message || err) };
+    console.error('sky: far-field band failed to load, the painted dome stays —', err); });
+}
+
 export function installSky(KEAGAME) {
   const G = KEAGAME.G, SKY = KEAGAME.SKY;
   if (!G.renderer) throw new Error('sky: no renderer to build a PMREM with');
@@ -56,8 +75,10 @@ export function installSky(KEAGAME) {
         pm.compileEquirectangularShader();
         const env = pm.fromEquirectangular(tex).texture;
         pm.dispose();
-        /* the source texture has done its job; the convolved cube is what the scene keeps */
-        tex.dispose();
+        /* THE SOURCE IS KEPT WHEN THE FAR FIELD IS ON (SPIKE_ADOPT 14): above the band's top edge the day
+           dome draws this equirect itself. Otherwise it has done its job and the convolved cube is what
+           the scene keeps. */
+        if (SKY.farOn && G.farU) installFarField(KEAGAME, tex); else tex.dispose();
 
         const prev = G.scene.environment;
         G.scene.environment = env;

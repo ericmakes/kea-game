@@ -124,6 +124,9 @@ const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay'
      SKY caught this one before a single variant was shot. */
   'cirrusBase', 'cirrusElev', 'cirrusElevVary', 'cirrusFringe', 'cirrusFringeAt', 'cirrusFringeR', 'cirrusLobes', 'cirrusPuffs', 'cirrusRMul', 'cirrusSpread', 'cirrusStretch', 'cirrusWisp', 'cirrusWispEmis', 'cirrusWispR', 'cloudCirrus',
   'skySatMul','skyHueRot','hazeColor','skyMidAt','skyLowAt',
+  'toneMapper','exposure',          // SPIKE_ADOPT 6 (2026-10-03): the tone mapper and its exposure, named
+  'farOn','farBand','farBandElev','farBandScale','farHazeAbove',   // SPIKE_ADOPT 14: the photographic far field
+  'cloudAlbedo',
   'cloudWisp','cloudWispR','cloudWispAt','cloudWispEmis','cloudWispAlpha',
   /* THE OUTLINE SPREADS — the second cumulus round. Registered before the first variant was shot,
      which is the point of the battery row that compares this list against SKY: the fifth drift

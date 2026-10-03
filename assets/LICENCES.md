@@ -23,6 +23,21 @@ permitted. Attribution is given here anyway, because the authors did the work.
 | `hdri/kloofendal_43d_clear_1k.hdr` | kloofendal_43d_clear | Greg Zaal | CC0 | `036ef061f3f6c20f509599552e60cb16` |
 | `hdri/dry_field_1k.hdr` | dry_field | Greg Zaal | CC0 | `7d0de3d3879054859c32776371ef29c6` |
 
+**THE SHIPPED LIGHT AND FAR FIELD, DERIVED (SPIKE_ADOPT 7 and 14, 2026-10-03).** Cut by `tools/hdri.mjs`
+from Poly Haven's **8K** `pizzo_pernice_8k.hdr` (md5 `2758cef9c87b1a8e871bf83eaff6e402`, not kept in the
+tree — 100 MB; re-download from polyhaven.com/a/pizzo_pernice) with `GROUND=0.325,0.20,0.054`. CC0, same
+author. Derived work of a CC0 original, so CC0 too.
+
+| file | what | md5 |
+|---|---|---|
+| `hdri/pizzo_pernice_ibl.hdr` | 1024x512 RGBE, sun disc painted out, lower hemisphere the game's ground lit by the measured sun and sky | `d90884258ba833188a2ea6771221e82f` |
+| `hdri/pizzo_pernice_band.jpg` | 8192x774 sRGB backplate, -4..30 degrees elevation, radiance x 1.03879 | `6305bd7d7078a47457facec0fdf6a409` |
+| `hdri/pizzo_pernice.json` | the measured sun (az 36.25, el 53.13 deg, irradiance 5.650 / 5.228 / 4.814), band scale, ground | `894a2fdd4043ed40c0e2487c5bd7300f` |
+
+The 1k original stays above as the shelf: it is what the sun in the sky was measured against before.
+**THE "WHY 1k" NOTE BELOW NO LONGER HOLDS FOR THE BACKPLATE**: the far field IS a visible background, so
+its band is full 8K resolution (0.27 MB as JPEG); the IBL is still 1K for the reason given.
+
 **WHY THREE AND NOT ONE.** The HDRI is a taste call, so it went to a variant strip
 per the WAVES law of best (never ship attempt one unseen). All three are kept in the
 tree so Eric can reshoot any of them with `KEASKY='{"hdri":"<name>_1k.hdr"}'` rather

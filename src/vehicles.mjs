@@ -22,7 +22,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
-const lin = (hex) => new THREE.Color(hex).convertSRGBToLinear();
+const lin = (hex) => new THREE.Color(hex);
 let LOAD = null;
 export function loadVehicles(url) {
   if (!LOAD) LOAD = new Promise((res, rej) => new GLTFLoader().load(url, res, undefined, rej)).then(gltf => {

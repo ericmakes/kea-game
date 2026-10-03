@@ -1,0 +1,252 @@
+{
+ "label": "l1_light_grade",
+ "at": "2026-10-03T04:15:54.858Z",
+ "cost": {
+  "runs": [
+   {
+    "meanMs": 14.23,
+    "medianMs": 13.4,
+    "p95Ms": 31.3,
+    "fps": 70.3,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.25,
+    "medianMs": 13.2,
+    "p95Ms": 32.1,
+    "fps": 70.2,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.31,
+    "medianMs": 12.7,
+    "p95Ms": 32.9,
+    "fps": 69.9,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   }
+  ],
+  "meanMs": 14.25
+ },
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 5,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.196,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.1943,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0885,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.3973,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 43.6459,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1221,
+     "ok": false,
+     "miss": 1.41
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 5,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.354,
+     "ok": false,
+     "miss": 0.08
+    },
+    "ridgeP10": {
+     "gv": 0.2144,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0879,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.3815,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 41.2979,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.2179,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 3,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1755,
+     "ok": false,
+     "miss": 0.18
+    },
+    "ridgeP10": {
+     "gv": 0.3132,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0455,
+     "ok": false,
+     "miss": 0.34
+    },
+    "luma": {
+     "gv": 0.4619,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 56.3469,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0877,
+     "ok": false,
+     "miss": 1.72
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 6,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3392,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2908,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0707,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4517,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 40.1158,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3167,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2269,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.118,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0511,
+     "ok": false,
+     "miss": 0.14
+    },
+    "luma": {
+     "gv": 0.3608,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 49.07,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.097,
+     "ok": false,
+     "miss": 1.64
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1482,
+     "ok": false,
+     "miss": 0.53
+    },
+    "ridgeP10": {
+     "gv": 0.2839,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0982,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4363,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 57.9829,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0404,
+     "ok": false,
+     "miss": 2.15
+    }
+   }
+  }
+ },
+ "ac": true,
+ "prev": "b2_budget100_ac",
+ "refusals": [
+  "06_skyline edgeDensity: was in band (0.199), now out (0.1755, 0.18 half-widths)",
+  "06_skyline snowPatch: was in band (0.0967), now out (0.0455, 0.34 half-widths)",
+  "12_seal_midpeel snowPatch: was in band (0.0667), now out (0.0511, 0.14 half-widths)"
+ ]
+}

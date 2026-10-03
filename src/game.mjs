@@ -6,26 +6,28 @@
    by content, never by file position, and that law did not change with the stack. */
 import * as THREE from 'three';
 
-/* COLOUR MANAGEMENT STAYS OFF, PERMANENTLY — REPLAT P1, corrected at step 5.
-
-   Step 2 pinned this as a temporary holding position and said the game compensated by hand "in
-   exactly one place, the grass tints". THAT WAS WRONG, and the correction matters: the game
-   converts sRGB -> linear in ~18 places, including BOTH central material helpers —
-
-       mat(c)  -> new THREE.Color(c).convertSRGBToLinear()      every Standard material
-       bmat(c) -> new THREE.Color(c).convertSRGBToLinear()      every Basic material
-
-   plus every vertex-colour site (sky dome, ground, mountains, tussock, snow, grass) and the
-   day/night lerp in nightApply. The game owns a complete and internally consistent colour
-   pipeline: authored values are sRGB, converted once at source, handed to the materials linear,
-   and encoded back by renderer.outputColorSpace = SRGBColorSpace.
-
-   Modern three's ColorManagement does the SAME conversion in the Color constructor. Enabling it
-   would therefore convert everything TWICE — not just the grass — and un-doing that means deleting
-   eighteen call sites to buy exactly the pipeline the game already has. So this is not a debt to
-   pay off at step 5; it is the correct setting for this codebase, and it is now documented as one.
-   Turn it on only alongside removing every convertSRGBToLinear above, and re-pin the whole set. */
-THREE.ColorManagement.enabled = false;
+/* COLOUR MANAGEMENT IS ON — SPIKE_ADOPT row 5, 2026-10-03 (Eric: "ColorManagement ON").
+   It was off from REPLAT P1 to here, with the game converting sRGB -> linear BY HAND at 59 call sites
+   (mat, bmat, every vertex-colour site, nightApply). Three's ColorManagement does the same conversion
+   in the Color constructor, so turning it on and deleting those hand conversions is the same pipeline
+   with one author instead of 59 — and every RAW hex that never had a conversion (handed straight to a
+   material as if it were linear, the bug ARTBIBLE's colour section warns about) is now converted too.
+   THE TWO PLACES THAT DO ARITHMETIC IN sRGB keep doing it there, explicitly: the sky's HSL tone knobs
+   and nightApply's day/night lerp both work on the AUTHORED numbers and convert once at the end, and
+   srgbBytes() below is how they get the authored numbers into a Color without three converting them.
+   PROVED BY gauntlet/verify/colourdigest.mjs: every colour the game hands the GPU on all six maps,
+   before and after. The converted sites read identical; every value that moved is listed and judged
+   in SPIKE_ADOPT.md row 5. */
+THREE.ColorManagement.enabled = true;
+/* srgbBytes(hex) — a Color holding the AUTHORED sRGB numbers, unconverted, for arithmetic that belongs
+   in sRGB (HSL knobs, a palette lerp). Call .convertSRGBToLinear() on the result before a material sees it. */
+const srgbBytes=h=>new THREE.Color().setHex(h,THREE.LinearSRGBColorSpace);
+/* linHex(hex) — THE SAME CALL, A DIFFERENT CLAIM: this hex was TUNED AS A LINEAR VALUE while
+   ColorManagement was off, and the tuned value is what ships. colourdigest.mjs found six such raw sites:
+   the torch's lens, beam and spot light and the campfire's flame, core and point light — all night
+   lights, all tuned by eye on the night vantages. Converting them now would deepen the flame from
+   (1, 0.63, 0.25) to (1, 0.36, 0.05) and move every night frame for a refactor. They say so instead. */
+const linHex=srgbBytes;
 
 /* PHYSICAL LIGHT UNITS — REPLAT P1 step 5 (2026-09-03).
    r155 made lighting physically correct and r165 DELETED useLegacyLights, so r128's light maths is
@@ -82,6 +84,13 @@ const SKY={
      three-step warmth strip; the values are in ARTBIBLE) and raised 1.45 -> 1.85 to take over the
      work withdrawn from fill and rim. The multiplier is LX_DIR (pi) like every other light, so
      the number is directly comparable with the r128 one it replaces. */
+  /* THE SUN, SHIPPED AS IT WAS (0xFFEAC8 at 1.85 x pi, picked by eye). THE MEASURED SUN IS THE CANDIDATE
+     (SPIKE_ADOPT 7, 2026-10-03), refused by the look rule and waiting on Eric: tools/hdri.mjs integrates
+     the disc of pizzo_pernice's 8K original (radiance x solid angle, the circumsolar ring's median taken
+     off) — 5.650 / 5.228 / 4.814 linear — and paints it out of the IBL so it is not counted twice. As
+     constants: sunDay 0xFFF6EE (the irradiance over its own max), sunIntensityDay 1.9194 (x pi = 6.03,
+     the panorama scaled x1.0673), envIntensityDay 1.0673, hdri pizzo_pernice_ibl.hdr, envRotationY
+     2.0628, hdriSunAz/El 0.6327/0.9273, hemi/fill/rim by day 0. KEASKY reproduces it. */
   sunDay:0xFFEAC8, sunNight:0xB9CCEE,
   sunIntensityDay:1.85, sunIntensityNight:0.24,
   sunPosDay:[-46,42,22], sunPosNight:[36,30,-26],
@@ -136,6 +145,10 @@ const SKY={
      fill exists to keep readable — hold at 0.30 mean luma for the brightest 3% of terrain against
      0.27 with the environment off entirely. 0.08 is where the warmth has essentially gone and the
      caps have not. */
+  /* THE CANDIDATE'S IBL (SPIKE_ADOPT 7) is assets/hdri/pizzo_pernice_ibl.hdr: the SUNLESS cut of the 8K
+     original, its lower hemisphere the ground the game draws (GROUND=0.325,0.20,0.054 — the carpark's
+     tussock and seal, measured off PAL and asphalt_02 — lit by the measured sun and sky). Shipped: the
+     1K original, its sun still in it, as before. */
   hdri:'hdri/pizzo_pernice_1k.hdr', envIntensityDay:0.55, envIntensityNight:0.08,
   envRotationY:2.0630,
   /* THE MEASURED INPUTS TO envRotationY, KEPT SO THE ROTATION CAN CHECK ITSELF. hdriSunAz is
@@ -475,6 +488,14 @@ const SKY={
      this level dominates that bounce and brings the shadowed side back to saturation 0.15, which
      is a grey cloud rather than a brown one — the same reading the plate's undersides give. */
   cloudEmissive:0.20,
+  /* THE SUNLIT SIDE OF A CUMULUS IS FAR BRIGHTER THAN A LAMBERT SPHERE (2026-10-03, SPIKE_ADOPT 5/7). A
+     real cloud scatters many times and throws much of the sun back toward a viewer on the sunny side;
+     a diffuse sphere returns albedo/pi of it. Under ACES that never showed, because the old exposure
+     clipped every sunlit top to white. Under AgX nothing clips, and with the measured sun the tops came
+     out BEIGE and barely brighter than the photographed sky: platescore's sky read internal contrast
+     0.163 against the plates' 0.237 floor and underside 0.066 against 0.077. A gain on the cloud's
+     albedo is that multiple-scattering term, named, and measured against the same two rows. */
+  cloudAlbedo:1.0,      // 1 = the shipped clouds. The light-and-grade CANDIDATE (SPIKE_ADOPT 5-7) runs 2.6 with cloudEmissive 0.10
   /* ONE MASS, NOT A BUNCH OF GRAPES. Per-sphere normals shade every sphere in the cluster
      separately, so each one draws its own outline INSIDE the cloud and the eye counts balloons —
      which is what the first two iterations' strips came back reading as. Blending each vertex
@@ -602,6 +623,31 @@ const SKY={
   skySatMul:0.70,        // scales each dome stop's HSL saturation, and the haze band's
   skyHueRot:8.0,         // degrees, added to each stop's hue
   hazeColor:0xC3D2DC,    // was a bare literal in buildSky; named so the knobs can reach it
+  /* THE TONE MAPPER AND ITS EXPOSURE, named (they were literals in initRenderer) so the light-and-grade
+     piece can sweep them through KEASKY: 'aces' | 'agx' | 'neutral'. SPIKE_ADOPT row 6. */
+  /* AgX AGAINST ACES WAS SCORED, NOT TAKEN ON THE SPIKE'S WORD (SPIKE_ADOPT 6). Under the measured light,
+     each at its best exposure and grade: AgX 30/36 on the bow trio and 6/6 against the spike frame;
+     ACES 30/36 and 3-4/6 — ACES pushed edge density and snow patchiness out (it clips the highlights the
+     spike frame keeps). Bare AgX reads grey (spike sat 0.031): it needs the display grade (post.mjs).
+     AgX at 0.65 is the CANDIDATE; ACES 0.95 ships until Eric rules (see SPIKE_ADOPT.md row 6). */
+  toneMapper:'aces', exposure:0.95,   // SHIPPED. The candidate (SPIKE_ADOPT 6) is 'agx' at 0.65 — refused by the look rule, see SPIKE_ADOPT.md
+  /* THE PHOTOGRAPHIC FAR FIELD — SPIKE_ADOPT row 14, 2026-10-03. tools/hdri.mjs cuts the HDRI's horizon
+     at full resolution into farBand (elevation farBandElev, sRGB of radiance x farBandScale). By day the
+     sky dome draws the PHOTOGRAPH, in the light's own radiance units and turned by envRotationY like the
+     light, so the backplate's sun side is the shadows' sun side: the band below its top edge, the
+     sunless IBL above it. The range keeps its geometry (parallax, flight) and takes its haze colour
+     from the photograph's own sky farHazeAbove degrees over the horizon in that azimuth — aerial
+     perspective is the colour of the air there, which is what the spike's image-based fog was.
+     farOn:false (and headless, which never loads a texture) draws the painted dome exactly as before. */
+  /* THE PANORAMA: pizzo_pernice (Poly Haven, CC0; Italian Alps above Lago Maggiore). No CC0 NZ HDRI exists.
+     Eleven candidates were scored: at the strip lens against nz_alps_01/02, for a clean sky at 8-30 degrees
+     (a backplate at infinity cannot carry near trees: lago_disola's conifers drew a forest across the sky,
+     57% clean; pizzo 99.7%), and in the game on the plates — range 7/7, sky 8/11, spike frame 5/6.
+     farHazeAbove 12: at 2 degrees a mountain panorama's "air" is its own far ridges (the range's hue went
+     to 29-34, out of the plates' blue); 12 is above every skyline in it.
+     farOn:false AS SHIPPED — part of the light-and-grade candidate, refused by the look rule; KEASKY
+     '{"farOn":true,...}' with the candidate's light reproduces it. */
+  farOn:false, farBand:'hdri/pizzo_pernice_band.jpg', farBandElev:[-4,30], farBandScale:1.03879, farHazeAbove:12.0,
 };
 for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_SKY__)||{})){
   if(k in SKY) SKY[k]=v;
@@ -2163,7 +2209,7 @@ function matGround(fam,rough){
      field's ground is the snow family and snow is not supposed to look like soil. The tint rides
      in matBase so matDress's paint-mode exposure compensation applies to it exactly as it does to
      the white it replaces, rather than being multiplied in afterwards where the two would fight. */
-  const base=fam==='grass'?new THREE.Color(GRASS.groundTint).convertSRGBToLinear()
+  const base=fam==='grass'?new THREE.Color(GRASS.groundTint)
                           :new THREE.Color(1,1,1);
   m.userData.matFamily=fam; m.userData.matBase=base; m.userData.matRough=rough;
   { const FF=MATS.families[fam]; if(FF&&FF.iso)matBreakup(m,FF,fam==='grass'); }
@@ -2220,8 +2266,8 @@ function snowForm(x,y,z,r,opts){
   if(o.lean){ const L=Math.hypot(o.lean.x,o.lean.z)||1; lx=o.lean.x/L; lz=o.lean.z/L; }
   const geo=new THREE.RingGeometry(0.001,r,S.ring.r,S.ring.h);
   const pos=geo.attributes.position, cols=[];
-  const cS=new THREE.Color(PAL.snow).convertSRGBToLinear().multiplyScalar(S.val);
-  const cD=new THREE.Color(S.shade).convertSRGBToLinear().multiplyScalar(S.val);
+  const cS=new THREE.Color(PAL.snow).multiplyScalar(S.val);
+  const cD=new THREE.Color(S.shade).multiplyScalar(S.val);
   const c=new THREE.Color();
   for(let v=0;v<pos.count;v++){
     const px=pos.getX(v), py=pos.getY(v);
@@ -2330,8 +2376,8 @@ function mkBoulder(x,y,z,r,c,parent){
        plates and crusts with bare rock between them. So the amount is modulated by a third noise
        of the vertex direction as well as by how upward the face is — same trick the ridge shading
        on the mountains uses, and free for the same reason. */
-    const base=new THREE.Color(c).convertSRGBToLinear();
-    const li=new THREE.Color(R.lichen).convertSRGBToLinear();
+    const base=new THREE.Color(c);
+    const li=new THREE.Color(R.lichen);
     const cv=base.clone().multiplyScalar(R.crevice);
     const q=new THREE.Color();
     for(let v=0;v<nrm.count;v++){
@@ -2910,6 +2956,23 @@ function terrainHeightAt(x,z){
    and colorspace_fragment, which is what the Vector3 below is about, and it is also why the haze
    constant is a measured number rather than a derived one: it is compared against the plates
    through the same encode the plates were photographed in. */
+/* farPhoto(dir) — the far field's radiance in a world direction (SKY.farOn, G.farU). The band below its
+   top edge, the sunless IBL above, blended over the band's last ~3 degrees; looked up through the SAME
+   rotation and the SAME equirect mapping three uses for the environment (common.glsl equirectUv), so the
+   photograph's sun is where the light's is. Radiance x the environment's intensity: the light's units. */
+const FARGLSL=`
+uniform float uFarOn, uFarB0, uFarB1, uFarInv, uFarI, uFarDay, uFarAbove;
+uniform sampler2D uFarBand, uFarSky; uniform mat3 uFarRot;
+vec3 farPhoto(vec3 dir){
+  vec3 d = uFarRot * dir;
+  float u = atan(d.z, d.x) * 0.15915494 + 0.5;
+  float el = asin(clamp(d.y, -1.0, 1.0));
+  vec3 band = texture2D(uFarBand, vec2(u, clamp((el - uFarB0) / (uFarB1 - uFarB0), 0.0, 1.0))).rgb * uFarInv;
+  vec3 sky = texture2D(uFarSky, vec2(u, el * 0.31830989 + 0.5)).rgb;
+  float w = smoothstep(uFarB1 - 0.07, uFarB1 - 0.015, el) + smoothstep(uFarB0 + 0.015, uFarB0, el);
+  return mix(band, sky, clamp(w, 0.0, 1.0)) * uFarI;
+}
+`;
 function rangeHaze(m){
   /* THE COLOUR IS CONVERTED TO LINEAR BY HAND, and the two things that could go wrong here both
      did, in opposite directions, before this line settled.
@@ -2930,7 +2993,7 @@ function rangeHaze(m){
      measured: 0x33476F rendered rgb(156,170,188) where the linear reading predicts rgb(88,96,116).
      So a haze colour authored above renders as very nearly the sRGB colour it names, which is the
      behaviour worth having, and this is the line that delivers it. */
-  const u={ c:{value:new THREE.Color(TERRAIN.haze.color).convertSRGBToLinear()},
+  const u={ c:{value:new THREE.Color(TERRAIN.haze.color)},
             d:{value:TERRAIN.haze.density} };
   /* THE TRIPLANAR SEAM. Two 1x1 WHITE textures and a switch, so the shader compiles and renders
      identically to the untextured range until something hands it real maps — which is what
@@ -2943,7 +3006,7 @@ function rangeHaze(m){
              scale:{value:1/TERRAIN.tex}, amt:{value:TERRAIN.rockAmt},
              rockMean:{value:0.5}, edge:{value:TERRAIN.snowEdge},
              brk:{value:TERRAIN.snowBreak},
-             snowCol:{value:new THREE.Color(TERRAIN.snowTint).convertSRGBToLinear()} };
+             snowCol:{value:new THREE.Color(TERRAIN.snowTint)} };
   m.userData.rangeHaze=u; m.userData.terrainTex=tx;
   m.fog=true;
   m.onBeforeCompile=(sh)=>{
@@ -2953,6 +3016,7 @@ function rangeHaze(m){
     sh.uniforms.uTexScale=tx.scale; sh.uniforms.uRockAmt=tx.amt;
     sh.uniforms.uRockMean=tx.rockMean; sh.uniforms.uSnowEdge=tx.edge;
     sh.uniforms.uSnowBreak=tx.brk; sh.uniforms.uSnowCol=tx.snowCol;
+    if(G.farU) Object.assign(sh.uniforms,G.farU);
 
     /* WORLD POSITION AND NORMAL, because a triplanar projection is defined in world space — that
        is what makes it independent of any unwrap and what stops a steep face stretching. */
@@ -3000,7 +3064,7 @@ function rangeHaze(m){
         '}\n'+
         '#endif')
       .replace('#include <fog_pars_fragment>',
-        '#include <fog_pars_fragment>\nuniform vec3 uHazeColor;\nuniform float uHazeDensity;\n'+
+        '#include <fog_pars_fragment>\nuniform vec3 uHazeColor;\nuniform float uHazeDensity;\n'+FARGLSL+
         'uniform sampler2D uRockMap;\nuniform sampler2D uSnowMap;\nuniform float uHasTex;\n'+
         'uniform float uTexScale;\nuniform float uRockAmt;\nuniform float uRockMean;\n'+
         'uniform float uSnowEdge;\nuniform float uSnowBreak;\nuniform vec3 uSnowCol;\n'+
@@ -3076,7 +3140,16 @@ function rangeHaze(m){
       .replace('#include <fog_fragment>',
         '#ifdef USE_FOG\n'+
         '  float hz = 1.0 - exp( - uHazeDensity * uHazeDensity * vFogDepth * vFogDepth );\n'+
-        '  gl_FragColor.rgb = mix( gl_FragColor.rgb, uHazeColor, clamp( hz, 0.0, 1.0 ) );\n'+
+        /* SKY.farOn: the haze is the colour of the PHOTOGRAPH's air, farHazeAbove degrees over the
+           horizon in this fragment's own azimuth (the spike's image-based haze) */
+        '  vec3 hc = uHazeColor;\n'+
+        '  if (uFarOn > 0.5) { vec3 dv = vWPos - cameraPosition;\n'+
+        '    vec3 ph = farPhoto(normalize(vec3(dv.x, length(dv.xz) * uFarAbove, dv.z)));\n'+
+        /* the photograph's COLOUR at the tuned haze's LUMINANCE: the air's hue and its variation round
+           the compass come from the picture, the range's measured contrast (TERRAIN.haze) is kept */
+        '    float lh = dot(uHazeColor, vec3(0.2126, 0.7152, 0.0722)), lp = max(dot(ph, vec3(0.2126, 0.7152, 0.0722)), 1e-4);\n'+
+        '    hc = mix(hc, ph * (lh / lp), uFarDay); }\n'+
+        '  gl_FragColor.rgb = mix( gl_FragColor.rgb, hc, clamp( hz, 0.0, 1.0 ) );\n'+
         '#endif');
   };
   /* WITHOUT THIS the range shares a compiled program with any other material of the same shape and
@@ -3106,11 +3179,11 @@ function terrainMesh(){
      "hard-edged noise-broken patches in gullies not a gradient". A weight per vertex, cut and
      broken in the fragment shader, can be as sharp as a pixel. */
   const asnow=new Float32Array(nR*nTheta), shd=new Float32Array(nR*nTheta);
-  const cRock=new THREE.Color(T.rock).convertSRGBToLinear();
-  const cLit=new THREE.Color(T.rockLit).convertSRGBToLinear();
-  const cSnow=new THREE.Color(T.snow).convertSRGBToLinear();
-  const cTus=new THREE.Color(T.tussock).convertSRGBToLinear();
-  const cScree=new THREE.Color(T.scree).convertSRGBToLinear();
+  const cRock=new THREE.Color(T.rock);
+  const cLit=new THREE.Color(T.rockLit);
+  const cSnow=new THREE.Color(T.snow);
+  const cTus=new THREE.Color(T.tussock);
+  const cScree=new THREE.Color(T.scree);
   const at=(j,i)=>field[Math.max(0,Math.min(nR-1,j))*nTheta+((i%nTheta)+nTheta)%nTheta];
   const q=new THREE.Color();
   for(let j=0;j<nR;j++){
@@ -3247,8 +3320,8 @@ function waterMat(){ return mat(0xFFFFFF,{vertexColors:true,roughness:WATER.roug
 /* WATER COLOUR AT A POINT, as a function of how far from the edge it is and how fast it moves.
    `edge` is metres to the nearest shore, `flow` is 0 for still water and 1 for a braid. */
 function waterTint(edge,flow){
-  const d=new THREE.Color(flow>0.5?WATER.deep:WATER.still).convertSRGBToLinear();
-  const sh=new THREE.Color(WATER.shallow).convertSRGBToLinear();
+  const d=new THREE.Color(flow>0.5?WATER.deep:WATER.still);
+  const sh=new THREE.Color(WATER.shallow);
   const t=1-Math.min(1,Math.max(0,edge)/WATER.shallowM);
   return sh.clone().lerp(d,1-t*t);          // squared, so the shallows hug the shore
 }
@@ -3293,7 +3366,7 @@ function updateWater(){
     pos.needsUpdate=true;
   }
 }
-function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshStandardMaterial(Object.assign({color:col,roughness:0.82,metalness:0.0,envMapIntensity:0.3},extra||{}));
+function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c);M[k]=new THREE.MeshStandardMaterial(Object.assign({color:col,roughness:0.82,metalness:0.0,envMapIntensity:0.3},extra||{}));
     /* REPLAT P3: a scanned family claims the colour BEFORE the procedural branch gets a look at
        it, and the two are exclusive by registration rather than by this ordering — see MATFAM.
        THE FAMILY BRANCH IS NOT BEHIND `!HEADLESS`, on purpose and unlike the branch below it.
@@ -3311,7 +3384,7 @@ function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=ne
       { const FF=MATS.families[MATFAM[c]]; if(FF&&FF.iso)matBreakup(M[k],FF); }
       matFam(MATFAM[c]).mats.push(M[k]); matDress(M[k]); }
     else if(!HEADLESS&&MAPKIND[c]&&!M[k].map){ const t=detailTex(MAPKIND[c]); if(t)M[k].map=t; } }return M[k];}
-function bmat(c,extra){const k='b'+c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c).convertSRGBToLinear();M[k]=new THREE.MeshBasicMaterial(Object.assign({color:col},extra||{}));}return M[k];}
+function bmat(c,extra){const k='b'+c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c);M[k]=new THREE.MeshBasicMaterial(Object.assign({color:col},extra||{}));}return M[k];}
 
 /* ---------- tiny utils ---------- */
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
@@ -4079,6 +4152,16 @@ function initScene(){
   G.scene.fog=new THREE.FogExp2(SKY.fogDay,SKY.fogDensityDay);
   G.scene.environmentIntensity=SKY.envIntensityDay;
   G.scene.environmentRotation.set(0,SKY.envRotationY,0);
+  /* THE FAR FIELD'S UNIFORMS (SKY.farOn): one object, made here so the dome and the range compile
+     against it from the first frame; src/sky.mjs hands it the textures and turns it on. Off — and so
+     identical to the painted world — until it does, which is all headless ever sees. uFarRot is the
+     SAME matrix three looks the environment up through (WebGLMaterials: the transpose of the Euler). */
+  { const w1=()=>{ const t=new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1); t.needsUpdate=true; return t; };
+    const R=new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationFromEuler(G.scene.environmentRotation)).transpose();
+    G.farU={ uFarOn:{value:0}, uFarBand:{value:w1()}, uFarSky:{value:w1()}, uFarRot:{value:R},
+      uFarB0:{value:SKY.farBandElev[0]*Math.PI/180}, uFarB1:{value:SKY.farBandElev[1]*Math.PI/180},
+      uFarInv:{value:1/SKY.farBandScale}, uFarI:{value:SKY.envIntensityDay}, uFarDay:{value:1},
+      uFarAbove:{value:Math.tan(SKY.farHazeAbove*Math.PI/180)} }; }
   /* IBL PROVENANCE LIVES IN SCENE STATE, and it is declared HERE — in the headless path — rather
      than only where the texture is built. P2's proof is "IBL present in scene state", and the
      PMREM convolution needs a WebGL renderer, so a battery running in node can never see the
@@ -4123,7 +4206,7 @@ function initScene(){
      sprite's 168 would put it — the moon should read as the most distant thing in the sky. */
   const mg=new THREE.SphereGeometry(4.5,24,18);
   const moon=new THREE.Mesh(mg,new THREE.MeshBasicMaterial({
-    color:new THREE.Color(SKY.moonColor).convertSRGBToLinear(),
+    color:new THREE.Color(SKY.moonColor),
     vertexColors:true, fog:false}));
   { const MP=SKY.sunPosNight, ml=Math.hypot(MP[0],MP[1],MP[2]), MOONDIST=148;
     G.moonPos=[MP[0]/ml*MOONDIST,MP[1]/ml*MOONDIST,MP[2]/ml*MOONDIST];
@@ -4167,7 +4250,7 @@ function buildSky(){
      once.
      THE SECOND ARGUMENT SURVIVES so the seam is still visible at the call sites — every caller now
      passes 1, and a future caller that wants the raw value has to say so out loud. */
-  const tone=(hex,lin)=>{ const c=new THREE.Color(hex);
+  const tone=(hex,lin)=>{ const c=srgbBytes(hex);
     if(SKY.skySatMul!==1||SKY.skyHueRot!==0){ const h={};
       c.getHSL(h);
       c.setHSL((h.h+SKY.skyHueRot/360+1)%1, Math.max(0,Math.min(1,h.s*SKY.skySatMul)), h.l); }
@@ -4196,6 +4279,14 @@ function buildSky(){
     cols.push(c.r,c.g,c.b); }
   sg.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
   const sky=new THREE.Mesh(sg,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false}));
+  /* SKY.farOn: BY DAY THE DOME IS THE PHOTOGRAPH, seen from the camera (so it sits at infinity, not on a
+     210 m sphere round the origin), faded back to this painted ramp as the night comes (uFarDay) */
+  if(G.farU){ sky.material.onBeforeCompile=(sh)=>{ Object.assign(sh.uniforms,G.farU);
+      sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;')
+        .replace('#include <fog_vertex>','#include <fog_vertex>\n  vFarW = (modelMatrix * vec4(position, 1.0)).xyz;');
+      sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;'+FARGLSL)
+        .replace('#include <opaque_fragment>','if (uFarOn > 0.5) outgoingLight = mix(outgoingLight, farPhoto(normalize(vFarW - cameraPosition)), uFarDay);\n#include <opaque_fragment>'); };
+    sky.material.customProgramCacheKey=()=>'farDome'; }
   G.scene.add(sky); G.sky=sky; sky.material.color=new THREE.Color(0xFFFFFF);
   /* HORIZON HAZE BAND — AND IT USED TO END IN A HARD RIM.
      The band is a 26 m tall open cylinder at y 8, so its top edge was a horizontal line at a fixed
@@ -4304,7 +4395,7 @@ function buildSky(){
         pos[k]=Math.cos(a)*r*SKY.starR; pos[k+1]=y*SKY.starR; pos[k+2]=Math.sin(a)*r*SKY.starR;
         /* brightness varies; a sky of identical stars reads as a texture rather than as stars */
         const b=SKY.starDim+(1-SKY.starDim)*_thash(i*131+7,i*57+3);
-        const c=new THREE.Color(0xEAF2FF).convertSRGBToLinear().multiplyScalar(b);
+        const c=new THREE.Color(0xEAF2FF).multiplyScalar(b);
         col[k]=c.r; col[k+1]=c.g; col[k+2]=c.b;
         k+=3; }
       const sg2=new THREE.BufferGeometry();
@@ -4316,7 +4407,7 @@ function buildSky(){
       sf.name='starfield'; sf.visible=false;
       G.scene.add(sf); G.starfield=sf; } }
   G.clouds=[];
-  const cWhite=new THREE.Color(PAL.cloud).convertSRGBToLinear();
+  const cWhite=new THREE.Color(PAL.cloud).multiplyScalar(SKY.cloudAlbedo);   // cloudAlbedo: see SKY
   /* CONVERTED BY HAND, like the dome's vertex colours three blocks up and like mat() everywhere
      else: THREE.ColorManagement is off in this project, so a raw hex handed to a material is
      treated as LINEAR and comes out of the sRGB encode brighter than it was authored. The old
@@ -4333,7 +4424,7 @@ function buildSky(){
      the dome'''s pale horizon stop at saturation 0.11 — nearly neutral, which is what a cloud base
      is. It also follows the tone knobs for free: change the sky and the bases follow it. */
   const cEmis=cLow.clone().multiplyScalar(SKY.cloudEmissive);
-  const cHaze=new THREE.Color(SKY.cloudHaze).convertSRGBToLinear();
+  const cHaze=new THREE.Color(SKY.cloudHaze);
   /* MERGED BY HAND. BufferGeometryUtils would be a second static import and game.mjs is the
      gauntlet's specimen: exactly one import, asserted. Sphere geometries are indexed, so each is
      taken to non-indexed first and then the position and normal arrays are concatenated — and
@@ -4419,7 +4510,7 @@ function buildSky(){
          thin wafer sticking out sideways — the clouds came back looking like saucers, with a hard
          disc extending past the mass on both sides. Only the hosts, the lobes and the vertical
          puffs that make up the body, meet the plane. */
-      const bt=new THREE.Color(SKY.cloudBaseTint).convertSRGBToLinear();
+      const bt=new THREE.Color(SKY.cloudBaseTint);
       /* NO RIM BUMP HANGS BELOW THE FLAT BASE. It is the clip's own argument applied to the other
          half of the mass: the base plane exists so the cloud has one flat bottom, and a bump
          dangling under it contradicts that as plainly as a lump would. The lobes get there by
@@ -5723,7 +5814,7 @@ function grassSub(src){
 function grassShader(m,B,tier,biome){   // B is a LAYER spec: the clump layer or the cover layer
   if(GRASS_OK!==true)return m;
   const C=grassCuts(biome), V4=(c)=>new THREE.Vector4(c[0],c[1],c[2],c[3]);
-  const lin=h=>new THREE.Color(h).convertSRGBToLinear();
+  const lin=h=>new THREE.Color(h);
   /* THE TERRAIN, as the two sines the ground plane is actually built from, so a blade sits ON the
      ground instead of at y=0 — which is what the old carpet did, and why blades floated over every
      undulation. The plane is built in XY and laid down by the minus-90 rotation, so its local y is
@@ -6482,9 +6573,9 @@ function buildCarpark(){
     let h=0; if(d>58) h=(d-58)*0.06*(1+0.4*Math.sin(x*0.08)*Math.cos(y*0.07));
     h+=Math.sin(x*0.15)*Math.cos(y*0.13)*0.18; pos.setZ(i,h); }
   gg.computeVertexNormals();
-  { const cols=[],c1=new THREE.Color(PAL.ground).convertSRGBToLinear(),c2=new THREE.Color(PAL.ground2).convertSRGBToLinear(),c3=new THREE.Color(PAL.ground3).convertSRGBToLinear(),cg=new THREE.Color(PAL.gravel).convertSRGBToLinear();
+  { const cols=[],c1=new THREE.Color(PAL.ground),c2=new THREE.Color(PAL.ground2),c3=new THREE.Color(PAL.ground3),cg=new THREE.Color(PAL.gravel);
     const pp=gg.attributes.position;
-    const cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const cR=new THREE.Color(PAL.rock);
     /* maskScale MULTIPLIES ONLY THE MASK'S OWN FREQUENCIES. It deliberately does NOT scale x,y
        for the two features below it — the carpark's gravel rectangle and the scree ring are
        PLACES, not pattern, and shrinking them would confound the very measurement this knob
@@ -6710,7 +6801,7 @@ function buildCarpark(){
     G.wear=[]; // desire paths: hut door, carpark mouth, campsite, hut cut, road pull-in, campsite track
     for(const [wx,wz,wr] of [[-24,-4.6,1.6],[0,7.5,2.4],[16.5,-14,1.8],[-19.5,1.5,1.9],[13,32.5,2.0],[15.5,-1.0,1.7]]){
       const pa=paintAt(wx,wz);
-      const col=pa?pa.mat.color.clone().convertLinearToSRGB().multiplyScalar(0.72).getHex():0x8A7A52; // oil-dark on seal, brown on dirt
+      const col=pa?pa.mat.color.clone().convertLinearToSRGB().multiplyScalar(0.72).getHex(THREE.LinearSRGBColorSpace):0x8A7A52; // oil-dark on seal, brown on dirt
       const wy=pa?pa.top+0.006:0.012;
       const wm=new THREE.Mesh(new THREE.CircleGeometry(wr,18),mat(col));
       wm.rotation.x=-Math.PI/2; wm.position.set(wx,wy,wz); wm.receiveShadow=!HEADLESS; G.scene.add(wm);
@@ -6773,12 +6864,12 @@ function castCarpark(){
   { const rex=G.humans[G.humans.length-1];
     const tg=new THREE.Group(); tg.position.set(0.34,1.05,0.2); rex.g.add(tg);
     const body=cyl(0.045,0.05,0.24,PAL.dark,0,0,0,tg,8); body.rotation.x=1.57;
-    const lens=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8),new THREE.MeshBasicMaterial({color:0xFFE9B8,fog:false}));
+    const lens=new THREE.Mesh(new THREE.SphereGeometry(0.055,8,8),new THREE.MeshBasicMaterial({color:linHex(0xFFE9B8),fog:false}));
     lens.position.set(0,0,0.14); lens.visible=false; tg.add(lens);
-    const spot=new THREE.SpotLight(0xFFE0B0,0,17,0.42,0.5,1.5); spot.position.set(0,0,0.1);
+    const spot=new THREE.SpotLight(linHex(0xFFE0B0),0,17,0.42,0.5,1.5); spot.position.set(0,0,0.1);
     const tgt=new THREE.Object3D(); tgt.position.set(0,-0.35,4.5); tg.add(tgt); spot.target=tgt; tg.add(spot);
     const beam=new THREE.Mesh(new THREE.ConeGeometry(0.8,6.8,12,1,true),
-      new THREE.MeshBasicMaterial({color:0xFFE0A6,transparent:true,opacity:0.08,side:THREE.FrontSide,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
+      new THREE.MeshBasicMaterial({color:linHex(0xFFE0A6),transparent:true,opacity:0.08,side:THREE.FrontSide,depthWrite:false,fog:false,blending:THREE.AdditiveBlending}));
     beam.rotation.x=Math.PI/2-0.078; beam.position.set(0,-0.16,3.5); beam.visible=false; tg.add(beam);
     rex.torch={g:tg,spot,lens,beam};
   }
@@ -6891,8 +6982,8 @@ function buildSkifield(){
      wrong puts bush above the peaks. The battery reads the vertex colours back at known world
      coordinates rather than trusting this comment. */
   { const cols=[], pp=gg.attributes.position;
-    const cS=new THREE.Color(PAL.snow).convertSRGBToLinear(), cW=new THREE.Color(PAL.snowShade).convertSRGBToLinear(),
-          cR=new THREE.Color(PAL.rock).convertSRGBToLinear(), cT=new THREE.Color(PAL.tussock).convertSRGBToLinear();
+    const cS=new THREE.Color(PAL.snow), cW=new THREE.Color(PAL.snowShade),
+          cR=new THREE.Color(PAL.rock), cT=new THREE.Color(PAL.tussock);
     const MS=GRD.maskScale;
     for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
       const n=Math.sin(mx*0.09+0.6)*Math.cos(mz*0.08)+Math.sin(mx*0.27)*0.4;
@@ -7368,10 +7459,10 @@ function buildCampground(){
     h+=Math.sin(x*0.15)*Math.cos(y*0.13)*0.11; pos.setZ(i,h); }
   gg.computeVertexNormals();
   { const cols=[], pp=gg.attributes.position;
-    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),      // the flat: the greenest of the three
-          cD=new THREE.Color(PAL.ground).convertSRGBToLinear(),
-          cS=new THREE.Color(PAL.gravel).convertSRGBToLinear(),       // river shingle
-          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const cG=new THREE.Color(PAL.ground3),      // the flat: the greenest of the three
+          cD=new THREE.Color(PAL.ground),
+          cS=new THREE.Color(PAL.gravel),       // river shingle
+          cR=new THREE.Color(PAL.rock);
     const MS=GRD.maskScale;
     for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
       const n=Math.sin(mx*0.10+0.9)*Math.cos(mz*0.08)+Math.sin(mx*0.29)*0.45;
@@ -7596,7 +7687,7 @@ function shopGlassMat(){
   if(SHOPGLASSMAT)return SHOPGLASSMAT;
   const g=SHOPGLASS;
   SHOPGLASSMAT=new THREE.MeshPhysicalMaterial({
-    color:new THREE.Color(g.body).convertSRGBToLinear(),
+    color:new THREE.Color(g.body),
     roughness:g.rough, metalness:0.0,
     clearcoat:g.coat, clearcoatRoughness:g.coatRough,
     envMapIntensity:g.env,
@@ -7828,9 +7919,9 @@ function buildVillage(){
     h+=Math.sin(x*0.14)*Math.cos(y*0.12)*0.09; pos.setZ(i,h); }
   gg.computeVertexNormals();
   { const cols=[], pp=gg.attributes.position;
-    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),
-          cD=new THREE.Color(PAL.ground).convertSRGBToLinear(),
-          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const cG=new THREE.Color(PAL.ground3),
+          cD=new THREE.Color(PAL.ground),
+          cR=new THREE.Color(PAL.rock);
     const MS=GRD.maskScale;
     for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
       const n=Math.sin(mx*0.11+1.2)*Math.cos(mz*0.09)+Math.sin(mx*0.30)*0.4;
@@ -8406,10 +8497,10 @@ function buildRiver(){
     pos.setZ(i,h); }
   gg.computeVertexNormals();
   { const cols=[], pp=gg.attributes.position;
-    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),
-          cS=new THREE.Color(PAL.gravel).convertSRGBToLinear(),
-          cP=new THREE.Color(0x9A9A90).convertSRGBToLinear(),      // dry shingle: grey, and NOT near-white
-          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const cG=new THREE.Color(PAL.ground3),
+          cS=new THREE.Color(PAL.gravel),
+          cP=new THREE.Color(0x9A9A90),      // dry shingle: grey, and NOT near-white
+          cR=new THREE.Color(PAL.rock);
     const MS=GRD.maskScale;
     for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
       const n=Math.sin(mx*0.12+0.4)*Math.cos(mz*0.10)+Math.sin(mx*0.31)*0.42;
@@ -8803,10 +8894,10 @@ function buildStation(){
     pos.setZ(i,h); }
   gg.computeVertexNormals();
   { const cols=[], pp=gg.attributes.position;
-    const cG=new THREE.Color(PAL.ground3).convertSRGBToLinear(),
-          cT=new THREE.Color(PAL.tussock2).convertSRGBToLinear(),
-          cD=new THREE.Color(0x7A6A44).convertSRGBToLinear(),      // the bare, dunged yard dirt
-          cR=new THREE.Color(PAL.rock).convertSRGBToLinear();
+    const cG=new THREE.Color(PAL.ground3),
+          cT=new THREE.Color(PAL.tussock2),
+          cD=new THREE.Color(0x7A6A44),      // the bare, dunged yard dirt
+          cR=new THREE.Color(PAL.rock);
     const MS=GRD.maskScale;
     for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
       const n=Math.sin(mx*0.10+2.2)*Math.cos(mz*0.09)+Math.sin(mx*0.28)*0.44;
@@ -9633,11 +9724,11 @@ function buildTent(){
     for(let i=0;i<7;i++){ const a=i/7*Math.PI*2; const st=sph(0.11,0x7A7468,0,0,0,null,6); st.position.set(fx+Math.cos(a)*0.5,0.07,fz+Math.sin(a)*0.5); G.scene.add(st); }
     const l1=cyl(0.06,0.07,0.7,PAL.woodD,fx-0.1,0.12,fz,null,6); l1.rotation.z=1.35; G.scene.add(l1);
     const l2=cyl(0.06,0.07,0.7,PAL.woodD,fx+0.1,0.12,fz+0.05,null,6); l2.rotation.x=1.3; G.scene.add(l2);
-    const flame=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.55,7),new THREE.MeshBasicMaterial({color:0xFFA13F,fog:false}));
+    const flame=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.55,7),new THREE.MeshBasicMaterial({color:linHex(0xFFA13F),fog:false}));
     flame.position.set(fx,0.42,fz); flame.visible=false; G.scene.add(flame);
-    const inner=new THREE.Mesh(new THREE.ConeGeometry(0.11,0.34,6),new THREE.MeshBasicMaterial({color:0xFFE08A,fog:false}));
+    const inner=new THREE.Mesh(new THREE.ConeGeometry(0.11,0.34,6),new THREE.MeshBasicMaterial({color:linHex(0xFFE08A),fog:false}));
     inner.position.set(fx,0.36,fz); inner.visible=false; G.scene.add(inner);
-    const fl=new THREE.PointLight(0xFF9A3C,0,9,2); fl.position.set(fx,0.8,fz); G.scene.add(fl);
+    const fl=new THREE.PointLight(linHex(0xFF9A3C),0,9,2); fl.position.set(fx,0.8,fz); G.scene.add(fl);
     G.fire={light:fl,flame,inner,x:fx,z:fz};
   }
   [[-1.6,0.6],[1.6,-0.6]].forEach((o,i)=>{
@@ -12415,8 +12506,8 @@ function initRenderer(){
      nothing but that quad. Only the no-post fallback draws real edges into it. __KEA_AA__=true restores. */
   G.renderer=new THREE.WebGLRenderer({preserveDrawingBuffer:true,canvas:cv,antialias:globalThis.__KEA_AA__===true});
   G.renderer.outputColorSpace=THREE.SRGBColorSpace;
-  G.renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  G.renderer.toneMappingExposure=0.95;
+  G.renderer.toneMapping={aces:THREE.ACESFilmicToneMapping,agx:THREE.AgXToneMapping,neutral:THREE.NeutralToneMapping}[SKY.toneMapper]??THREE.ACESFilmicToneMapping;
+  G.renderer.toneMappingExposure=SKY.exposure;
   applyRenderScale();
   G.renderer.shadowMap.enabled=true;
   /* REPLAT P2: SOFT SHADOWS ARE A SHADOW-MAP CHOICE, not a radius. See the SKY block — PCFSoft
@@ -12544,7 +12635,7 @@ function pollPads(){
   }
 }
 function nightApply(t){
-  const L=(a,b)=>a+(b-a)*t, C=(h1,h2)=>new THREE.Color(h1).lerp(new THREE.Color(h2),t).convertSRGBToLinear();
+  const L=(a,b)=>a+(b-a)*t, C=(h1,h2)=>srgbBytes(h1).lerp(srgbBytes(h2),t).convertSRGBToLinear();
   if(!G.sun)return;
   G.sun.intensity=L(SKY.sunIntensityDay,SKY.sunIntensityNight)*LX_DIR; G.sun.color=C(SKY.sunDay,SKY.sunNight);
   G.sun.position.set(L(SKY.sunPosDay[0],SKY.sunPosNight[0]),L(SKY.sunPosDay[1],SKY.sunPosNight[1]),L(SKY.sunPosDay[2],SKY.sunPosNight[2]));
@@ -12563,6 +12654,7 @@ function nightApply(t){
      because everything already has fill. Scene.environmentIntensity is the correct knob because
      it scales the contribution without rebuilding the convolution. */
   G.scene.environmentIntensity=L(SKY.envIntensityDay,SKY.envIntensityNight);
+  if(G.farU){ G.farU.uFarI.value=G.scene.environmentIntensity; G.farU.uFarDay.value=1-t; }   // the far field follows the light and fades to the painted night
   if(G.ibl)G.ibl.intensity=G.scene.environmentIntensity;
   if(G.sky)G.sky.material.color.setRGB(L(1,0.16),L(1,0.20),L(1,0.34));
   if(G.haze)G.haze.material.opacity=L(SKY.hazeOpacityDay,SKY.hazeOpacityNight);
@@ -12742,7 +12834,7 @@ function boot(opts){
      on it - and a pick made on the brochure is the fallback, ahead of the default. */
   initScene(); buildWorld((opts&&opts.biome)||SAVE.picked()); registerSheepPecks(); homesRegister();   // TODO 17: after the build, so site rotations count
   { const w1=mat(0x9FB8C4,GLASSX), w2=mat(PAL.sun);
-    for(const m of [w1,w2]){ m.emissive=new THREE.Color(0xFFB35C).convertSRGBToLinear(); m.emissiveIntensity=0; }
+    for(const m of [w1,w2]){ m.emissive=new THREE.Color(0xFFB35C); m.emissiveIntensity=0; }
     G.warmMats=[w1,w2]; }
   if(HEADLESS)return;
   TOUCH.init();

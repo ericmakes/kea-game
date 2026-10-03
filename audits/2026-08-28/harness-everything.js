@@ -299,7 +299,7 @@ X.startGame(1); tick(8); park();
 
 C.section('THE CANOPY TAKES THE NIGHT');
 X.startGame(1); tick(4);
-{ const T=H.THREE, lin=h=>new T.Color(h).convertSRGBToLinear();
+{ const T=H.THREE, lin=h=>new T.Color().setHex(h,T.LinearSRGBColorSpace).convertSRGBToLinear();   // authored -> linear, whatever ColorManagement says
   const L=c=>{ const o={}; c.getHSL(o); return o.l; };
   const reg=G.nightMats||[];
   ok(reg.length>=5,'the trees hand their materials to the night driver ('+reg.length+')');
@@ -4499,7 +4499,7 @@ C.section('SKY.md 4: the night sky — the moon, the stars, and a name that was 
      X.SKY.envIntensityDay+') — it was 0.80 against 0.55, which is brighter after dark');
   /* THE MOON'S COLOUR IS CONVERTED, like the stars and the dome's three stops. ColorManagement is
      off in this project, so a raw hex is treated as LINEAR and renders brighter than authored. */
-  { const want=new THREE.Color(X.SKY.moonColor).convertSRGBToLinear();
+  { const want=new THREE.Color().setHex(X.SKY.moonColor,THREE.LinearSRGBColorSpace).convertSRGBToLinear();
     ok(G.moon&&Math.abs(G.moon.material.color.r-want.r)<1e-6,
        'the moon\'s colour goes through convertSRGBToLinear (' +
        (G.moon?G.moon.material.color.getHexString():'-')+' from '+
@@ -4770,7 +4770,7 @@ C.section('SKY.md step 2: the clouds are lit, unfogged, and inside the picture')
        4 of 8 and the fringe check 5 of 8, both measuring their own confusion. Bucketing the heights
        and taking the most populated bucket finds the plane itself. */
     let flatOK=0, downOK=0, tintOK=0, fringeBelow=0;
-    const bt=new THREE.Color(X.SKY.cloudBaseTint).convertSRGBToLinear();
+    const bt=new THREE.Color().setHex(X.SKY.cloudBaseTint,THREE.LinearSRGBColorSpace).convertSRGBToLinear();
     for(const b of cuBodies){
       const p=b.geometry.attributes.position, nr=b.geometry.attributes.normal,
             co=b.geometry.attributes.color;
@@ -5068,6 +5068,9 @@ C.section('REPLAT P2: sky and sun');
      the auto-driver cannot ease it — but nightApply is deliberately NOT called yet, because at
      boot it has not run: update() only calls it when nightT and the target disagree, and both are
      0. That matters for the colour assertions below.
+     THE sRGB/LINEAR SEAM IS CLOSED (2026-10-03, ColorManagement ON, SPIKE_ADOPT row 5): initScene's
+     raw hexes are now converted by three exactly as nightApply converts, so boot and post-roll agree and
+     the assertions below say so. The history, kept:
      THE sRGB/LINEAR SEAM, FOUND BY THIS SECTION AND PRE-EXISTING. initScene hands raw authored
      hex to the lights and the fog, while nightApply writes the SAME constants through
      convertSRGBToLinear(). So a colour is one value at boot and a slightly deeper one the moment
@@ -5079,8 +5082,11 @@ C.section('REPLAT P2: sky and sun');
   G.nightManual=true; G.night=false; G.nightT=0;
 
   ok(!!SKY,'the sky recipe is exported as one named block (KEAGAME.SKY)');
-  const lin=h=>new H.THREE.Color(h).convertSRGBToLinear().getHex();
-  const raw=h=>new H.THREE.Color(h).getHex();
+  /* EVERY COLOUR HERE IS COMPARED AS THE STORED LINEAR VALUE (getHex(Linear)), and the expectation is
+     the authored hex taken to linear explicitly — so neither side depends on ColorManagement. */
+  const LS=H.THREE.LinearSRGBColorSpace;
+  const lin=h=>new H.THREE.Color().setHex(h,LS).convertSRGBToLinear().getHex(LS);
+  const hx=c=>c.getHex(LS), hs=c=>c.getHexString(LS);
 
   // ---- FOG: exponential, and pinned to the constants ----
   const fog=G.scene.fog;
@@ -5091,9 +5097,9 @@ C.section('REPLAT P2: sky and sun');
      'so it has no near/far to drive — nightApply must roll DENSITY (near '+(fog&&fog.near)+
      ', far '+(fog&&fog.far)+')');
   near(fog&&fog.density,SKY.fogDensityDay,1e-9,'day fog density is the pinned constant');
-  ok(!!fog&&fog.color.getHex()===raw(SKY.fogDay),
-     'and at boot its colour is the pinned constant, authored-encoded (#'+
-     (fog?fog.color.getHexString():'?')+')');
+  ok(!!fog&&hx(fog.color)===lin(SKY.fogDay),
+     'and at boot its colour is the pinned constant, LINEAR — the boot/night seam is closed (#'+
+     (fog?hs(fog.color):'?')+')');
   /* THE FOG IS TUNED TO THE SKY, AND THAT IS CHECKABLE RATHER THAN A CLAIM IN A COMMENT. The
      failure P2 corrected is fog DARKER than the horizon it sits against, which makes distant
      ridges fade toward something bluer than the sky behind them — the one thing aerial perspective
@@ -5110,9 +5116,9 @@ C.section('REPLAT P2: sky and sun');
   const sun=G.sun;
   ok(!!sun&&sun.isDirectionalLight===true,'the sun is one directional light');
   near(sun&&sun.intensity,SKY.sunIntensityDay*PI,1e-6,'its day intensity is the constant x pi');
-  ok(!!sun&&sun.color.getHex()===raw(SKY.sunDay),
-     'and at boot its colour is the pinned constant, authored-encoded (#'+
-     (sun?sun.color.getHexString():'?')+')');
+  ok(!!sun&&hx(sun.color)===lin(SKY.sunDay),
+     'and at boot its colour is the pinned constant, LINEAR — the boot/night seam is closed (#'+
+     (sun?hs(sun.color):'?')+')');
   { const c=sun?sun.color:{r:0,g:0,b:0};
     ok(c.r>c.g&&c.g>c.b,'the sun is WARM — r > g > b, which is the whole point of "one warm'+
        ' directional sun" ('+c.r.toFixed(3)+' / '+c.g.toFixed(3)+' / '+c.b.toFixed(3)+')'); }
@@ -5187,11 +5193,11 @@ C.section('REPLAT P2: sky and sun');
      once a session. Law 5 throughout: night is OWNED here, never eased into. */
   G.night=true; G.nightManual=true; G.nightT=1; X.nightApply(1); tick(2);
   near(G.scene.fog.density,SKY.fogDensityNight,1e-9,'night rolls the fog DENSITY to its constant');
-  ok(G.scene.fog.color.getHex()===lin(SKY.fogNight),
+  ok(hx(G.scene.fog.color)===lin(SKY.fogNight),
      'and the fog colour with it, linear-encoded as nightApply writes it (#'+
-     G.scene.fog.color.getHexString()+')');
-  ok(G.sun.color.getHex()===lin(SKY.sunNight),
-     'and the sun colour likewise (#'+G.sun.color.getHexString()+')');
+     hs(G.scene.fog.color)+')');
+  ok(hx(G.sun.color)===lin(SKY.sunNight),
+     'and the sun colour likewise (#'+hs(G.sun.color)+')');
   near(G.scene.environmentIntensity,SKY.envIntensityNight,1e-9,
      'and the ENVIRONMENT dims — without this a midday HDRI keeps lighting the night at full');
   near(G.sun.intensity,SKY.sunIntensityNight*PI,1e-6,'and the sun stands down to its night constant');
@@ -5208,11 +5214,10 @@ C.section('REPLAT P2: sky and sun');
      rolls out and does not roll back moves frames nobody was aiming at. */
   G.night=false; G.nightT=0; X.nightApply(0); tick(2);
   near(G.scene.fog.density,SKY.fogDensityDay,1e-9,'and day rolls every one of them back');
-  ok(G.scene.fog.color.getHex()===lin(SKY.fogDay),
-     'the day fog colour comes back linear-encoded, which is the seam noted at the top of this '+
-     'section and not a drift (#'+G.scene.fog.color.getHexString()+')');
-  ok(G.sun.color.getHex()===lin(SKY.sunDay),
-     'and so does the sun (#'+G.sun.color.getHexString()+')');
+  ok(hx(G.scene.fog.color)===lin(SKY.fogDay),
+     'the day fog colour comes back linear-encoded, the SAME value it booted with (#'+hs(G.scene.fog.color)+')');
+  ok(hx(G.sun.color)===lin(SKY.sunDay),
+     'and so does the sun (#'+hs(G.sun.color)+')');
   near(G.scene.environmentIntensity,SKY.envIntensityDay,1e-9,'environment included');
   near(G.sun.intensity,SKY.sunIntensityDay*PI,1e-6,'sun included');
   near(G.hemi.intensity,SKY.hemiIntensityDay*PI,1e-6,'hemisphere included');
@@ -8197,14 +8202,14 @@ C.section('rocks: angular, settled, bedded');
     /* AND NO BOULDER-SIZED GREY SPHERE IS LEFT ANYWHERE. The check that catches a site nobody
        converted, across every map — scoped to rock colours and to boulder size, so pebbles and
        the nest's mossy knoll are not swept up in it. */
-    { const lin=h=>new THREE.Color(h).convertSRGBToLinear().getHexString();
+    { const LS=THREE.LinearSRGBColorSpace, lin=h=>new THREE.Color().setHex(h,LS).convertSRGBToLinear().getHexString(LS);
       const RK=new Set([lin(X.PAL.rock),lin(X.PAL.rockD)]);
       const left=[];
       for(const b of REALBIOMES){ X.setSeed(20260828); X.boot({biome:b});
         G.scene.traverse(o=>{ if(!o.isMesh||o.geometry.type!=='SphereGeometry')return;
           const q=o.geometry.parameters;
           if(q.radius<0.45||q.radius>3.0)return;            // pebbles out, the nest knoll out
-          if(!RK.has(o.material.color.getHexString()))return;
+          if(!RK.has(o.material.color.getHexString(LS)))return;
           left.push(b+' r='+q.radius.toFixed(2)); }); }
       ok(left.length===0,'and no boulder-sized grey sphere survives in any map ('+left.length+
          (left.length?': '+left.slice(0,4).join(', '):'')+')');
@@ -8859,6 +8864,10 @@ C.section('REPLAT P6A: the model-swap seam');
      each ute an envelope, bonnet and tray perches and a solid cab — each at the real body's height off
      the drawn seal (solid boxes side by side trapped a sheep in their seam). Caravan and trailer
      re-measured. Order is preserved: every body still calls p.collide() where it always did. */
+  /* 2026-10-03 (ColorManagement ON, SPIKE_ADOPT 5): THE DIGEST SPELLS EACH COLOUR AS ITS STORED LINEAR
+     VALUE (getHexString(Linear)). With ColorManagement on, plain getHexString() converts to sRGB and would
+     respell every material in the world without one of them changing; the pins below are unchanged and
+     still match, which is the proof that turning ColorManagement on moved no material. */
   const PRESEAM={
     carpark :{mesh:'1170831b785f1ede', col:'ae5074aa53ffefd2', meshes:921, tris:301060,
               inter:58, props:16, colliders:39, cars:6, sheep:3, strips:2, hints:9, snow:10,
@@ -8887,7 +8896,7 @@ C.section('REPLAT P6A: the model-swap seam');
                  s.x.toFixed(5),s.y.toFixed(5),s.z.toFixed(5),
                  (g?g.type:'-'),
                  (p?JSON.stringify(p).replace(/"uuid":"[^"]*",?/g,''):'-'),
-                 (m?(m.type+':'+(m.color?m.color.getHexString():'-')+':'+
+                 (m?(m.type+':'+(m.color?m.color.getHexString(THREE.LinearSRGBColorSpace):'-')+':'+   // the STORED value: ColorManagement must not respell it
                    (m.roughness!==undefined?m.roughness.toFixed(3):'-')):'-'),
                  (o.castShadow?'C':'-')+(o.receiveShadow?'R':'-')+(o.visible?'V':'-')].join('|')+'\n');
     });
@@ -9796,7 +9805,7 @@ C.section('THE BRAIDED RIVER - the fifth map, the swing bridge, and a floor that
     /* THE COLOURS AGAINST THE PLATES, which were measured with lum.mjs and are in the WATER
        comment: nz_river_01 sat 0.20 hue 191, nz_water_01 sat 0.33 hue 203. The surprise was how
        DESATURATED real rock-flour water is; both shipped colours were about twice the plate. */
-    const hsv=h=>{ const c=new H.THREE.Color(h), mx=Math.max(c.r,c.g,c.b), mn=Math.min(c.r,c.g,c.b);
+    const hsv=h=>{ const c=new H.THREE.Color().setHex(h,H.THREE.LinearSRGBColorSpace), mx=Math.max(c.r,c.g,c.b), mn=Math.min(c.r,c.g,c.b);   // the AUTHORED sRGB numbers, whatever ColorManagement says
       let hu=0; if(mx>mn){ const d=mx-mn;
         if(mx===c.r)hu=60*(((c.g-c.b)/d)%6); else if(mx===c.g)hu=60*((c.b-c.r)/d+2);
         else hu=60*((c.r-c.g)/d+4); } if(hu<0)hu+=360;
@@ -9997,7 +10006,7 @@ C.section('THE HIGH STATION - the last map, the drafting cascade, and riding a s
     const THREEx=H.THREE||require('three');
     const c=new THREEx.Color().copy(piles[0].material.color).convertLinearToSRGB();
     const lum=0.2126*c.r+0.7152*c.g+0.0722*c.b;
-    const was=(()=>{const q=new THREEx.Color(0xA9A7A2);
+    const was=(()=>{const q=new THREEx.Color().setHex(0xA9A7A2,THREEx.LinearSRGBColorSpace);   // authored sRGB numbers, as the pile's side is
       return 0.2126*q.r+0.7152*q.g+0.0722*q.b;})();
     ok(lum<was*0.55,'AND THEY ARE NO LONGER THE BALES\' CONCRETE — pile luma '+lum.toFixed(3)+
        ' against 0xA9A7A2\'s '+was.toFixed(3)+', a factor of '+(was/lum).toFixed(2)+
