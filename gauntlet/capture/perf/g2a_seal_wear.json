@@ -1,0 +1,248 @@
+{
+ "label": "g2a_seal_wear",
+ "at": "2026-10-03T07:46:52.762Z",
+ "cost": {
+  "runs": [
+   {
+    "meanMs": 14.45,
+    "medianMs": 13.6,
+    "p95Ms": 31.8,
+    "fps": 69.2,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.59,
+    "medianMs": 14,
+    "p95Ms": 31.6,
+    "fps": 68.5,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.65,
+    "medianMs": 13.5,
+    "p95Ms": 32.6,
+    "fps": 68.3,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   }
+  ],
+  "meanMs": 14.59
+ },
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 5,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1948,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2826,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1117,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4987,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 46.4671,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1046,
+     "ok": false,
+     "miss": 1.57
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3609,
+     "ok": false,
+     "miss": 0.17
+    },
+    "ridgeP10": {
+     "gv": 0.2595,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1254,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4516,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 45.5662,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1736,
+     "ok": false,
+     "miss": 0.51
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 3,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1932,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.368,
+     "ok": false,
+     "miss": 0.86
+    },
+    "snowPatch": {
+     "gv": 0.0957,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5105,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 169.3661,
+     "ok": false,
+     "miss": 3.08
+    },
+    "sat": {
+     "gv": 0.0401,
+     "ok": false,
+     "miss": 2.15
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 5,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3361,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3619,
+     "ok": false,
+     "miss": 0.77
+    },
+    "snowPatch": {
+     "gv": 0.0802,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5359,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 43.644,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3008,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2263,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2263,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0599,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4639,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 86.6869,
+     "ok": false,
+     "miss": 0.32
+    },
+    "sat": {
+     "gv": 0.0293,
+     "ok": false,
+     "miss": 2.25
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 2,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1617,
+     "ok": false,
+     "miss": 0.36
+    },
+    "ridgeP10": {
+     "gv": 0.3361,
+     "ok": false,
+     "miss": 0.38
+    },
+    "snowPatch": {
+     "gv": 0.1142,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5156,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 168.2644,
+     "ok": false,
+     "miss": 3.04
+    },
+    "sat": {
+     "gv": 0.013,
+     "ok": false,
+     "miss": 2.4
+    }
+   }
+  }
+ },
+ "ac": true,
+ "prev": "l1_colour_managed",
+ "refusals": []
+}

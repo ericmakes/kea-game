@@ -6217,3 +6217,18 @@ exposure, contrast, cloud albedo, fills and tone mapper each dropped something e
 so it is Eric's call. Instruments fixed for it: platescore's flag takes stand the look down (far field,
 AgX and grade move magenta; the flag is geometry); the far field's haze sample at 2 deg read ridges.
 THE 14c DISSOLVE IS BLOCKED on the geometry: the range is 64-190 m of real mountain the bird flies into.
+
+## 2026-10-03f — SPIKE_ADOPT 4: the seal wears its use (Opus 5.5) — certified 33f5d4eb
+
+Step 2 of Eric's order, ground surfaces, piece 1 of 3. The spike's placed asphalt wear, rewritten from TSL into the
+breakup shader: oil under each parked vehicle's own bonnet, tyre polish down every lane's wheel tracks and the
+carpark aisle, newer-seal repair patches on a jittered 7 x 5 m grid, tar sealant down the scan's own cracks, a
+narrow broken gravel fringe at seal edges that meet ground. Per map and derived (sealConfigure at the end of every
+build): carpark 4 oil / 6 painted lines / 5 polish tracks / 3 seal boxes, village 2 / 1 / 4 / 0.
+The bay lines and both maps' centre dashes are worn PAINT, not boxes 7-9 cm proud of the seal; the carpark bays
+move +2.5 m z to frame the cars (the spike's correction). Headless keeps the boxes and their seeded draws.
+Two faults of mine, found by eye before the gate: a 1.6 m spill covered most of the 7 m village street (no spill
+there now: it meets kerbs), and with no seal boxes the union depth's sentinel read as "on the edge" everywhere.
+One battery held me to its intent: every iso breakup material must share ONE compiled program, so the seal block
+is in every breakup shader behind a per-material uniform (asphalt only) rather than in a second program.
+perfstep g2a_seal_wear: 14.59 ms at 100% (14.45 / 14.59 / 14.65), key six unchanged, ACCEPTED; gate meter 15.96.

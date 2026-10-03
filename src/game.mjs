@@ -2109,6 +2109,123 @@ const MATBREAK_OK=(()=>{
 if(MATBREAK_OK!==true&&typeof console!=='undefined')
   console.error('materials: the tiling breakup did not install — '+MATBREAK_OK);
 
+/* ---- SPIKE_ADOPT 4: THE SEAL WEARS ITS USE (2026-10-03) ----
+   The render spike's asphalt (its src/materials.js) had the tiling breakup the game already has (P3b)
+   and then the thing that makes a carpark read as USED: oil under every parked engine, tyre polish down
+   the lanes, newer-seal repair patches, tar sealant down the scan's own cracks, gravel tracked onto the
+   seal at its edges, and bay lines that are worn road PAINT — missing where the aggregate pokes
+   through. This is that, in WebGL, on the asphalt family only (the far-grass block's rule: a family
+   that does not use a term does not compile it).
+   THE PLACEMENT IS PER MAP AND DERIVED, NOT TYPED: sealConfigure() runs at the end of every build and
+   writes the uniforms from the world that was just built — oil from each parked vehicle's own bonnet
+   (CARKIND's bonnet perch, taken through the car's transform), polish from the traffic lanes the
+   cars actually drive, lines from SEAL.maps, spill from the seal boxes' own edges. uSealOn starts 0,
+   so headless (which never configures) and a map with no seal are the world they were.
+   THE PAINT REPLACES GEOMETRY. The carpark's five bay lines and both maps' centre dashes were boxes
+   standing 7-9 cm proud of the seal (walkers stepped up onto them); they are painted flush now. The
+   carpark's bays are moved +2.5 m z so a real 4 m car sits in its bay (the spike's own correction:
+   the old lines framed the cars' front 1.8 m only). */
+const SEAL={
+  oilAmt:0.55, laneAmt:0.10, patchAmt:0.28, crackAmt:0.9, paint:[0.80,0.79,0.74],
+  patchCell:[7.0,5.0], spillM:0.9, spillAmt:0.75,   // spill: a narrow broken fringe (1.6 m covered most of a 7 m street)
+  maps:{
+    carpark:{ rects:[[-18,6,22,28],[-2,23,6,31],[-120,29.5,120,38.5]],
+      /* bays: x as before, z 13.6..19.0 (was 10.7..16.1), 10 cm paint */
+      lines:[...[-12,-5.4,1.2,7.8,14.4].map(x=>[x,13.6,x,19.0,0.05,0,0]),
+             [-118,34,120,34,0.14,6,2.6/6]],                                   // the road's centre dashes, as painted
+      lanes:[[-17,21.6,21,21.6,2.0],                                           // the aisle the cars drive in on
+             [-120,31.4,120,31.4,0.35],[-120,33.0,120,33.0,0.35],             // wheel tracks, lane z 32.2
+             [-120,35.0,120,35.0,0.35],[-120,36.6,120,36.6,0.35]] },          // and lane z 35.8
+    /* no spill rects: the street meets a kerb, not gravel */
+    village:{ rects:[],
+      lines:[[-42,0,44,0,0.08,5,2.2/5]],
+      lanes:[[-44,-2.55,44,-2.55,0.35],[-44,-0.95,44,-0.95,0.35],[-44,0.95,44,0.95,0.35],[-44,2.55,44,2.55,0.35]] },
+  },
+};
+const SEAL_N={oil:16,line:12,lane:6,rect:4};
+const SEALU={
+  uSealOn:{value:0}, uSealAmt:{value:new THREE.Vector4(SEAL.oilAmt,SEAL.laneAmt,SEAL.patchAmt,SEAL.crackAmt)},
+  uSealPaint:{value:new THREE.Vector3(...SEAL.paint)},
+  uSealOil:{value:Array.from({length:SEAL_N.oil},()=>new THREE.Vector3())}, uSealOilN:{value:0},
+  uSealLine:{value:Array.from({length:SEAL_N.line},()=>new THREE.Vector4())},
+  uSealLineP:{value:Array.from({length:SEAL_N.line},()=>new THREE.Vector3())}, uSealLineN:{value:0},
+  uSealLane:{value:Array.from({length:SEAL_N.lane},()=>new THREE.Vector4())},
+  uSealLaneW:{value:new Array(SEAL_N.lane).fill(0)}, uSealLaneN:{value:0},
+  uSealRect:{value:Array.from({length:SEAL_N.rect},()=>new THREE.Vector4())}, uSealRectN:{value:0},
+};
+const SEAL_GLSL=`
+uniform float uSealOn; uniform float uSealFam; uniform vec4 uSealAmt; uniform vec3 uSealPaint;
+uniform vec3 uSealOil[${SEAL_N.oil}]; uniform int uSealOilN;
+uniform vec4 uSealLine[${SEAL_N.line}]; uniform vec3 uSealLineP[${SEAL_N.line}]; uniform int uSealLineN;
+uniform vec4 uSealLane[${SEAL_N.lane}]; uniform float uSealLaneW[${SEAL_N.lane}]; uniform int uSealLaneN;
+uniform vec4 uSealRect[${SEAL_N.rect}]; uniform int uSealRectN;
+vec4 KEA_SW = vec4(0.0);      // oil, paint, sealant, patch — read again by roughness and normal
+float keaSealH(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+void keaSeal(inout vec3 albedo, vec3 scan){
+  KEA_SW = vec4(0.0); if (uSealOn * uSealFam < 0.5) return;
+  vec2 xz = vKeaWorld.xz; float lum = dot(scan, vec3(0.333));
+  /* GRAVEL SPILL: depth inside the UNION of the seal boxes (so slab-to-apron joins are not edges) */
+  float depth = uSealRectN > 0 ? -1e3 : 1e3;      // no seal boxes listed = no edge anywhere (the village: kerbs, not gravel)
+  for (int i = 0; i < ${SEAL_N.rect}; i++) { if (i >= uSealRectN) break; vec4 r = uSealRect[i];
+    depth = max(depth, min(min(xz.x - r.x, r.z - xz.x), min(xz.y - r.y, r.w - xz.y))); }
+  float spill = ${SEAL.spillAmt.toFixed(2)} * smoothstep(${SEAL.spillM.toFixed(2)}, 0.0, depth + (keaMacroField(xz * 0.9) - 0.5) * 0.6)
+              * smoothstep(0.45, 0.6, keaMacroField(xz * 7.0) + smoothstep(1.2, 0.0, depth) * 0.4);
+  vec3 gravel = vec3(0.30, 0.285, 0.25) * (0.75 + 0.5 * keaMacroField(xz * 11.0 + 3.1));
+  /* REPAIRS: rectangles of newer, darker seal on a jittered 7 x 5 m grid, about a third of cells */
+  vec2 cell = vec2(${SEAL.patchCell[0].toFixed(1)}, ${SEAL.patchCell[1].toFixed(1)}), pid = floor(xz / cell);
+  vec2 ph = vec2(keaSealH(pid), keaSealH(pid + 17.3)), pc = (pid + 0.5) * cell + (ph - 0.5) * vec2(3.0, 2.0);
+  vec2 pr = abs(xz - pc) - vec2(ph.y * 1.4 + 0.5, ph.x * 0.9 + 0.4);
+  float patchM = smoothstep(0.03, -0.03, max(pr.x, pr.y)) * smoothstep(0.62, 0.66, ph.x);
+  /* SEALANT on the scan's OWN cracks (its darkest texels), in bands where the council got to it */
+  float crack = smoothstep(0.014, 0.006, lum) * smoothstep(0.45, 0.6, keaMacroField(xz * 0.11 + 4.0));
+  /* OIL under each parked engine, irregular */
+  float oil = 0.0;
+  for (int i = 0; i < ${SEAL_N.oil}; i++) { if (i >= uSealOilN) break; vec3 o = uSealOil[i];
+    float d = length((xz - o.xy) * vec2(1.0, 0.7)) / o.z + (keaMacroField(xz * 2.3 + o.x) - 0.5) * 0.5;
+    oil = max(oil, smoothstep(1.0, 0.18, d) * 0.55); }
+  /* TYRE POLISH along the wheel tracks and the aisle */
+  float lane = 0.0;
+  for (int i = 0; i < ${SEAL_N.lane}; i++) { if (i >= uSealLaneN) break; vec4 sg = uSealLane[i]; vec2 a = sg.xy, ab = sg.zw - sg.xy;
+    float t = clamp(dot(xz - a, ab) / dot(ab, ab), 0.0, 1.0); float d = length(xz - (a + ab * t)), hw = uSealLaneW[i];
+    lane = max(lane, smoothstep(hw, hw * 0.3, d) * smoothstep(0.35, 1.0, keaMacroField(vec2(dot(xz - a, normalize(ab)) * 0.15, d * 1.6)))); }
+  /* PAINT: segments (x0,z0,x1,z1), params (half-width, dash period, duty); worn where the aggregate pokes through */
+  float line = 0.0;
+  for (int i = 0; i < ${SEAL_N.line}; i++) { if (i >= uSealLineN) break; vec4 sg = uSealLine[i]; vec3 P = uSealLineP[i];
+    vec2 a = sg.xy, ab = sg.zw - sg.xy; float L = length(ab); vec2 u = ab / L;
+    float along = dot(xz - a, u), across = abs(dot(xz - a, vec2(-u.y, u.x)));
+    float inL = smoothstep(P.x + 0.006, P.x - 0.006, across) * smoothstep(-0.01, 0.01, along) * smoothstep(L + 0.01, L - 0.01, along);
+    if (P.y > 0.0) { float f = fract(along / P.y); inL *= smoothstep(0.0, 0.004, f) * smoothstep(P.z + 0.004, P.z - 0.004, f); }
+    line = max(line, inL); }
+  line *= smoothstep(0.30, 0.65, (keaMacroField(xz * 1.7) - 0.5) * 0.9 + 0.55) * smoothstep(0.015, 0.05, lum);
+  albedo = mix(albedo, gravel, spill);
+  albedo *= (1.0 - oil * uSealAmt.x) * (1.0 - lane * uSealAmt.y) * (1.0 - patchM * uSealAmt.z);
+  albedo = mix(albedo, vec3(0.018, 0.017, 0.016), crack * uSealAmt.w * (1.0 - spill));
+  albedo = mix(albedo, uSealPaint, line);
+  KEA_SW = vec4(oil, line, crack, patchM);
+}
+`;
+const SEAL_PATCH=[
+  ['map_fragment',[['diffuseColor *= sampledDiffuseColor;','diffuseColor *= sampledDiffuseColor;\n\tkeaSeal( diffuseColor.rgb, sampledDiffuseColor.rgb );']]],
+  ['roughnessmap_fragment',[['roughnessFactor = clamp(roughnessFactor,0.04,1.0);',
+    'roughnessFactor = clamp(roughnessFactor,0.04,1.0);\n\troughnessFactor = clamp( mix(roughnessFactor, 0.58, KEA_SW.y) - KEA_SW.x * 0.25 - KEA_SW.z * 0.35 - KEA_SW.w * 0.08, 0.05, 1.0 );']]],
+  ['normal_fragment_maps',[['vec3 mapN = keaBlendN( normalMap, KEA_G );','vec3 mapN = keaBlendN( normalMap, KEA_G );\n\tmapN.xy *= mix( 1.0, 0.25, KEA_SW.y );']]],
+];
+/* sealConfigure(biome) — the end of every build: write this map's wear from the world just built */
+function sealConfigure(biome){
+  const C=SEAL.maps[biome], U=SEALU;
+  if(!C){ U.uSealOn.value=0; U.uSealOilN.value=U.uSealLineN.value=U.uSealLaneN.value=U.uSealRectN.value=0; return null; }
+  C.rects.slice(0,SEAL_N.rect).forEach((r,i)=>U.uSealRect.value[i].set(...r)); U.uSealRectN.value=Math.min(C.rects.length,SEAL_N.rect);
+  C.lines.slice(0,SEAL_N.line).forEach((l,i)=>{ U.uSealLine.value[i].set(l[0],l[1],l[2],l[3]); U.uSealLineP.value[i].set(l[4],l[5],l[6]); }); U.uSealLineN.value=Math.min(C.lines.length,SEAL_N.line);
+  C.lanes.slice(0,SEAL_N.lane).forEach((l,i)=>{ U.uSealLane.value[i].set(l[0],l[1],l[2],l[3]); U.uSealLaneW.value[i]=l[4]; }); U.uSealLaneN.value=Math.min(C.lanes.length,SEAL_N.lane);
+  /* OIL FROM THE CARS THAT ARE PARKED HERE: each one's bonnet perch (CARKIND), through its own transform */
+  const oil=[], v=new THREE.Vector3();
+  for(const c of G.cars||[]){ if(c.traffic||!c.g)continue; const K=CARKIND[c.kind||c.type]; const bon=K&&K.collider.find(b=>!b.solid);
+    if(!bon)continue; c.g.updateMatrixWorld(true); v.set(0,0,bon.z).applyMatrix4(c.g.matrixWorld);
+    oil.push([v.x,v.z,0.85]); }
+  oil.slice(0,SEAL_N.oil).forEach((o,i)=>U.uSealOil.value[i].set(...o)); U.uSealOilN.value=Math.min(oil.length,SEAL_N.oil);
+  U.uSealOn.value=1;
+  return {oil:oil.length,lines:U.uSealLineN.value,lanes:U.uSealLaneN.value,rects:U.uSealRectN.value};
+}
 function matChunk(src,name,pairs){
   const inc='#include <'+name+'>';
   let body=THREE.ShaderChunk[name];
@@ -2156,8 +2273,12 @@ function matBreakup(m,F,far){
       uFarMoundK:{value:1/B4.clumpM}, uFarMoundAmt:{value:FG.moundAmt},
       uFarMoundFade:{value:FG.moundFadeM},
     }); }
+  /* THE SEAL BLOCK IS IN EVERY BREAKUP SHADER, switched by a per-material uniform (uSealFam, 1 on asphalt
+     only): every iso material then runs IDENTICAL source and shares one compiled program, which is what
+     the battery on program cache keys asserts. A separate asphalt program would have needed its own key. */
+  U.uSealFam={value:F===MATS.families.asphalt?1:0};
   m.onBeforeCompile=(sh)=>{
-    Object.assign(sh.uniforms,U);
+    Object.assign(sh.uniforms,SEALU,U);
     /* WORLD POSITION, NOT MODEL POSITION, and it matters. The macro field has to be continuous
        ACROSS meshes: the carpark slab, its entrance apron and the road are three separate boxes
        lying in the same plane, and a wear field that restarted at each mesh origin would draw a
@@ -2172,7 +2293,7 @@ function matBreakup(m,F,far){
       'uniform vec3 uKeaMeanA;\nuniform float uKeaMeanR;\nuniform float uKeaVar;\n'+MATBREAK_GLSL+
       /* THE FAR BLOCK CARRIES ITS OWN UNIFORMS, so a family without it compiles without them and
          cannot reference an identifier that was never declared. */
-      (far?MATFAR_GLSL:'')+
+      (far?MATFAR_GLSL:'')+SEAL_GLSL+
       'KeaTiles KEA_G;\n'+sh.fragmentShader;
     /* THE TAPS ARE COMPUTED ONCE, in the albedo chunk, and reused by the other two. The order is
        three's and is not an assumption: meshphysical_frag runs map_fragment, then
@@ -2182,6 +2303,10 @@ function matBreakup(m,F,far){
     for(const [name,pairs] of MATBREAK_PATCH) sh.fragmentShader=matChunk(sh.fragmentShader,name,pairs);
     if(far) for(const [name,pairs] of MATFAR_PATCH)
       sh.fragmentShader=matChunk(sh.fragmentShader,name,pairs);
+    /* the seal's wear splices into the chunks MATBREAK_PATCH has ALREADY expanded, so it matches their text */
+    for(const [,pairs] of SEAL_PATCH) for(const [from,to] of pairs){
+      if(!sh.fragmentShader.includes(from)) throw new Error('seal: patch target missing: '+from);
+      sh.fragmentShader=sh.fragmentShader.split(from).join(to); }
   };
   return m;
 }
@@ -6550,6 +6675,7 @@ function buildWorld(biome){
   b.build();
   matUVSweep();
   DRAWN=HEADLESS?null:drawnGroundBuild();          // the feet piece: the ground as drawn, for walkers
+  G.seal=HEADLESS?null:sealConfigure(biome);        // SPIKE_ADOPT 4: this map's wear on the seal
   /* REPLAT P6A: the prop seam reports what it placed, rebuilt per build for the same reason G.mats
      is — a state block that is mutated rather than rebuilt drifts from the registry. */
   G.propsState=propsState();
@@ -6706,7 +6832,9 @@ function buildCarpark(){
   // ROAD along z=34, x -120..120
   const road=box(240,0.12,9,PAL.road,0,0.06,34,null,{noshadow:true}); road.receiveShadow=!HEADLESS;
   box(240,0.125,0.5,0x6A7280,0,0.065,29.7,null,{noshadow:true}); box(240,0.125,0.5,0x6A7280,0,0.065,38.3,null,{noshadow:true}); // edge wear
-  for(let x=-118;x<120;x+=6) box(2.6,0.13,0.28,PAL.roadLine,x+rnd(-0.3,0.3),0.13,34,null,{noshadow:true});
+  /* the centre dashes are PAINT now (SEAL.maps.carpark), not boxes 7.5 cm proud of the road. The draw each one
+     took from the seeded stream is still taken, so every placement after this line lands where it did. */
+  for(let x=-118;x<120;x+=6) { if(HEADLESS) box(2.6,0.13,0.28,PAL.roadLine,x+rnd(-0.3,0.3),0.13,34,null,{noshadow:true}); else rnd(-0.3,0.3); }
   for(let x=-116;x<120;x+=9){ cyl(0.05,0.06,0.85,PAL.white,x,0.42,28.6,null,6); box(0.12,0.1,0.03,PAL.red,x,0.78,28.66,null,{noshadow:true});
     cyl(0.05,0.06,0.85,PAL.white,x+4.5,0.42,39.4,null,6); } // roadside marker posts
   /* carpark slab
@@ -6724,7 +6852,9 @@ function buildCarpark(){
      shadow crossing a bay would otherwise leave the white line glowing straight through it. */
   { const slab=box(40,0.14,22,PAL.tarmac,2,0.07,17,null,{noshadow:true}); slab.receiveShadow=!HEADLESS;
     const apron=box(8,0.13,8,PAL.tarmac,2,0.14,27,null,{noshadow:true}); apron.receiveShadow=!HEADLESS; } // entrance apron
-  for(let i=0;i<5;i++){ const bay=box(0.25,0.14,5.4,PAL.roadLine,-12+i*6.6,0.16,13.4,null,{noshadow:true}); bay.receiveShadow=!HEADLESS; }
+  /* the bay lines are PAINT now, moved +2.5 m z to frame the cars (SEAL.maps.carpark). Headless keeps the boxes:
+     no texture reaches node, and the batteries' world is the world they were pinned on. */
+  if(HEADLESS) for(let i=0;i<5;i++){ const bay=box(0.25,0.14,5.4,PAL.roadLine,-12+i*6.6,0.16,13.4,null,{noshadow:true}); bay.receiveShadow=!HEADLESS; }
   for(const [px,pz,pr] of [[-8,24.5,1.3],[14,10,1.0],[-2,20,0.8]]){ const pd=cyl(pr,pr,0.03,0,px,0.145,pz,null,16); pd.material=bmat(0xC6DCE8); } // puddles
   G.gravel=[]; // carpark grit, named: vantage 18 caught one behind the bird and nothing could say what it was
   for(let i=0;i<26;i++){ const grr=rnd(0.05,0.12), gcol=i%2?0x9AA0A6:PAL.gravel, gx=2+rnd(-19,19), gz=17+rnd(-10,10);
@@ -7940,7 +8070,7 @@ function buildVillage(){
     const slab=box(L,0.16,S.w,PAL.tarmac,cx,0.08,S.z,null,{noshadow:true});
     slab.receiveShadow=!HEADLESS;
     /* the centre line, dashed, which is what says ROAD rather than APRON */
-    for(let x=S.x0+2;x<S.x1;x+=5) box(2.2,0.16,0.16,PAL.roadLine,x,0.17,S.z,null,{noshadow:true});
+    if(HEADLESS) for(let x=S.x0+2;x<S.x1;x+=5) box(2.2,0.16,0.16,PAL.roadLine,x,0.17,S.z,null,{noshadow:true});   // painted in the browser (SEAL.maps.village)
     for(const pz of [VILLPATH.north,VILLPATH.south]){
       const kerb=box(L,0.28,0.22,0xA9A7A2,cx,0.14,pz+(pz<0?VILLPATH.w/2:-VILLPATH.w/2),null,{noshadow:true});
       kerb.receiveShadow=!HEADLESS;
