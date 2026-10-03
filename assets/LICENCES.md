@@ -963,3 +963,5 @@ triangles and bounds asserted equal to the source. CC0 1.0; no attribution requi
 | file | asset | author(s) | licence | source | md5 |
 |---|---|---|---|---|---|
 | `models/props/wooden_picnic_table.glb` | Wooden Picnic Table (`wooden_picnic_table`), 10,210 tris | Ulan Cabanilla | **CC0 1.0** | https://polyhaven.com/a/wooden_picnic_table — gltf `6da01f8a75e559f356b494059f7b0eda`, bin `5d52db76187b9990c328f79612eafe5b` | `21ad4ed72274ca14377e2bc3568462e2` |
+| `models/props/trashbag.glb` | Trash Bag (`trashbag`), 4,482 tris — clutter, src/decor.mjs | Benny Weimer | **CC0 1.0** | https://polyhaven.com/a/trashbag — gltf `c29158e170beeeb6bb518fe8d4407fe5`, bin `ad6ebbf5b9aa0179feeea87a4bd289a3` | `86d636fed50c52e913cc32d290d04df4` |
+| `models/props/old_tyre.glb` | Old Tyre (`old_tyre`), 2,880 tris — clutter, src/decor.mjs | MP (as the Poly Haven API names the author) | **CC0 1.0** | https://polyhaven.com/a/old_tyre — gltf `e29d7aee130a850f2224ac0dd103617b`, bin `e29bd9703ad64da8883d8389b0cfb797` | `906595786cf7dc047f069506aa3f6017` |

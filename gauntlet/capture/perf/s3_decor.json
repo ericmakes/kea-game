@@ -1,0 +1,248 @@
+{
+ "label": "s3_decor",
+ "at": "2026-10-03T10:43:53.645Z",
+ "cost": {
+  "runs": [
+   {
+    "meanMs": 14.25,
+    "medianMs": 13.3,
+    "p95Ms": 31.7,
+    "fps": 70.2,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.69,
+    "medianMs": 13.4,
+    "p95Ms": 32.4,
+    "fps": 68.1,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 13.54,
+    "medianMs": 12.2,
+    "p95Ms": 32.3,
+    "fps": 73.8,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   }
+  ],
+  "meanMs": 14.25
+ },
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 5,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1983,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2813,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1054,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4967,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 46.6593,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1005,
+     "ok": false,
+     "miss": 1.61
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3613,
+     "ok": false,
+     "miss": 0.18
+    },
+    "ridgeP10": {
+     "gv": 0.2589,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1246,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4522,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 45.2423,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.175,
+     "ok": false,
+     "miss": 0.48
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 3,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1965,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3692,
+     "ok": false,
+     "miss": 0.88
+    },
+    "snowPatch": {
+     "gv": 0.0932,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5112,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 169.6579,
+     "ok": false,
+     "miss": 3.09
+    },
+    "sat": {
+     "gv": 0.0396,
+     "ok": false,
+     "miss": 2.16
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 5,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3355,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3627,
+     "ok": false,
+     "miss": 0.78
+    },
+    "snowPatch": {
+     "gv": 0.08,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5363,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 43.327,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3027,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 4,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2254,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2259,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0604,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4675,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 91.1494,
+     "ok": false,
+     "miss": 0.47
+    },
+    "sat": {
+     "gv": 0.0264,
+     "ok": false,
+     "miss": 2.28
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 2,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1589,
+     "ok": false,
+     "miss": 0.39
+    },
+    "ridgeP10": {
+     "gv": 0.3418,
+     "ok": false,
+     "miss": 0.47
+    },
+    "snowPatch": {
+     "gv": 0.0941,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.5247,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 186.4186,
+     "ok": false,
+     "miss": 3.65
+    },
+    "sat": {
+     "gv": 0.0164,
+     "ok": false,
+     "miss": 2.37
+    }
+   }
+  }
+ },
+ "ac": true,
+ "prev": "s3_ground",
+ "refusals": []
+}

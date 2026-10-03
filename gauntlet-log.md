@@ -6302,3 +6302,14 @@ as holes; 0.14 / dark grey at 0.72 alpha reads as damp. (3) The six desire-path 
 oil-dark disc at the carpark mouth, the sand pads under the table and by the hut): same soft edge, drawn 1.4x so the
 feather lands where the rim was. Every shape comes from a local hash, not rnd().
 Gate meter 15.66 ms; perfstep s3_ground 14.32 ms (14.16 / 14.32 / 14.53), key six in band, ACCEPTED.
+
+## 2026-10-03l — STEP 3, THE CARPARK: clutter (Opus 5.5) — certified c82287a9
+
+src/decor.mjs (new, browser-only, like the clumps): DECOR.maps in game.mjs declares Poly Haven CC0 pieces, the file
+places them on the drawn ground and re-dresses on travel. Dressing only — no collider, no anchor; anything to perch
+on or peck stays a P6A registry prop. The Carpark: two trash bags in the bin's lee, three old tyres at the hut's back
+corner (the file stands the tyre on edge, axis z: a quarter turn lays the stack flat). Rig seam NODECOR=1.
+THE GATE'S METER READ 16.63 ms, 0.04 inside the budget, so it was measured before it was believed: framemeter A/B,
+alternated, clutter on 15.31 / 15.49, off 15.51 / 15.39 — no cost; the 16.63 was the warm-machine spread this log has
+recorded before (16.81 refused, 16.20 idle, on one frame). perfstep s3_decor 14.25 ms (14.25 / 14.69 / 13.54) against
+s3_ground's 14.32, key six in band, ACCEPTED.

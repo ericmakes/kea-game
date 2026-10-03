@@ -2125,6 +2125,23 @@ if(MATBREAK_OK!==true&&typeof console!=='undefined')
    standing 7-9 cm proud of the seal (walkers stepped up onto them); they are painted flush now. The
    carpark's bays are moved +2.5 m z so a real 4 m car sits in its bay (the spike's own correction:
    the old lines framed the cars' front 1.8 m only). */
+/* THE CLUTTER (Step 3, the per-map pass: "add clutter and wear") — src/decor.mjs places these, browser-only, with no
+   collider and no anchor. Poly Haven CC0 (tools/derive_polyhaven.mjs; rows in assets/LICENCES.md). Metres are the
+   file's own (Poly Haven is measured at real size); `y` lifts one onto another; rx/rz tip it before the yaw. */
+const DECOR={
+  maps:{
+    carpark:[
+      /* the bin's lee (bin at 7,-6, 0.95 m): two bags put out beside it */
+      {url:'models/props/trashbag.glb', at:[7.88,-5.55], ry:0.7, scale:1.05},
+      {url:'models/props/trashbag.glb', at:[7.70,-6.62], ry:2.4, scale:0.92},
+      /* the hut's back corner (hut at -24,-9, walls to x -20.5 and z -11.7): old tyres, a stack of two and one leant on
+         the wall. The file stands its tyre on edge, axis along z: rx a quarter lays it flat */
+      {url:'models/props/old_tyre.glb', at:[-19.98,-11.30], ry:0.3, rx:Math.PI/2},
+      {url:'models/props/old_tyre.glb', at:[-19.95,-11.26], ry:1.1, rx:Math.PI/2, y:0.165},
+      {url:'models/props/old_tyre.glb', at:[-20.30,-10.05], ry:Math.PI/2, rx:0.16},
+    ],
+  },
+};
 const SEAL={
   oilAmt:0.55, laneAmt:0.10, patchAmt:0.28, crackAmt:0.9, paint:[0.80,0.79,0.74],
   patchCell:[7.0,5.0], spillM:0.9, spillAmt:0.75,   // spill: a narrow broken fringe (1.6 m covered most of a 7 m street)
@@ -13124,7 +13141,7 @@ function boot(opts){
   requestAnimationFrame(frame);
 }
 if(typeof globalThis!=='undefined'){
-  globalThis.KEAGAME={VERGE,SEAL,SEALU,grassCuts,terrainFlatAt,G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,setRenderScale,RENDER,drawnGroundAt,drawnLift,drawnGroundState,drawnGroundExplain,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
+  globalThis.KEAGAME={VERGE,DECOR,SEAL,SEALU,grassCuts,terrainFlatAt,G,boot,startGame,update,press,release,nightApply,nightApply,KEYS,initScene,buildWorld,registerSheepPecks,defineMissions,noise,award,done,prog,groundHeightAt,setRenderScale,RENDER,drawnGroundAt,drawnLift,drawnGroundState,drawnGroundExplain,onVanRoof,jailFull,jailedKea,SNOWFIELD,SNOWSLIDE,SNOWBULK,snowBlocked,snowSpot,
     STARS:{KINDS:STARKINDS,rec:starRec,count:starCount,pips:starPips,header:pageHeader,
            rows:pageRows,cleared:pageCleared,cur:curPage,sync:syncClearedStars,
            snap:pageSnap,open:pageOpen,close:pageClose,earned:pageEarned,init:starsInit,

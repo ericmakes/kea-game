@@ -259,10 +259,10 @@ export async function preparePage(page, { seed = GAUNTLETSEED, biome } = {}) {
      src/shadows.mjs's CASCADE (cascades, size, maxFar, radius, blurSamples...). PERF S6: KEASCALE=<f>
      sets the render scale. All three for like-for-like A/Bs at the vantage. */
   { let cas = null; if (process.env.KEACASCADE) { try { cas = JSON.parse(process.env.KEACASCADE); } catch (e) { throw new Error('webrig: KEACASCADE is not valid JSON — ' + e.message); } }
-    const nocsm = !!process.env.NOCSM, scale = process.env.KEASCALE ? +process.env.KEASCALE : null, noaa = !!process.env.NOAA, nocl = !!process.env.NOCLUMPS;
-    if (nocsm || cas || scale || noaa || nocl) await page.evaluateOnNewDocument((n, c, sc, na, ncl) => {
+    const nocsm = !!process.env.NOCSM, scale = process.env.KEASCALE ? +process.env.KEASCALE : null, noaa = !!process.env.NOAA, nocl = !!process.env.NOCLUMPS, nodc = !!process.env.NODECOR;
+    if (nocsm || cas || scale || noaa || nocl || nodc) await page.evaluateOnNewDocument((n, c, sc, na, ncl, ndc) => {
       if (n) globalThis.__KEA_NOCSM__ = true; if (c) globalThis.__KEA_CASCADE__ = c; if (sc) globalThis.__KEA_SCALE__ = sc; if (na) globalThis.__KEA_AA__ = false;
-      if (ncl) globalThis.__KEA_NOCLUMPS__ = true; }, nocsm, cas, scale, noaa, nocl); }
+      if (ncl) globalThis.__KEA_NOCLUMPS__ = true; if (ndc) globalThis.__KEA_NODECOR__ = true; }, nocsm, cas, scale, noaa, nocl, nodc); }   // NODECOR=1: no Step 3 clutter (src/decor.mjs)
   await page.evaluateOnNewDocument((s, b) => {
     let t = s >>> 0;
     Math.random = () => { t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t);

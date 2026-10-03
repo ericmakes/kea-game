@@ -106,6 +106,12 @@ if (!cfg.noclumps && !globalThis.__KEA_NOCLUMPS__) {
   catch (e) { console.error('clumps: the tussock clumps failed to install, the blade field stands alone —', e); }
 }
 
+/* STEP 3: THE CLUTTER — see src/decor.mjs. Dressing only (no collider, no anchor); a failed load leaves the map bare. */
+if (!cfg.nodecor && !globalThis.__KEA_NODECOR__) {
+  try { const { installDecor } = await import('./decor.mjs'); await installDecor(KEAGAME); }
+  catch (e) { console.error('decor: the clutter failed to install —', e); }
+}
+
 /* PERF S4: THE SUN'S SHADOWS IN CASCADES FITTED TO THE CAMERA — see src/shadows.mjs. Browser-only
    for the same reasons as everything above; if it cannot install, the authored sun keeps its one
    fixed map and the game plays on. __KEA_NOCSM__ forces the old map for a like-for-like frame. */
