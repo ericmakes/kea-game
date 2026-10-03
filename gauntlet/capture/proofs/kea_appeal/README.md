@@ -1,9 +1,13 @@
-# Kea — tail rebuild + appeal strip (for Eric's pick), 2026-10-03
+# Kea — tail rebuild + appeal strip, 2026-10-03 — REFERENCE ONLY
+
+**ON HOLD (Eric, 2026-10-03): none of A, B or C ships.** The character goes to Astra for a proper art pass; the
+approved bird stays loaded as it is and Task 2 is OPEN. This package is kept as reference for that import. The
+three full GLBs are committed at `gauntlet/reference/kea_tail_appeal/` (outside `assets/`, so no build copies them).
 
 Built by `tools/kea_lab/build_variants.mjs` from the approved `assets/models/astra_incoming/approved/kea_animated.glb`
-(read only), validated by `tools/kea_lab/validate.mjs`. The GLBs are not committed (33 MB each): the builder
-rebuilds them byte for byte into `kea_variants_local/` (full 4096 textures) and `assets/models/kea_variants/`
-(the game copies, the shipped 2048 images spliced in). Nothing in the game loads them yet.
+(read only), validated by `tools/kea_lab/validate.mjs`. The full GLBs are committed at
+`gauntlet/reference/kea_tail_appeal/`; the builder also rebuilds them byte for byte, plus game copies with the
+shipped 2048 images (gitignored). Nothing in the game loads them.
 
 | file | md5 (full) | md5 (game copy, 2048png) |
 |---|---|---|
