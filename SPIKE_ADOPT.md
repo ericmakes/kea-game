@@ -34,6 +34,10 @@ Status: **LANDED** · **IN PROGRESS** · **NEXT** (queued, in order) · **BLOCKE
 | 15 | **WebGPURenderer / TSL node materials** | NOT APPLICABLE | a port of every material and post pass, not a setting (SPIKE.md "could not adopt" 1). Each look is re-expressed in WebGL instead |
 | 16 | **Kea slimmed to 1K WebP** | NOT APPLICABLE | the game already ships 2048 PNG + 1024 WebP fallback (BIRD_STATE 7a); 1K is too soft for 03 / 18 (SPIKE.md's own caveat) |
 
+## The test frame
+
+`gauntlet/capture/proofs/SPIKE_01_spike_vs_game_vs_before.jpg`: the spike's 01 (top), the game now (middle), the game before the cars and trees (bottom). Whole set re-pinned after rows 1-3 (43 vantages, 4-run consensus).
+
 ## Frame cost
 
 | after | live meter, AC, 1920x1080 window, bird flying |

@@ -1,3 +1,31 @@
+# REPORT — SPIKE ADOPTION: cars and trees landed; STOPPED for the 01 side-by-side (2026-10-03, Opus 5.5)
+
+Branch `replat-b`. **CERTIFIED-SHIP** at specimen `2b3b92a03d55cdf1eb8fabdd67b48660`. The status of every row is in **SPIKE_ADOPT.md**.
+
+## THE TEST
+`gauntlet/capture/proofs/SPIKE_01_spike_vs_game_vs_before.jpg`: the spike's `out/01_carpark_wide.png` (top), the game now (middle), and the game before this session's pieces (bottom).
+
+## SHIPPED
+| commit | one line |
+|---|---|
+| `2ab3652` SPIKE_ADOPT 1+2 | **The spike's cars:** hatch, ute, caravan and trailer, plain GLB, WebGL clearcoat, its tyres and alloys; 7 placements and all traffic. Anchors moved onto the real bodies (18 of 59, row-diffed); seal 12/12 round the real door. **Props on the drawn ground:** cars, traffic, humans, sheep. **Render scale:** 100% + auto (your ruling). |
+| `d60551f` SPIKE_ADOPT 3 | **The spike's Poly Haven trees** for every mkTree in every map. |
+| (this) PIN | Whole set re-pinned once, 43 vantages, 4-run consensus. |
+
+## WHAT YOU SHOULD KNOW
+- **The cars face the way the spike's do,** rears to the 01 camera. That is the game's own front: the old primitive had its wipers on the rear window. Wipers, aerials, mirrors and the crate all moved onto the real bodies.
+- **Render scale at 100% costs ~20 ms** with cars and trees. Auto holds the budget by settling at about 70% at 1080p. Trees are ~2 ms of leaf fill; a far LOD saved 0.4 ms and looked thinner, so it is off.
+- **`camp_van`** (the campground motorhome) is still primitive: the spike has no motorhome. Your call whether it takes the caravan body.
+- **No number-plate or wheel-nut missions exist** to resolve.
+
+## WHAT STILL SEPARATES THE TWO FRAMES (next rows, in order)
+1. **Light and grade:** the spike's warm, graded, AgX look against our cooler ACES. This is Piece 2, plus the HDRI sun measurement and the tone mapper.
+2. **The far field:** the spike's photographic Swiss valley. NOT APPLICABLE as is, because it is not NZ and the bird flies; it needs an NZ HDRI.
+3. **Asphalt wear:** oil, tyre polish, repairs, worn paint (row 4).
+4. **The verge:** the spike's tussock clumps and paint-mode terrain (row 9). Also the wheel stops and moved bay lines (row 10).
+
+---
+
 # REPORT — bird pinned, feet + trample, and the PERFORMANCE PIECE; STOPPED for frames (2026-10-02, Opus 5.5)
 
 Branch `replat-b`. **CERTIFIED-SHIP** at specimen `54b3bfae55bf070f4a4b7e4594d0abcf`. **Stopped before
