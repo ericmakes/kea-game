@@ -6173,3 +6173,15 @@ mask, and the 16 extra were the head's halo over blades BEHIND it — 2 "blades 
 now a keyed take (the bird drawn flat magenta): 1477 px at every heading, every run. Control still red
 (trample off: 37-136 blade px over the bird). The step was certified once with the camp_van change in the
 tree (684c6708, 15.90 / 16.36 ms) and again without it for this commit.
+
+## 2026-10-03d — SPIKE_ADOPT 1, camp_van: the campground motorhome takes the caravan body (Opus 5.5) — certified 684c6708
+
+Eric: "The camp_van takes the caravan body for now." The spike's caravan through the P6A seam, mirrored in
+z as the carpark's is (drawbar +z, door +x); the awning group stays with the model (keepWithModel: the
+camp chair sits under it); door anchor (1.16, 1.46, -0.95) on the model's door; colliders the body
+(2.28 x 5.0, top 2.55) and the drawbar. models.mjs now lifts a vehicle onto the DRAWN ground where its
+placement does not carry it (the carpark's cars carry the 0.14 m slab in at.y; camp_van stands on the
+campground's relief, +50.7 mm). Measured on the campground: tyres -4.8 / -3.1 mm from the drawn ground
+(the jockey wheel +34 mm, and it is not a wheel). harness-everything: the shipped-swapped list names it,
+and the campground's "all primitive" row now says all primitive except camp_van. Gate: CERTIFIED-SHIP
+684c6708 with step 0 in the tree (meter 16.36 ms at 100%; the campground is not on the meter's circuit).

@@ -7285,10 +7285,15 @@ defineProp('camp_tent',{
     p.collide();
   },
 });
+/* SPIKE_ADOPT row 1 (Eric, 2026-10-03: "the camp_van takes the caravan body for now"): the spike's
+   caravan, mirrored as the carpark's is; its awning stays (the chair sits under it), the door anchor is
+   the model's door, the colliders are the body and its drawbar. */
 defineProp('camp_van',{
   biome:'campground', at:{x:CAMPVAN.x,z:CAMPVAN.z,ry:-0.22},
-  collider:[{kind:'box',w:2.4,d:5.2,top:2.3,solid:true}],
-  anchors:{roof:{x:0,y:2.3,z:0}, door:{x:1.25,y:1.0,z:0.4}, awning:{x:2.4,y:2.05,z:0}},
+  source:'model', url:VEHICLEURL, vehicle:{node:'caravan',paint:0xeeede8,rough:0.30,coat:0.6,mirrorZ:true},
+  collider:[{kind:'box',w:2.28,d:5.0,top:2.55,solid:true},
+            {kind:'box',x:0,z:3.3,w:0.9,d:1.4,top:0.75,solid:true}],
+  anchors:{roof:{x:0,y:2.55,z:0}, door:{x:1.16,y:1.46,z:-0.95}, awning:{x:2.4,y:2.05,z:0}},
   material:{family:null,nightTint:false},
   build(g,p){
     /* A PLACEHOLDER VAN. Deliberately plain — no wipers, no mirrors, no door seal, because those
@@ -7301,9 +7306,10 @@ defineProp('camp_van',{
     for(const sdx of [-1,1])for(const wz of [-1.6,1.6]){
       const wh=cyl(0.34,0.34,0.16,0x23262B,sdx*1.12,0.34,wz,g,12); wh.rotation.z=1.57; }
     /* the awning: the roll-out roof every one of these has, and the thing the chair sits under */
-    box(0.10,0.10,4.0,PAL.metal,2.35,2.00,0,g,{noshadow:true});
-    for(const az of [-1.8,1.8]) cyl(0.035,0.035,2.0,PAL.metal,2.35,1.0,az,g,6);
-    { const aw=box(2.5,0.05,4.0,0xC8B48A,1.22,2.02,0,g,{noshadow:true}); aw.rotation.z=-0.05; }
+    { const ag=new THREE.Group(); ag.userData.keepWithModel=true; g.add(ag);   // stays when the caravan model is on
+      box(0.10,0.10,4.0,PAL.metal,2.35,2.00,0,ag,{noshadow:true});
+      for(const az of [-1.8,1.8]) cyl(0.035,0.035,2.0,PAL.metal,2.35,1.0,az,ag,6);
+      { const aw=box(2.5,0.05,4.0,0xC8B48A,1.22,2.02,0,ag,{noshadow:true}); aw.rotation.z=-0.05; } }
     blob(g,2.0,0.5);
     p.collide();
   },

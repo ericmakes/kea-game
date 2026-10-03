@@ -115,8 +115,12 @@ export async function installModels(K){
     if(p.entry.vehicle){
       try{ const V=await loadVehicles(url); const v=buildVehicle(V,p.entry.vehicle);
         for(const o of p.body)if(!o.userData.keepWithModel)o.visible=false;   // a mission object (the DOC crate) stays
+        /* on the DRAWN ground (SPIKE_ADOPT 2): the carpark's cars carry the seal in their placement y;
+           anywhere else the plane's relief under the wheels is taken here */
+        const lift=K.drawnGroundAt?K.drawnGroundAt(p.at.x,p.at.z)-(p.at.y||0):0;
+        v.position.y=lift/(p.at.scale||1);
         p.group.add(v);
-        p.model={root:v,yaw:v,url,scale:1,lift:0,measured:null}; p.mode='model';
+        p.model={root:v,yaw:v,url,scale:1,lift:+lift.toFixed(4),measured:null}; p.mode='model';
         K.G.models.swapped.push(p.id);
         K.G.models.detail[p.id]={url,vehicle:p.entry.vehicle.node,hidden:p.body.length,
           colliders:p.colliders.length,anchors:Object.keys(p.entry.anchors).length};

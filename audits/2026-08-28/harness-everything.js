@@ -8938,7 +8938,7 @@ C.section('REPLAT P6A: the model-swap seam');
   /* SPIKE_ADOPT 1 (2026-10-03): THE SPIKE'S VEHICLES SHIP AS MODELS, and only they do. This was
      "nothing ships swapped" until the first real batch landed; it now names the batch, so a prop
      that starts shipping a model by accident is still red. */
-  { const VEH=['campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer'];
+  { const VEH=['camp_van','campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer'];   // camp_van: Eric 2026-10-03
     ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH),'ONLY THE SPIKE VEHICLES SHIP SWAPPED ('+
        (shipsModel.slice().sort().join(', ')||'none')+')');
     ok(VEH.every(id=>{ const e=X.PROPS.ALL[id]; return e.url==='models/vehicles/vehicles_plain.glb'&&e.vehicle&&e.vehicle.node; }),
@@ -9315,7 +9315,9 @@ C.section('THE DOC CAMPGROUND - the third map, additive, with its own cast and i
     const foreign=reg.filter(p=>p.entry.biome!=='campground'&&p.entry.biome!=='*');
     ok(foreign.length===0,'and every placement belongs to this map or to every map ('+
        (foreign.map(p=>p.id+'='+p.entry.biome).join(', ')||'all do')+')');
-    ok(reg.every(p=>p.source==='primitive'),'all of them primitive, because no model has arrived');
+    /* camp_van wears the spike caravan since 2026-10-03 (Eric); everything else here is still primitive */
+    ok(reg.every(p=>p.source==='primitive'||p.id==='camp_van')&&reg.some(p=>p.id==='camp_van'&&p.source==='model'),
+       'all of them primitive except camp_van, which wears the spike caravan');
     /* THE PLACEHOLDER NOTE THE BRIEF PROMISED IS THIS ASSERTION, not a list in a markdown file:
        every campground prop carries the columns a model swap needs, so `PROPS.ALL` IS the list. */
     const entries=Object.values(P.ALL).filter(e=>e.biome==='campground');
