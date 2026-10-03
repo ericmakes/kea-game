@@ -162,6 +162,23 @@ export const SKYFLAG=`(()=>{ const G=KEAGAME.G;
   (G.clouds||[]).forEach(c=>{c.visible=false;});
 })();`;
 
+/* THE SKY KEY FOR A WHOLE VANTAGE — SPIKE_ADOPT 19 (Eric 2026-10-03: "fix the snow-patchiness detector to mask the
+   sky region"). The whole-frame snow detector takes an image's brightest pixels, and in a frame with sky in it those
+   are the CLOUDS: the light-and-grade candidate's cumulus against the photographed sky was being scored as snow
+   (06 and 12's refusals). So a key vantage gets a second take, same page, same camera: everything that IS the sky —
+   the dome (which also draws the photographed far field), the haze band, the clouds, the sun, the moon and the
+   stars — is hidden and the background is magenta, so a magenta pixel is one where nothing solid is drawn.
+   Geometry, never a colour guess: the SKYFLAG rule pointed at a whole frame. The range, the ground, every prop and
+   the HUD draw as they do, so none of them can read as sky. The test that reads the key back is KEYSKY below. */
+export const SKYKEY=`(()=>{ const G=KEAGAME.G;
+  for(const o of [G.sky,G.haze,G.sunSprite,G.starfield,G.moon]) if(o) o.visible=false;
+  (G.clouds||[]).forEach(c=>{ (c.g||c).visible=false; });
+  G.scene.background=new THREE.Color(0xFF00FF);
+})();`;
+/* a keyed pixel: red AND blue both 25 levels clear of green — the tone mapper and the grade pull a flat magenta
+   toward grey (birdcolour.mjs measured it under AgX), and no sky, rock, grass or paint in the game passes this */
+export const KEYSKY=(p)=>p[0]>p[1]+25&&p[2]>p[1]+25;
+
 /* THE SHIP FRAME FOR THE SKY hides the HUD and nothing else. Same reason, same rows. */
 /* #mutebtn IS NOT .hud, AND IT SITS IN THE SKY. It is `class="muted"`, so the first version of
    this hid the top bar and the feed and left a rounded grey button with the word "sound" on it in

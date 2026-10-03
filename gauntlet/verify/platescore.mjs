@@ -220,17 +220,21 @@ export function measureAll(im,isSky){
 /* FOUR TILES, and they are VERTICAL slices rather than quadrants on purpose: a mountain photograph
    varies far more left-to-right (this massif, that valley, the next ridge) than top-to-bottom
    inside its own ridge band, so vertical slices sample the variation that actually exists. */
-export function plateBand(im,isSky){
+/* skyAt(x,y) — OPTIONAL, SPIKE_ADOPT 19: a second exclusion tested in WHOLE-IMAGE pixel coordinates. isSky is handed
+   each tile's own pixels and tile-local x (a quarter of the plate), so a region defined over the whole plate cannot
+   be expressed through it; skyAt is offset by the tile here. Absent, plateBand is exactly what it was. */
+export function plateBand(im,isSky,skyAt){
   const tiles=[];
   const tw=Math.floor(im.w/4);
+  const pred=(off)=>skyAt?((p,x,y)=>(isSky?isSky(p,x,y):false)||skyAt(x+off,y)):isSky;
   for(let t=0;t<4;t++){
     const sub={w:tw,h:im.h,buf:Buffer.alloc(tw*im.h*3)};
     for(let y=0;y<im.h;y++)for(let x=0;x<tw;x++){
       const p=px(im,t*tw+x,y), i=(y*tw+x)*3;
       sub.buf[i]=p[0]; sub.buf[i+1]=p[1]; sub.buf[i+2]=p[2]; }
-    tiles.push(measureAll(sub,isSky));
+    tiles.push(measureAll(sub,pred(t*tw)));
   }
-  const whole=measureAll(im,isSky);
+  const whole=measureAll(im,pred(0));
   const band={};
   for(const k of PROPS){
     const vs=tiles.map(t=>t[k]).filter(v=>v!==null&&isFinite(v));

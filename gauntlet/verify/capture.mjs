@@ -8,6 +8,7 @@ const OUT=path.join(ROOT,'gauntlet/capture'); fs.mkdirSync(OUT,{recursive:true})
    page is served over loopback (ES modules will not load over file://). Both live in webrig.mjs,
    shared with probe/motion/journey so the four cannot drift apart again. */
 import {ensureBuild,serve,preparePage,assertBooted,assertBirdDressed,launch,GAUNTLETSEED} from './webrig.mjs';
+import {SKYKEY} from './stripcam.mjs';
 let SRV=null;
 const origin=async()=>{ if(!SRV){ ensureBuild(); SRV=await serve(); console.log('capture: built and serving '+SRV.origin); } return SRV.origin; };
 // SEEDED WORLD (2026-08-28): the game seeds nothing, so every load builds a different country.
@@ -80,6 +81,10 @@ async function shot(name,stage,opts){
       if(o.colossal){ await page.evaluate(`window.__keaFeedKeep=true; for(let i=0;i<9;i++)KEAGAME.award(300,'CAR: BUNTED',{x:0,y:1,z:0});`); await sleep(500); }
       await page.evaluate('{'+stage+'}'); await sleep(o.settle||900);
       await page.screenshot({path:path.join(OUT,name+'.png')});
+      /* SKYKEY=1 (SPIKE_ADOPT 19): a second take of the same page with the sky keyed magenta — see SKYKEY in
+         stripcam.mjs. Written beside the frame as <name>.sky.png; framescore reads it to keep the snow and
+         edge-density detectors off the sky. The pinned frame above is taken first and is untouched by it. */
+      if(process.env.SKYKEY){ await page.evaluate(SKYKEY); await sleep(400); await page.screenshot({path:path.join(OUT,name+'.sky.png')}); }
     })(), SHOT_MS, 'shot '+name);
   } finally {
     // kill(), not just close(): a browser that stopped answering will not honour a clean close

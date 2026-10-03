@@ -44,17 +44,27 @@ if (!process.env.SKIPCOST) {
 }
 if (!process.env.SKIPLOOK) {
   /* FROMPINS=1 scores the PINNED frames instead of shooting — the "before" of a piece is the set it starts from */
-  if (!process.env.FROMPINS) run(['gauntlet/verify/capture.mjs'], { SHOTS: KEY6.join(',') });
+  /* SPIKE_ADOPT 19: every look is shot WITH its sky key (capture SKYKEY=1), and the key travels with the frame, so
+     framescore measures snow and edge density off the sky. Pinned frames carry no key: a FROMPINS look is scored
+     unkeyed, says so per frame, and is not comparable with a keyed one (the refusal check below refuses to try). */
+  if (!process.env.FROMPINS) run(['gauntlet/verify/capture.mjs'], { SHOTS: KEY6.join(','), SKYKEY: '1' });
   const from = process.env.FROMPINS ? 'gauntlet/capture/baseline' : 'gauntlet/capture';
-  const frames = KEY6.map(v => { const src = path.join(ROOT, from, v + '.png'), dst = path.join(OUT, LABEL, v + '.png'); fs.copyFileSync(src, dst); return dst; });
+  const frames = KEY6.map(v => { const src = path.join(ROOT, from, v + '.png'), dst = path.join(OUT, LABEL, v + '.png'); fs.copyFileSync(src, dst);
+    const k = src.replace(/\.png$/, '.sky.png'), kd = dst.replace(/\.png$/, '.sky.png');
+    if (!process.env.FROMPINS && fs.existsSync(k)) fs.copyFileSync(k, kd); else if (fs.existsSync(kd)) fs.unlinkSync(kd);
+    return dst; });
   const fsj = JSON.parse(run(['gauntlet/verify/framescore.mjs', ...frames], { JSON: '1', WALL: 'bow' }));
   rec.look = {};
-  for (const r of fsj) { const v = path.basename(r.frame, '.png'); rec.look[v] = { inCount: r.inCount, rows: Object.fromEntries(r.rows.map(x => [x.k, { gv: +x.gv.toFixed(4), ok: x.ok, miss: +(x.miss || 0).toFixed(2) }])) }; }
+  for (const r of fsj) { const v = path.basename(r.frame, '.png'); rec.look[v] = { inCount: r.inCount, keyed: !!(r.sky && r.sky.keyed), rows: Object.fromEntries(r.rows.map(x => [x.k, { gv: +x.gv.toFixed(4), ok: x.ok, miss: +(x.miss || 0).toFixed(2) }])) }; }
 }
 const refusals = [];
 if (!rec.ac) refusals.push('the machine is on battery — the target is an AC figure');
 if (process.env.PREV) {
   const prev = JSON.parse(fs.readFileSync(path.join(OUT, process.env.PREV + '.json'), 'utf8'));
+  /* ONE INSTRUMENT PER COMPARISON: a keyed look against an unkeyed one would call the recalibration itself a refusal
+     (or hide one). Steps before SPIKE_ADOPT 19 are unkeyed; compare against a keyed PREV. */
+  if (rec.look && prev.look) for (const v of KEY6) if (prev.look[v] && rec.look[v] && !!prev.look[v].keyed !== !!rec.look[v].keyed)
+    refusals.push(`${v}: ${process.env.PREV} was scored ${prev.look[v].keyed ? 'keyed' : 'unkeyed'} and this step ${rec.look[v].keyed ? 'keyed' : 'unkeyed'} — not one instrument (SPIKE_ADOPT 19); re-shoot PREV keyed`);
   if (rec.look && prev.look) for (const v of KEY6) for (const k in (prev.look[v] || {}).rows || {}) {
     const a = prev.look[v].rows[k], b = rec.look[v] && rec.look[v].rows[k];
     if (a && a.ok && b && !b.ok) refusals.push(`${v} ${k}: was in band (${a.gv}), now out (${b.gv}, ${b.miss} half-widths)`);

@@ -31,7 +31,9 @@
    Usage: node gauntlet/verify/framescore.mjs <frame.png> [...]       WALL=bow (default) | spike | both
           JSON=1 for machine output */
 import path from 'path'; import url from 'url';
+import fs from 'fs';
 import { bandNorm, measureAll, plateBand, NORMW, loadRGB } from './platescore.mjs';
+import { KEYSKY } from './stripcam.mjs';
 
 const HERE = path.dirname(url.fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
@@ -59,21 +61,65 @@ const PLATEMASK = {
 };
 const masker = (rects, im) => (p, x, y) =>
   rects.some(r => x >= r[0] * im.w && x <= r[2] * im.w && y >= r[1] * im.h && y <= r[3] * im.h);
+
+/* ---- THE SKY IS NOT SNOW — SPIKE_ADOPT 19 (Eric 2026-10-03) ----
+   "Two of [the candidate's three refusals] are the snow detector counting clouds in the photographed sky. Do not
+   loosen thresholds: fix the snow-patchiness detector to mask the sky region, then re-derive the edge-density and
+   snow bands ... from the plates against the new sky." snowPatch takes a frame's brightest pixels; with sky in the
+   frame those are cumulus, so a change to the CLOUDS read as a change to the SNOW. And edge density over a frame
+   whose upper third is smooth sky is diluted by however much sky the vantage happens to hold.
+   SO THE TWO GROUND PROPERTIES ARE MEASURED OFF THE SKY, on both sides, and nothing else changes: no threshold,
+   no band width (MINREL, the tile rule), and luma / hue / sat / ridge p10 are still the whole frame.
+     THE GAME: the sky key capture.mjs takes beside the frame (SKYKEY=1 -> <name>.sky.png; stripcam SKYKEY) —
+               geometry, never a colour guess. A frame with no key is scored as before and SAYS SO (unkeyed).
+     THE PLATES: the bow trio have no sky to mask (stripcam: 5.8-11.3% smooth in their top 22%, canopy and roofline;
+               REF_BOW.md names none of them a sky) — their sky mask is empty, stated, so their bands are re-derived
+               and come out where they were. The spike frame's sky is a MEASURED POLYGON, like the watermark
+               rectangles above: a colour test (b-r>20) took the blue car, the shadows and the forest, and a flood
+               from the top edge ate the hazy far slopes; the polygon follows the ridgeline to a few px (3.6% of
+               the frame, the thin haze strip at the ridge left in). */
+export const SKYOFF = ['edgeDensity', 'snowPatch'];
+const SKYPOLY = {
+  ref_bow_00: null, ref_bow_04: null, ref_bow_06: null,
+  spike_01: [[0.6146, 0], [0.6528, 0.0358], [0.7431, 0.0815], [0.8125, 0.1086], [0.868, 0.1346], [0.8993, 0.1389], [0.934, 0.1327], [1, 0.1019], [1, 0]],
+};
+const inPoly = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) { const [xi, yi] = P[i], [xj, yj] = P[j];
+  if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) c = !c; } return c; };
+/* the sky key for a game frame, read at the frame's own normalisation, as a per-pixel lookup; null if there is none */
+export function skyKeyFor(frame) {
+  const k = frame.replace(/\.png$/, '.sky.png'); if (k === frame || !fs.existsSync(k)) return null;
+  const im = bandNorm(k, 0, 1, NORMW), m = new Uint8Array(im.w * im.h);
+  for (let j = 0; j < m.length; j++) m[j] = KEYSKY([im.buf[j * 3], im.buf[j * 3 + 1], im.buf[j * 3 + 2]]) ? 1 : 0;
+  return { w: im.w, h: im.h, m, frac: m.reduce((a, b) => a + b, 0) / m.length };
+}
 const plateFile = n => n === 'spike_01' ? SPIKE_FRAME : path.join(BOARD, n + '.jpg');
 
 export function plates(wall = 'bow') {
   const out = {};
   for (const n of WALLS[wall]) {
-    const im = bandNorm(plateFile(n), 0, 1, NORMW);
-    out[n] = plateBand(im, masker(PLATEMASK[n], im));
+    const im = bandNorm(plateFile(n), 0, 1, NORMW), mk = masker(PLATEMASK[n], im);
+    out[n] = plateBand(im, mk);
+    /* SKYOFF: the same plate re-banded with its sky masked too (SPIKE_ADOPT 19); the polygon is in whole-plate
+       fractions, so it goes to plateBand as skyAt (whole-image coordinates), not through the tile-local isSky */
+    const P = SKYPOLY[n];
+    if (P) { const skyAt = (x, y) => inPoly(P, x / im.w, y / im.h), off = plateBand(im, mk, skyAt);
+      for (const k of SKYOFF) out[n].band[k] = off.band[k];
+      let c = 0; for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) c += skyAt(x, y) ? 1 : 0;
+      out[n].sky = { polygon: true, frac: c / (im.w * im.h) }; }
+    else out[n].sky = { polygon: false, frac: 0, note: 'no sky in this plate' };
   }
   return out;
 }
 
 export function scoreFrame(frame, P) {
   const names = Object.keys(P);
-  const im = bandNorm(frame, 0, 1, NORMW);
-  const g = measureAll(im, masker(GAMEHUD, im));
+  const im = bandNorm(frame, 0, 1, NORMW), hud = masker(GAMEHUD, im);
+  const g = measureAll(im, hud);
+  /* SKYOFF (SPIKE_ADOPT 19): snow and edge density off the sky, from the frame's own key. No key, no change — and
+     the result says it was unkeyed, so a keyed band is never silently compared with an unkeyed frame. */
+  const key = skyKeyFor(frame);
+  if (key && (key.w !== im.w || key.h !== im.h)) throw new Error('framescore: sky key ' + key.w + 'x' + key.h + ' does not match its frame ' + im.w + 'x' + im.h);
+  if (key) { const g2 = measureAll(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1); for (const k of SKYOFF) g[k] = g2[k]; }
   let inCount = 0;
   const rows = JUDGED.map(k => {
     const cells = names.map(n => { const b = P[n].band[k];
@@ -85,14 +131,14 @@ export function scoreFrame(frame, P) {
       return Math.max(0, Math.abs(g[k] - mid) - half) / half; }));
     return { k, gv: g[k], cells, ok, miss };
   });
-  return { frame, game: g, rows, inCount, judged: JUDGED.length, plates: names };
+  return { frame, game: g, rows, inCount, judged: JUDGED.length, plates: names, sky: key ? { keyed: true, frac: +key.frac.toFixed(4) } : { keyed: false } };
 }
 
 export const FMT = { edgeDensity: v => v.toFixed(4), ridgeP10: v => v.toFixed(3), snowPatch: v => v.toFixed(4),
               luma: v => v.toFixed(3), hue: v => v.toFixed(0), sat: v => v.toFixed(3) };
 export function table(res) {
   const L = [];
-  L.push('  ' + path.basename(res.frame));
+  L.push('  ' + path.basename(res.frame) + (res.sky ? (res.sky.keyed ? '   (sky keyed: ' + (res.sky.frac * 100).toFixed(1) + '% of the frame off snow and edge density)' : '   (UNKEYED: no .sky.png — snow and edge density include the sky)') : ''));
   L.push('  property        frame     ' + res.plates.map(n => (n + ' band').padEnd(22)).join('') + 'verdict');
   for (const r of res.rows) {
     const f = FMT[r.k];
@@ -192,7 +238,7 @@ if ((process.argv[1] || '').endsWith('framescore.mjs')) {
   const all = [];
   for (const w of walls) { const P = plates(w); for (const f of frames) all.push({ wall: w, ...scoreFrame(path.resolve(f), P) }); }
   if (process.env.JSON) console.log(JSON.stringify(all.map(r => ({ wall: r.wall, frame: r.frame, inCount: r.inCount,
-    judged: r.judged, rows: r.rows.map(x => ({ k: x.k, gv: x.gv, ok: x.ok, miss: x.miss })) })), null, 1));
+    judged: r.judged, sky: r.sky, rows: r.rows.map(x => ({ k: x.k, gv: x.gv, ok: x.ok, miss: x.miss })) })), null, 1));
   else for (const w of walls) {
     console.log('FRAMESCORE — platescore.mjs properties, whole frame, against ' + WALLS[w].join(', ') + '\n');
     for (const r of all.filter(r => r.wall === w)) console.log(table(r) + '\n');

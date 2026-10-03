@@ -6313,3 +6313,41 @@ THE GATE'S METER READ 16.63 ms, 0.04 inside the budget, so it was measured befor
 alternated, clutter on 15.31 / 15.49, off 15.51 / 15.39 — no cost; the 16.63 was the warm-machine spread this log has
 recorded before (16.81 refused, 16.20 idle, on one frame). perfstep s3_decor 14.25 ms (14.25 / 14.69 / 13.54) against
 s3_ground's 14.32, key six in band, ACCEPTED.
+
+## 2026-10-03m — SPIKE_ADOPT 19 (a): THE SKY IS NOT SNOW — the detector fixed, the bands re-derived (Opus 5.5) — certified c82287a9 (src unchanged)
+
+Eric's ruling (row 19): take the step-1 candidate; "fix the snow-patchiness detector to mask the sky region, then
+re-derive the edge-density and snow bands ... from the plates against the new sky, record the recalibration in the log".
+THE KEY. capture.mjs SKYKEY=1 takes a second frame on the same page: the dome (which also draws the photographed far
+field), the haze band, the clouds, the sun, the moon and the stars hidden, the background magenta (stripcam SKYKEY; read
+back by KEYSKY, red and blue 25 over green, which survives AgX). Geometry, never colour — the SKYFLAG rule. Checked by
+eye on 06 and 12: magenta exactly to the ridgeline; range, ground, props and HUD drawn.
+THE DETECTOR. framescore measures snowPatch AND edgeDensity off the sky (both are ground properties; snow took the
+frame's brightest pixels, which in a frame with sky are cumulus, and edge density was diluted by whatever sky a vantage
+holds). luma / hue / sat / ridge p10 stay whole-frame. No threshold, no MINREL, no tile rule touched. A frame without a
+key is scored as before and labelled UNKEYED; perfstep shoots keyed, carries the key with the frame, and REFUSES to
+compare a keyed step with an unkeyed PREV (s19_keyed_ship is the first keyed baseline).
+THE PLATES, SAME RULE. platescore.plateBand gains an optional whole-image exclusion (skyAt) — its isSky is handed tile-
+local x, so a whole-plate region could not be expressed through it; absent, plateBand is unchanged (selftest ALL PASS).
+  bow trio   no sky to mask (stripcam: 5.8-11.3% smooth in the top 22%, canopy and roofline) -> bands UNCHANGED:
+             edgeDensity [0.2118-0.3110] [0.2108-0.3166] [0.1898-0.3473], snow [0.0548-0.1088] [0.0585-0.0977] [0.0786-0.1473]
+  spike_01   sky = a measured ridgeline polygon (3.6%; a colour test took the blue car, shadows and forest, a flood from
+             the top edge ate the hazy far slopes): edgeDensity [0.1446-0.2081] -> [0.1505-0.2204]; snow [0.0199-0.1120] unchanged
+THE SHIPPED KEY SIX, unkeyed (s3_decor) -> keyed (s19_keyed_ship), 23 -> 22:
+  01 5->5   edge 0.198 -> 0.217 in            snow 0.105 -> 0.106 in
+  02 4->4   edge 0.361 -> 0.468 out (was out) snow in -> in
+  06 3->2   edge 0.197 in -> 0.354 OUT        snow 0.093 -> 0.080 in      (the sky was 43% of the frame)
+  11 5->4   edge 0.336 in -> 0.390 OUT        snow in -> in
+  12 4->4   edge 0.225 -> 0.282 in            snow 0.060 -> 0.070 in
+  07 2->3   edge 0.159 out -> 0.225 IN        snow in -> in
+WHAT IT SAYS: with the sky out, the game's ground is BUSIER than the Birds of War plates at 02, 06 and 11 — a real finding
+the sky had been hiding, recorded for Eric, not tuned. FOUND ON THE WAY, not fixed (it would move every bow band):
+framescore's PLATEMASK watermark rectangles are compared with tile-local x inside plateBand's tiles, so in the four tile
+measurements the watermark mask lands in the wrong place; only the whole-plate value masks it correctly.
+THE CANDIDATE ON THE NEW INSTRUMENT (keyed, KEASKY/KEAFILM as SPIKE_ADOPT records it): 22/36 -> 28/36. Gained: 02 sat,
+06 ridge and hue, 11 ridge, 12 hue, 07 ridge and hue. 06's snow refusal is gone (0.069, in: it was the clouds). 06's edge
+density is out for ship and candidate alike (0.354 / 0.367), so it is no longer the candidate's refusal. ONE REMAINS:
+12 snow 0.0584 -> 0.0522 under a floor of 0.0548, four single takes each identical to the fourth place — real, and not
+the sky (12 is 17% sky; its "snow" is the white caravan, whose highlight edges AgX softens). Grade contrast restores it,
+non-monotonically (1.25 0.0548, 1.30 0.0549, 1.35 0.0580): that is tuning Eric's ruled look to a metric, so it is
+HELD for Eric. Against the spike the candidate closes ridge p10 (0.282 -> 0.187) but not saturation (0.118 vs 0.222-0.319).
