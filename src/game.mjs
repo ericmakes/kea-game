@@ -9781,8 +9781,17 @@ function buildHut(){
    undo — the sandwich is loose loot and stays a satellite.
    THE HANDBAG'S TRANSFORM IS ITS OWN, not an offset typed twice: its entry says (15.7, 0.95, -13.2)
    because that is where the bag is, and the peck anchor is the bag's own origin. */
+/* SPIKE_ADOPT 11 (step 3, the Carpark pass): THE TABLE IS POLY HAVEN'S wooden_picnic_table (CC0, Ulan Cabanilla),
+   derived by tools/derive_polyhaven.mjs. The file is 2.92 m long with its top at 0.75 m and lies along z; this
+   game's table is 2.4 x 1.3 at 0.85 along x, and the collider, the top/spread anchors, the handbag and the
+   sandwich all stand on that. So it is turned a quarter and fitted PER AXIS to the old body's box (fit.size):
+   x 0.82, y 1.14, z 1.04 — and the per-axis fit puts the file's bench seats at z +-1.15, height 0.51, exactly
+   where the primitive's were. The planks run the long way, so the shortening does not show; the A-frames
+   stand a little steeper. The primitive (with its gingham runner) is still built and is what headless sees. */
 defineProp('picnic_table',{
   biome:'carpark', at:{x:15,z:-13},
+  source:'model', url:'models/props/wooden_picnic_table.glb',
+  fit:{standM:null,axis:'y',ry:Math.PI/2,ground:true,size:[2.48,0.85,2.34]},   // the whole box: top 2.92 -> 2.4 long, 1.245 -> 1.3 wide, 0.746 -> 0.85 high
   collider:[{kind:'box',w:2.4,d:1.3,top:0.85,solid:true}],
   anchors:{top:{x:0,y:0.85,z:0},spread:{x:0,y:0.92,z:0}},
   material:{family:null,nightTint:false},

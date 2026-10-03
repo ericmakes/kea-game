@@ -953,3 +953,13 @@ as the spike encoded them, bounds and triangle count asserted identical.
 replaced by the scan's own `grass_medium_01_dry_diff_1k.png` (md5 `6f5ae8d4f152542de30aad6b6a3ea327`, its alpha in the
 fourth channel), all maps at 512. CC0; derived work of a CC0 original.
 
+
+## POLY HAVEN PROPS (Step 3, the Carpark pass, 2026-10-03)
+
+Each derived by `tools/derive_polyhaven.mjs <id> <dst> 1k` from the public Poly Haven API: every file of the 1k glTF
+download checked against the md5 the API publishes, packed as a plain GLB (float geometry, the JPEG maps as shipped),
+triangles and bounds asserted equal to the source. CC0 1.0; no attribution required, given anyway.
+
+| file | asset | author(s) | licence | source | md5 |
+|---|---|---|---|---|---|
+| `models/props/wooden_picnic_table.glb` | Wooden Picnic Table (`wooden_picnic_table`), 10,210 tris | Ulan Cabanilla | **CC0 1.0** | https://polyhaven.com/a/wooden_picnic_table — gltf `6da01f8a75e559f356b494059f7b0eda`, bin `5d52db76187b9990c328f79612eafe5b` | `21ad4ed72274ca14377e2bc3568462e2` |

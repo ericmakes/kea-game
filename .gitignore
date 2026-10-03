@@ -18,3 +18,6 @@ astra_archive/
 # tools/kea_lab/build_variants.mjs output: rebuilt from the approved kea, ~33 MB each
 kea_variants_local/
 assets/models/kea_variants/
+
+# tools/derive_polyhaven.mjs raw downloads (md5-checked against the Poly Haven API; the derived GLB is what ships)
+raw_polyhaven/

@@ -38,7 +38,12 @@ function loadGLB(url){
      fit.standM  the size the prop should occupy along fit.axis, in game metres. null = trust the file.
      fit.axis    which of the model's own axes standM measures. 'y' unless the exporter was odd.
      fit.ry      a yaw correction, in radians, for an asset that arrives facing the wrong way.
-     fit.ground  lift so the lowest vertex lands on the prop's own y=0. */
+     fit.ground  lift so the lowest vertex lands on the prop's own y=0.
+     fit.size    [x,y,z] game metres for the measured box AFTER the yaw, one scale per axis — for a model
+                 whose proportions differ from the collider it must agree with (SPIKE_ADOPT 11: Poly Haven's
+                 picnic table is 2.92 m long at a 0.75 m top; the game's is 2.4 m at 0.85, and its handbag,
+                 sandwich and the bird's perch all sit on that top). Overrides standM. The scale is applied
+                 OUTSIDE the yaw, so x/y/z mean the game's axes, not the file's. */
 function normalise(root,fit){
   const yaw=new THREE.Object3D();
   yaw.add(root);
@@ -46,6 +51,17 @@ function normalise(root,fit){
   yaw.updateMatrixWorld(true);
   const bb=new THREE.Box3().setFromObject(root);
   const size=new THREE.Vector3(); bb.getSize(size);
+  if(fit.size){
+    const outer=new THREE.Object3D(); outer.add(yaw);
+    const sv=fit.size.map((m,i)=>m/Math.max(1e-6,size.getComponent(i)));
+    outer.scale.set(sv[0],sv[1],sv[2]);
+    /* centred on the prop's origin in x/z, as the collider is; the lift in the unscaled box, then scaled */
+    const c=new THREE.Vector3(); bb.getCenter(c);
+    yaw.position.set(-c.x,fit.ground?-bb.min.y:0,-c.z);
+    return {yaw:outer,scale:sv[1],scales:sv.map(v=>+v.toFixed(5)),measured:+size.y.toFixed(4),
+            lift:+(fit.ground?-bb.min.y*sv[1]:0).toFixed(5),
+            size:[+size.x.toFixed(4),+size.y.toFixed(4),+size.z.toFixed(4)]};
+  }
   const measured=Math.max(1e-6,fit.axis==='x'?size.x:(fit.axis==='z'?size.z:size.y));
   const s=fit.standM?(fit.standM/measured):1;
   yaw.scale.setScalar(s);
@@ -153,7 +169,7 @@ export async function installModels(K){
       p.model={root,yaw:n.yaw,url,scale:n.scale,lift:n.lift,measured:n.measured};
       p.mode='model';
       K.G.models.swapped.push(p.id);
-      K.G.models.detail[p.id]={url,alpha,scale:+n.scale.toFixed(6),lift:n.lift,measured:n.measured,
+      K.G.models.detail[p.id]={url,alpha,scale:+n.scale.toFixed(6),...(n.scales?{scales:n.scales}:{}),lift:n.lift,measured:n.measured,
                                modelSize:n.size,materials:mat.materials,
                                tinted:mat.tinted,overridden:mat.overridden,
                                hidden:p.body.length,colliders:p.colliders.length,

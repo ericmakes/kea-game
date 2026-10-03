@@ -6270,3 +6270,19 @@ world is unchanged. On the way: the village's two parked cars stood at y 0 insid
 omitted); they now stand on it (VSTOP 0.16). This piece was refused once at 16.81 ms on the gate meter before the
 bloom recovery; on the recovered frame the gate meter read 14.80 and perfstep g2c_stops 14.74 ms
 (14.74 / 14.94 / 13.79), key six in band, ACCEPTED.
+
+## 2026-10-03j — STEP 3, THE CARPARK: the Poly Haven picnic table (Opus 5.5) — certified f4b9c0d2
+
+The first placeholder of the per-map pass, Poly Haven first. tools/derive_polyhaven.mjs (new) fetches one CC0 model
+from the public API, checks every file against the md5 the API publishes, and packs a plain GLB (float geometry,
+the JPEG maps as shipped), asserting triangles and bounds equal. wooden_picnic_table (10,210 tris) ships through the
+P6A seam. It is 2.92 m long at a 0.75 m top and the game's table is 2.4 x 1.3 at 0.85 with the collider, both
+anchors, the handbag and the sandwich standing on that — a uniform scale fits one or the other. So `fit.size` (new,
+models.mjs): one scale per axis, applied outside the yaw, measured: 0.82 / 1.14 / 1.04, which also puts the file's
+seats at z +-1.15, height 0.51, exactly where the primitive's were. Headless keeps the primitive (no loader).
+THE HARNESS NAMES THE BATCH: "only the spike vehicles ship swapped" was written to name its batch so an accidental
+swap stays red; picnic_table joins it BY NAME (both the registry census and the headless wantModel list), with a new
+check that each Poly Haven prop names its own GLB under models/props/ and a per-axis fit.
+REFUSED: the bench. Poly Haven's only bench is an indoor painted settle with a shelf under the seat; stretched to the
+1.9 m collider Tom's nap no longer lay on it. It goes to Higgsfield. Poly Haven has no wheelie bin or DOC board.
+Gate meter 15.09 ms; perfstep s3_table 14.73 ms (14.83 / 14.73 / 14.06), key six in band, ACCEPTED.

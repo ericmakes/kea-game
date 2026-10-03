@@ -8947,11 +8947,17 @@ C.section('REPLAT P6A: the model-swap seam');
   /* SPIKE_ADOPT 1 (2026-10-03): THE SPIKE'S VEHICLES SHIP AS MODELS, and only they do. This was
      "nothing ships swapped" until the first real batch landed; it now names the batch, so a prop
      that starts shipping a model by accident is still red. */
+  /* STEP 3, THE PER-MAP PASS (Eric 2026-10-03: "replace placeholders from MODEL_MANIFEST in pixel order: Poly Haven
+     CC0 first"): the Poly Haven props join the named batch, one by one, each by name — so an accidental swap is still
+     red, and each one must name its own derived GLB and a measured fit. */
   { const VEH=['camp_van','campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer'];   // camp_van: Eric 2026-10-03
-    ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH),'ONLY THE SPIKE VEHICLES SHIP SWAPPED ('+
+    const PH=['picnic_table'];                                                                              // Step 3, the Carpark pass
+    ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH.concat(PH).sort()),'ONLY THE SPIKE VEHICLES AND THE NAMED POLY HAVEN PROPS SHIP SWAPPED ('+
        (shipsModel.slice().sort().join(', ')||'none')+')');
     ok(VEH.every(id=>{ const e=X.PROPS.ALL[id]; return e.url==='models/vehicles/vehicles_plain.glb'&&e.vehicle&&e.vehicle.node; }),
-       'and every one of them names the plain vehicle GLB and the body it wears'); }
+       'and every vehicle names the plain vehicle GLB and the body it wears');
+    ok(PH.every(id=>{ const e=X.PROPS.ALL[id]; return /^models\/props\/[a-z0-9_]+\.glb$/.test(e.url)&&!e.vehicle&&e.fit&&Array.isArray(e.fit.size)&&e.fit.size.length===3&&e.fit.size.every(v=>v>0); }),
+       'and every Poly Haven prop names its own derived GLB under models/props/ and a per-axis fit to its collider'); }
   ok(noBuild.length===0,'every entry names a primitive builder, so a failed model always has '+
      'something to fall back to ('+(noBuild.join(', ')||'all do')+')');
   ok(badCol.length===0,'every declared collider is a shape groundHeightAt can read ('+
@@ -9233,8 +9239,8 @@ C.section('REPLAT P6A: the model-swap seam');
     const st=G.propsState;
     ok(st&&st.placed>=20,'the carpark builds its prop tier through the registry ('+
        (st&&st.placed)+' placements)');
-    ok(st.model===0&&JSON.stringify(st.wantModel.slice().sort())===JSON.stringify(['campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer']),
-       'and headless swaps none of them (no loader in node), while exactly the spike vehicles ask to be ('+st.wantModel.length+')');
+    ok(st.model===0&&JSON.stringify(st.wantModel.slice().sort())===JSON.stringify(['campervan','car_blue','car_red','car_white','car_yellow','doc_ute','picnic_table','trailer']),
+       'and headless swaps none of them (no loader in node), while exactly the spike vehicles and the carpark\'s Poly Haven table ask to be ('+st.wantModel.length+')');
     ok(st.ignored.length===0,'and no KEAPROPS path was refused on a plain boot');
     ok(st.anchors>=40,'the registry carries a real anchor table ('+st.anchors+' named points)');
     /* WHAT EACH BODY ACTUALLY WEARS IS MEASURED, so the census cannot drift from the world the way
