@@ -6286,3 +6286,19 @@ check that each Poly Haven prop names its own GLB under models/props/ and a per-
 REFUSED: the bench. Poly Haven's only bench is an indoor painted settle with a shelf under the seat; stretched to the
 1.9 m collider Tom's nap no longer lay on it. It goes to Higgsfield. Poly Haven has no wheelie bin or DOC board.
 Gate meter 15.09 ms; perfstep s3_table 14.73 ms (14.83 / 14.73 / 14.06), key six in band, ACCEPTED.
+
+## 2026-10-03k — STEP 3, THE CARPARK: the seal clean of the field; puddles as wet seal; soft wear (Opus 5.5) — certified ab83a124
+
+Scored against the spike frame, the pinned 01 was 4/6 (ridge p10 just out, saturation 0.100 against 0.222-0.319 —
+saturation is light and grade, the refused step-1 candidate, Eric's call). In pixels, the next gaps on the seal
+were three of the game's own: (1) an 8 m pale "gravel" lobe left of the trailer — a raycast found the GROUND PLANE
+at y 0.142-0.171 over the 0.14 m slab: its relief (+-0.18 m) rises through the slab, road and apron, and row 9's
+verge shader paints it gravel. Lattice vertices inside the seal boxes are now held 4 cm under the box top,
+browser-only. A one-cell (5 m) skirt was tried first and REFUSED by the vehicles battery: doc_ute's front wheels
+overhang the slab's north edge and stood 40.7 mm above the lowered field. Without the skirt the lobe is still gone.
+(2) The three puddles were unlit (MeshBasic) pale-blue discs: now wet seal, a dark smooth film lit by the IBL with a
+feathered, broken edge and a damp ring, sides and underside not drawn. A first take at roughness 0.06 / black read
+as holes; 0.14 / dark grey at 0.72 alpha reads as damp. (3) The six desire-path discs were hard-edged decals (the
+oil-dark disc at the carpark mouth, the sand pads under the table and by the hut): same soft edge, drawn 1.4x so the
+feather lands where the rim was. Every shape comes from a local hash, not rnd().
+Gate meter 15.66 ms; perfstep s3_ground 14.32 ms (14.16 / 14.32 / 14.53), key six in band, ACCEPTED.

@@ -3555,6 +3555,25 @@ function mat(c,extra){const k=c+JSON.stringify(extra||{});if(!M[k]){const col=ne
       { const FF=MATS.families[MATFAM[c]]; if(FF&&FF.iso)matBreakup(M[k],FF); }
       matFam(MATFAM[c]).mats.push(M[k]); matDress(M[k]); }
     else if(!HEADLESS&&MAPKIND[c]&&!M[k].map){ const t=detailTex(MAPKIND[c]); if(t)M[k].map=t; } }return M[k];}
+/* A SOFT DISC — a flat patch whose edge is feathered and broken, for the browser (Step 3, the Carpark pass). One
+   canvas per disc: alpha is a core (`core`) inside an edge pushed in and out by a few low harmonics, so no two read as
+   circles, then a fainter ring (`ring`) beyond it — damp tarmac round a puddle, trodden dust round a desire path. The
+   shape comes from a local hash of `seed`, never rnd(): the seeded stream must not move. Drawn on CircleGeometry or
+   a cylinder's top cap, whose UVs are both the unit disc. */
+function softDiscMat(seed,{color,roughness=0.9,env=0.3,core=0.72,ring=0.28,feather=0.12}){
+  const cv=document.createElement('canvas'); cv.width=cv.height=128; const c=cv.getContext('2d'), I=c.createImageData(128,128);
+  const h=k=>{ const v=Math.sin(seed*12.9898+k*78.233)*43758.5453; return v-Math.floor(v); };
+  const amp=[0,1,2,3,4].map(k=>[0.10/(1+k*0.6)*h(k),h(k+9)*6.283]);
+  for(let y=0;y<128;y++) for(let x=0;x<128;x++){ const dx=(x-63.5)/63.5, dy=(y-63.5)/63.5, r=Math.hypot(dx,dy), a=Math.atan2(dy,dx);
+    let e=0.66; amp.forEach(([m,ph],k)=>e+=m*Math.sin(a*(k+2)+ph));
+    const body=1-Math.min(1,Math.max(0,(r-e)/feather)), halo=1-Math.min(1,Math.max(0,(r-(e+0.10))/0.18));
+    const v=Math.max(body*core,halo*ring), o=(y*128+x)*4; I.data[o]=I.data[o+1]=I.data[o+2]=Math.round(v*255); I.data[o+3]=255; }
+  c.putImageData(I,0,0); const t=new THREE.CanvasTexture(cv);
+  return new THREE.MeshStandardMaterial({color,roughness,metalness:0,envMapIntensity:env,alphaMap:t,transparent:true,depthWrite:false,
+    polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+}
+/* WET SEAL — the carpark's puddles in the browser: a dark, smooth film that takes the sky's IBL strongly */
+function wetSealMat(seed){ return softDiscMat(seed,{color:0x3a3c3f,roughness:0.14,env:1.6}); }
 function bmat(c,extra){const k='b'+c+JSON.stringify(extra||{});if(!M[k]){const col=new THREE.Color(c);M[k]=new THREE.MeshBasicMaterial(Object.assign({color:col},extra||{}));}return M[k];}
 
 /* ---------- tiny utils ---------- */
@@ -6561,6 +6580,12 @@ const PROPDEFAULTS={
    props on the drawn ground): the placement's y, so the body, the wipers and every anchor come with
    it and nothing reads it twice. */
 const CARSLAB=0.14;
+/* the carpark's seal boxes as the ground plane sees them: [x0,z0,x1,z1,top] — the slab, the entrance apron and the road
+   (the boxes drawn in buildCarpark). Lattice vertices INSIDE a box only: a skirt of one 5 m cell lowered the field
+   under doc_ute's front wheels, which overhang the slab's north edge (the vehicles battery: 40.7 mm above the drawn
+   ground), and what a triangle from an outside vertex can still lift through a box's edge lands where the seal's own
+   gravel spill already is. */
+const CARPARKSEALBOXES=[[-18,6,22,28,CARSLAB],[-2,23,6,31,0.205],[-120,29.5,120,38.5,0.12]];
 const CARKIND={
   hatch:{collider:[{kind:'box',z:0,w:2.1,d:3.96,top:CARSLAB+0.98,solid:true},          // the envelope
                    {kind:'box',z:-1.30,w:2.1,d:1.36,top:CARSLAB+0.98,solid:false},    // the bonnet (a perch)
@@ -6743,7 +6768,15 @@ function buildCarpark(){
   const pos=gg.attributes.position;
   for(let i=0;i<pos.count;i++){ const x=pos.getX(i),y=pos.getY(i); const d=Math.sqrt(x*x+y*y);
     let h=0; if(d>58) h=(d-58)*0.06*(1+0.4*Math.sin(x*0.08)*Math.cos(y*0.07));
-    h+=Math.sin(x*0.15)*Math.cos(y*0.13)*0.18; pos.setZ(i,h); }
+    h+=Math.sin(x*0.15)*Math.cos(y*0.13)*0.18;
+    /* THE SEAL'S BOXES ARE NOT HOLED BY THE FIELD (Step 3, the Carpark pass). The relief's +-0.18 m swell rose through
+       the 0.14 m slab, the 0.12 m road and the apron in broad lobes, and the verge shader (row 9) painted every lobe
+       as gravel: the pale "patch" on the seal left of the trailer, 8 m across, that the spike's frame does not have.
+       Under each box the field is held 4 cm below the box's top. Browser-only: headless keeps the plane the batteries
+       were pinned on (a box covers it there either way, and drawnGroundAt takes the higher surface). The plane's
+       y is world -z. */
+    if(!HEADLESS) for(const [x0,z0,x1,z1,top] of CARPARKSEALBOXES) if(x>=x0&&x<=x1&&-y>=z0&&-y<=z1) h=Math.min(h,top-0.04);
+    pos.setZ(i,h); }
   gg.computeVertexNormals();
   { const cols=[],c1=new THREE.Color(PAL.ground),c2=new THREE.Color(PAL.ground2),c3=new THREE.Color(PAL.ground3),cg=new THREE.Color(PAL.gravel);
     const pp=gg.attributes.position;
@@ -6906,7 +6939,14 @@ function buildCarpark(){
      scan; the drawn ground reads it as a 12 cm step. Browser-only like the paint: a 12 cm cosmetic that would move the
      batteries' pinned world digest for nothing a battery tests. */
   if(!HEADLESS) for(const bx of [-8.7,-2.1,4.5,11.1]){ const ws=box(1.6,0.12,0.16,0xA9A7A2,bx,CARSLAB+0.06,14.05,null,{noshadow:false}); ws.receiveShadow=true; }
-  for(const [px,pz,pr] of [[-8,24.5,1.3],[14,10,1.0],[-2,20,0.8]]){ const pd=cyl(pr,pr,0.03,0,px,0.145,pz,null,16); pd.material=bmat(0xC6DCE8); } // puddles
+  /* PUDDLES. Headless keeps the pale unlit discs the batteries were pinned on. In the browser (Step 3, the Carpark
+     pass) they are WET SEAL, as the spike's frame has none of the pale discs: the same disc, its side and underside
+     drawn as nothing, its top a dark, nearly mirror-smooth film that takes its light from the sky's IBL like the car
+     paint does, the edge feathered and broken by a per-puddle canvas (a local hash, not rnd(): the seeded stream
+     must not move). Damp tarmac round the water is the darker ring the canvas paints under the film. */
+  for(const [px,pz,pr] of [[-8,24.5,1.3],[14,10,1.0],[-2,20,0.8]]){ const pd=cyl(pr,pr,0.03,0,px,0.145,pz,null,16);
+    pd.material=HEADLESS?bmat(0xC6DCE8):[bmat(0,{visible:false}),wetSealMat(px*7.31+pz*3.17),bmat(0,{visible:false})];
+    if(!HEADLESS){ pd.castShadow=false; pd.receiveShadow=true; pd.scale.set(1.35,1,1.35); } } // puddles
   G.gravel=[]; // carpark grit, named: vantage 18 caught one behind the bird and nothing could say what it was
   for(let i=0;i<26;i++){ const grr=rnd(0.05,0.12), gcol=i%2?0x9AA0A6:PAL.gravel, gx=2+rnd(-19,19), gz=17+rnd(-10,10);
     const gr=sph(grr,gcol,gx,0.16,gz,null,5); gr.scale.y=0.5;
@@ -6984,7 +7024,9 @@ function buildCarpark(){
       const pa=paintAt(wx,wz);
       const col=pa?pa.mat.color.clone().convertLinearToSRGB().multiplyScalar(0.72).getHex(THREE.LinearSRGBColorSpace):0x8A7A52; // oil-dark on seal, brown on dirt
       const wy=pa?pa.top+0.006:0.012;
-      const wm=new THREE.Mesh(new THREE.CircleGeometry(wr,18),mat(col));
+      /* in the browser the disc is SOFT (softDiscMat), drawn 1.4x so its feathered edge lands where the hard rim was:
+         a hard oil-dark disc at the carpark mouth and a hard sand disc under the picnic table read as decals */
+      const wm=new THREE.Mesh(new THREE.CircleGeometry(wr*(HEADLESS?1:1.4),18),HEADLESS?mat(col):softDiscMat(wx*5.17+wz*2.31,{color:col,core:pa?0.6:0.85,ring:pa?0.2:0.3}));
       wm.rotation.x=-Math.PI/2; wm.position.set(wx,wy,wz); wm.receiveShadow=!HEADLESS; G.scene.add(wm);
       G.wear.push({x:wx,z:wz,r:wr,y:wy,color:col,paint:!!pa}); }
   }
