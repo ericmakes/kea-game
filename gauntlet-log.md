@@ -6458,3 +6458,25 @@ Against the target: 5/7 -> 6/7. perfstep s22_ski_snow (the six key vantages; thi
 (14.54 / 16.00 / 14.80), nothing lost, 12 gained one; gate meter 16.44 (warm). THE SKI FIELD's own frame (framebudget
 BIOME=skifield, unlocked): with the piece 12.50 / 15.49 / 15.77 / 12.40, without 15.56 / 10.75 — the clumps' cost is
 inside the spread; every reading inside 16.67.
+
+## 2026-10-04f — STEP 3, THE SKI FIELD (2): the tow shed in corrugated iron; Higgsfield requests (Opus 5.5) — certified 704e834f
+
+THE SHED: the target's is weathered corrugated iron; ours was a flat blue box. Its registry entry says family
+'corrugate', but that is the MODEL's intent; a primitive wears families by colour (MATFAM). 0x4E6E8E now keys corrugate
+(paint mode keeps the blue, takes the ribs and weathering from corrugated_iron_02). The only other user of that blue,
+the village's MERINO shop wall, moves to 0x4E6E8F — the colour-as-key rule the lodge chimney's fix set (the shop is
+weatherboard, not iron). Checked in a worktree first: vertical ribs, weathered grey-blue, as the target's.
+A MISTAKE ON THE WAY, caught: I first applied this edit to the main tree and rebuilt dist WHILE the re-pin was shooting
+from it. The re-pin was stopped before it wrote a baseline, the edit set aside, dist rebuilt from the commit and the
+re-pin restarted clean (7df2fdf). From then on, experiments ran in a worktree while a re-pin was running.
+PERFSTEP REFUSED 12's snow (s22_ski_snow 0.055 -> 0.0484), and the refusal is not this piece — measured, not argued:
+12 shot alone, three takes with the shed and three without: 0.0484 every time; and at 21c (5bac43f, before the snow
+albedo) in a worktree: 0.0484 twice. One build, perfstep's batch pass has read that row at 0.048 and at 0.055; 0.055
+was the high read, and it sits at the band floor (0.0548). FOR ERIC: this row has honestly read just under its floor
+since 21c — the caravan row he accepted at 19b. It is recorded, not added to perfstep's EXCEPTIONS (that is his to name).
+A FLAKE TO FIX (FLAKES-style, review-tier): a perfstep batch capture of 12 and a solo capture differ (0.0698 vs 0.0584
+earlier, 0.055 vs 0.0484 now) — something in the batch is not deterministic for that vantage.
+perfstep s22_ski_shed 14.31 ms (14.31 / 13.94 / 14.35); gate meter 16.36 (warm). Against its target the Ski Field stays
+6/7 (the shed is a small share of the frame; the remaining OUT is snow-edge hardness, governed by the plates).
+HIGGSFIELD: Poly Haven has no shed, hut, lodge or rack. References generated (gpt_image_2_5, 0.25 credits each) and the
+specs added to assets/models/higgsfield_requests/REQUESTS.md: ski_lodge (tier A), tow_shed (B), gear_rack (B, x3).

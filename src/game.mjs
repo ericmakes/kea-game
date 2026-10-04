@@ -1801,6 +1801,7 @@ _mf(PAL.tarmac,'asphalt');   _mf(PAL.road,'asphalt');
 _mf(PAL.gravel,'gravel');    _mf(0x9AA0A6,'gravel');    _mf(0x8E8B84,'gravel');
 _mf(PAL.hutRoof,'corrugate');_mf(0x4A545C,'corrugate');
 _mf(PAL.woolshed,'corrugate');
+_mf(0x4E6E8E,'corrugate');   // the ski tow shed's painted iron (Step 3, the Ski Field: the target's shed is weathered corrugated iron; it was a flat blue box). The village's MERINO shop moved to 0x4E6E8F so it does not follow
 _mf(PAL.wood,'timber');      _mf(PAL.woodD,'timber');
 _mf(0x9C7B52,'timber');      // the village verandah deck, which sits beside a woodD door
 _mf(0x8C8F93,'brick');
@@ -7999,7 +8000,7 @@ const VILLSHOP={z:-10.2, w:7.6, d:6.0, h:4.2};         // the shop row, three un
 const VILLUNITS=[
   {id:'bakery',   x:-7.6, name:'BAKERY',   wall:0xB8563A},
   {id:'cafe',     x: 0.0, name:'CAFE',     wall:0xC9B48A},
-  {id:'souvenir', x: 7.6, name:'MERINO',   wall:0x4E6E8E},
+  {id:'souvenir', x: 7.6, name:'MERINO',   wall:0x4E6E8F},   // one unit off the ski tow shed's blue, which keys the corrugate family (Step 3, the Ski Field) — the shop is not corrugated iron
 ];
 const VILLSHELTER={x:7.0, z:6.8};                      // the bus shelter, across the street
 const VILLBIKE={x:-14.2, z:-5.0};

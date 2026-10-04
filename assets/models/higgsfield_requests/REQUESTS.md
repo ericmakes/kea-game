@@ -31,3 +31,14 @@ seamless light-grey background, even light, no text or logos.
 
 `assets/` is Vite's publicDir, so these three PNGs (3.8 MB) are copied into `dist/` on every build. They are here
 because Eric named this folder; move them out of `assets/` (as `astra_archive/` was) once the GLBs are in.
+
+# THE SKI FIELD'S THREE (Step 3, the Ski Field pass, 2026-10-04)
+
+Poly Haven, the first route, has no shed, hut or lodge (its only buildings are city facades) and no ski rack. Same
+conventions as above. References: Higgsfield `gpt_image_2_5`, one object, plain background, no snow, no text.
+
+| drop the GLB at | reference | spec |
+|---|---|---|
+| `assets/models/props/ski_lodge.glb` | `ski_lodge_reference.png` (job 321290cc) | **ski_lodge** — single-storey gabled club lodge, **11.6 W × 5.55 H × 7.63 D m** (manifest box), green weatherboard on cream piles, corrugated roof, walls 11 × 7 × 3.0 m on 0.4 m piles (SKILODGE), brick chimney at **x +2.0, z −0.4** (anchor `chimney`, top at y 5.3), three front windows centred at y 2.2, **door near the front-left (anchor `door` x −4.3, y 1.4, z +3.53, on +Z)**, roof ridge at the `roof` anchor (y 4.32), origin ground contact, tier **A: 6,000 tris** (primitive 162). The deck, racks and drift are separate props — not in the model |
+| `assets/models/props/tow_shed.glb` | `tow_shed_reference.png` (job 3273ff85) | **tow_shed** — corrugated-iron rope-tow shed, **3.4 W × 2.2 H walls × 2.6 D m, roof 3.8 × 3.0 to 2.51 m** (manifest box 3.80 × 2.51 × 3.00; collider 3.4 × 2.6, top 2.2), the **shuttered ticket window on +Z centred at y 0.75** (anchor `window`, z +1.34), origin ground contact, tier **B: 2,500 tris** (primitive 36). The bullwheel (anchor `wheel`, behind on −Z) is the map's own geometry — not in the model |
+| `assets/models/props/gear_rack.glb` | `gear_rack_reference.png` (job ce4878f4) | **gear_rack** — timber A-frame ski rack, **2.40 W × 1.00 H × 0.71 D m**, top rail at **y 0.995** along its length (anchor `rail`; its collider is the map's rail, not the model's), origin ground contact, tier **B: 2,500 tris** (primitive 72); placed **three times**, so one download and one budget |
