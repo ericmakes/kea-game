@@ -97,7 +97,7 @@ const PLATEMASK = {
                [50 / 1280, 585 / 720, 1085 / 1280, 685 / 720]],
   ref_bow_04: [[1100 / 1280, 180 / 720, 1185 / 1280, 260 / 720], [900 / 1280, 290 / 720, 1185 / 1280, 340 / 720]],
   ref_bow_06: [[145 / 1280, 485 / 720, 222 / 1280, 562 / 720], [148 / 1280, 594 / 720, 428 / 1280, 644 / 720]],
-  spike_01: [],
+  spike_01: [], target: [],
 };
 const masker = (rects, im) => (p, x, y) =>
   rects.some(r => x >= r[0] * im.w && x <= r[2] * im.w && y >= r[1] * im.h && y <= r[3] * im.h);
@@ -132,7 +132,18 @@ export function skyKeyFor(frame) {
   for (let j = 0; j < m.length; j++) m[j] = KEYSKY([im.buf[j * 3], im.buf[j * 3 + 1], im.buf[j * 3 + 2]]) ? 1 : 0;
   return { w: im.w, h: im.h, m, frac: m.reduce((a, b) => a + b, 0) / m.length };
 }
-const plateFile = n => n === 'spike_01' ? SPIKE_FRAME : path.join(BOARD, n + '.jpg');
+const plateFile = n => n === 'spike_01' ? SPIKE_FRAME : n === 'target' ? TARGET : path.join(BOARD, n + '.jpg');
+/* A MAP'S OWN TARGET (SPIKE_ADOPT 21d). The spike frame is a carpark, and a carpark's content cannot govern a snowfield;
+   a map's spike-standard target is its OWN key vantage brought to the spike's standard and put through the shipped
+   grade (tools/grade_match.mjs, gauntlet/reference/targets/), so it carries the approved look at that map's composition.
+   TARGET=<target.jpg> stands it in for spike_01 as the look governor on the record wall; the bow plates still govern
+   detail density and snow. Its sky is the game frame's own key, stored beside it as <name>.sky.png — the target keeps
+   the frame's composition, so the frame's geometry says where its sky is. */
+const TARGET = process.env.TARGET ? path.resolve(process.env.TARGET) : null;
+if (TARGET) WALLS.record = ['ref_bow_00', 'ref_bow_04', 'ref_bow_06', 'target'];
+const targetSkyAt = (im) => { const k = TARGET.replace(/\.(jpe?g|png)$/, '.sky.png'); if (!fs.existsSync(k)) throw new Error('framescore: the target has no sky key at ' + k);
+  const km = bandNorm(k, 0, 1, NORMW); if (km.w !== im.w) throw new Error('framescore: target key width ' + km.w + ' != ' + im.w);
+  return (x, y) => { const yy = Math.min(km.h - 1, Math.round(y * km.h / im.h)), i = (yy * km.w + x) * 3; return KEYSKY([km.buf[i], km.buf[i + 1], km.buf[i + 2]]); }; };
 
 export function plates(wall = 'bow') {
   const out = {};
@@ -141,8 +152,8 @@ export function plates(wall = 'bow') {
     out[n] = plateBand(im, mk);
     /* SKYOFF: the same plate re-banded with its sky masked too (SPIKE_ADOPT 19); the polygon is in whole-plate
        fractions, so it goes to plateBand as skyAt (whole-image coordinates), not through the tile-local isSky */
-    const P = SKYPOLY[n];
-    if (P) { const skyAt = (x, y) => inPoly(P, x / im.w, y / im.h), off = plateBand(im, mk, skyAt);
+    const P = n === 'target' ? 'key' : SKYPOLY[n];
+    if (P) { const skyAt = P === 'key' ? targetSkyAt(im) : (x, y) => inPoly(P, x / im.w, y / im.h), off = plateBand(im, mk, skyAt);
       for (const k of SKYOFF) out[n].band[k] = off.band[k];
       let c = 0; for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) c += skyAt(x, y) ? 1 : 0;
       out[n].sky = { polygon: true, frac: c / (im.w * im.h) };
@@ -162,12 +173,12 @@ export function scoreFrame(frame, P) {
   if (key && (key.w !== im.w || key.h !== im.h)) throw new Error('framescore: sky key ' + key.w + 'x' + key.h + ' does not match its frame ' + im.w + 'x' + im.h);
   if (key) { const g2 = measureAll(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1); for (const k of SKYOFF) g[k] = g2[k]; }
   /* the look of record: each property against its governor only; aerial needs the sky off, so it needs the key */
-  const record = names.includes('spike_01') && names.length > 1;
+  const look = names.includes('target') ? 'target' : 'spike_01', record = names.includes(look) && names.length > 1;
   g.aerial = key ? aerialOf(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1) : null;
   const judged = record ? JUDGED_RECORD : JUDGED;
   let inCount = 0;
   const rows = judged.map(k => {
-    const gov = record ? names.filter(n => (GOVERN[k] === 'spike') === (n === 'spike_01')) : names;
+    const gov = record ? names.filter(n => (GOVERN[k] === 'spike') === (n === look)) : names;
     const cells = gov.map(n => { const b = P[n].band[k];
       return { n, b, ok: b && g[k] !== null ? g[k] >= b.lo && g[k] <= b.hi : null }; });
     const ok = cells.some(c => c.ok); if (ok) inCount++;   // an unmeasured property (null) is never in band

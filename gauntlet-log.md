@@ -6419,3 +6419,23 @@ THE BIRD (birdcolour.mjs, not in the gate): under the candidate's grade the dark
 cameras (0.038, 0.074 against 0.015-0.032) — the candidate's "bird in band" had been judged on saturation alone. This
 grade brings one back (camera 0.5 still out, 0.046). Recorded for Eric; the bird is on hold for Astra.
 Gate meter 16.46 ms; perfstep s21_grade 14.57 ms (14.57 / 14.40 / 14.98), look 26/42 -> 29/42, ACCEPTED.
+
+## 2026-10-04d — SPIKE_ADOPT 21 (d): spike-standard targets per map, graded by the game's own operator (Opus 5.5) — certified 19a27134 (src unchanged)
+
+The whole-set re-pin after 21c is pinned (5722b66). The Carpark re-scored against the spike frame, as Eric asked:
+5/6 — ridge p10 closed (0.282 shipped-before-candidate -> 0.214), saturation did not (0.115 against 0.222-0.319). Eric
+expected both to close; saturation is the frame's mean colour, and the Carpark's is grey seal (measured on the ground:
+0.156 against the spike's meadow-carrying 0.294), which a grade closes only by casting the seal.
+THE TARGETS. gauntlet/reference/targets/: a map's key vantage passed through Higgsfield gpt_image_2_5 image-to-image
+(the game frame and the spike frame as references; composition kept exactly, surfaces and light to the spike's
+standard, HUD removed; 2.75 credits a pair), then tools/grade_match.mjs — which applies THE SHIPPED GRADE OPERATOR, the
+arithmetic of gradePass with FILM.grade read out of src/post.mjs, so every target carries the grade the game ships.
+REFUSED ON THE WAY: the first grade_match was a Reinhard transfer (each Lab channel's mean and spread matched to the
+spike frame's ground). It passed its own check and the spike's bands — and turned the Ski Field's snow murky
+yellow-grey (ground L 67 -> 44): it put the CARPARK's content on a snowfield. A grade is an operator, not statistics.
+framescore TARGET=<file>: on the record wall the target stands in for spike_01 as the look governor (luma, hue, sat,
+ridge p10, aerial), sky from the frame's own key stored beside it; the bow plates keep detail density and snow.
+THE SKI FIELD AGAINST ITS TARGET (28_skifield_base, after 21c): 5/7. In: hue 68, sat 0.046, aerial 0.747, ridge p10,
+edge density. OUT: luma 0.502 against 0.542-0.780 (our snow is darker than the target's) and snow patchiness 0.027
+against the plates' 0.055 floor (our snow's edges are soft — drifts that fade into the field). That is the gap the Ski
+Field pass closes first.
