@@ -79,7 +79,7 @@ export const FILM = {
   bloom:   { strength: 0.12, radius: 0.45, threshold: 2.0, dayOff: true, nightOn: 0.02 },
   // AO darkens contact and crevice only; the scene already carries its own painted shade. Measured
   // at YAVG 154.5 against the plain renderer's 154.5 — it adds shade without lifting exposure.
-  ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45, res: 0.5, clip: 120, samples: 8, pdSamples: 16 },   // samples: 2026-10-03, 16 -> 8 for the 100% budget. pdSamples STAYS 16: at 8 the denoise left a halo round the bird that trample.mjs read as 5 blade pixels over it   // res: PERF S2; clip: the AO box's half-width, m
+  ao:      { distance: 0.42, thickness: 0.62, scale: 1.0, blend: 0.45, res: 0.35, clip: 120, samples: 8, pdSamples: 16 },   // res 0.5 -> 0.35: BUDGET RECOVERY 2026-10-04 (AO was ~4 ms of the frame; framemeter A/B 15.33-15.53 against 15.65-15.99)   // samples: 2026-10-03, 16 -> 8 for the 100% budget. pdSamples STAYS 16: at 8 the denoise left a halo round the bird that trample.mjs read as 5 blade pixels over it   // res: PERF S2; clip: the AO box's half-width, m
   // a long focus and a narrow aperture: the far hills soften, everything you play in stays sharp
   /* MAXBLUR CAME DOWN FROM 0.003 TO 0.0008, and it is the range that asked for it. The original
      comment here read "a long focus and a narrow aperture: the far hills soften, everything you

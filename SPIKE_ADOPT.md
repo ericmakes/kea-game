@@ -80,6 +80,8 @@ Proof sheets: `gauntlet/capture/proofs/LIGHT1_key6_before_shipped_candidate.jpg`
 
 ## Frame cost
 
+**2026-10-04, BUDGET RECOVERY 2 (AO at 0.35 resolution):** the Carpark's bench and DOC board (Higgsfield) took the gate meter over 16.67 on 3 of 6 runs (16.99 median on the gate) — a small real cost (~0.1-0.2 ms, primitives 15.52-15.62 vs models 15.67-15.79 passing) on a frame that had crept to the edge. Not a load hitch (the model tier is done 0.4-0.9 s after start, inside the 3 s warm). Ablated: AO ~4 ms of the frame (noao 11.8 vs base ~16). Cheaper AO samples (6/12, 8/12) were inside the meter's +-0.8 ms spread; FILM.ao.res 0.5 -> 0.35 was outside it: 15.33 / 15.37 / 15.53 against 15.65 / 15.99. Trample (the bird's AO halo) passes; the six key vantages unchanged.
+
 | after | live meter, AC, 1920x1080 window, bird flying |
 |---|---|
 | cars + props on ground | 15.4 ms at auto (settled 80%); 18.8 ms fixed at 100%, the same as before the cars |

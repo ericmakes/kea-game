@@ -6518,3 +6518,14 @@ GEAR RACK: first attempt (50cd625c), 1,725 tris, clean — ACCEPTED.
 All three land through the P6A seam (source:'model', a per-axis fit to the primitive's box, the harness's named batch
 HF). Gate meter 16.23; perfstep s23_ski_models 14.97 ms (the six unchanged); the Ski Field's own frame 10.52 / 11.77 ms.
 Against the target 6/7 (28: L 68.6 / spread 23.3 / b* 6.5). Credits: ~240 for the Ski Field's (8 generations + 3 views).
+
+## 2026-10-04i — BUDGET RECOVERY 2: AO at 0.35 resolution (Opus 5.5) — certified 17951bdc
+
+The Carpark's bench and DOC board (next piece) took the gate's meter to 16.99 (runs 15.6 / 16.99 / 17.48): REFUSED.
+A/B on one build, alternated: models 15.68 / 15.67 / 15.79 and three over-budget runs of six; primitives 15.60 / 15.52 /
+15.62, all pass — a small real cost plus variance on a frame at the edge. Not a load hitch: probed, the carpark's model
+tier (10 swaps) is done 379-895 ms after startGame, inside framebudget's 3 s warm-up. frameablate (noisy): AO ~4 ms
+(noao 11.76 vs base 15.8-16.5); tussock and tree shadows inside the noise. Cheaper AO samples (6/12, 8/12) inside the
+meter's +-0.8 ms spread (15.45/16.24, 15.82/over); FILM.ao.res 0.5 -> 0.35 outside it, three of three: 15.53 / 15.37 /
+15.33 against the current 15.99 / 15.65. Trample passes (the AO halo at 8 denoise samples was the bird's problem; the
+denoise is unchanged). Gate meter 15.85; perfstep r2_ao_res 14.88 ms, the six unchanged, ACCEPTED.
