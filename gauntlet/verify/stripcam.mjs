@@ -173,6 +173,7 @@ export const SKYFLAG=`(()=>{ const G=KEAGAME.G;
 export const SKYKEY=`(()=>{ const G=KEAGAME.G;
   for(const o of [G.sky,G.haze,G.sunSprite,G.starfield,G.moon]) if(o) o.visible=false;
   (G.clouds||[]).forEach(c=>{ (c.g||c).visible=false; });
+  (G.cloudCards||[]).forEach(c=>{ c.visible=false; });   // SPIKE_ADOPT 25: the photo cloud cards are sky too
   G.scene.background=new THREE.Color(0xFF00FF);
 })();`;
 /* a keyed pixel: red AND blue both 25 levels clear of green — the tone mapper and the grade pull a flat magenta

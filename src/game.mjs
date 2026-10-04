@@ -319,6 +319,17 @@ const SKY={
      proportion. Physically a cloud does not become grey at midnight; but the alternative is a sky
      full of glowing white lumps, and this is the knob the engine leaves. */
   cloudNightTint:0.34,
+  /* THE CLOUDS' FORM (SPIKE_ADOPT 25) — see src/skyclouds.mjs. 'procedural' as before; 'photo' (A) the far field's
+     photograph alone; 'cards' (B) CC0 cumulus photographs on billboards; 'hybrid' (C) the photograph plus a near layer of
+     cards. A candidate is chosen by Eric; until then 'procedural' ships and the others are reachable through KEASKY. */
+  cloudMode:'procedural',
+  cloudCards:{ dir:'sky/cards/', set:['cloud_00.png','cloud_01.png','cloud_03.png','cloud_04.png','cloud_05.png','cloud_06.png','cloud_08.png','cloud_09.png'],
+    gain:2.0, drift:0.004,
+    /* INSIDE THE DOME: the sky dome is a 210 m sphere that writes depth, and a card whose corner passes it is cut along its
+       curve (measured: the first far ring at 185-205 m with 110 m cards came back as straight-edged slabs). r + w/2 < 200. */
+    layers:[ { n:8, r:[150,165], alt:[48,72], w:[55,80] },                // the far layer, above the range
+             { n:5, r:[115,135], alt:[36,52], w:[34,52], phase:0.6 } ],   // a nearer, lower layer
+    hybrid:[ { n:4, r:[115,135], alt:[36,52], w:[34,52], phase:0.6 } ] },  // C: the near moving layer only
   stars:420, starR:203, starSize:1.9, starMinEl:0.05,
   starDim:0.55,          // the faintest star's brightness, as a fraction of the brightest
   cloudFlatBase:1,       // clip lobe vertices to a shared base plane and face them down

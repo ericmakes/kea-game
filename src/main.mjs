@@ -112,6 +112,10 @@ if (!cfg.nodecor && !globalThis.__KEA_NODECOR__) {
   catch (e) { console.error('decor: the clutter failed to install —', e); }
 }
 
+/* SPIKE_ADOPT 25: THE CLOUDS' FORM — see src/skyclouds.mjs (SKY.cloudMode). A failed card load leaves the sky as it was. */
+try { const { installSkyClouds } = await import('./skyclouds.mjs'); await installSkyClouds(KEAGAME); }
+catch (e) { console.error('skyclouds: the cloud form failed to install, the procedural clouds stand —', e); for (const c of KEAGAME.G.clouds || []) c.visible = true; }
+
 /* PERF S4: THE SUN'S SHADOWS IN CASCADES FITTED TO THE CAMERA — see src/shadows.mjs. Browser-only
    for the same reasons as everything above; if it cannot install, the authored sun keeps its one
    fixed map and the game plays on. __KEA_NOCSM__ forces the old map for a like-for-like frame. */

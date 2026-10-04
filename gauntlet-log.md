@@ -6563,3 +6563,29 @@ bound lid->lid, and with the primitive lid driven to the tween's end the model's
 THE GATE REFUSED IT ONCE: meter 17.67 (runs 15.49 / 17.67 / 19.36 — a 4 ms spread inside one measurement). A/B on one
 build, alternated: bin model 16.21 / 15.19 / 15.47, bin primitive 16.37 / 15.45 / 16.09 — no cost. The gate re-run:
 meter 15.52, CERTIFIED. perfstep s20_cp_bin 13.63 ms (13.63 / 15.35 / 13.52), the six unchanged.
+
+## 2026-10-04l — SPIKE_ADOPT 25: THE CLOUDS — three candidates, built and off, for Eric's pick (Opus 5.5) — certified 702ebfa1
+
+Eric: "the sphere-union cumulus is the last procedural primitive in the environment and reads as rendered puffs against
+the photographic horizon; stop tuning lobes." src/skyclouds.mjs, SKY.cloudMode — 'procedural' ships until the pick.
+Browser-only: headless still BUILDS the 8 procedural clouds (they draw from the seeded stream; skipping them would move
+every placement after), and every mode only HIDES them.
+  A 'photo'   the far field's pizzo_pernice photograph alone (it already crossfades to the painted night dome).
+  B 'cards'   CC0 cumulus cut from Poly Haven kloofendal_48d_partly_cloudy_puresky (tools/derive_cloud_cards.mjs — keyed
+              on blueness and luma, soft edges un-blended against the row's sky; first cut had 4 of 12 hollow (bright
+              cores near the sun) and neighbours inside crops: own-component isolation, a true hole test by flood fill,
+              a solidity floor) on 13 billboards in two rings, drifting on G.time (a pinned capture pins the sky).
+  C 'hybrid'  the photograph plus 4 near cards.
+FAULTS FOUND IN THE FIRST STRIP: a straight-edged beige slab at 06 and 30. Not AO (postExclude is vestigial; cards write no
+depth), not orientation (turning cards to the RENDERING camera in onBeforeRender is kept — it is right for split screen —
+but did not fix it): isolated by shooting one texture at a time, then found — the far ring (185-205 m, cards to 110 m
+wide) poked through the sky dome, a 210 m sphere that writes depth, which cut each card along its curve. Rings now
+inside the dome (r + w/2 < 200).
+SCORES. Whole-frame framescore cannot see form (its own header says so): record wall 12 / 11 / 11 / 11, spike wall 11 each
+(now / A / B / C) at 01, 06, 30, 43. The sky strip (platescore MODE=sky, the cloud-form instrument) looks at one fixed
+window: now 8/11 (cover 23.7%, 15 blobs), A 7/10 (4.0%), B and C "7/7" — NOT comparable: almost no card falls in that
+window, so their cloud-form properties went unmeasured. COVER at the real vantages (sky-key pixels clearly brighter than
+their row's sky median): now 13.7%, A 6.3%, B 12.2%, C 3.9%. ms/frame (framemeter, interleaved, two rounds): now 15.29 /
+15.21, A 15.60 / 14.84, B 15.27 / 15.61, C 15.42 / 15.98 — inside the meter's spread. The bird's AO halo (trample) passes
+in all four; birdsky passes in all four (one C finding did not reproduce in two re-runs). The sky key hides the cards.
+RECOMMENDATION: B. Gate meter 15.34.
