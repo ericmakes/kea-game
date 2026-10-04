@@ -101,7 +101,7 @@ if(SHOOT){
         }
       }
       const k=sweepOrphans(before);
-      const got=fs.readdirSync(SHOOT).filter(f=>/^\d\d_.*\.png$/.test(f)).length;
+      const got=fs.readdirSync(SHOOT).filter(f=>/^\d\d_.*\.png$/.test(f)&&!f.endsWith('.sky.png')).length;
       console.log('  '+got+'/'+want.length+' frames'+(k?('   swept '+k+' orphan browser(s)'):''));
     }
     if(fails.length)console.log('COULD NOT SHOOT: '+fails.join(', '));
@@ -194,7 +194,7 @@ try{
      first directory alone would report the other twenty-seven as unpinned. */
   const shot=new Set();
   for(const d of dirs) for(const f of fs.readdirSync(d))
-    if(/^\d\d_.*\.png$/.test(f))shot.add(f);
+    if(/^\d\d_.*\.png$/.test(f)&&!f.endsWith('.sky.png'))shot.add(f);   // a .sky.png is a key beside its frame (SPIKE_ADOPT 19), not a vantage
   const unpinned=[...shot].filter(f=>!fs.existsSync(path.join(BASE,f)));
   if(unpinned.length) console.log('UNPINNED, and still not pinned by this tool — adding a vantage '+
     'is a decision for Eric, not a side effect of a re-pin: '+unpinned.map(f=>f.replace(/\.png$/,'')).join(', '));

@@ -6377,3 +6377,26 @@ manual QA]" whenever it is used. FLAKES law 8 is the review-tier classification:
 The first gate attempt was on battery (the frame budget is an AC figure) and could not certify; on AC: gate meter
 15.53 ms; perfstep s19_candidate (LOOKWALL=bow, the keyed instrument the exception was ruled on) 14.42 ms
 (14.18 / 14.42 / 14.55), look 22/36 -> 28/36, the one exception accepted, ACCEPTED.
+
+## 2026-10-04b — SPIKE_ADOPT 21 (a, b): THE SPIKE FRAME IS THE LOOK OF RECORD — the scorer amended, the gap named (Opus 5.5) — certified 19a27134 (src unchanged)
+
+Eric's amendment: grade, saturation, contrast and aerial perspective take their bands from the spike frame; the plates
+keep geometry, materials, detail density and snow. framescore WALL=record: one governor per property (GOVERN) —
+spike_01 for luma, hue, sat, ridge p10 (local contrast) and aerial; the bow trio for edge density and snow (sky keyed off).
+AERIAL is new: over the frame's ground (sky and HUD masked), std(luma) of the far quarter of the ground's rows over the
+near quarter — air flattens the far ground, so more aerial perspective scores lower; null below 40 ground rows or 500 px
+a quarter. Banded by plateBand's own rule (four tiles, MINREL 18%, now exported). Its spike band is WIDE, 0.66-2.64 —
+the spike's own tiles disagree that much — so it is a weak test, and is reported as one. perfstep defaults to the record
+wall and tags its instrument ('record+skykey'); it refuses to compare across instruments. repin no longer lists a
+.sky.png key as an unpinned vantage.
+THE SHIPPED CANDIDATE UNDER THE RULE (s21_record_ship, 14.06 ms): 26/42 — 01 6/7, 02 5/7, 06 3/7, 11 4/7, 12 4/7, 07 4/7.
+WHERE IT FALLS SHORT OF THE SPIKE'S GRADE: luma and hue in band everywhere. SATURATION short at 01 0.118, 06 0.085,
+12 0.093, 07 0.033, 02 0.221 (band 0.222-0.319). CONTRAST (ridge p10) high at 06 0.306 / 11 0.291 / 07 0.295 (ceiling
+0.277), low at 12 0.121 (floor 0.128). AERIAL low at 11 0.463 / 07 0.629 (floor 0.662); 06 unmeasurable.
+WHAT IS GRADE AND WHAT IS NOT — sat is the saturation of the frame's MEAN colour, so composition is in it. Measured on
+the ground only: the spike's ground is sat 0.294 at hue 51 (yellow-green); ours is hue ~40 (orange) on every vantage, at
+the spike's saturation on grass (02 0.37, 06 0.34, 11 0.40) and half of it where the frame is seal (01 / 12 / 07,
+0.16-0.20); 06's whole-frame 0.085 is 42% blue sky. So the hue and the contrast are the grade; most of the saturation
+gap is the grey seal and the share of sky. A per-pixel saturation boost barely moves the mean (1.4: 01 0.118 -> 0.121);
+a warmer cast does (warm 0.10: 01 0.205) but takes 11 out of band (0.415) — the content spread (grass 0.32, seal 0.03)
+is wider than the spike's band, and closing it would mean casting the seal yellow, which the spike's seal is not.

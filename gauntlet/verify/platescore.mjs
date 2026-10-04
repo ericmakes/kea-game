@@ -190,7 +190,7 @@ export function silhouette(im,isSky){
 
 /* ---------- the target bands, from the paired plate's own four tiles ---------- */
 export const PROPS=['edgeDensity','ridgeP10','snowPatch','luma','hue','sat','silhouette'];
-const MINREL=0.18;                // a band is never tighter than +/-18% of the plate's own mean
+export const MINREL=0.18;                // a band is never tighter than +/-18% of the plate's own mean
 const HUETOL=30;                  // degrees, about the plate's mean — see plateBand
 
 /* EVERY PROPERTY IS MEASURED ON THE SUBJECT ONLY, and finding that out cost a false 7-of-7. The

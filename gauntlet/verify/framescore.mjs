@@ -32,7 +32,7 @@
           JSON=1 for machine output */
 import path from 'path'; import url from 'url';
 import fs from 'fs';
-import { bandNorm, measureAll, plateBand, NORMW, loadRGB } from './platescore.mjs';
+import { bandNorm, measureAll, plateBand, NORMW, loadRGB, MINREL } from './platescore.mjs';
 import { KEYSKY } from './stripcam.mjs';
 
 const HERE = path.dirname(url.fileURLToPath(import.meta.url));
@@ -42,8 +42,48 @@ export const SPIKE_FRAME = path.join(ROOT, 'gauntlet/reference/spike/01_carpark_
 export const WALLS = {
   bow: ['ref_bow_00', 'ref_bow_04', 'ref_bow_06'],
   spike: ['spike_01'],
+  record: ['ref_bow_00', 'ref_bow_04', 'ref_bow_06', 'spike_01'],
 };
 export const JUDGED = ['edgeDensity', 'ridgeP10', 'snowPatch', 'luma', 'hue', 'sat'];
+/* ---- THE LOOK OF RECORD — Eric's amendment, 2026-10-04 (SPIKE_ADOPT 21) ----
+   "The SPIKE FRAME is the look of record. For grade, saturation, contrast and aerial perspective, derive the target
+   bands from the spike's frame, not the plates; the plates keep governing geometry, materials, detail density and
+   snow." So WALL=record judges each property against ONE governor, named here, and nothing else:
+     spike_01  luma, hue (the grade), sat, ridgeP10 (local contrast), aerial (aerial perspective, below)
+     bow trio  edgeDensity (detail density), snowPatch (snow) — with the sky keyed off, SPIKE_ADOPT 19
+   Geometry and materials have no whole-frame property here; they stay with the plates by construction (platescore's
+   range and sky strips, the material families), untouched by this. Every band is made exactly as before — the
+   governor's four vertical tiles, never tighter than MINREL of its mean, hue +/-30 degrees. */
+export const GOVERN = { luma: 'spike', hue: 'spike', sat: 'spike', ridgeP10: 'spike', aerial: 'spike', edgeDensity: 'bow', snowPatch: 'bow' };
+export const JUDGED_RECORD = ['edgeDensity', 'ridgeP10', 'snowPatch', 'luma', 'hue', 'sat', 'aerial'];
+/* AERIAL PERSPECTIVE as a number: how much of its contrast the FAR ground keeps against the NEAR ground. Over the
+   frame's ground only (sky and HUD masked — the game's sky key, the spike's ridgeline polygon), the ground's rows are
+   split into quarters from the skyline down; aerial = std(luma) of the far quarter / std(luma) of the near quarter.
+   Air between the eye and the far ground flattens it, so a frame with more aerial perspective scores LOWER. Null when
+   the ground spans too few rows (under 40) or either quarter is under 500 px to say anything. */
+export function aerialOf(im, excl) {
+  const { w, h, buf } = im; let r0 = h, r1 = -1;
+  const keep = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 3;
+    if (excl && excl([buf[i], buf[i + 1], buf[i + 2]], x, y)) continue; keep[y * w + x] = 1; r0 = Math.min(r0, y); r1 = Math.max(r1, y); }
+  if (r1 - r0 < 40) return null;
+  const q = (r1 - r0 + 1) / 4, sd = (ya, yb) => { let n = 0, m = 0, m2 = 0;
+    for (let y = Math.floor(ya); y < Math.floor(yb); y++) for (let x = 0; x < w; x++) { if (!keep[y * w + x]) continue; const i = (y * w + x) * 3;
+      const l = (0.2126 * buf[i] + 0.7152 * buf[i + 1] + 0.0722 * buf[i + 2]) / 255; n++; m += l; m2 += l * l; }
+    return n < 500 ? null : Math.sqrt(Math.max(0, m2 / n - (m / n) ** 2)); };
+  const far = sd(r0, r0 + q), near = sd(r1 + 1 - q, r1 + 1);
+  return far === null || near === null || near === 0 ? null : far / near;
+}
+/* its band off a plate, by plateBand's own rule: four vertical tiles and the whole, never tighter than MINREL */
+function aerialBand(im, excl) {
+  const tw = Math.floor(im.w / 4), vs = [];
+  for (let t = 0; t < 4; t++) { const sub = { w: tw, h: im.h, buf: Buffer.alloc(tw * im.h * 3) };
+    for (let y = 0; y < im.h; y++) for (let x = 0; x < tw; x++) { const a = (y * im.w + t * tw + x) * 3, b = (y * tw + x) * 3;
+      sub.buf[b] = im.buf[a]; sub.buf[b + 1] = im.buf[a + 1]; sub.buf[b + 2] = im.buf[a + 2]; }
+    const v = aerialOf(sub, (p, x, y) => excl(p, x + t * tw, y)); if (v !== null) vs.push(v); }
+  const c = aerialOf(im, excl); if (c === null || !vs.length) return null;
+  const pad = Math.abs(c) * MINREL; return { lo: Math.min(Math.min(...vs), c - pad), hi: Math.max(Math.max(...vs), c + pad), plate: c, tiles: vs };
+}
 
 /* Rectangles as fractions of the frame [x0,y0,x1,y1], measured off the pictures (the spike's). */
 export const GAMEHUD = [
@@ -105,7 +145,8 @@ export function plates(wall = 'bow') {
     if (P) { const skyAt = (x, y) => inPoly(P, x / im.w, y / im.h), off = plateBand(im, mk, skyAt);
       for (const k of SKYOFF) out[n].band[k] = off.band[k];
       let c = 0; for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) c += skyAt(x, y) ? 1 : 0;
-      out[n].sky = { polygon: true, frac: c / (im.w * im.h) }; }
+      out[n].sky = { polygon: true, frac: c / (im.w * im.h) };
+      out[n].band.aerial = aerialBand(im, (p, x, y) => mk(p, x, y) || skyAt(x, y)); }
     else out[n].sky = { polygon: false, frac: 0, note: 'no sky in this plate' };
   }
   return out;
@@ -120,31 +161,38 @@ export function scoreFrame(frame, P) {
   const key = skyKeyFor(frame);
   if (key && (key.w !== im.w || key.h !== im.h)) throw new Error('framescore: sky key ' + key.w + 'x' + key.h + ' does not match its frame ' + im.w + 'x' + im.h);
   if (key) { const g2 = measureAll(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1); for (const k of SKYOFF) g[k] = g2[k]; }
+  /* the look of record: each property against its governor only; aerial needs the sky off, so it needs the key */
+  const record = names.includes('spike_01') && names.length > 1;
+  g.aerial = key ? aerialOf(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1) : null;
+  const judged = record ? JUDGED_RECORD : JUDGED;
   let inCount = 0;
-  const rows = JUDGED.map(k => {
-    const cells = names.map(n => { const b = P[n].band[k];
+  const rows = judged.map(k => {
+    const gov = record ? names.filter(n => (GOVERN[k] === 'spike') === (n === 'spike_01')) : names;
+    const cells = gov.map(n => { const b = P[n].band[k];
       return { n, b, ok: b && g[k] !== null ? g[k] >= b.lo && g[k] <= b.hi : null }; });
-    const ok = cells.some(c => c.ok); if (ok) inCount++;
+    const ok = cells.some(c => c.ok); if (ok) inCount++;   // an unmeasured property (null) is never in band
     /* distance outside the nearest band, in units of that band's half-width: 0 = inside */
     const miss = Math.min(...cells.filter(c => c.b && g[k] !== null).map(c => {
       const half = (c.b.hi - c.b.lo) / 2, mid = (c.b.hi + c.b.lo) / 2;
       return Math.max(0, Math.abs(g[k] - mid) - half) / half; }));
     return { k, gv: g[k], cells, ok, miss };
   });
-  return { frame, game: g, rows, inCount, judged: JUDGED.length, plates: names, sky: key ? { keyed: true, frac: +key.frac.toFixed(4) } : { keyed: false } };
+  return { frame, game: g, rows, inCount, judged: judged.length, plates: names, record, sky: key ? { keyed: true, frac: +key.frac.toFixed(4) } : { keyed: false } };
 }
 
 export const FMT = { edgeDensity: v => v.toFixed(4), ridgeP10: v => v.toFixed(3), snowPatch: v => v.toFixed(4),
-              luma: v => v.toFixed(3), hue: v => v.toFixed(0), sat: v => v.toFixed(3) };
+              luma: v => v.toFixed(3), hue: v => v.toFixed(0), sat: v => v.toFixed(3), aerial: v => v.toFixed(3) };
 export function table(res) {
   const L = [];
   L.push('  ' + path.basename(res.frame) + (res.sky ? (res.sky.keyed ? '   (sky keyed: ' + (res.sky.frac * 100).toFixed(1) + '% of the frame off snow and edge density)' : '   (UNKEYED: no .sky.png — snow and edge density include the sky)') : ''));
-  L.push('  property        frame     ' + res.plates.map(n => (n + ' band').padEnd(22)).join('') + 'verdict');
+  if (res.record) L.push('  THE LOOK OF RECORD: grade, saturation, contrast and aerial perspective against the spike frame; detail and snow against the bow plates');
+  L.push('  property        frame     ' + (res.record ? 'governor and its band(s)'.padEnd(66) : res.plates.map(n => (n + ' band').padEnd(22)).join('')) + 'verdict');
   for (const r of res.rows) {
     const f = FMT[r.k];
+    const cellTxt = r.cells.map(c => (res.record ? c.n.replace('ref_bow_', 'bow') + ' ' : '') + (c.b ? '[' + f(c.b.lo) + ' … ' + f(c.b.hi) + ']' + (c.ok ? '*' : '') : '—'));
     L.push('  ' + r.k.padEnd(16) + (r.gv === null ? '—' : f(r.gv)).padEnd(10) +
-      r.cells.map(c => (c.b ? '[' + f(c.b.lo) + ' … ' + f(c.b.hi) + ']' + (c.ok ? '*' : '') : '—').padEnd(22)).join('') +
-      (r.ok ? 'IN BAND' : 'OUT  (' + r.miss.toFixed(2) + ' half-widths from nearest)'));
+      (res.record ? cellTxt.join('  ').padEnd(66) : cellTxt.map(t => t.padEnd(22)).join('')) +
+      (r.ok ? 'IN BAND' : r.gv === null ? 'NOT MEASURED' : 'OUT  (' + r.miss.toFixed(2) + ' half-widths from nearest)'));
   }
   L.push('  ' + res.inCount + ' of ' + res.judged + ' in band   (* = inside that plate)');
   return L.join('\n');

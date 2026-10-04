@@ -55,7 +55,7 @@ if (!process.env.SKIPLOOK) {
     return dst; });
   /* THE LOOK OF RECORD (Eric 2026-10-04, SPIKE_ADOPT 21): grade, saturation, contrast and aerial perspective against
      the spike frame, detail density and snow against the bow plates — framescore WALL=record */
-  const wall = process.env.LOOKWALL || 'bow';
+  const wall = process.env.LOOKWALL || 'record';     // LOOKWALL=bow: the instrument before the amendment (SPIKE_ADOPT 19a)
   const fsj = JSON.parse(run(['gauntlet/verify/framescore.mjs', ...frames], { JSON: '1', WALL: wall }));
   rec.instrument = wall === 'bow' ? 'bow' : 'record+skykey';
   rec.look = {};
