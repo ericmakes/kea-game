@@ -2855,3 +2855,12 @@ sky and survived three wrong fixes before the wisp emissive was cranked to 3.0 a
 while the rectangles did not move. `G.postExclude` is now the seam any transparent tier can use, and
 `src/post.mjs` wraps both passes. The first version of that list used `|| []` and leaked 8 stale
 meshes per travel — TODO 48's law again: the reset belongs to the function that fills it.
+
+### 119. POLISH: THE CAMPGROUND CHAIR'S CANVAS HAS DARK SHARDS (Eric 2026-10-04: "accept as-is for now, file it as a polish TODO")
+
+`assets/models/props/camp_chair.glb` (Higgsfield image_to_3d 6bdfa371, SPIKE_ADOPT 26) shows dark triangular patches in its
+red canvas — Meshy's thin-surface texturing fault, the same one that spoiled the tow shed's roof. A second single-view
+generation (07c93584) was worse (a grey web down one side) and was refused. Routes, in order: (1) multi_image_to_3d from
+three generated views of the same chair (it gave the tow shed clean walls); (2) re-texture the canvas from the reference
+with the frame kept; (3) Astra. Accept with tools/accept_generated.mjs and tools/look_model.mjs; the fit stays uniform
+to the primitive's 0.99 m height.
