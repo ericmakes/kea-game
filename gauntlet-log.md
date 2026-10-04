@@ -6439,3 +6439,22 @@ THE SKI FIELD AGAINST ITS TARGET (28_skifield_base, after 21c): 5/7. In: hue 68,
 edge density. OUT: luma 0.502 against 0.542-0.780 (our snow is darker than the target's) and snow patchiness 0.027
 against the plates' 0.055 floor (our snow's edges are soft — drifts that fade into the field). That is the gap the Ski
 Field pass closes first.
+
+## 2026-10-04e — STEP 3, THE SKI FIELD (1): snow at a physical albedo; spring tussock through the snow (Opus 5.5) — certified 2226c2d8
+
+Shot the key vantage (28_skifield_base), built the target (21d), scored the gap: 5/7 — luma and snow-edge hardness out.
+Largest by area is the SNOW: ours rendered 150/148/141 where the target's is 210/204/193. snow_02 (the scan) averages
+0.38 LINEAR — grey rock's albedo; the photograph was simply exposed dark. A scan family can now declare a physical
+albedo: MATS.families.snow.albedo 0.75 (old packed spring snow; fresh 0.8-0.9), applied in matDress as albedo / the
+map's own measured linear mean (materials.mjs imageMeanLinear — imageMean reads sRGB bytes, which is not an albedo).
+150 -> 180, luma IN. 0.85 (KEAMATS) bought 6 more levels: the rest is AgX's shoulder, i.e. the shipped look; kept 0.75.
+THE TUSSOCK: the target's snow is broken by tussock round the shed. src/clumps.mjs takes several bands per map; the
+Ski Field keeps its tussock band (drawn first, so its seeded placements are unchanged) and gains a melt-through band,
+120 round the base, kept off the piste and tracks by the cuts. At the verge's 3.2-5.0 scale all 120 were placed and
+none could be seen (probed: 127 within 16 m of the base) — they vanished into the blade field; at 6.5-10 they read, as
+wispy stalks rather than the target's dense mounds (the clump cards' own limit). Snow edges 0.027 -> 0.038, still
+under the plates' floor (0.055): our drifts thin to a soft margin by design (SNOW FORMS), not chased.
+Against the target: 5/7 -> 6/7. perfstep s22_ski_snow (the six key vantages; this is every map's snow) 14.80 ms
+(14.54 / 16.00 / 14.80), nothing lost, 12 gained one; gate meter 16.44 (warm). THE SKI FIELD's own frame (framebudget
+BIOME=skifield, unlocked): with the piece 12.50 / 15.49 / 15.77 / 12.40, without 15.56 / 10.75 — the clumps' cost is
+inside the spread; every reading inside 16.67.

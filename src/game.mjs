@@ -801,7 +801,11 @@ const MATS={
     grass:        {asset:'withered_grass',     tileM:2.000, mode:'paint', iso:true },
     gravel:       {asset:'gravel_floor_02',    tileM:2.000, mode:'scan', tint:0.35, iso:true },
     asphalt:      {asset:'asphalt_02',         tileM:3.000, mode:'scan', tint:0.45, iso:true },
-    snow:         {asset:'snow_02',            tileM:2.000, mode:'scan', tint:0.55, iso:true },
+    /* albedo (SPIKE_ADOPT 22, the Ski Field pass): snow_02 is a photograph averaging 0.38 linear — grey rock, not snow —
+       and the Ski Field target's snow is twice as bright as ours. A scan family that declares a PHYSICAL albedo is
+       scaled so its mean lands there (matDress, off the map's own measured linear mean); its texture is untouched.
+       0.75: old, packed spring snow (fresh is 0.8-0.9, dirty 0.5-0.6). */
+    snow:         {asset:'snow_02',            tileM:2.000, mode:'scan', tint:0.55, iso:true, albedo:0.75 },
     weatherboard: {asset:'dark_planks',        tileM:2.000, mode:'paint', iso:false},
     corrugate:    {asset:'corrugated_iron_02', tileM:2.700, mode:'paint', iso:false},
     brick:        {asset:'brick_wall_09',      tileM:2.010, mode:'scan', tint:0.20, iso:false},
@@ -1828,6 +1832,7 @@ function matDress(m){
        touching exposure, then `tint` lerps white -> that hue. See the recipe note. */
     const L=_lumOf(base)||1, hue=base.clone().multiplyScalar(1/L);
     m.color.setRGB(1,1,1).lerp(hue,F.tint===undefined?0:F.tint);
+    if(F.albedo&&S.linMean)m.color.multiplyScalar(F.albedo/S.linMean);   // a physical albedo, off the scan's measured mean
   } else {
     m.color.copy(base).multiplyScalar(1/MATS.paintMean);
   }
@@ -2249,7 +2254,12 @@ const VERGE={
     village:   { count:400, centre:[0,0],  radius:38, fall:10 },
     river:     { count:450, centre:[0,4],  radius:40, fall:11 },
     station:   { count:550, centre:[-6,4], radius:42, fall:12 },
-    skifield:  { count:300, centre:[0,46], radius:26, fall:10, zMin:36 },   // only its tussock band, below the snow
+    /* two bands (src/clumps.mjs takes an array): its tussock band below the snow, unchanged and drawn first so its
+       seeded placements are what they were; and (Step 3, the Ski Field pass) the MELT-THROUGH round the base — spring
+       tussock standing out of the thinning snow, as the map's spike-standard target shows round the tow shed. Kept
+       off the piste and every track by the cuts, as every clump is. */
+    skifield:  [ { count:300, centre:[0,46], radius:26, fall:10, zMin:36 },
+                 { count:120, centre:[6,22], radius:16, fall:14, scale:[6.5,10.0] } ],   // big spring tussocks, 0.6-0.9 m: at the verge's 3.2-5.0 they vanished into the blade field
   },
 };
 const VERGE_GLSL=`

@@ -96,6 +96,17 @@ function imageMean(img) {
   return [r / n / 255, g / n / 255, b / n / 255];
 }
 
+/* THE MEAN LINEAR LUMINANCE of a colour map whose bytes are sRGB — for a family that declares a physical albedo
+   (MATS.families.<f>.albedo, SPIKE_ADOPT 22): a scan is a photograph, exposed however its photographer liked, and
+   snow_02 averages 0.38 linear, the albedo of grey rock. 64x64 is ample for a mean. */
+function imageMeanLinear(img) {
+  const N = 64, cv = document.createElement('canvas'); cv.width = cv.height = N;
+  const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(img, 0, 0, N, N);
+  const px = cx.getImageData(0, 0, N, N).data, s2l = c => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  let L = 0; for (let i = 0; i < px.length; i += 4) L += 0.2126 * s2l(px[i] / 255) + 0.7152 * s2l(px[i + 1] / 255) + 0.0722 * s2l(px[i + 2] / 255);
+  return L / (px.length / 4);
+}
+
 export async function installMaterials(KEAGAME) {
   const G = KEAGAME.G, MATS = KEAGAME.MATS;
   if (!G.scene) throw new Error('materials: no scene to dress');
@@ -150,6 +161,7 @@ export async function installMaterials(KEAGAME) {
           : imageMean(map.image);
         S.mean = { albedo: a, rough: imageMean(arm.image)[1] };   // roughness is the GREEN channel
       }
+      if (F.albedo) S.linMean = imageMeanLinear(map.image);       // SPIKE_ADOPT 22: the scan brought to a physical albedo
       S.maps = { map, normalMap: nor, roughnessMap: arm };
       S.failed = false;
       for (const m of S.mats) KEAGAME.matDress(m);

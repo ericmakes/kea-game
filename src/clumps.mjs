@@ -27,7 +27,8 @@ export async function installClumps(K) {
   let live = [];
   const dress = () => {
     for (const im of live) { im.parent && im.parent.remove(im); im.dispose(); } live = [];
-    const biome = G.biome, C = V.maps[biome]; if (!C) { G.clumps = { mode: 'none', biome }; return; }
+    const biome = G.biome, CC = V.maps[biome]; if (!CC) { G.clumps = { mode: 'none', biome }; return; }
+    const BANDS = Array.isArray(CC) ? CC : [CC];   // a map may declare more than one band (the Ski Field: its tussock band, and the melt-through round the base)
     let s = (2166136261 ^ biome.split('').reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619), 0)) >>> 0 || 7;
     const rnd = () => (s = (Math.imul(s, 48271) % 2147483647 + 2147483647) % 2147483647) / 2147483647;
     const cuts = K.grassCuts(biome).filter(c => c[2] > 0 && c[3] > 0), off = V.clumps.keepOff;
@@ -40,7 +41,8 @@ export async function installClumps(K) {
     const outSeal = (x, z) => rects.length ? Math.max(0, -Math.max(...rects.map(r => Math.min(x - r[0], r[2] - x, z - r[1], r[3] - z)))) : null;
     const per = variants.map(() => []), M = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     let placed = 0, tries = 0;
-    while (placed < C.count && tries < C.count * 12) { tries++;
+    for (const C of BANDS) { let got = 0, tr = 0;
+    while (got < C.count && tr < C.count * 12) { tries++; tr++;
       const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * C.radius, x = C.centre[0] + Math.cos(a) * r, z = C.centre[1] + Math.sin(a) * r;
       if (C.zMin != null && z < C.zMin) continue;
       /* density: from the seal's margin where there is seal (the spike's rule), else from the map's centre */
@@ -55,9 +57,9 @@ export async function installClumps(K) {
       const ex = K.drawnGroundExplain(x, z) || [], gp = ex.find(e => /^plane\d+\(ground\)/.test(e[0]));
       const dy = gp ? gp[1] : K.drawnGroundAt(x, z);
       if (ex.some(([kk, y]) => !/^plane|^range/.test(kk) && y > dy - 0.05)) continue;
-      const k = V.clumps.scale[0] + (V.clumps.scale[1] - V.clumps.scale[0]) * Math.pow(rnd(), 1.6);
+      const SC = C.scale || V.clumps.scale, k = SC[0] + (SC[1] - SC[0]) * Math.pow(rnd(), 1.6);   // a band may size its own (the Ski Field's melt-through tussocks are big)
       M.compose(p.set(x, dy - 0.02, z), q.setFromAxisAngle(up, rnd() * Math.PI * 2), sc.set(k, k * (0.8 + rnd() * 0.5), k));
-      per[Math.floor(rnd() * variants.length) % variants.length].push(M.clone()); placed++; }
+      per[Math.floor(rnd() * variants.length) % variants.length].push(M.clone()); placed++; got++; } }
     variants.forEach((src, j) => { if (!per[j].length) return;
       const im = new THREE.InstancedMesh(src.geometry, src.material, per[j].length);
       per[j].forEach((m, i) => im.setMatrixAt(i, m)); im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere();
