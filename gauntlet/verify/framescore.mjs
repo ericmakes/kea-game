@@ -54,8 +54,26 @@ export const JUDGED = ['edgeDensity', 'ridgeP10', 'snowPatch', 'luma', 'hue', 's
    Geometry and materials have no whole-frame property here; they stay with the plates by construction (platescore's
    range and sky strips, the material families), untouched by this. Every band is made exactly as before — the
    governor's four vertical tiles, never tighter than MINREL of its mean, hue +/-30 degrees. */
-export const GOVERN = { luma: 'spike', hue: 'spike', sat: 'spike', ridgeP10: 'spike', aerial: 'spike', edgeDensity: 'bow', snowPatch: 'bow' };
-export const JUDGED_RECORD = ['edgeDensity', 'ridgeP10', 'snowPatch', 'luma', 'hue', 'sat', 'aerial'];
+export const GOVERN = { luma: 'spike', hue: 'spike', sat: 'spike', ridgeP10: 'spike', aerial: 'spike', skyB: 'spike', edgeDensity: 'bow', snowPatch: 'bow' };
+export const JUDGED_RECORD = ['edgeDensity', 'ridgeP10', 'snowPatch', 'luma', 'hue', 'sat', 'aerial', 'skyB'];
+/* THE GROUND'S COLOUR AND THE SKY'S, APART — Eric 2026-10-04 (SPIKE_ADOPT 26): "The 02/06/07 refusals are whole-frame
+   averages being dragged by sky pixels - the same class as the caravan 'snow' row. Use the geometric sky mask ... measure
+   hue and saturation on the GROUND with the sky masked, and score the sky's own b* against the spike as its own property.
+   Re-derive those bands under the mask." So on the record wall hue and sat join SKYOFF (game frame by its key; the spike
+   by its ridgeline polygon; a map target by its key), and skyB is the sky region's mean CIE b* (blue negative), banded
+   off the governor's sky by plateBand's rule (its tiles that hold sky, never tighter than MINREL of the mean). */
+export const RECORD_SKYOFF = ['hue', 'sat'];
+const s2lin = c => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4), fLab = t => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116;
+/* mean b* over the pixels skyAt(x, y) selects, null under 200 of them */
+export function skyBOf(im, skyAt, x0 = 0, x1 = im.w) { let n = 0, b = 0;
+  for (let y = 0; y < im.h; y++) for (let x = x0; x < x1; x++) { if (!skyAt(x, y)) continue; const i = (y * im.w + x) * 3;
+    const R = s2lin(im.buf[i] / 255), G = s2lin(im.buf[i + 1] / 255), B = s2lin(im.buf[i + 2] / 255);
+    const Y = 0.2126 * R + 0.7152 * G + 0.0722 * B, Z = (0.0193 * R + 0.1192 * G + 0.9505 * B) / 1.08883; b += 200 * (fLab(Y) - fLab(Z)); n++; }
+  return n < 200 ? null : b / n; }
+function skyBBand(im, skyAt) { const tw = Math.floor(im.w / 4), vs = [];
+  for (let t = 0; t < 4; t++) { const v = skyBOf(im, skyAt, t * tw, (t + 1) * tw); if (v !== null) vs.push(v); }
+  const c = skyBOf(im, skyAt); if (c === null) return null; const pad = Math.abs(c) * MINREL;
+  return { lo: Math.min(...vs, c - pad), hi: Math.max(...vs, c + pad), plate: c, tiles: vs }; }
 /* AERIAL PERSPECTIVE as a number: how much of its contrast the FAR ground keeps against the NEAR ground. Over the
    frame's ground only (sky and HUD masked — the game's sky key, the spike's ridgeline polygon), the ground's rows are
    split into quarters from the skyline down; aerial = std(luma) of the far quarter / std(luma) of the near quarter.
@@ -154,7 +172,8 @@ export function plates(wall = 'bow') {
        fractions, so it goes to plateBand as skyAt (whole-image coordinates), not through the tile-local isSky */
     const P = n === 'target' ? 'key' : SKYPOLY[n];
     if (P) { const skyAt = P === 'key' ? targetSkyAt(im) : (x, y) => inPoly(P, x / im.w, y / im.h), off = plateBand(im, mk, skyAt);
-      for (const k of SKYOFF) out[n].band[k] = off.band[k];
+      for (const k of (wall === 'record' ? SKYOFF.concat(RECORD_SKYOFF) : SKYOFF)) out[n].band[k] = off.band[k];
+      out[n].band.skyB = skyBBand(im, skyAt);
       let c = 0; for (let y = 0; y < im.h; y++) for (let x = 0; x < im.w; x++) c += skyAt(x, y) ? 1 : 0;
       out[n].sky = { polygon: true, frac: c / (im.w * im.h) };
       out[n].band.aerial = aerialBand(im, (p, x, y) => mk(p, x, y) || skyAt(x, y)); }
@@ -171,9 +190,10 @@ export function scoreFrame(frame, P) {
      the result says it was unkeyed, so a keyed band is never silently compared with an unkeyed frame. */
   const key = skyKeyFor(frame);
   if (key && (key.w !== im.w || key.h !== im.h)) throw new Error('framescore: sky key ' + key.w + 'x' + key.h + ' does not match its frame ' + im.w + 'x' + im.h);
-  if (key) { const g2 = measureAll(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1); for (const k of SKYOFF) g[k] = g2[k]; }
-  /* the look of record: each property against its governor only; aerial needs the sky off, so it needs the key */
   const look = names.includes('target') ? 'target' : 'spike_01', record = names.includes(look) && names.length > 1;
+  if (key) { const g2 = measureAll(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1); for (const k of (record ? SKYOFF.concat(RECORD_SKYOFF) : SKYOFF)) g[k] = g2[k]; }
+  /* the look of record: each property against its governor only; aerial and the sky's b* need the key */
+  g.skyB = key ? skyBOf(im, (x, y) => key.m[y * im.w + x] === 1 && !hud(null, x, y)) : null;
   g.aerial = key ? aerialOf(im, (p, x, y) => hud(p, x, y) || key.m[y * im.w + x] === 1) : null;
   const judged = record ? JUDGED_RECORD : JUDGED;
   let inCount = 0;
@@ -192,11 +212,11 @@ export function scoreFrame(frame, P) {
 }
 
 export const FMT = { edgeDensity: v => v.toFixed(4), ridgeP10: v => v.toFixed(3), snowPatch: v => v.toFixed(4),
-              luma: v => v.toFixed(3), hue: v => v.toFixed(0), sat: v => v.toFixed(3), aerial: v => v.toFixed(3) };
+              luma: v => v.toFixed(3), hue: v => v.toFixed(0), sat: v => v.toFixed(3), aerial: v => v.toFixed(3), skyB: v => v.toFixed(1) };
 export function table(res) {
   const L = [];
   L.push('  ' + path.basename(res.frame) + (res.sky ? (res.sky.keyed ? '   (sky keyed: ' + (res.sky.frac * 100).toFixed(1) + '% of the frame off snow and edge density)' : '   (UNKEYED: no .sky.png — snow and edge density include the sky)') : ''));
-  if (res.record) L.push('  THE LOOK OF RECORD: grade, saturation, contrast and aerial perspective against the spike frame; detail and snow against the bow plates');
+  if (res.record) L.push('  THE LOOK OF RECORD: grade, saturation, contrast and aerial perspective against the spike frame (hue and sat on the GROUND, the sky\'s own b* apart); detail and snow against the bow plates');
   L.push('  property        frame     ' + (res.record ? 'governor and its band(s)'.padEnd(66) : res.plates.map(n => (n + ' band').padEnd(22)).join('')) + 'verdict');
   for (const r of res.rows) {
     const f = FMT[r.k];

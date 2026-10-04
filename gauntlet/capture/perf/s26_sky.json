@@ -1,0 +1,322 @@
+{
+ "label": "s26_sky",
+ "at": "2026-10-04T12:49:56.450Z",
+ "cost": {
+  "runs": [
+   {
+    "meanMs": 14.76,
+    "medianMs": 13.7,
+    "p95Ms": 33.1,
+    "fps": 67.7,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 15.19,
+    "medianMs": 14.7,
+    "p95Ms": 32.7,
+    "fps": 65.8,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 15.3,
+    "medianMs": 13.6,
+    "p95Ms": 33.6,
+    "fps": 65.3,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   }
+  ],
+  "meanMs": 15.19
+ },
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 7,
+   "judged": 8,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2037,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2146,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0845,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4048,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 44.3488,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1501,
+     "ok": false,
+     "miss": 1.23
+    },
+    "aerial": {
+     "gv": 0.9785,
+     "ok": true,
+     "miss": 0
+    },
+    "skyB": {
+     "gv": -9.9275,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 7,
+   "judged": 8,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.4482,
+     "ok": false,
+     "miss": 1.28
+    },
+    "ridgeP10": {
+     "gv": 0.2309,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1146,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.3948,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 38.6893,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3623,
+     "ok": true,
+     "miss": 0
+    },
+    "aerial": {
+     "gv": 1.2206,
+     "ok": true,
+     "miss": 0
+    },
+    "skyB": {
+     "gv": -9.091,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 6,
+   "judged": 8,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3359,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3237,
+     "ok": false,
+     "miss": 0.63
+    },
+    "snowPatch": {
+     "gv": 0.0634,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.472,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 41.5467,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3289,
+     "ok": true,
+     "miss": 0
+    },
+    "aerial": {
+     "gv": null,
+     "ok": false,
+     "miss": 0
+    },
+    "skyB": {
+     "gv": -9.0354,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 4,
+   "judged": 8,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3728,
+     "ok": false,
+     "miss": 0.32
+    },
+    "ridgeP10": {
+     "gv": 0.3104,
+     "ok": false,
+     "miss": 0.45
+    },
+    "snowPatch": {
+     "gv": 0.0708,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4575,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 39.7791,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3914,
+     "ok": false,
+     "miss": 0.03
+    },
+    "aerial": {
+     "gv": 0.4657,
+     "ok": false,
+     "miss": 0.2
+    },
+    "skyB": {
+     "gv": -10.3788,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 6,
+   "judged": 8,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2569,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.1532,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0424,
+     "ok": false,
+     "miss": 0.46
+    },
+    "luma": {
+     "gv": 0.3821,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 42.3989,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.188,
+     "ok": false,
+     "miss": 0.72
+    },
+    "aerial": {
+     "gv": 1.3152,
+     "ok": true,
+     "miss": 0
+    },
+    "skyB": {
+     "gv": -10.653,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 5,
+   "judged": 8,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1993,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3138,
+     "ok": false,
+     "miss": 0.5
+    },
+    "snowPatch": {
+     "gv": 0.0885,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4516,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 41.0625,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1541,
+     "ok": false,
+     "miss": 1.18
+    },
+    "aerial": {
+     "gv": 0.5154,
+     "ok": false,
+     "miss": 0.15
+    },
+    "skyB": {
+     "gv": -9.3976,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  }
+ },
+ "ac": true,
+ "instrument": "record+skykey+ground",
+ "prev": "s26_ground_base",
+ "refusals": [],
+ "accepted": []
+}

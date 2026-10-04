@@ -669,6 +669,7 @@ const SKY={
      farOn:true — SHIPPED with the light-and-grade candidate (SPIKE_ADOPT 19, Eric 2026-10-04). The 90-320 m
      dissolve into the photograph (row 14c) stays BLOCKED: the range stays geometry. */
   farOn:true, farBand:'hdri/pizzo_pernice_band.jpg', farBandElev:[-4,30], farBandScale:1.03879, farHazeAbove:12.0,
+  farSkySat:1.5,   // the photographed sky's saturation above the horizon (farSky, the dome only), matched to the spike frame's sky: b* -9.0..-10.7 on the six key vantages against its band -12.7..-7.1 (at 1.0: -4.9..-6.1). SPIKE_ADOPT 26
 };
 for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_SKY__)||{})){
   if(k in SKY) SKY[k]=v;
@@ -3184,7 +3185,7 @@ function terrainHeightAt(x,z){
    rotation and the SAME equirect mapping three uses for the environment (common.glsl equirectUv), so the
    photograph's sun is where the light's is. Radiance x the environment's intensity: the light's units. */
 const FARGLSL=`
-uniform float uFarOn, uFarB0, uFarB1, uFarInv, uFarI, uFarDay, uFarAbove;
+uniform float uFarOn, uFarB0, uFarB1, uFarInv, uFarI, uFarDay, uFarAbove, uFarSat;
 uniform sampler2D uFarBand, uFarSky; uniform mat3 uFarRot;
 vec3 farPhoto(vec3 dir){
   vec3 d = uFarRot * dir;
@@ -3194,6 +3195,14 @@ vec3 farPhoto(vec3 dir){
   vec3 sky = texture2D(uFarSky, vec2(u, el * 0.31830989 + 0.5)).rgb;
   float w = smoothstep(uFarB1 - 0.07, uFarB1 - 0.015, el) + smoothstep(uFarB0 + 0.015, uFarB0, el);
   return mix(band, sky, clamp(w, 0.0, 1.0)) * uFarI;
+}
+/* farSky(dir) — farPhoto as the DOME draws it: SKY.farSkySat, the photographed sky's saturation above the horizon,
+   feathered over its first ~3 degrees (SPIKE_ADOPT 25, governed by the spike frame's sky). The dome only: the range's
+   haze samples farPhoto as "the photograph's air" and is scored against the plates, so it keeps the photograph's own. */
+vec3 farSky(vec3 dir){
+  vec3 c = farPhoto(dir);
+  float el = asin(clamp((uFarRot * dir).y, -1.0, 1.0)), l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+  return mix(vec3(l), c, mix(1.0, uFarSat, smoothstep(0.0, 0.05, el)));
 }
 `;
 function rangeHaze(m){
@@ -4403,7 +4412,7 @@ function initScene(){
     G.farU={ uFarOn:{value:0}, uFarBand:{value:w1()}, uFarSky:{value:w1()}, uFarRot:{value:R},
       uFarB0:{value:SKY.farBandElev[0]*Math.PI/180}, uFarB1:{value:SKY.farBandElev[1]*Math.PI/180},
       uFarInv:{value:1/SKY.farBandScale}, uFarI:{value:SKY.envIntensityDay}, uFarDay:{value:1},
-      uFarAbove:{value:Math.tan(SKY.farHazeAbove*Math.PI/180)} }; }
+      uFarAbove:{value:Math.tan(SKY.farHazeAbove*Math.PI/180)}, uFarSat:{value:SKY.farSkySat??1} }; }
   /* IBL PROVENANCE LIVES IN SCENE STATE, and it is declared HERE — in the headless path — rather
      than only where the texture is built. P2's proof is "IBL present in scene state", and the
      PMREM convolution needs a WebGL renderer, so a battery running in node can never see the
@@ -4527,7 +4536,7 @@ function buildSky(){
       sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;')
         .replace('#include <fog_vertex>','#include <fog_vertex>\n  vFarW = (modelMatrix * vec4(position, 1.0)).xyz;');
       sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vFarW;'+FARGLSL)
-        .replace('#include <opaque_fragment>','if (uFarOn > 0.5) outgoingLight = mix(outgoingLight, farPhoto(normalize(vFarW - cameraPosition)), uFarDay);\n#include <opaque_fragment>'); };
+        .replace('#include <opaque_fragment>','if (uFarOn > 0.5) outgoingLight = mix(outgoingLight, farSky(normalize(vFarW - cameraPosition)), uFarDay);\n#include <opaque_fragment>'); };
     sky.material.customProgramCacheKey=()=>'farDome'; }
   G.scene.add(sky); G.sky=sky; sky.material.color=new THREE.Color(0xFFFFFF);
   /* HORIZON HAZE BAND — AND IT USED TO END IN A HARD RIM.

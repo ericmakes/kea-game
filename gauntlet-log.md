@@ -6626,3 +6626,19 @@ from Poly Haven kloofendal_48d on 13 billboards in two rings inside the dome, dr
 field's day factor; the procedural clouds are still built (seeded stream) and hidden. A and C stay reachable through
 KEASKY. The first certification attempt was on battery. Gate meter 16.21; perfstep s25_cards 15.11 ms
 (14.94 / 15.30 / 15.11), the six unchanged, ACCEPTED. Pins stale by design until the one combined re-pin.
+
+## 2026-10-04o — SPIKE_ADOPT 26: the sky's own blue to the spike; hue and sat measured on the GROUND (Opus 5.5) — certified edd78e01
+
+A dome-only saturation for the photographed sky (SKY.farSkySat, farSky in FARGLSL; the range's haze keeps farPhoto). At 1.5
+the old instrument refused 02 sat, 06 hue, 07 hue; 1.15 was the ceiling it allowed. Eric refused the compromise: "The
+02/06/07 refusals are whole-frame averages being dragged by sky pixels - the same class as the caravan 'snow' row. Use the
+geometric sky mask ... measure hue and saturation on the GROUND with the sky masked, and score the sky's own b* against the
+spike as its own property. Re-derive those bands under the mask."
+THE INSTRUMENT (framescore record wall; perfstep instrument 'record+skykey+ground', so it refuses to compare with older
+steps): hue and sat join SKYOFF on the record wall — game frames by their sky key, the spike by its ridgeline polygon, a map
+target by its key; NEW skyB, the sky region's mean CIE b*, governed by the spike, banded by plateBand's rule over the tiles
+that hold sky. Re-derived bands: spike ground hue 21-81, ground sat 0.241-0.389, skyB -12.7..-7.1. No threshold touched.
+On it: baseline at 1.0 (s26_ground_base) — skyB -4.9..-6.1, OUT on all six; at 1.5 — -9.0..-10.7, IN on all six, and
+NOTHING ON THE GROUND LEFT ITS BAND (the ground did not change; Eric's stop condition did not fire). 1.6 also held (-9.8..
+-11.5); 1.5 sits at the band's centre. GROUNDTRUTH clean in the AC gate (its three battery-gate findings did not recur).
+Gate meter 15.89; perfstep s26_sky 15.19 ms (14.76 / 15.19 / 15.30), 33 -> 39 of 48, ACCEPTED.

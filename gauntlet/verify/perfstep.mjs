@@ -57,7 +57,7 @@ if (!process.env.SKIPLOOK) {
      the spike frame, detail density and snow against the bow plates — framescore WALL=record */
   const wall = process.env.LOOKWALL || 'record';     // LOOKWALL=bow: the instrument before the amendment (SPIKE_ADOPT 19a)
   const fsj = JSON.parse(run(['gauntlet/verify/framescore.mjs', ...frames], { JSON: '1', WALL: wall }));
-  rec.instrument = wall === 'bow' ? 'bow' : 'record+skykey';
+  rec.instrument = wall === 'bow' ? 'bow' : 'record+skykey+ground';   // +ground: hue and sat off the sky, skyB (SPIKE_ADOPT 26)
   rec.look = {};
   for (const r of fsj) { const v = path.basename(r.frame, '.png'); rec.look[v] = { inCount: r.inCount, judged: r.judged, keyed: !!(r.sky && r.sky.keyed), rows: Object.fromEntries(r.rows.map(x => [x.k, { gv: x.gv === null ? null : +x.gv.toFixed(4), ok: x.ok, miss: +(x.miss || 0).toFixed(2) }])) }; }
 }
