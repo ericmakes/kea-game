@@ -9967,6 +9967,10 @@ function buildPicnic(){
    place to prove the anchor contract. */
 defineProp('bench',{
   biome:'carpark', at:{x:28,z:0},
+  /* Step 3, the Carpark (SPIKE_ADOPT 20): a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md;
+     tools/accept_generated.mjs; +Z front checked on tools/look_model.mjs), fitted per axis so the collider and anchors
+     stand where they were; headless keeps the primitive. */
+  source:'model', url:'models/props/bench.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[1.90,1.08,0.69]},   // the model's seat (0.54 m in the file) lands at 0.60, under the 0.62 collider Tom naps on
   collider:[{kind:'box',w:1.9,d:0.6,top:0.62,solid:true}],
   anchors:{seat:{x:0,y:0.62,z:0}},
   material:{family:null,nightTint:false},
@@ -10109,6 +10113,10 @@ function drawKeaSil(c,cx,cy,sc,col){ // traced verbatim from the reference road 
    is the one a model should arrive for. MODEL_MANIFEST.md loses the row for the same reason. */
 defineProp('doc_board',{
   biome:'carpark', at:{x:44,z:-40},
+  /* Step 3, the Carpark (SPIKE_ADOPT 20): a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md;
+     tools/accept_generated.mjs; +Z front checked on tools/look_model.mjs), fitted per axis so the collider and anchors
+     stand where they were; headless keeps the primitive. */
+  source:'model', url:'models/props/doc_board.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[2.20,2.45,0.21]},
   collider:[{kind:'box',w:2.3,d:0.3,top:2.45,solid:true}],
   anchors:{face:{x:0,y:1.9,z:0.07}},
   material:{family:null,nightTint:false},

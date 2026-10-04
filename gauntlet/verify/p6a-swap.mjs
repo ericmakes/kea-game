@@ -98,6 +98,9 @@ async function shot(name,{props,night,after}={}){
     await page.goto(url0,{waitUntil:'load'}); await sleep(1000);
     await assertBooted(page,{biome:'carpark'});
     await page.evaluate(`window.AudioContext=undefined; KEAGAME.startGame(1);`); await sleep(500);
+    /* WAIT FOR THE MODEL TIER, not a fixed half second: since Step 3 the carpark loads several GLBs (the table, the
+       bench, the DOC board, the vehicles) and the bench's arrives after the stage would have run */
+    await page.waitForFunction(()=>KEAGAME.G.models&&KEAGAME.G.models.mode!=='loading',{timeout:60000});
     await page.evaluate(QUIET);
     await page.evaluate('{'+STAGE+(night?NIGHT:'')+(after||'')+'}');
     await sleep(900);
@@ -120,7 +123,10 @@ const REVERT=`{ const P=KEAGAME.PROPS, p=P.placed('bench');
   delete M.detail['bench']; M.mode=M.swapped.length?'model':'primitive';
   KEAGAME.G.propsState=KEAGAME.propsState(); }`;
 
-const A=await shot('P6A_A_bench_primitive');
+/* THE BENCH SHIPS AS A MODEL since Step 3 (SPIKE_ADOPT 20): the primitive takes say so through KEAPROPS rather than
+   lean on the default, so A, A2 and D are still the primitive bench they are named for. */
+const PRIM={bench:{source:'primitive'}};
+const A=await shot('P6A_A_bench_primitive',{props:PRIM});
 /* THE CONTROL, AND THIS PROOF IS WORTHLESS WITHOUT IT. The bench stands in the grass field, and
    src/game.mjs's REPLAT P4c note records at length that the field's content is a STEP FUNCTION of
    camera position — a take-to-take camera hair either side of the 0.5 m snap moves the whole
@@ -128,10 +134,10 @@ const A=await shot('P6A_A_bench_primitive');
    the same machine. So "did the flip back return to baseline" cannot be asked against 1.0000; it
    has to be asked against what this vantage reshoots at when NOTHING has changed. A2 is that
    number, shot identically to A, and every claim below is held to it rather than to perfection. */
-const A2=await shot('P6A_A2_control');
+const A2=await shot('P6A_A2_control',{props:PRIM});
 const B=await shot('P6A_B_bench_model',{props:SWAP});
 const C=await shot('P6A_C_bench_model_night',{props:SWAPNIGHT,night:true});
-const D=await shot('P6A_D_bench_primitive_again');
+const D=await shot('P6A_D_bench_primitive_again',{props:PRIM});
 const E=await shot('P6A_E_bench_reverted',{props:SWAP,after:REVERT});
 
 /* ---- THE MEASUREMENTS ----

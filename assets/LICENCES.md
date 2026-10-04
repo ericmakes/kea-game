@@ -979,3 +979,5 @@ tools/look_model.mjs.
 | `models/props/ski_lodge.glb` | ski lodge, 3,514 tris | image_to_3d job 0f9c1649 (third attempt: 72de7aea had a skirt and side flaps; 93e53a39 was 13,344 tris) from ref 321290cc | `d7a46f93fb2f36175bd8a4eb98ed0874` |
 | `models/props/tow_shed.glb` | tow shed WALLS, 792 tris (the roof is the game's primitive) | multi_image_to_3d job 6262f87a from refs 3273ff85 + 568a002f + 5bfb1f58, cut at the eave by tools/reskin_roof.mjs DROP (five attempts could not make the roof: e2b6234f, 7a430e68, bca8d7e5, 6d332b02) | `a333e43afb848b8f5e877bbfbea0cf87` |
 | `models/props/gear_rack.glb` | ski rack, 1,725 tris | image_to_3d job 50cd625c from ref ce4878f4 | `c8d948f0096c2d3b612b0d43a494d980` |
+| `models/props/bench.glb` | park bench, 1,579 tris | image_to_3d job 2e2d1291 from ref a6eecf6f (first attempt) | `93a91080c7adb47de5f7af9a5b9e5626` |
+| `models/props/doc_board.glb` | DOC trailhead board, 1,634 tris, blank panel | image_to_3d job ca307f2e from ref c13398b2 (first attempt) | `1c1652c5767d08419f6e7f15895efa68` |

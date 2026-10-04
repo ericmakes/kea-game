@@ -6529,3 +6529,21 @@ tier (10 swaps) is done 379-895 ms after startGame, inside framebudget's 3 s war
 meter's +-0.8 ms spread (15.45/16.24, 15.82/over); FILM.ao.res 0.5 -> 0.35 outside it, three of three: 15.53 / 15.37 /
 15.33 against the current 15.99 / 15.65. Trample passes (the AO halo at 8 denoise samples was the bird's problem; the
 denoise is unchanged). Gate meter 15.85; perfstep r2_ao_res 14.88 ms, the six unchanged, ACCEPTED.
+
+## 2026-10-04j — STEP 3, THE CARPARK: the generated bench and DOC board (Opus 5.5) — certified f92be498
+
+Both Higgsfield models accepted first time (bench 1,579 tris, board 1,634, +Z front on the renders). Through the P6A seam,
+fitted per axis to the primitive's box; the bench's seat (0.54 m in the file) lands at 0.60, under the 0.62 collider Tom
+naps on. THE BENCH WAS THE P6A DEMO PROP, and two proofs assumed it shipped primitive:
+  - the harness's both-ways registry proof flipped primitive -> model -> primitive. It now starts from whichever source
+    the bench SHIPS and flips to the other and back; every check (byte-identical colliders, anchors, meshes; headless
+    stays primitive) holds at full strength in either starting state — not loosened.
+  - gauntlet/verify/p6a-swap.mjs (the browser proof, not in the gate): its primitive takes now SAY primitive through
+    KEAPROPS rather than lean on the default, and it waits for the model tier instead of a fixed half second (with more
+    carpark models the bench's GLB arrived after the stage). FINDING, not fixed: its live-revert take now differs from the
+    primitive take at the bench box (0.645 against a 0.999 control) — the revert itself works (the primitive bench is back
+    in the picture); the field round it moves, because loading more GLBs draws more of the rig's seeded stream (the effect
+    the proof's own notes describe). The harness's registry half proves both directions; this browser half needs Eric's
+    call on a new control.
+This piece was REFUSED once on the gate meter (16.99) and landed after BUDGET RECOVERY 2. Gate meter 16.30; perfstep
+s20_cp_models 14.57 ms (14.57 / 14.15 / 16.64), the six unchanged, ACCEPTED.

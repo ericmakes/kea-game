@@ -8952,7 +8952,7 @@ C.section('REPLAT P6A: the model-swap seam');
      red, and each one must name its own derived GLB and a measured fit. */
   { const VEH=['camp_van','campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer'];   // camp_van: Eric 2026-10-03
     const PH=['picnic_table'];                                                                              // Step 3, the Carpark pass
-    const HF=['gear_rack','ski_lodge','tow_shed'];                                                           // Step 3, the Ski Field: Higgsfield image-to-3D
+    const HF=['bench','doc_board','gear_rack','ski_lodge','tow_shed'];                                                           // Step 3, the Ski Field: Higgsfield image-to-3D
     ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH.concat(PH,HF).sort()),'ONLY THE SPIKE VEHICLES AND THE NAMED POLY HAVEN AND HIGGSFIELD PROPS SHIP SWAPPED ('+
        (shipsModel.slice().sort().join(', ')||'none')+')');
     ok(VEH.every(id=>{ const e=X.PROPS.ALL[id]; return e.url==='models/vehicles/vehicles_plain.glb'&&e.vehicle&&e.vehicle.node; }),
@@ -9039,7 +9039,9 @@ C.section('REPLAT P6A: the model-swap seam');
      the entry either way, and the only thing that changes headless is which source the placement
      says it WANTS. Then flip it back and check it is identical again. */
   {
-    const e=ALL.bench, was={source:e.source, url:e.url, fit:Object.assign({},e.fit)};
+    /* THE BENCH SHIPS AS A MODEL since Step 3 (SPIKE_ADOPT 20), so the flip starts from whichever source it SHIPS and goes
+       to the other and back: the both-ways property, and every check below, at full strength in either starting state. */
+    const e=ALL.bench, was={source:e.source, url:e.url, fit:Object.assign({},e.fit)}, other=e.source==='model'?'primitive':'model';
     const read=()=>{ const r=worldRead('carpark');
       const p=P.placed('bench');
       return {mesh:r.mesh, col:r.col, colliders:r.colliders,
@@ -9047,16 +9049,17 @@ C.section('REPLAT P6A: the model-swap seam');
                 return n+'='+a.x+','+a.y+','+a.z;}).join(';'),
               mode:p.mode, source:p.source, body:p.body.length,
               vis:p.body.filter(o=>o.visible).length}; };
-    const prim=read();
-    e.source='model'; e.url='models/placeholder_box.glb';
-    e.fit=Object.assign({},e.fit,{standM:0.98,axis:'y',ground:true});
-    const asModel=read();
+    const first=read();
+    if(other==='model'){ e.source='model'; e.url='models/placeholder_box.glb'; e.fit=Object.assign({},e.fit,{standM:0.98,axis:'y',ground:true}); }
+    else { e.source='primitive'; }
+    const flipped=read();
     e.source=was.source; e.url=was.url; e.fit=was.fit;
     const back=read();
+    const prim=first.source==='primitive'?first:flipped, asModel=first.source==='model'?first:flipped;
 
-    ok(prim.source==='primitive'&&asModel.source==='model'&&back.source==='primitive',
+    ok(first.source===was.source&&flipped.source===other&&back.source===was.source&&prim.source==='primitive'&&asModel.source==='model',
        'the entry flips both ways and the placement reports which it wants ('+
-       prim.source+' -> '+asModel.source+' -> '+back.source+')');
+       first.source+' -> '+flipped.source+' -> '+back.source+')');
     ok(asModel.mode==='primitive','and headless it STAYS on the primitive body, because nothing '+
        'fetched a GLB — a battery must never depend on the network');
     ok(asModel.body===prim.body&&asModel.vis===prim.vis,
@@ -9245,8 +9248,8 @@ C.section('REPLAT P6A: the model-swap seam');
     const st=G.propsState;
     ok(st&&st.placed>=20,'the carpark builds its prop tier through the registry ('+
        (st&&st.placed)+' placements)');
-    ok(st.model===0&&JSON.stringify(st.wantModel.slice().sort())===JSON.stringify(['campervan','car_blue','car_red','car_white','car_yellow','doc_ute','picnic_table','trailer']),
-       'and headless swaps none of them (no loader in node), while exactly the spike vehicles and the carpark\'s Poly Haven table ask to be ('+st.wantModel.length+')');
+    ok(st.model===0&&JSON.stringify(st.wantModel.slice().sort())===JSON.stringify(['bench','campervan','car_blue','car_red','car_white','car_yellow','doc_board','doc_ute','picnic_table','trailer']),
+       'and headless swaps none of them (no loader in node), while exactly the spike vehicles and the carpark\'s Poly Haven table, Higgsfield bench and DOC board ask to be ('+st.wantModel.length+')');
     ok(st.ignored.length===0,'and no KEAPROPS path was refused on a plain boot');
     ok(st.anchors>=40,'the registry carries a real anchor table ('+st.anchors+' named points)');
     /* WHAT EACH BODY ACTUALLY WEARS IS MEASURED, so the census cannot drift from the world the way
