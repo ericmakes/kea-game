@@ -6618,3 +6618,11 @@ attribute, so the tow shed was fitted to a box that still held its roof — narr
 compacts; the tow shed is re-fitted; the shelter was cut with the fixed tool.
 Gate meter 14.75; perfstep s26_camp 14.89 ms (the six unchanged); the Campground's own frame 11.98 / 11.90 ms.
 PINS ARE STALE BY DESIGN until the one whole-set re-pin after the clouds ship (Eric: "ONE whole-set re-pin covering both").
+
+## 2026-10-04n — SPIKE_ADOPT 25: THE CLOUDS SHIPPED — B, the CC0 photo cloud cards (Opus 5.5) — certified 6229a6ab
+
+Eric's pick (his message carried the template "[A / B / C]"; asked, he chose B). SKY.cloudMode 'cards': CC0 cumulus cut
+from Poly Haven kloofendal_48d on 13 billboards in two rings inside the dome, drifting on G.time, dimming with the far
+field's day factor; the procedural clouds are still built (seeded stream) and hidden. A and C stay reachable through
+KEASKY. The first certification attempt was on battery. Gate meter 16.21; perfstep s25_cards 15.11 ms
+(14.94 / 15.30 / 15.11), the six unchanged, ACCEPTED. Pins stale by design until the one combined re-pin.

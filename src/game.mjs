@@ -321,8 +321,8 @@ const SKY={
   cloudNightTint:0.34,
   /* THE CLOUDS' FORM (SPIKE_ADOPT 25) — see src/skyclouds.mjs. 'procedural' as before; 'photo' (A) the far field's
      photograph alone; 'cards' (B) CC0 cumulus photographs on billboards; 'hybrid' (C) the photograph plus a near layer of
-     cards. A candidate is chosen by Eric; until then 'procedural' ships and the others are reachable through KEASKY. */
-  cloudMode:'procedural',
+     cards. Eric picked B, 'cards', on 2026-10-04 (SPIKE_ADOPT 25); the others stay reachable through KEASKY. */
+  cloudMode:'cards',
   cloudCards:{ dir:'sky/cards/', set:['cloud_00.png','cloud_01.png','cloud_03.png','cloud_04.png','cloud_05.png','cloud_06.png','cloud_08.png','cloud_09.png'],
     gain:2.0, drift:0.004,
     /* INSIDE THE DOME: the sky dome is a 210 m sphere that writes depth, and a card whose corner passes it is cut along its
