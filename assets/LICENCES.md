@@ -986,6 +986,6 @@ tools/look_model.mjs.
 ## CLOUD CARDS (SPIKE_ADOPT 25, 2026-10-04)
 
 `sky/cards/cloud_00..09.png` (eight used; 02 and 07, sun-side and ragged, removed) — cumulus cut from Poly Haven
-**kloofendal_48d_partly_cloudy_puresky** (CC0 1.0; Greg Zaal) by `tools/derive_cloud_cards.mjs` from the 8K tonemapped JPG
+**kloofendal_48d_partly_cloudy_puresky** (CC0 1.0; Greg Zaal — original, Jarod Guest — sky edits, as the Poly Haven API credits them) by `tools/derive_cloud_cards.mjs` from the 8K tonemapped JPG
 the Poly Haven API publishes (md5 `3f2b19fa9c14943b34e5d4f480ba13ba`): keyed on blueness and luma, the soft edge un-blended
 against the row's own sky colour, hollow and ragged components refused. Derived work of a CC0 original.
