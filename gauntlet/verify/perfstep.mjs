@@ -53,28 +53,44 @@ if (!process.env.SKIPLOOK) {
     const k = src.replace(/\.png$/, '.sky.png'), kd = dst.replace(/\.png$/, '.sky.png');
     if (!process.env.FROMPINS && fs.existsSync(k)) fs.copyFileSync(k, kd); else if (fs.existsSync(kd)) fs.unlinkSync(kd);
     return dst; });
-  const fsj = JSON.parse(run(['gauntlet/verify/framescore.mjs', ...frames], { JSON: '1', WALL: 'bow' }));
+  /* THE LOOK OF RECORD (Eric 2026-10-04, SPIKE_ADOPT 21): grade, saturation, contrast and aerial perspective against
+     the spike frame, detail density and snow against the bow plates — framescore WALL=record */
+  const wall = process.env.LOOKWALL || 'bow';
+  const fsj = JSON.parse(run(['gauntlet/verify/framescore.mjs', ...frames], { JSON: '1', WALL: wall }));
+  rec.instrument = wall === 'bow' ? 'bow' : 'record+skykey';
   rec.look = {};
-  for (const r of fsj) { const v = path.basename(r.frame, '.png'); rec.look[v] = { inCount: r.inCount, keyed: !!(r.sky && r.sky.keyed), rows: Object.fromEntries(r.rows.map(x => [x.k, { gv: +x.gv.toFixed(4), ok: x.ok, miss: +(x.miss || 0).toFixed(2) }])) }; }
+  for (const r of fsj) { const v = path.basename(r.frame, '.png'); rec.look[v] = { inCount: r.inCount, judged: r.judged, keyed: !!(r.sky && r.sky.keyed), rows: Object.fromEntries(r.rows.map(x => [x.k, { gv: x.gv === null ? null : +x.gv.toFixed(4), ok: x.ok, miss: +(x.miss || 0).toFixed(2) }])) }; }
 }
-const refusals = [];
+const refusals = [], accepted = [];
+/* ACCEPTED EXCEPTIONS — ruled by Eric by name, never by this file. Each is scoped to the ONE step it was ruled on (its
+   PREV), so it cannot quietly excuse the same property leaving its band again later. */
+const EXCEPTIONS = [
+  { v: '12_seal_midpeel', k: 'snowPatch', prev: 's19_keyed_ship', ruled: 'Eric 2026-10-04 (SPIKE_ADOPT 19, option 1)',
+    why: 'the detector is measuring the white caravan softening under a warm grade - a correct outcome under the wrong name; contrast not raised, caravan not exempted',
+    law: 'parked under FLAKES law 8: review-tier, manual QA' },
+];
 if (!rec.ac) refusals.push('the machine is on battery — the target is an AC figure');
 if (process.env.PREV) {
   const prev = JSON.parse(fs.readFileSync(path.join(OUT, process.env.PREV + '.json'), 'utf8'));
   /* ONE INSTRUMENT PER COMPARISON: a keyed look against an unkeyed one would call the recalibration itself a refusal
      (or hide one). Steps before SPIKE_ADOPT 19 are unkeyed; compare against a keyed PREV. */
-  if (rec.look && prev.look) for (const v of KEY6) if (prev.look[v] && rec.look[v] && !!prev.look[v].keyed !== !!rec.look[v].keyed)
+  if (rec.look && prev.look && (prev.instrument || 'bow') !== rec.instrument)
+    refusals.push(`${process.env.PREV} was scored on the '${prev.instrument || 'bow'}' instrument and this step on '${rec.instrument}' — not one instrument (SPIKE_ADOPT 21); re-shoot PREV on this one`);
+  else if (rec.look && prev.look) for (const v of KEY6) if (prev.look[v] && rec.look[v] && !!prev.look[v].keyed !== !!rec.look[v].keyed)
     refusals.push(`${v}: ${process.env.PREV} was scored ${prev.look[v].keyed ? 'keyed' : 'unkeyed'} and this step ${rec.look[v].keyed ? 'keyed' : 'unkeyed'} — not one instrument (SPIKE_ADOPT 19); re-shoot PREV keyed`);
   if (rec.look && prev.look) for (const v of KEY6) for (const k in (prev.look[v] || {}).rows || {}) {
     const a = prev.look[v].rows[k], b = rec.look[v] && rec.look[v].rows[k];
-    if (a && a.ok && b && !b.ok) refusals.push(`${v} ${k}: was in band (${a.gv}), now out (${b.gv}, ${b.miss} half-widths)`);
+    if (a && a.ok && b && !b.ok) { const x = EXCEPTIONS.find(e => e.v === v && e.k === k && e.prev === process.env.PREV);
+      if (x) accepted.push(`${v} ${k}: was in band (${a.gv}), now out (${b.gv}, ${b.miss} half-widths) — ACCEPTED EXCEPTION, ${x.ruled}: ${x.why} [${x.law}]`);
+      else refusals.push(`${v} ${k}: was in band (${a.gv}), now out (${b.gv}, ${b.miss} half-widths)`); }
   }
   rec.prev = process.env.PREV;
 }
-rec.refusals = refusals;
+rec.refusals = refusals; rec.accepted = accepted;
 fs.writeFileSync(path.join(OUT, LABEL + '.json'), JSON.stringify(rec, null, 1));
 console.log(`PERFSTEP ${LABEL}${rec.prev ? ' (against ' + rec.prev + ')' : ''}   ${rec.ac ? 'AC' : 'BATTERY'}`);
 if (rec.cost) console.log(`  cost   ${rec.cost.meanMs} ms/frame (median of ${RUNS} unlocked means: ${rec.cost.runs.map(r => r.meanMs).join(', ')})  budget 16.67`);
-if (rec.look) console.log('  look   ' + KEY6.map(v => `${v.slice(0, 2)} ${rec.look[v].inCount}/6`).join('  '));
+if (rec.look) console.log('  look   ' + KEY6.map(v => `${v.slice(0, 2)} ${rec.look[v].inCount}/${rec.look[v].judged || 6}`).join('  '));
+if (accepted.length) console.log(accepted.map(r => '    ~ ' + r).join('\n'));
 console.log(refusals.length ? refusals.map(r => '    ✗ ' + r).join('\n') + `\nPERFSTEP: REFUSED (${refusals.length})` : 'PERFSTEP: ACCEPTED — no property left its band');
 process.exit(refusals.length ? 1 : 0);

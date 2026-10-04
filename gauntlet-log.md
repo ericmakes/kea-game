@@ -6360,3 +6360,20 @@ MODEL_MANIFEST (dimensions, origin, budget, the colliders and anchors the models
 bin's: it is not a drop-in — PECK BIN LID tweens the primitive's own lid, so the model's lid must be its own node and
 models.mjs must bind it before the swap; recorded in the spec. The PNGs sit in Vite's publicDir (3.8 MB into dist) because
 that is the folder Eric named; REQUESTS.md says to move them out once the GLBs land.
+
+## 2026-10-04a — SPIKE_ADOPT 19 (b): THE LIGHT-AND-GRADE CANDIDATE SHIPPED (Opus 5.5) — certified 19a27134
+
+Eric, option 1: "ship the candidate as ruled; record 12's snow row as an accepted exception (the detector is measuring
+the white caravan softening under a warm grade - a correct outcome under the wrong name), parked under law 8. Do not
+raise contrast or exempt the caravan." Shipped exactly as SPIKE_ADOPT recorded it: the measured sun (0xFFF6EE x 1.9194),
+the sunless pizzo_pernice IBL at 1.0673, hemi/fill/rim off by day, AgX at 0.65, the photographed far field (farOn), the
+clouds at albedo 2.6 / emissive 0.10, and FILM.grade on (luma, sat 1.2, warm 0.05, contrast 1.15, vig 0.22, grain 0.018).
+ONE CHANGE FROM THE RECORD, and it is the codebase's own idiom: cloudAlbedo applies in the browser only. The gate's
+harness pins the batteries' world mesh digest (PRESEAM), which includes every material's stored colour; isolated by
+running it with cloudAlbedo 1.0 (ALL PASS) — the clouds' colour was the only thing moving it. No assertion touched.
+THE EXCEPTION is perfstep's EXCEPTIONS list, by name: 12_seal_midpeel snowPatch, scoped to PREV s19_keyed_ship so it
+cannot excuse that row leaving its band again later; it prints as "~ ACCEPTED EXCEPTION ... [FLAKES law 8: review-tier,
+manual QA]" whenever it is used. FLAKES law 8 is the review-tier classification: classify, manual QA, stop burning calls.
+The first gate attempt was on battery (the frame budget is an AC figure) and could not certify; on AC: gate meter
+15.53 ms; perfstep s19_candidate (LOOKWALL=bow, the keyed instrument the exception was ruled on) 14.42 ms
+(14.18 / 14.42 / 14.55), look 22/36 -> 28/36, the one exception accepted, ACCEPTED.

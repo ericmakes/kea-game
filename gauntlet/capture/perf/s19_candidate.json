@@ -1,0 +1,264 @@
+{
+ "label": "s19_candidate",
+ "at": "2026-10-04T01:29:19.912Z",
+ "cost": {
+  "runs": [
+   {
+    "meanMs": 14.18,
+    "medianMs": 13.4,
+    "p95Ms": 32.6,
+    "fps": 70.5,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.42,
+    "medianMs": 13.6,
+    "p95Ms": 31.9,
+    "fps": 69.3,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 14.55,
+    "medianMs": 13.7,
+    "p95Ms": 32.4,
+    "fps": 68.7,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   }
+  ],
+  "meanMs": 14.42
+ },
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 5,
+   "judged": 6,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2321,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.1871,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0924,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.3928,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 43.9902,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.1176,
+     "ok": false,
+     "miss": 1.45
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 5,
+   "judged": 6,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.4853,
+     "ok": false,
+     "miss": 1.75
+    },
+    "ridgeP10": {
+     "gv": 0.204,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1233,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.376,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 41.3697,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.2214,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 4,
+   "judged": 6,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3667,
+     "ok": false,
+     "miss": 0.25
+    },
+    "ridgeP10": {
+     "gv": 0.306,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0693,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4551,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 58.0816,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0846,
+     "ok": false,
+     "miss": 1.75
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 5,
+   "judged": 6,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.4008,
+     "ok": false,
+     "miss": 0.68
+    },
+    "ridgeP10": {
+     "gv": 0.2906,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0783,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.451,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 39.9057,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.319,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 4,
+   "judged": 6,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2895,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.1211,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.052,
+     "ok": false,
+     "miss": 0.1
+    },
+    "luma": {
+     "gv": 0.3642,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 49.1842,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0935,
+     "ok": false,
+     "miss": 1.67
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 5,
+   "judged": 6,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2297,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.295,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.093,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4327,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 66.6648,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0326,
+     "ok": false,
+     "miss": 2.22
+    }
+   }
+  }
+ },
+ "ac": true,
+ "instrument": "bow",
+ "prev": "s19_keyed_ship",
+ "refusals": [],
+ "accepted": [
+  "12_seal_midpeel snowPatch: was in band (0.0698), now out (0.052, 0.1 half-widths) — ACCEPTED EXCEPTION, Eric 2026-10-04 (SPIKE_ADOPT 19, option 1): the detector is measuring the white caravan softening under a warm grade - a correct outcome under the wrong name; contrast not raised, caravan not exempted [parked under FLAKES law 8: review-tier, manual QA]"
+ ]
+}

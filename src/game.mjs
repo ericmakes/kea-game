@@ -84,15 +84,15 @@ const SKY={
      three-step warmth strip; the values are in ARTBIBLE) and raised 1.45 -> 1.85 to take over the
      work withdrawn from fill and rim. The multiplier is LX_DIR (pi) like every other light, so
      the number is directly comparable with the r128 one it replaces. */
-  /* THE SUN, SHIPPED AS IT WAS (0xFFEAC8 at 1.85 x pi, picked by eye). THE MEASURED SUN IS THE CANDIDATE
-     (SPIKE_ADOPT 7, 2026-10-03), refused by the look rule and waiting on Eric: tools/hdri.mjs integrates
+  /* THE MEASURED SUN, SHIPPED (SPIKE_ADOPT 7 in the light-and-grade candidate; Eric's ruling 2026-10-04, row 19 —
+     it replaced 0xFFEAC8 at 1.85 x pi, picked by eye). tools/hdri.mjs integrates
      the disc of pizzo_pernice's 8K original (radiance x solid angle, the circumsolar ring's median taken
      off) — 5.650 / 5.228 / 4.814 linear — and paints it out of the IBL so it is not counted twice. As
      constants: sunDay 0xFFF6EE (the irradiance over its own max), sunIntensityDay 1.9194 (x pi = 6.03,
      the panorama scaled x1.0673), envIntensityDay 1.0673, hdri pizzo_pernice_ibl.hdr, envRotationY
-     2.0628, hdriSunAz/El 0.6327/0.9273, hemi/fill/rim by day 0. KEASKY reproduces it. */
-  sunDay:0xFFEAC8, sunNight:0xB9CCEE,
-  sunIntensityDay:1.85, sunIntensityNight:0.24,
+     2.0628, hdriSunAz/El 0.6327/0.9273, hemi/fill/rim by day 0. */
+  sunDay:0xFFF6EE, sunNight:0xB9CCEE,   // SPIKE_ADOPT 19: sunDay is the measured sun (5.650 / 5.228 / 4.814 linear) as colour x intensity
+  sunIntensityDay:1.9194, sunIntensityNight:0.24,
   sunPosDay:[-46,42,22], sunPosNight:[36,30,-26],
 
   /* SOFT SHADOWS. `type` picks the shadow map: 'vsm' is THREE.VSMShadowMap, which is the only
@@ -149,8 +149,9 @@ const SKY={
      original, its lower hemisphere the ground the game draws (GROUND=0.325,0.20,0.054 — the carpark's
      tussock and seal, measured off PAL and asphalt_02 — lit by the measured sun and sky). Shipped: the
      1K original, its sun still in it, as before. */
-  hdri:'hdri/pizzo_pernice_1k.hdr', envIntensityDay:0.55, envIntensityNight:0.08,
-  envRotationY:2.0630,
+  hdri:'hdri/pizzo_pernice_ibl.hdr', envIntensityDay:1.0673,   // SPIKE_ADOPT 19: the candidate shipped (Eric 2026-10-04) — the sunless IBL at its measured scale (was the 1k panorama at 0.55)
+  envIntensityNight:0.08,
+  envRotationY:2.0628,
   /* THE MEASURED INPUTS TO envRotationY, KEPT SO THE ROTATION CAN CHECK ITSELF. hdriSunAz is
      pizzo_pernice's own solar azimuth (the energy-weighted centroid of its brightest 0.02% of
      upper-hemisphere pixels) and hdriSunEl its elevation, both in radians. The identity that must
@@ -161,7 +162,7 @@ const SKY={
      hdriSunEl is not used by the renderer at all; it is recorded because the 13.6deg elevation
      residual against the game's 39.5deg sun is a known, accepted trade (see the note above) and a
      number nobody wrote down is a number the next session re-derives. */
-  hdriSunAz:0.6325, hdriSunEl:0.9269,
+  hdriSunAz:0.6327, hdriSunEl:0.9273,   // SPIKE_ADOPT 19: measured on the 8K original's disc (tools/hdri.mjs)
   /* HOW 0.55 WAS ARRIVED AT, IN THREE MEASURED STEPS. Recorded in full because the obvious value
      is wrong twice over and the next person to touch it will otherwise repeat both mistakes.
 
@@ -216,11 +217,11 @@ const SKY={
      the coloured shade ref_bow_00 and _06 read as; 0.18 was picked off the warmth strip, where
      0.14/0.18/0.22 all held exposure and the middle sat closest to the baseline on 28.
      NIGHT VALUES ARE UNTOUCHED r128 VALUES. Only the night environment moved. */
-  hemiIntensityDay:0.18, hemiIntensityNight:0.13,
+  hemiIntensityDay:0, hemiIntensityNight:0.13,   // SPIKE_ADOPT 19: by day the IBL is the sky's light — no painted hemisphere, fill or rim
   hemiSkyDay:0xC7DBE8, hemiSkyNight:0x22304C,
   hemiGroundDay:0x8A7C42, hemiGroundNight:0x161A24,
-  fillIntensityDay:0.05, fillIntensityNight:0.05,
-  rimIntensityDay:0.10, rimIntensityNight:0.04,
+  fillIntensityDay:0, fillIntensityNight:0.05,
+  rimIntensityDay:0, rimIntensityNight:0.04,
 
   /* the painted dome keeps its own art; these are the two knobs nightApply already drove */
   hazeOpacityDay:0.45, hazeOpacityNight:0.14,
@@ -487,7 +488,7 @@ const SKY={
      would be measuring only the lit half however dark the other half got. A neutral emissive at
      this level dominates that bounce and brings the shadowed side back to saturation 0.15, which
      is a grey cloud rather than a brown one — the same reading the plate's undersides give. */
-  cloudEmissive:0.20,
+  cloudEmissive:0.10,
   /* THE SUNLIT SIDE OF A CUMULUS IS FAR BRIGHTER THAN A LAMBERT SPHERE (2026-10-03, SPIKE_ADOPT 5/7). A
      real cloud scatters many times and throws much of the sun back toward a viewer on the sunny side;
      a diffuse sphere returns albedo/pi of it. Under ACES that never showed, because the old exposure
@@ -495,7 +496,7 @@ const SKY={
      out BEIGE and barely brighter than the photographed sky: platescore's sky read internal contrast
      0.163 against the plates' 0.237 floor and underside 0.066 against 0.077. A gain on the cloud's
      albedo is that multiple-scattering term, named, and measured against the same two rows. */
-  cloudAlbedo:1.0,      // 1 = the shipped clouds. The light-and-grade CANDIDATE (SPIKE_ADOPT 5-7) runs 2.6 with cloudEmissive 0.10
+  cloudAlbedo:2.6,      // SPIKE_ADOPT 19 (shipped 2026-10-04): the candidate's 2.6 with cloudEmissive 0.10 — under AgX against the photographed sky 1.0 fell to beige (cloud contrast 0.163 vs 0.237)
   /* ONE MASS, NOT A BUNCH OF GRAPES. Per-sphere normals shade every sphere in the cluster
      separately, so each one draws its own outline INSIDE the cloud and the eye counts balloons —
      which is what the first two iterations' strips came back reading as. Blending each vertex
@@ -630,7 +631,7 @@ const SKY={
      ACES 30/36 and 3-4/6 — ACES pushed edge density and snow patchiness out (it clips the highlights the
      spike frame keeps). Bare AgX reads grey (spike sat 0.031): it needs the display grade (post.mjs).
      AgX at 0.65 is the CANDIDATE; ACES 0.95 ships until Eric rules (see SPIKE_ADOPT.md row 6). */
-  toneMapper:'aces', exposure:0.95,   // SHIPPED. The candidate (SPIKE_ADOPT 6) is 'agx' at 0.65 — refused by the look rule, see SPIKE_ADOPT.md
+  toneMapper:'agx', exposure:0.65,   // SPIKE_ADOPT 19: the light-and-grade candidate SHIPPED on Eric's ruling (2026-10-04); was 'aces' at 0.95
   /* THE PHOTOGRAPHIC FAR FIELD — SPIKE_ADOPT row 14, 2026-10-03. tools/hdri.mjs cuts the HDRI's horizon
      at full resolution into farBand (elevation farBandElev, sRGB of radiance x farBandScale). By day the
      sky dome draws the PHOTOGRAPH, in the light's own radiance units and turned by envRotationY like the
@@ -645,9 +646,9 @@ const SKY={
      57% clean; pizzo 99.7%), and in the game on the plates — range 7/7, sky 8/11, spike frame 5/6.
      farHazeAbove 12: at 2 degrees a mountain panorama's "air" is its own far ridges (the range's hue went
      to 29-34, out of the plates' blue); 12 is above every skyline in it.
-     farOn:false AS SHIPPED — part of the light-and-grade candidate, refused by the look rule; KEASKY
-     '{"farOn":true,...}' with the candidate's light reproduces it. */
-  farOn:false, farBand:'hdri/pizzo_pernice_band.jpg', farBandElev:[-4,30], farBandScale:1.03879, farHazeAbove:12.0,
+     farOn:true — SHIPPED with the light-and-grade candidate (SPIKE_ADOPT 19, Eric 2026-10-04). The 90-320 m
+     dissolve into the photograph (row 14c) stays BLOCKED: the range stays geometry. */
+  farOn:true, farBand:'hdri/pizzo_pernice_band.jpg', farBandElev:[-4,30], farBandScale:1.03879, farHazeAbove:12.0,
 };
 for(const [k,v] of Object.entries((typeof globalThis!=='undefined'&&globalThis.__KEA_SKY__)||{})){
   if(k in SKY) SKY[k]=v;
@@ -4614,7 +4615,10 @@ function buildSky(){
       sf.name='starfield'; sf.visible=false;
       G.scene.add(sf); G.starfield=sf; } }
   G.clouds=[];
-  const cWhite=new THREE.Color(PAL.cloud).multiplyScalar(SKY.cloudAlbedo);   // cloudAlbedo: see SKY
+  /* cloudAlbedo is a LOOK (see SKY) and browser-only, like every look-only change: headless keeps the cloud colour the
+     batteries' world digest was pinned on (PRESEAM — measured: at 2.6 the carpark and ski-field digests move on the
+     cloud meshes' colour and nothing else). */
+  const cWhite=new THREE.Color(PAL.cloud).multiplyScalar(HEADLESS?1:SKY.cloudAlbedo);   // cloudAlbedo: see SKY
   /* CONVERTED BY HAND, like the dome's vertex colours three blocks up and like mat() everywhere
      else: THREE.ColorManagement is off in this project, so a raw hex handed to a material is
      treated as LINEAR and comes out of the sRGB encode brighter than it was authored. The old

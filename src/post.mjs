@@ -53,7 +53,7 @@ export const FILM = {
      must stay inside its approved render's band (framescore birdProps). Spike numbers (1.5 / 0.08 / 1.22)
      took the bird's saturation to 0.59 even in luma form; 1.2 / 0.05 / 1.15 holds it at 0.43-0.46
      (approved 0.335-0.483) and scores 27/36 on the bow trio and 5/6 against the spike frame. */
-  grade:   { on: false, form: 'luma', sat: 1.2, warm: 0.05, contrast: 1.15, lift: 0.0, vig: 0.22, grain: 0.018 },   // OFF as shipped: the values are the candidate's
+  grade:   { on: true, form: 'luma', sat: 1.2, warm: 0.05, contrast: 1.15, lift: 0.0, vig: 0.22, grain: 0.018 },   // ON: SPIKE_ADOPT 19, the candidate shipped on Eric's ruling (2026-10-04)
   /* BLOOM RUNS ON LINEAR HDR, BEFORE TONE MAPPING, and that is why the threshold is above 1.
      The first tuning used 0.86 with strength 0.34 — sensible-looking numbers for a post-tonemap
      buffer, and wrong here: lit surfaces already exceed 1.0 in linear, so nearly every bright
