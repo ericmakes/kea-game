@@ -96,7 +96,8 @@ export async function serve(dir = DIST) {
    Object.assigns over it and there is nothing deeper to get wrong.
    All six are read here so every browser tool gets them for free, and all six are absent from a
    normal pass, which therefore shoots exactly what the build pins. */
-const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','sunDay','sunNight',
+const SKY_KEYS = ['fogDay','fogDensityDay','fogNight','fogDensityNight','atmos',   // atmos: SPIKE_ADOPT 24, per-map camera (a nested table — KEASKY replaces it whole)
+  'sunDay','sunNight',
   'sunIntensityDay','sunIntensityNight','sunPosDay','sunPosNight','shadowType','shadowMap',
   'shadowRadius','shadowBlur','shadowBias','shadowNormalBias','shadowExtent','shadowFar',
   /* hdriSunAz and hdriSunEl WERE ALREADY MISSING when the new assertion below was written — the

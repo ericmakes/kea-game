@@ -77,6 +77,15 @@ const SKY={
      linear night fog's REACH rather than its shape: Fog(34,126) was fully opaque by 126 units,
      and 1-exp(-(d*density)^2) reaches 0.97 at d=126 when density is 0.0148. */
   fogDay:0xC4D2D6, fogDensityDay:0.0062,
+  /* PER-MAP CAMERA (Step 3, the Ski Field; Eric 2026-10-04: "the spike grade isn't carrying to this map ... close it
+     to the target"). The grade OPERATOR is one for every map (FILM.grade: sat, warmth, vignette, grain). Two things a
+     map may set, as multipliers, measured against its own spike-standard target:
+       exposureMul  the exposure a photographer chooses for the scene — snow is high-key and sits on AgX's shoulder;
+       contrastMul  a TRIM on the grade's contrast — exposure brightens snow but the shoulder flattens it, so a
+                    high-key map needs the contrast back. The one per-map grade term, stated as such.
+     A map not listed is 1 and 1; the Carpark is not listed. Browser-only in effect. A fog multiplier was tried for
+     the Ski Field (clearer alpine air) and measured NO change at 28/29/30 — not shipped. See SPIKE_ADOPT 24. */
+  atmos:{skifield:{exposureMul:1.6,contrastMul:1.2}},
   fogNight:0x0C1524, fogDensityNight:0.0148,
 
   /* THE SUN — one warm directional, per P2, and the piece's main light in a way it was not
@@ -6779,6 +6788,7 @@ function buildWorld(biome){
   matUVSweep();
   DRAWN=HEADLESS?null:drawnGroundBuild();          // the feet piece: the ground as drawn, for walkers
   G.seal=HEADLESS?null:sealConfigure(biome);        // SPIKE_ADOPT 4: this map's wear on the seal
+  G.atmos=Object.assign({exposureMul:1,contrastMul:1},SKY.atmos[biome]||{});   // this map's air and camera (SKY.atmos)
   /* REPLAT P6A: the prop seam reports what it placed, rebuilt per build for the same reason G.mats
      is — a state block that is mutated rather than rebuilt drifts from the registry. */
   G.propsState=propsState();

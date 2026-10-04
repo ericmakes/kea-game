@@ -204,8 +204,8 @@ function build(renderer, scene, camera, w, h) {
   // OutputPass owns tone mapping and the sRGB encode once the chain is composited, so the
   // renderer must NOT also do it — doing both tone maps the frame twice and washes it out.
   c.addPass(new OutputPass());
-  if (FILM.grade.on) c.addPass(gradePass());
-  return { composer: c, ao, bokeh, bloom, w, h, camera };
+  const grade = FILM.grade.on ? gradePass() : null; if (grade) c.addPass(grade);
+  return { composer: c, ao, bokeh, bloom, grade, w, h, camera };
 }
 
 function gradePass() {
@@ -276,7 +276,10 @@ export function installPost(KEAGAME) {
       { const cin = cinematic(); for (const e of eyes) if (e.bokeh) e.bokeh.enabled = cin; }
       { const on = !FILM.bloom.dayOff || (G.nightT || 0) >= FILM.bloom.nightOn; for (const e of eyes) if (e.bloom) e.bloom.enabled = on; }
       renderer.toneMapping = toneMapping;   // OutputPass reads it off the renderer
-      renderer.toneMappingExposure = exposure;
+      renderer.toneMappingExposure = exposure * ((G.atmos && G.atmos.exposureMul) || 1);   // the map's camera (SKY.atmos)
+      /* the map's contrast TRIM on the one grade operator (SKY.atmos.contrastMul, SPIKE_ADOPT 24): same operator, same
+         sat / warm / vignette on every map; only a high-key map's contrast is trimmed toward its own target */
+      for (const e of eyes) if (e.grade) e.grade.uniforms.uCon.value = FILM.grade.contrast * ((G.atmos && G.atmos.contrastMul) || 1);
       if (split) {
         const half = w / 2;
         for (let i = 0; i < 2; i++) {

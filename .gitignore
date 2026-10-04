@@ -21,3 +21,6 @@ assets/models/kea_variants/
 
 # tools/derive_polyhaven.mjs raw downloads (md5-checked against the Poly Haven API; the derived GLB is what ships)
 raw_polyhaven/
+
+# Higgsfield image-to-3D raw downloads (tools/accept_generated.mjs makes the GLB that ships)
+raw_higgsfield/

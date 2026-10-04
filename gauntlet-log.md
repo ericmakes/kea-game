@@ -6480,3 +6480,19 @@ perfstep s22_ski_shed 14.31 ms (14.31 / 13.94 / 14.35); gate meter 16.36 (warm).
 6/7 (the shed is a small share of the frame; the remaining OUT is snow-edge hardness, governed by the plates).
 HIGGSFIELD: Poly Haven has no shed, hut, lodge or rack. References generated (gpt_image_2_5, 0.25 credits each) and the
 specs added to assets/models/higgsfield_requests/REQUESTS.md: ski_lodge (tier A), tow_shed (B), gear_rack (B, x3).
+
+## 2026-10-04g — STEP 3, THE SKI FIELD (3): the camera for snow — the grade carried to its target (Opus 5.5) — certified 30bfa35b
+
+Eric: NOT approved — "29 and 30 look flatter, cooler and hazier than the target's warm contrast; check why the per-map
+grade result diverges from the carpark's and from the target, and close it to the target not the plates." Measured on
+ground pixels (sky keyed off), Lab: TARGET 28 L 67.4 / spread 24.6 / b* 6.2 / chroma 10.0; game 28 57.3 / 21.2 / 4.9 /
+7.1; 29 50.2 / 20.2 / 8.1 / 10.9; 30 64.1 / 17.7 / 6.4 / 7.2. WHY: the grade operator is one, the scene into it is not —
+snow is high-key and sits on AgX's shoulder (darker, flatter), and 21c's contrast 1.05 (fitted to the carpark's spike)
+flattened it further. NOT the fog: halving it moved nothing at 28/29/30 (shipped no fog knob). 30's grey sky is its
+cumulus cover — content. THE FIX: SKY.atmos, a per-map camera: exposureMul 1.6 (exposing for snow) and contrastMul 1.2
+(a trim on the one grade operator's contrast — the one per-map grade term, stated as such). Swept exposure 1.0-1.8 and
+contrast 1.0-1.25: 28 lands L 67.5 / spread 24.4 / b* 6.0. Left: chroma 7.9 vs 10.0 and sky b* -5.4 vs -8.7 (content).
+A first sweep through KEASKY changed nothing: webrig's SKY_KEYS lacked atmos — the harness's own "every SKY constant is
+reachable through KEASKY" assertion caught it; atmos added. Against the target 6/7 (snow edges 0.038 -> 0.044, still
+the plates' floor). Gate meter 16.37; perfstep s24_ski_camera 13.94 ms, the six unchanged, ACCEPTED (the Carpark is
+not listed in atmos). The first certification attempt was on battery.
