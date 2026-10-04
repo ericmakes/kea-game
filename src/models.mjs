@@ -164,7 +164,7 @@ export async function installModels(K){
       /* THE PRIMITIVE IS HIDDEN, NOT DELETED. It cost nothing more to keep, it is what a
          later flip back to 'primitive' needs, and a deleted body would take the seeded stream's
          evidence with it. Visibility only — the meshes stay in the group and stay measurable. */
-      for(const o of p.body)o.visible=false;
+      for(const o of p.body)if(!o.userData.keepWithModel)o.visible=false;   // a part flagged keepWithModel stays (the tow shed's roof over generated walls), as the vehicle path already allows
       p.group.add(n.yaw);
       p.model={root,yaw:n.yaw,url,scale:n.scale,lift:n.lift,measured:n.measured};
       p.mode='model';

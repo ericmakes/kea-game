@@ -8952,12 +8952,13 @@ C.section('REPLAT P6A: the model-swap seam');
      red, and each one must name its own derived GLB and a measured fit. */
   { const VEH=['camp_van','campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer'];   // camp_van: Eric 2026-10-03
     const PH=['picnic_table'];                                                                              // Step 3, the Carpark pass
-    ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH.concat(PH).sort()),'ONLY THE SPIKE VEHICLES AND THE NAMED POLY HAVEN PROPS SHIP SWAPPED ('+
+    const HF=['gear_rack','ski_lodge','tow_shed'];                                                           // Step 3, the Ski Field: Higgsfield image-to-3D
+    ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH.concat(PH,HF).sort()),'ONLY THE SPIKE VEHICLES AND THE NAMED POLY HAVEN AND HIGGSFIELD PROPS SHIP SWAPPED ('+
        (shipsModel.slice().sort().join(', ')||'none')+')');
     ok(VEH.every(id=>{ const e=X.PROPS.ALL[id]; return e.url==='models/vehicles/vehicles_plain.glb'&&e.vehicle&&e.vehicle.node; }),
        'and every vehicle names the plain vehicle GLB and the body it wears');
-    ok(PH.every(id=>{ const e=X.PROPS.ALL[id]; return /^models\/props\/[a-z0-9_]+\.glb$/.test(e.url)&&!e.vehicle&&e.fit&&Array.isArray(e.fit.size)&&e.fit.size.length===3&&e.fit.size.every(v=>v>0); }),
-       'and every Poly Haven prop names its own derived GLB under models/props/ and a per-axis fit to its collider'); }
+    ok(PH.concat(HF).every(id=>{ const e=X.PROPS.ALL[id]; return /^models\/props\/[a-z0-9_]+\.glb$/.test(e.url)&&!e.vehicle&&e.fit&&Array.isArray(e.fit.size)&&e.fit.size.length===3&&e.fit.size.every(v=>v>0); }),
+       'and every Poly Haven and Higgsfield prop names its own GLB under models/props/ and a per-axis fit to its collider'); }
   ok(noBuild.length===0,'every entry names a primitive builder, so a failed model always has '+
      'something to fall back to ('+(noBuild.join(', ')||'all do')+')');
   ok(badCol.length===0,'every declared collider is a shape groundHeightAt can read ('+
@@ -9194,8 +9195,13 @@ C.section('REPLAT P6A: the model-swap seam');
     ok(!/\.collide\(/.test(m),'and never emits a collider');
     ok(!/entry\.anchors\s*\[/.test(m)&&!/propAnchor/.test(m),
        'and never computes an anchor — both are the registry\'s, decided at build time');
-    ok(/for\(const o of p\.body\)o\.visible=false;/.test(m),
+    /* a part flagged userData.keepWithModel stays VISIBLE beside the model (the tow shed's roof over generated walls,
+       Step 3 the Ski Field; the vehicle path's DOC crate already did): still hidden-not-deleted, so the regex takes the
+       guarded form — and the property is now ALSO asserted directly: nothing in models.mjs removes or disposes a body part */
+    ok(/for\(const o of p\.body\)(if\(!o\.userData\.keepWithModel\))?o\.visible=false;/.test(m),
        'the primitive body is HIDDEN rather than deleted, so the way back needs nothing restored');
+    ok(!/p\.body[^;\n]*\.(remove|dispose|removeFromParent)\(/.test(m)&&!/\.remove\(o\)/.test(m),
+       'and no body part is ever removed or disposed by the model tier (keepWithModel only keeps one VISIBLE)');
     ok(/export function revertProp/.test(m),'and there is a way back that does not need a reload');
     ok(/CACHE/.test(m),'one fetch per url however many props share it');
     ok(/m\.clone\(\)/.test(m),'and the materials are cloned per prop, or tinting one bin would '+

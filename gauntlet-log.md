@@ -6496,3 +6496,25 @@ A first sweep through KEASKY changed nothing: webrig's SKY_KEYS lacked atmos —
 reachable through KEASKY" assertion caught it; atmos added. Against the target 6/7 (snow edges 0.038 -> 0.044, still
 the plates' floor). Gate meter 16.37; perfstep s24_ski_camera 13.94 ms, the six unchanged, ACCEPTED (the Carpark is
 not listed in atmos). The first certification attempt was on battery.
+
+## 2026-10-04h — STEP 3, THE SKI FIELD (4): the real buildings — Higgsfield lodge, shed walls, ski rack (Opus 5.5) — certified 17951bdc
+
+Eric: "Run the six Higgsfield image-to-3D generations yourself ... verify against its spec before accepting ... reject
+and regenerate if off ... tow_shed, ski_lodge, gear_rack first." New tools: tools/accept_generated.mjs (decode meshopt,
+refuse Draco, textures to <= 1024, origin to ground contact under the footprint centre, metres by the spec's width,
+asserts plain/tier/origin), tools/look_model.mjs (three-view render for the +Z front, which geometry cannot prove).
+Meshy normalises every model to ~1.9 units: WIDTH scales to the spec.
+SKI LODGE: attempt 1 (72de7aea) had the piles merged into a skirt and dark flaps on a gable — rejected by eye; attempt 2
+(quad, 93e53a39) was clean but 13,344 tris against a 6,000 tier — refused; attempt 3 (triangle, symmetry on, seed 7,
+0f9c1649) 3,514 tris, clean gable and front, a smaller skirt hidden by the deck and drift — ACCEPTED.
+TOW SHED: five generations. Single-view (e2b6234f, bca8d7e5) and quad (7a430e68, 8,124 tris) gave dark triangular shards
+over the walls and a broken roof; three generated views (front, rear quarter, side) through multi_image_to_3d (6262f87a)
+gave CLEAN WALLS and a crumpled roof; a fourth roof view (6d332b02) fixed the roof and broke the walls. Re-skinning the
+roof with the game's corrugated_iron_02 left shards (the geometry, not the texture). So: the three-view WALLS, cut at the
+eave (tools/reskin_roof.mjs DROP), under the primitive's own iron roof, which stays (userData.keepWithModel — models.mjs's
+generic path now honours it, as the vehicle path did). The harness's "hidden rather than deleted" source check takes the
+guarded form, AND gains a direct assertion that no body part is ever removed or disposed.
+GEAR RACK: first attempt (50cd625c), 1,725 tris, clean — ACCEPTED.
+All three land through the P6A seam (source:'model', a per-axis fit to the primitive's box, the harness's named batch
+HF). Gate meter 16.23; perfstep s23_ski_models 14.97 ms (the six unchanged); the Ski Field's own frame 10.52 / 11.77 ms.
+Against the target 6/7 (28: L 68.6 / spread 23.3 / b* 6.5). Credits: ~240 for the Ski Field's (8 generations + 3 views).

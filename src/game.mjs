@@ -7178,18 +7178,30 @@ const SKILODGE={x:-22,z:8,w:11,d:7,h:3.0,deck:4.4};
    Registering it is a piece of its own and it is written down here rather than half-done. */
 defineProp('tow_shed',{
   biome:'skifield', at:{x:SKITOW.x,z:SKITOW.base},
+  /* Step 3, the Ski Field: a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md; tools/accept_generated.mjs:
+     plain GLB, tier, ground-contact origin, metres, textures <= 1024; +Z front checked on tools/look_model.mjs). Fitted per
+     axis to the primitive's own box, so the collider and anchors stand where they were; headless keeps the primitive. */
+  /* THE WALLS ARE GENERATED, THE ROOF IS THE PRIMITIVE'S: five generations (single- and multi-view) could not texture or
+     shape the roof (dark shards, crumpled geometry); three views gave clean walls. tools/reskin_roof.mjs DROP cut the model
+     at its eave; the walls fit the primitive's wall box, their top tucked into the primitive's iron roof, which stays. */
+  source:'model', url:'models/props/tow_shed.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[3.40,2.30,2.60]},
   collider:[{kind:'box',w:3.4,d:2.6,top:2.2,solid:true}],
   anchors:{roof:{x:0,y:2.3,z:0}, window:{x:0,y:0.75,z:1.34}, wheel:{x:0,y:2.5,z:-2.0}},
   material:{family:'corrugate',nightTint:false},
   build(shed,p){
     box(3.4,2.2,2.6,0x4E6E8E,0,1.1,0,shed);
     const sr=box(3.8,0.16,3.0,PAL.hutRoof,0,2.3,0,shed); sr.rotation.z=0.07;
+    sr.userData.keepWithModel=true;                                     // the roof stays over the generated walls (see the entry's note)
     box(1.0,1.1,0.08,PAL.woodD,0,0.75,1.34,shed);                     // the ticket window, shuttered
     p.collide();
   },
 });
 defineProp('ski_lodge',{
   biome:'skifield', at:{x:SKILODGE.x,z:SKILODGE.z},
+  /* Step 3, the Ski Field: a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md; tools/accept_generated.mjs:
+     plain GLB, tier, ground-contact origin, metres, textures <= 1024; +Z front checked on tools/look_model.mjs). Fitted per
+     axis to the primitive's own box, so the collider and anchors stand where they were; headless keeps the primitive. */
+  source:'model', url:'models/props/ski_lodge.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[11.60,5.55,7.63]},
   collider:[{kind:'roof',w:(SKILODGE.w+0.6)/2,d:SKILODGE.d*0.55,ridge:SKILODGE.h+1.32,slope:0.48},
             {kind:'box',w:SKILODGE.w,d:SKILODGE.d,top:SKILODGE.h+0.4,solid:true}],
   anchors:{roof:{x:0,y:SKILODGE.h+1.32,z:0},
@@ -7217,6 +7229,10 @@ defineProp('ski_lodge',{
 });
 defineProp('gear_rack',{
   biome:'skifield', at:{x:0,z:0},
+  /* Step 3, the Ski Field: a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md; tools/accept_generated.mjs:
+     plain GLB, tier, ground-contact origin, metres, textures <= 1024; +Z front checked on tools/look_model.mjs). Fitted per
+     axis to the primitive's own box, so the collider and anchors stand where they were; headless keeps the primitive. */
+  source:'model', url:'models/props/gear_rack.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[2.40,1.00,0.63]},   // depth: the model's own A-frame splay; its rail (y 1.00) is the anchor's 0.995
   collider:[],                        // the rail collider is railTop's, emitted by the map with its yaw
   anchors:{rail:{x:0,y:0.995,z:0}},
   material:{family:null,nightTint:false},

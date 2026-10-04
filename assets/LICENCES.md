@@ -965,3 +965,17 @@ triangles and bounds asserted equal to the source. CC0 1.0; no attribution requi
 | `models/props/wooden_picnic_table.glb` | Wooden Picnic Table (`wooden_picnic_table`), 10,210 tris | Ulan Cabanilla | **CC0 1.0** | https://polyhaven.com/a/wooden_picnic_table — gltf `6da01f8a75e559f356b494059f7b0eda`, bin `5d52db76187b9990c328f79612eafe5b` | `21ad4ed72274ca14377e2bc3568462e2` |
 | `models/props/trashbag.glb` | Trash Bag (`trashbag`), 4,482 tris — clutter, src/decor.mjs | Benny Weimer | **CC0 1.0** | https://polyhaven.com/a/trashbag — gltf `c29158e170beeeb6bb518fe8d4407fe5`, bin `ad6ebbf5b9aa0179feeea87a4bd289a3` | `86d636fed50c52e913cc32d290d04df4` |
 | `models/props/old_tyre.glb` | Old Tyre (`old_tyre`), 2,880 tris — clutter, src/decor.mjs | MP (as the Poly Haven API names the author) | **CC0 1.0** | https://polyhaven.com/a/old_tyre — gltf `e29d7aee130a850f2224ac0dd103617b`, bin `e29bd9703ad64da8883d8389b0cfb797` | `906595786cf7dc047f069506aa3f6017` |
+
+## GENERATED PROPS — Higgsfield image-to-3D (Step 3, 2026-10-04)
+
+Generated on Eric's Higgsfield account (Meshy image_to_3d / multi_image_to_3d, textured, PBR) from reference images
+generated on the same account (gpt_image_2_5; assets/models/higgsfield_requests/). Owned by the account holder under
+the service's terms; no third-party source asset. Each brought to MODEL_MANIFEST's conventions by
+tools/accept_generated.mjs (plain GLB, tier, ground-contact origin, metres, textures <= 1024), +Z front checked on
+tools/look_model.mjs.
+
+| file | asset | generation | md5 |
+|---|---|---|---|
+| `models/props/ski_lodge.glb` | ski lodge, 3,514 tris | image_to_3d job 0f9c1649 (third attempt: 72de7aea had a skirt and side flaps; 93e53a39 was 13,344 tris) from ref 321290cc | `d7a46f93fb2f36175bd8a4eb98ed0874` |
+| `models/props/tow_shed.glb` | tow shed WALLS, 792 tris (the roof is the game's primitive) | multi_image_to_3d job 6262f87a from refs 3273ff85 + 568a002f + 5bfb1f58, cut at the eave by tools/reskin_roof.mjs DROP (five attempts could not make the roof: e2b6234f, 7a430e68, bca8d7e5, 6d332b02) | `a333e43afb848b8f5e877bbfbea0cf87` |
+| `models/props/gear_rack.glb` | ski rack, 1,725 tris | image_to_3d job 50cd625c from ref ce4878f4 | `c8d948f0096c2d3b612b0d43a494d980` |

@@ -32,7 +32,7 @@ seamless light-grey background, even light, no text or logos.
 `assets/` is Vite's publicDir, so these three PNGs (3.8 MB) are copied into `dist/` on every build. They are here
 because Eric named this folder; move them out of `assets/` (as `astra_archive/` was) once the GLBs are in.
 
-# THE SKI FIELD'S THREE (Step 3, the Ski Field pass, 2026-10-04)
+# THE SKI FIELD'S THREE (Step 3, the Ski Field pass, 2026-10-04) — GENERATED AND LANDED 2026-10-04 (see assets/LICENCES.md)
 
 Poly Haven, the first route, has no shed, hut or lodge (its only buildings are city facades) and no ski rack. Same
 conventions as above. References: Higgsfield `gpt_image_2_5`, one object, plain background, no snow, no text.
