@@ -53,7 +53,7 @@ export const FILM = {
      must stay inside its approved render's band (framescore birdProps). Spike numbers (1.5 / 0.08 / 1.22)
      took the bird's saturation to 0.59 even in luma form; 1.2 / 0.05 / 1.15 holds it at 0.43-0.46
      (approved 0.335-0.483) and scores 27/36 on the bow trio and 5/6 against the spike frame. */
-  grade:   { on: true, form: 'luma', sat: 1.2, warm: 0.05, contrast: 1.15, lift: 0.0, vig: 0.22, grain: 0.018 },   // ON: SPIKE_ADOPT 19, the candidate shipped on Eric's ruling (2026-10-04)
+  grade:   { on: true, form: 'luma', sat: 1.15, warm: 0.05, warmG: 0.55, contrast: 1.05, lift: 0.0, vig: 0.22, grain: 0.018 },   // ON since SPIKE_ADOPT 19; SPIKE_ADOPT 21c moved it toward the spike frame's grade: warmG 0.35 -> 0.55 (orange -> the spike's yellow-green), contrast 1.15 -> 1.05, sat 1.2 -> 1.15 — 26/42 -> 29/42 on the look of record, none lost
   /* BLOOM RUNS ON LINEAR HDR, BEFORE TONE MAPPING, and that is why the threshold is above 1.
      The first tuning used 0.86 with strength 0.34 — sensible-looking numbers for a post-tonemap
      buffer, and wrong here: lit surfaces already exceed 1.0 in linear, so nearly every bright
@@ -210,17 +210,17 @@ function build(renderer, scene, camera, w, h) {
 
 function gradePass() {
   const G = FILM.grade;
-  const sh = { uniforms: { tDiffuse: { value: null }, uSat: { value: G.sat }, uWarm: { value: G.warm }, uCon: { value: G.contrast },
+  const sh = { uniforms: { tDiffuse: { value: null }, uSat: { value: G.sat }, uWarm: { value: G.warm }, uWarmG: { value: G.warmG ?? 0.35 }, uCon: { value: G.contrast },
       uLift: { value: G.lift }, uVig: { value: G.vig }, uGrain: { value: G.grain }, uSpike: { value: G.form === 'spike' ? 1 : 0 } },
     vertexShader: CopyShader.vertexShader,
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float uSat, uWarm, uCon, uLift, uVig, uGrain; uniform int uSpike; varying vec2 vUv;
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uSat, uWarm, uWarmG, uCon, uLift, uVig, uGrain; uniform int uSpike; varying vec2 vUv;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
       void main(){
         vec4 t = texture2D(tDiffuse, vUv); vec3 d = t.rgb;
         float l = dot(d, vec3(0.2126, 0.7152, 0.0722));
         d = mix(vec3(l), d, uSat);
         if (uSpike == 1) { d += vec3(uWarm, uWarm * 0.35, -uWarm) * 0.5; d = (d - 0.5) * uCon + 0.5 + uLift; }
-        else { d *= vec3(1.0 + uWarm, 1.0 + 0.35 * uWarm, 1.0 - uWarm);
+        else { d *= vec3(1.0 + uWarm, 1.0 + uWarmG * uWarm, 1.0 - uWarm);   // warmG: green's share of the warm tilt — 0.35 orange, toward 1 yellow
                float l1 = max(dot(d, vec3(0.2126, 0.7152, 0.0722)), 1e-4), l2 = max((l1 - 0.5) * uCon + 0.5 + uLift, 0.0);
                d *= l2 / l1; }
         float r = length((vUv - 0.5) * vec2(1.0, 0.75));

@@ -6400,3 +6400,22 @@ the spike's saturation on grass (02 0.37, 06 0.34, 11 0.40) and half of it where
 gap is the grey seal and the share of sky. A per-pixel saturation boost barely moves the mean (1.4: 01 0.118 -> 0.121);
 a warmer cast does (warm 0.10: 01 0.205) but takes 11 out of band (0.415) — the content spread (grass 0.32, seal 0.03)
 is wider than the spike's band, and closing it would mean casting the seal yellow, which the spike's seal is not.
+
+## 2026-10-04c — SPIKE_ADOPT 21 (c): the grade moved toward the spike's (Opus 5.5) — certified 19a27134
+
+The part of the gap that is grade (21b): our hue is orange where the spike's is yellow-green, and our local contrast
+runs high. FILM.grade gains warmG — green's share of the warm tilt, 0.35 as it was (orange) — and the sweep on all six
+key vantages against the record wall, refusals counted against the shipped candidate:
+  warmG 0.55                                   26  (nothing either way)
+  warmG 0.55, contrast 1.05                    28  lost 11 sat (0.323, its band top 0.319)
+  warmG 0.65, contrast 1.05                    27  lost 11 sat, 07 hue (82.1)
+  warmG 0.55, contrast 1.00                    27  lost 11 sat, 07 edge density
+  warmG 0.55, contrast 1.08                    28  lost 11 sat
+  warmG 0.55, contrast 1.05, sat 1.15          29  gained 02 sat, 06 edge density, 12 contrast — NONE LOST   <- shipped
+  (earlier: sat 1.4 barely moves the frame-mean saturation; warm 0.10 does, and takes 11 out — content, not grade)
+By eye beside the spike (01, 11, 07): a touch yellower and softer, toward the spike's gentler contrast; the remaining
+difference is content — the spike's green meadow and photographed valley.
+THE BIRD (birdcolour.mjs, not in the gate): under the candidate's grade the dark feather rims were OUT at 2 of 3
+cameras (0.038, 0.074 against 0.015-0.032) — the candidate's "bird in band" had been judged on saturation alone. This
+grade brings one back (camera 0.5 still out, 0.046). Recorded for Eric; the bird is on hold for Astra.
+Gate meter 16.46 ms; perfstep s21_grade 14.57 ms (14.57 / 14.40 / 14.98), look 26/42 -> 29/42, ACCEPTED.
