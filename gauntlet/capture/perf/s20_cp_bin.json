@@ -1,0 +1,292 @@
+{
+ "label": "s20_cp_bin",
+ "at": "2026-10-04T07:00:50.663Z",
+ "cost": {
+  "runs": [
+   {
+    "meanMs": 13.63,
+    "medianMs": 11.4,
+    "p95Ms": 32.6,
+    "fps": 73.3,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 15.35,
+    "medianMs": 15.1,
+    "p95Ms": 33.1,
+    "fps": 65.1,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   },
+   {
+    "meanMs": 13.52,
+    "medianMs": 11.6,
+    "p95Ms": 32.8,
+    "fps": 73.9,
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "refuse": []
+   }
+  ],
+  "meanMs": 13.63
+ },
+ "look": {
+  "01_carpark_wide": {
+   "inCount": 6,
+   "judged": 7,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2037,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.2146,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0845,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4041,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 48.977,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.115,
+     "ok": false,
+     "miss": 2.19
+    },
+    "aerial": {
+     "gv": 0.9925,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "02_hut_snow": {
+   "inCount": 6,
+   "judged": 7,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.4483,
+     "ok": false,
+     "miss": 1.28
+    },
+    "ridgeP10": {
+     "gv": 0.2306,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.1152,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.3885,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 43.6338,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.2218,
+     "ok": true,
+     "miss": 0
+    },
+    "aerial": {
+     "gv": 1.1752,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "06_skyline": {
+   "inCount": 4,
+   "judged": 7,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3366,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3233,
+     "ok": false,
+     "miss": 0.62
+    },
+    "snowPatch": {
+     "gv": 0.0624,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4614,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 61.6575,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0922,
+     "ok": false,
+     "miss": 2.66
+    },
+    "aerial": {
+     "gv": null,
+     "ok": false,
+     "miss": 0
+    }
+   }
+  },
+  "11_trailhead": {
+   "inCount": 4,
+   "judged": 7,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.3728,
+     "ok": false,
+     "miss": 0.32
+    },
+    "ridgeP10": {
+     "gv": 0.3104,
+     "ok": false,
+     "miss": 0.45
+    },
+    "snowPatch": {
+     "gv": 0.0709,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4576,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 41.572,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.3147,
+     "ok": true,
+     "miss": 0
+    },
+    "aerial": {
+     "gv": 0.4658,
+     "ok": false,
+     "miss": 0.2
+    }
+   }
+  },
+  "12_seal_midpeel": {
+   "inCount": 5,
+   "judged": 7,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.2576,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.153,
+     "ok": true,
+     "miss": 0
+    },
+    "snowPatch": {
+     "gv": 0.0484,
+     "ok": false,
+     "miss": 0.24
+    },
+    "luma": {
+     "gv": 0.3772,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 55.3198,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0915,
+     "ok": false,
+     "miss": 2.68
+    },
+    "aerial": {
+     "gv": 1.3058,
+     "ok": true,
+     "miss": 0
+    }
+   }
+  },
+  "07_jam": {
+   "inCount": 4,
+   "judged": 7,
+   "keyed": true,
+   "rows": {
+    "edgeDensity": {
+     "gv": 0.1993,
+     "ok": true,
+     "miss": 0
+    },
+    "ridgeP10": {
+     "gv": 0.3138,
+     "ok": false,
+     "miss": 0.5
+    },
+    "snowPatch": {
+     "gv": 0.0884,
+     "ok": true,
+     "miss": 0
+    },
+    "luma": {
+     "gv": 0.4399,
+     "ok": true,
+     "miss": 0
+    },
+    "hue": {
+     "gv": 74.9389,
+     "ok": true,
+     "miss": 0
+    },
+    "sat": {
+     "gv": 0.0438,
+     "ok": false,
+     "miss": 3.66
+    },
+    "aerial": {
+     "gv": 0.5647,
+     "ok": false,
+     "miss": 0.1
+    }
+   }
+  }
+ },
+ "ac": true,
+ "instrument": "record+skykey",
+ "prev": "s20_cp_models",
+ "refusals": [],
+ "accepted": []
+}

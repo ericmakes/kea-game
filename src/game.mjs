@@ -6657,6 +6657,7 @@ function defineProp(id,e){
     anchors:Object.assign({},e.anchors),
     material:Object.assign({},d.material,e.material),
     vehicle:e.vehicle?Object.assign({},e.vehicle):null,   // SPIKE_ADOPT 1: a spike vehicle body (src/vehicles.mjs)
+    bind:e.bind?Object.assign({},e.bind):null,              // SPIKE_ADOPT 20: model nodes that follow a primitive part's tween (src/models.mjs)
     build:e.build};
   if(typeof o.build!=='function')throw new Error('defineProp: '+id+' has no primitive builder');
   /* A MISSPELLED FAMILY MUST NOT LOOK LIKE A POLICY. 'corrugated' is not a family and 'metal' has
@@ -10048,6 +10049,11 @@ function buildTent(){
    the mesh, which is why a model can be dropped in behind them without a mission noticing. */
 defineProp('bin',{
   biome:'carpark', at:{x:7,z:-6},
+  /* Step 3, the Carpark (SPIKE_ADOPT 20): a Higgsfield image-to-3D bin (REQUESTS.md; tools/accept_generated.mjs), its
+     lid cut into its own node by tools/split_lid.mjs (the size baked into the vertices so the lid turns unsheared) and
+     BOUND to the primitive lid PECK BIN LID tweens (bind, src/models.mjs). TIP THE BIN turns the whole group, model
+     inside. Collider and anchors as declared; headless keeps the primitive. */
+  source:'model', url:'models/props/bin.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[0.97,1.30,1.00]}, bind:{lid:'lid'},
   collider:[{kind:'box',w:0.95,d:0.95,top:1.2,solid:true}],
   anchors:{lid:{x:0,y:1.1,z:0},body:{x:0,y:0.7,z:0},mouth:{x:0,y:1.3,z:0}},
   material:{family:null,nightTint:false},

@@ -1,4 +1,4 @@
-# HIGGSFIELD IMAGE-TO-3D REQUESTS — the Carpark's three (Eric, 2026-10-03)
+# HIGGSFIELD IMAGE-TO-3D REQUESTS — the Carpark's three (Eric, 2026-10-03) — GENERATED AND LANDED 2026-10-04 (see assets/LICENCES.md)
 
 Eric: "Bench, wheelie bin and DOC board go to Higgsfield image-to-3D: produce a clean reference image and a one-line
 spec for each from MODEL_MANIFEST (dimensions, origin, budget) ... I will run the generations and drop the GLBs back in."

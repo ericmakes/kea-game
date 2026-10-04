@@ -6547,3 +6547,19 @@ naps on. THE BENCH WAS THE P6A DEMO PROP, and two proofs assumed it shipped prim
     call on a new control.
 This piece was REFUSED once on the gate meter (16.99) and landed after BUDGET RECOVERY 2. Gate meter 16.30; perfstep
 s20_cp_models 14.57 ms (14.57 / 14.15 / 16.64), the six unchanged, ACCEPTED.
+
+## 2026-10-04k — STEP 3, THE CARPARK: the generated bin, its lid bound to PECK BIN LID (Opus 5.5) — certified 8bfef94a
+
+Eric: "The bin is its own piece - it needs a separate node named 'lid' and models.mjs taught to bind that node to the
+PECK BIN LID tween." The Higgsfield bin (first attempt, 1,126 tris) is one mesh; tools/split_lid.mjs bakes the manifest
+box into the vertices (so the lid turns without the shear a per-axis scale would give it) and cuts every triangle above
+y 1.04 — read off the mesh's own radius profile, where the lid's rim flares past the drum — into a node named 'lid',
+its origin at the lid's centre. src/models.mjs: entry.bind {field: nodeName} — the model's node follows the PRIMITIVE
+part the mission tweens (p.lid), as rotation and translation deltas from rest, applied before the node draws; a node the
+file lacks is reported in G.models.failed. defineProp carries bind. The primitive lid still drives the mission; colliders
+and anchors untouched (the harness's source checks on models.mjs still pass). PROVED in a browser: the model reports
+bound lid->lid, and with the primitive lid driven to the tween's end the model's lid stands open off the drum
+(gauntlet/capture/proofs/step3_carpark/BIN_lid_bound_closed_open.jpg). TIP THE BIN turns the whole group, model inside.
+THE GATE REFUSED IT ONCE: meter 17.67 (runs 15.49 / 17.67 / 19.36 — a 4 ms spread inside one measurement). A/B on one
+build, alternated: bin model 16.21 / 15.19 / 15.47, bin primitive 16.37 / 15.45 / 16.09 — no cost. The gate re-run:
+meter 15.52, CERTIFIED. perfstep s20_cp_bin 13.63 ms (13.63 / 15.35 / 13.52), the six unchanged.

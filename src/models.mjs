@@ -168,12 +168,27 @@ export async function installModels(K){
       p.group.add(n.yaw);
       p.model={root,yaw:n.yaw,url,scale:n.scale,lift:n.lift,measured:n.measured};
       p.mode='model';
+      /* BOUND PARTS (SPIKE_ADOPT 20, the bin). A mission tweens a PRIMITIVE part (PECK BIN LID turns and lifts the bin's
+         lid mesh); with the primitive hidden that motion would play on nothing. entry.bind {field: nodeName} names the
+         primitive part (p[field]) and the model's own node that must follow it: each frame, before the node draws, it takes
+         the primitive part's rotation and translation as DELTAS from their rest, in the model's units (/ the fit's scale).
+         The primitive part keeps driving the mission — colliders, anchors and the tween are untouched; the model follows.
+         A named node the file does not have is reported in G.models, never invented. */
+      const bound=[];
+      for(const [field,name] of Object.entries(p.entry.bind||{})){
+        const prim=p[field], node=root.getObjectByName(name);
+        if(!prim||!node){ K.G.models.failed.push({id:p.id,url,why:'bind: '+(prim?'the model has no node '+name:'the primitive has no part '+field)}); continue; }
+        const P0=prim.position.clone(), R0=prim.rotation.clone(), N0=node.position.clone(), NR0=node.rotation.clone(), sc=n.scale||1;
+        const follow=()=>{ node.position.set(N0.x+(prim.position.x-P0.x)/sc, N0.y+(prim.position.y-P0.y)/sc, N0.z+(prim.position.z-P0.z)/sc);
+          node.rotation.set(NR0.x+prim.rotation.x-R0.x, NR0.y+prim.rotation.y-R0.y, NR0.z+prim.rotation.z-R0.z); node.updateMatrixWorld(true); };
+        node.traverse(o=>{ if(o.isMesh){ const was=o.onBeforeRender; o.onBeforeRender=function(...a){ follow(); return was&&was.apply(this,a); }; } });
+        bound.push(field+'->'+name); }
       K.G.models.swapped.push(p.id);
       K.G.models.detail[p.id]={url,alpha,scale:+n.scale.toFixed(6),...(n.scales?{scales:n.scales}:{}),lift:n.lift,measured:n.measured,
                                modelSize:n.size,materials:mat.materials,
                                tinted:mat.tinted,overridden:mat.overridden,
                                hidden:p.body.length,colliders:p.colliders.length,
-                               anchors:Object.keys(p.entry.anchors).length};
+                               anchors:Object.keys(p.entry.anchors).length,bound};
     }catch(e){
       K.G.models.failed.push({id:p.id,url,why:'attach: '+String(e&&e.message||e)});
       for(const o of p.body)o.visible=true;

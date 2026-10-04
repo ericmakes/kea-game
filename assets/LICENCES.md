@@ -981,3 +981,4 @@ tools/look_model.mjs.
 | `models/props/gear_rack.glb` | ski rack, 1,725 tris | image_to_3d job 50cd625c from ref ce4878f4 | `c8d948f0096c2d3b612b0d43a494d980` |
 | `models/props/bench.glb` | park bench, 1,579 tris | image_to_3d job 2e2d1291 from ref a6eecf6f (first attempt) | `93a91080c7adb47de5f7af9a5b9e5626` |
 | `models/props/doc_board.glb` | DOC trailhead board, 1,634 tris, blank panel | image_to_3d job ca307f2e from ref c13398b2 (first attempt) | `1c1652c5767d08419f6e7f15895efa68` |
+| `models/props/bin.glb` | litter bin, 1,126 tris: body 818 + a node named `lid` 308 | image_to_3d job 20b04757 from ref 4d4d8751 (first attempt); size baked and lid cut by tools/split_lid.mjs | `40aa416e185f20b3f01b41a569cf424d` |
