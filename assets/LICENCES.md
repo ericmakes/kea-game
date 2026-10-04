@@ -989,3 +989,9 @@ tools/look_model.mjs.
 **kloofendal_48d_partly_cloudy_puresky** (CC0 1.0; Greg Zaal — original, Jarod Guest — sky edits, as the Poly Haven API credits them) by `tools/derive_cloud_cards.mjs` from the 8K tonemapped JPG
 the Poly Haven API publishes (md5 `3f2b19fa9c14943b34e5d4f480ba13ba`): keyed on blueness and luma, the soft edge un-blended
 against the row's own sky colour, hollow and ragged components refused. Derived work of a CC0 original.
+| `models/props/camp_ablution.glb` | DOC ablution block, 4,643 tris | image_to_3d job 5699b4c5 from ref 3de3ae06 (first attempt) | `c0cbfc1d6080f4a9eb74fea8a58d5744` |
+| `models/props/camp_shelter.glb` | cook shelter POSTS, FLOOR, TABLES, 580 tris (the roof is the game's primitive) | image_to_3d job 8a60399a from ref c42ade09, cut at the eave by tools/reskin_roof.mjs DROP | `4bffa77408b17bd572704c26aeb9b488` |
+| `models/props/camp_tent.glb` | hiking tent, 1,846 tris | image_to_3d job f485aa26 from ref 37a27f49 (first attempt) | `ef68722d4cd987b74bf95b2ef9496938` |
+| `models/props/camp_chilly.glb` | chilly bin, 932 tris: body + a node named `lid`, hinged at the rear | image_to_3d job 2bb0ae17 from ref 91e21041; lid cut by tools/split_lid.mjs PIVOT=rear | `ef82e7fd3153aaafac3e2aea0ef73364` |
+| `models/props/camp_chair.glb` | folding camp chair, 986 tris | image_to_3d job 6bdfa371 from ref cad6c112 (the regeneration 07c93584 was worse and was refused) | `6a81f3bc4b550fa236a2ef8492ca710f` |
+| `models/props/tow_shed.glb` (RE-FITTED) | tow shed walls, 792 tris, vertices compacted | as above (6262f87a), re-cut by the compacting tools/reskin_roof.mjs | `16d656ebc840db233f555b798a66328c` |

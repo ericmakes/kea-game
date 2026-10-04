@@ -42,3 +42,11 @@ conventions as above. References: Higgsfield `gpt_image_2_5`, one object, plain 
 | `assets/models/props/ski_lodge.glb` | `ski_lodge_reference.png` (job 321290cc) | **ski_lodge** — single-storey gabled club lodge, **11.6 W × 5.55 H × 7.63 D m** (manifest box), green weatherboard on cream piles, corrugated roof, walls 11 × 7 × 3.0 m on 0.4 m piles (SKILODGE), brick chimney at **x +2.0, z −0.4** (anchor `chimney`, top at y 5.3), three front windows centred at y 2.2, **door near the front-left (anchor `door` x −4.3, y 1.4, z +3.53, on +Z)**, roof ridge at the `roof` anchor (y 4.32), origin ground contact, tier **A: 6,000 tris** (primitive 162). The deck, racks and drift are separate props — not in the model |
 | `assets/models/props/tow_shed.glb` | `tow_shed_reference.png` (job 3273ff85) | **tow_shed** — corrugated-iron rope-tow shed, **3.4 W × 2.2 H walls × 2.6 D m, roof 3.8 × 3.0 to 2.51 m** (manifest box 3.80 × 2.51 × 3.00; collider 3.4 × 2.6, top 2.2), the **shuttered ticket window on +Z centred at y 0.75** (anchor `window`, z +1.34), origin ground contact, tier **B: 2,500 tris** (primitive 36). The bullwheel (anchor `wheel`, behind on −Z) is the map's own geometry — not in the model |
 | `assets/models/props/gear_rack.glb` | `gear_rack_reference.png` (job ce4878f4) | **gear_rack** — timber A-frame ski rack, **2.40 W × 1.00 H × 0.71 D m**, top rail at **y 0.995** along its length (anchor `rail`; its collider is the map's rail, not the model's), origin ground contact, tier **B: 2,500 tris** (primitive 72); placed **three times**, so one download and one budget |
+
+# THE CAMPGROUND'S FIVE (Step 3, the Campground, 2026-10-04) — GENERATED AND LANDED (see assets/LICENCES.md)
+
+References here (gpt_image_2_5): camp_ablution_reference.png (3de3ae06), camp_tent_reference.png (37a27f49),
+camp_chair_reference.png (cad6c112), camp_chilly_reference.png (91e21041), camp_shelter_reference.png (c42ade09).
+Specs from MODEL_MANIFEST: camp_ablution 4.70 x 2.76 x 3.50 tier A; camp_shelter 9.00 x 2.71 x 5.50 tier A (its flat roof is
+the collider — the generated gable is cut off); camp_tent 2.79 x 1.65 x 2.75 tier B; camp_chair 0.66 x 0.99 x 0.61 tier C;
+camp_chilly 1.08 x 0.91 x 0.66 tier C with its lid a separate hinged node.

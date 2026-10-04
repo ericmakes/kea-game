@@ -175,12 +175,19 @@ export async function installModels(K){
          The primitive part keeps driving the mission — colliders, anchors and the tween are untouched; the model follows.
          A named node the file does not have is reported in G.models, never invented. */
       const bound=[];
-      for(const [field,name] of Object.entries(p.entry.bind||{})){
-        const prim=p[field], node=root.getObjectByName(name);
+      for(const [field,spec] of Object.entries(p.entry.bind||{})){
+        /* spec: a node name, or {node, move:false} — follow the part's turn and scale but not its translation (the tent's
+           collapse lowers its cone's CENTRE as it squashes; the model's node stands on the ground and would sink) */
+        const name=typeof spec==='string'?spec:spec.node, move=typeof spec==='string'||spec.move!==false;
+        /* '@model' is the whole fitted model (its outermost object, whose origin is the prop's own — on the ground): a squash
+           about a NODE inside the file pivots on the file's origin, which for the tent was mid-height, and it floated */
+        const prim=p[field], node=name==='@model'?n.yaw:root.getObjectByName(name);
         if(!prim||!node){ K.G.models.failed.push({id:p.id,url,why:'bind: '+(prim?'the model has no node '+name:'the primitive has no part '+field)}); continue; }
-        const P0=prim.position.clone(), R0=prim.rotation.clone(), N0=node.position.clone(), NR0=node.rotation.clone(), sc=n.scale||1;
-        const follow=()=>{ node.position.set(N0.x+(prim.position.x-P0.x)/sc, N0.y+(prim.position.y-P0.y)/sc, N0.z+(prim.position.z-P0.z)/sc);
-          node.rotation.set(NR0.x+prim.rotation.x-R0.x, NR0.y+prim.rotation.y-R0.y, NR0.z+prim.rotation.z-R0.z); node.updateMatrixWorld(true); };
+        const P0=prim.position.clone(), R0=prim.rotation.clone(), S0=prim.scale.clone(), N0=node.position.clone(), NR0=node.rotation.clone(), NS0=node.scale.clone(), sc=n.scale||1;
+        const follow=()=>{ if(move)node.position.set(N0.x+(prim.position.x-P0.x)/sc, N0.y+(prim.position.y-P0.y)/sc, N0.z+(prim.position.z-P0.z)/sc);
+          node.rotation.set(NR0.x+prim.rotation.x-R0.x, NR0.y+prim.rotation.y-R0.y, NR0.z+prim.rotation.z-R0.z);
+          node.scale.set(NS0.x*prim.scale.x/(S0.x||1), NS0.y*prim.scale.y/(S0.y||1), NS0.z*prim.scale.z/(S0.z||1));   // the tent's TENT DOWN tween scales its body
+          node.updateMatrixWorld(true); };
         node.traverse(o=>{ if(o.isMesh){ const was=o.onBeforeRender; o.onBeforeRender=function(...a){ follow(); return was&&was.apply(this,a); }; } });
         bound.push(field+'->'+name); }
       K.G.models.swapped.push(p.id);

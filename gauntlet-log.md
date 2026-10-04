@@ -6589,3 +6589,32 @@ their row's sky median): now 13.7%, A 6.3%, B 12.2%, C 3.9%. ms/frame (framemete
 15.21, A 15.60 / 14.84, B 15.27 / 15.61, C 15.42 / 15.98 — inside the meter's spread. The bird's AO halo (trample) passes
 in all four; birdsky passes in all four (one C finding did not reproduce in two re-runs). The sky key hides the cards.
 RECOMMENDATION: B. Gate meter 15.34.
+
+## 2026-10-04m — STEP 3, THE CAMPGROUND: everything but its sky (Opus 5.5) — certified 3dcaa413
+
+Eric: "do not wait idle: go straight on to THE CAMPGROUND's sky-independent work". KEY VANTAGE 32_camp_sites (the caravan,
+the tent, the ablution block, the chair and the chilly bin in one frame). TARGET: Higgsfield over the game frame with the
+spike frame as the standard (variant A of two), through the shipped grade (tools/grade_match.mjs).
+THE GAP, new tool tools/gradegap.mjs (Lab on the ground and the sky apart, each split by its own sky key), ground:
+32 L -11.1, contrast -3.1, a* -3.7, b* -5.8, chroma -7.4. The ground was a green LAWN where the target is gold tussock:
+the vertex mask put green on the flat and gold in the hollows, and the blades wore a green lawn palette.
+  - the mask's choice turned round: gold on the flat, green in the hollows (same mask).
+  - the blades take the carpark's tussock palette; the grazed FORM (shorter, less bare) is kept.
+  - SKY.atmos campground: exposure 1.35, contrast 1.1 (swept 1.25 and 1.35/1.1 against the target).
+  32: L -6.7 / contrast -1.2 / a* -2.1 / b* -4.8 / chroma -6.7; 31 and 33 now within about 1 L (31 -0.6, 33 -0.1). The sky
+  rows (sky L -8.6, sky b* +6.7) wait on the cloud pick.
+PROPS — Poly Haven has no shed, tent, folding chair, cooler or shelter; all five to Higgsfield (references, then
+image_to_3d; accepted by tools/accept_generated.mjs, front checked on tools/look_model.mjs):
+  ablution 4,643 tris (clean); tent 1,846 (small dark shards); chair 986 (dark shards in the canvas — a regeneration
+  was worse and was refused); chilly bin 932 (clean; lid cut by split_lid PIVOT=rear — new — and bound to the TUG LATCH
+  lid group, opening on its rear hinge in the browser probe); shelter: posts, slab and tables generated, the gable cut
+  off at the eave — its FLAT primitive roof is the climbable collider, so the primitive roof stays over the model.
+  bind: '@model' binds the whole fitted model (origin on the ground), and {node, move:false} follows turn and scale but
+  not translation — TENT DOWN lowers its cone's centre as it squashes, which sank (then, bound to a node, floated) the
+  model; now it collapses flat onto its pitch. The harness names the campground's model set exactly.
+A FAULT FOUND IN THE LAST PIECE, FIXED: tools/reskin_roof.mjs DROP re-indexed the walls but left the dropped roof's
+vertices in every attribute; three's bounding box (and so the fit and the ground origin) is taken over the whole
+attribute, so the tow shed was fitted to a box that still held its roof — narrower and lower than its collider. DROP now
+compacts; the tow shed is re-fitted; the shelter was cut with the fixed tool.
+Gate meter 14.75; perfstep s26_camp 14.89 ms (the six unchanged); the Campground's own frame 11.98 / 11.90 ms.
+PINS ARE STALE BY DESIGN until the one whole-set re-pin after the clouds ship (Eric: "ONE whole-set re-pin covering both").

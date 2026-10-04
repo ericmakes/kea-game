@@ -85,7 +85,7 @@ const SKY={
                     high-key map needs the contrast back. The one per-map grade term, stated as such.
      A map not listed is 1 and 1; the Carpark is not listed. Browser-only in effect. A fog multiplier was tried for
      the Ski Field (clearer alpine air) and measured NO change at 28/29/30 — not shipped. See SPIKE_ADOPT 24. */
-  atmos:{skifield:{exposureMul:1.6,contrastMul:1.2}},
+  atmos:{skifield:{exposureMul:1.6,contrastMul:1.2}, campground:{exposureMul:1.35,contrastMul:1.1}},   // campground: SPIKE_ADOPT 26, measured against its target (tools/gradegap.mjs)
   fogNight:0x0C1524, fogDensityNight:0.0148,
 
   /* THE SUN — one warm directional, per P2, and the piece's main light in a way it was not
@@ -1291,8 +1291,11 @@ const GRASS={
        rather than ochre-to-rust. `bare` is the lever that says "somebody mows this". Heights stay
        inside the band the carpark's were LOCKED at against the subject floors (0.20-0.48) so the
        bird cannot be buried — that measurement was paid for once. */
+    /* Step 3, the Campground (SPIKE_ADOPT 26): the grazed FORM stays (shorter, less bare), the COLOUR takes the
+       carpark's tussock palette — its spike-standard target is gold tussock, and the green lawn palette measured a* -1.9
+       against the target's +1.8. Was base 0x3E6A1C, tint [0xA8B043,0x62701F,0xE6E2BC], tip 0x66521E. */
     campground:{h:[0.18,0.42], w:[0.008,0.017], lean:[0.12,0.38], bare:0.10, clumpM:1.15, taper:0.58,
-               base:0x3E6A1C, tint:[0xA8B043,0x62701F,0xE6E2BC], tip:0x66521E},
+               base:0x4C6B22, tint:[0xC58E31,0x8E6118,0xE6D6A2], tip:0x7A3F16},
     /* THE VILLAGE VERGE IS MOWN AND IT IS THE ONE PLACE THAT IS HONEST. A campground is grazed and
        TODO 92 asks whether its 0.10 read as lawn; a village berm between a footpath and a fence
        genuinely IS lawn, so it is short, dense and green, and the ochres come almost out. Heights
@@ -7196,6 +7199,8 @@ defineProp('tow_shed',{
   /* THE WALLS ARE GENERATED, THE ROOF IS THE PRIMITIVE'S: five generations (single- and multi-view) could not texture or
      shape the roof (dark shards, crumpled geometry); three views gave clean walls. tools/reskin_roof.mjs DROP cut the model
      at its eave; the walls fit the primitive's wall box, their top tucked into the primitive's iron roof, which stays. */
+  /* RE-FITTED 2026-10-04 (SPIKE_ADOPT 26): the first walls file kept the dropped roof's vertices, so it was fitted to a box
+     that still held the roof — narrower and lower than the collider. tools/reskin_roof.mjs now compacts. */
   source:'model', url:'models/props/tow_shed.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[3.40,2.30,2.60]},
   collider:[{kind:'box',w:3.4,d:2.6,top:2.2,solid:true}],
   anchors:{roof:{x:0,y:2.3,z:0}, window:{x:0,y:0.75,z:1.34}, wheel:{x:0,y:2.5,z:-2.0}},
@@ -7546,6 +7551,12 @@ const CAMPSNOW=null;
 
 defineProp('camp_shelter',{
   biome:'campground', at:{x:CAMPSHELTER.x,z:CAMPSHELTER.z},
+  /* Step 3, the Campground (SPIKE_ADOPT 26): a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md;
+     tools/accept_generated.mjs; +Z front on tools/look_model.mjs), fitted per axis so collider and anchors stand where
+     they were; headless keeps the primitive. */
+  /* POSTS, FLOOR AND TABLES GENERATED; THE ROOF IS THE PRIMITIVE'S. The shelter's flat roof is its collider (the climbable
+     one), and the generated gable would have stood above it; tools/reskin_roof.mjs DROP cut the model at its eave. */
+  source:'model', url:'models/props/camp_shelter.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[9.00,2.45,5.50]},
   collider:[{kind:'box',w:CAMPSHELTER.w,d:CAMPSHELTER.d,top:CAMPSHELTER.h+0.25,solid:true}],
   anchors:{ridge:{x:0,y:CAMPSHELTER.h+0.42,z:0}, tableA:{x:-2.1,y:0.78,z:0}, tableB:{x:2.1,y:0.78,z:0}},
   material:{family:'corrugate',nightTint:false},
@@ -7553,9 +7564,10 @@ defineProp('camp_shelter',{
     const S=CAMPSHELTER;
     for(const sx of [-1,1])for(const sz of [-1,1])
       cyl(0.09,0.10,S.h,PAL.woodD,sx*(S.w/2-0.35),S.h/2,sz*(S.d/2-0.3),g,7);
-    box(S.w,0.10,S.d,PAL.hutRoof,0,S.h+0.05,0,g);                    // the roof
-    for(let i=0;i<5;i++) box(S.w-0.4,0.05,0.07,0x4A545C,0,S.h+0.12,-S.d/2+0.5+i*((S.d-1.0)/4),g,{noshadow:true});
-    box(S.w+0.5,0.14,0.16,PAL.hutRoof,0,S.h+0.16,0,g,{noshadow:true}); // ridge batten
+    { const keep=o=>{ o.userData.keepWithModel=true; return o; };       // the roof stays over the generated posts (see the entry)
+      keep(box(S.w,0.10,S.d,PAL.hutRoof,0,S.h+0.05,0,g));             // the roof
+      for(let i=0;i<5;i++) keep(box(S.w-0.4,0.05,0.07,0x4A545C,0,S.h+0.12,-S.d/2+0.5+i*((S.d-1.0)/4),g,{noshadow:true}));
+      keep(box(S.w+0.5,0.14,0.16,PAL.hutRoof,0,S.h+0.16,0,g,{noshadow:true})); } // ridge batten
     box(S.w+0.6,0.16,S.d+0.5,0x9AA0A6,0,0.05,0,g,{noshadow:true});     // the concrete pad
     for(const tx of [-2.1,2.1]){                                       // two trestle tables
       rbox(2.2,0.09,0.8,0.03,PAL.wood,tx,0.74,0,g);
@@ -7568,6 +7580,10 @@ defineProp('camp_shelter',{
 });
 defineProp('camp_ablution',{
   biome:'campground', at:{x:CAMPABLUTION.x,z:CAMPABLUTION.z},
+  /* Step 3, the Campground (SPIKE_ADOPT 26): a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md;
+     tools/accept_generated.mjs; +Z front on tools/look_model.mjs), fitted per axis so collider and anchors stand where
+     they were; headless keeps the primitive. */
+  source:'model', url:'models/props/camp_ablution.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[4.50,2.76,3.30]},
   collider:[{kind:'box',w:CAMPABLUTION.w,d:CAMPABLUTION.d,top:CAMPABLUTION.h+0.2,solid:true}],
   anchors:{roof:{x:0,y:CAMPABLUTION.h+0.2,z:0}, door:{x:0,y:1.0,z:CAMPABLUTION.d/2+0.06}},
   material:{family:'weatherboard',nightTint:false},
@@ -7654,6 +7670,11 @@ defineProp('camp_site_post',{
    second list of "things to model later" anywhere in the tree. */
 defineProp('camp_tent',{
   biome:'campground', at:{x:CAMPTENTSITE.x,z:CAMPTENTSITE.z},
+  /* Step 3, the Campground (SPIKE_ADOPT 26): a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md;
+     tools/accept_generated.mjs; +Z front on tools/look_model.mjs), fitted per axis so collider and anchors stand where
+     they were; headless keeps the primitive. */
+  source:'model', url:'models/props/camp_tent.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[2.79,1.65,2.75]},
+  bind:{tentBody:{node:'@model',move:false}},   // TENT DOWN squashes the body: the model follows its turn and scale, not its drop
   collider:[{kind:'box',w:2.2,d:2.2,top:1.15,solid:true}],
   anchors:{peak:{x:0,y:1.58,z:0}, guyA:{x:-1.34,y:0.4,z:0.50}, guyB:{x:1.34,y:0.4,z:-0.50},
            door:{x:0,y:0.5,z:1.05}},
@@ -7700,6 +7721,11 @@ defineProp('camp_van',{
 });
 defineProp('camp_chilly',{
   biome:'campground', at:{x:CAMPVAN.x+2.3,z:CAMPVAN.z-2.2},
+  /* Step 3, the Campground (SPIKE_ADOPT 26): a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md;
+     tools/accept_generated.mjs; +Z front on tools/look_model.mjs), fitted per axis so collider and anchors stand where
+     they were; headless keeps the primitive. */
+  source:'model', url:'models/props/camp_chilly.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[0.96,0.80,0.66]},
+  bind:{lidG:'lid'},   // the hinged lid group the TUG LATCH tween turns; tools/split_lid.mjs PIVOT=rear
   collider:[{kind:'box',w:0.9,d:0.6,top:0.72,solid:true}],
   anchors:{latch:{x:0,y:0.7,z:0}, lid:{x:0,y:0.67,z:0}},
   material:{family:null,nightTint:false},
@@ -7713,6 +7739,11 @@ defineProp('camp_chilly',{
 });
 defineProp('camp_chair',{
   biome:'campground', at:{x:CAMPVAN.x+2.6,z:CAMPVAN.z+0.9},
+  /* Step 3, the Campground (SPIKE_ADOPT 26): a Higgsfield image-to-3D model (assets/models/higgsfield_requests/REQUESTS.md;
+     tools/accept_generated.mjs; +Z front on tools/look_model.mjs), fitted per axis so collider and anchors stand where
+     they were; headless keeps the primitive. */
+  /* uniform: the file's own proportions (it carries armrests), scaled to the primitive's 0.99 m height */
+  source:'model', url:'models/props/camp_chair.glb', fit:{standM:null,axis:'y',ry:0,ground:true,size:[0.92,0.99,0.58]},
   collider:[],
   anchors:{seat:{x:0,y:0.46,z:0}},
   material:{family:null,nightTint:false},
@@ -7759,7 +7790,10 @@ function buildCampground(){
     const MS=GRD.maskScale;
     for(let i=0;i<pp.count;i++){ const x=pp.getX(i), zw=-pp.getY(i), mx=x*MS, mz=zw*MS;
       const n=Math.sin(mx*0.10+0.9)*Math.cos(mz*0.08)+Math.sin(mx*0.29)*0.45;
-      let c=n>0.4?cD.clone():cG.clone();
+      /* Step 3, the Campground (SPIKE_ADOPT 26): the flat is GOLD TUSSOCK with damp green in the hollows, as its
+         spike-standard target shows — it was green with gold in the hollows (measured: ground a* -1.9 against the
+         target's +1.8, b* 13.3 against 19.1). The same mask, the choice turned round. */
+      let c=n>0.4?cG.clone():cD.clone();
       /* THE RIVER IS A BAND OF SHINGLE ALONG THE FAR EDGE, not water: this is a braided river flat
          and what a campground looks out at is stones. The water itself is the RIVER map, later. */
       const shingle=clamp((zw-40)/14,0,1); if(shingle>0)c.lerp(cS,shingle*0.9);

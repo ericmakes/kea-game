@@ -37,11 +37,21 @@ const roof = doc.createPrimitive().setMaterial(mat).setIndices(doc.createAccesso
   .setAttribute('NORMAL', doc.createAccessor().setType('VEC3').setArray(new Float32Array(nor)))
   .setAttribute('TEXCOORD_0', doc.createAccessor().setType('VEC2').setArray(new Float32Array(uv)));
 prim.setIndices(doc.createAccessor().setType('SCALAR').setArray(new Uint32Array(wallT)));
-if (process.env.DROP) { roof.dispose(); mat.getBaseColorTexture().dispose(); mat.getNormalTexture().dispose(); mat.getMetallicRoughnessTexture().dispose(); mat.dispose(); }
+/* DROP COMPACTS: re-indexing alone leaves the dropped roof's vertices in every attribute, and three's bounding box (and
+   so the game's fit, and the ground-contact origin) is taken over the WHOLE attribute — the first DROP'd tow shed was
+   sized against a box that still held its roof. So every attribute is rebuilt with only the vertices the walls use. */
+const compact = (pr, keepIdx) => { const used = [...new Set(keepIdx)].sort((a, b) => a - b), remap = new Map(used.map((v, i) => [v, i]));
+  for (const sem of pr.listSemantics()) { const A = pr.getAttribute(sem), n = A.getElementSize(), src = A.getArray(), out = new src.constructor(used.length * n);
+    used.forEach((v, i) => { for (let k = 0; k < n; k++) out[i * n + k] = src[v * n + k]; });
+    pr.setAttribute(sem, doc.createAccessor().setType(A.getType()).setArray(out).setNormalized(A.getNormalized())); }
+  pr.setIndices(doc.createAccessor().setType('SCALAR').setArray(new Uint32Array(keepIdx.map(v => remap.get(v))))); };
+if (process.env.DROP) { compact(prim, wallT); roof.dispose(); mat.getBaseColorTexture().dispose(); mat.getNormalTexture().dispose(); mat.getMetallicRoughnessTexture().dispose(); mat.dispose(); }
 else node.getMesh().addPrimitive(roof);
 fs.writeFileSync(DST, await io.writeBinary(doc));
 const out = await io.read(DST); let tris = 0; for (const m of out.getRoot().listMeshes()) for (const p of m.listPrimitives()) tris += p.getIndices().getCount() / 3;
 const ok = tris === (process.env.DROP ? wallT.length / 3 : n0);
+if (process.env.DROP) { let used = 0; for (const m of out.getRoot().listMeshes()) for (const p of m.listPrimitives()) used += p.getAttribute('POSITION').getCount();
+  console.log('  compacted: ' + used + ' vertices kept, all of them indexed'); }
 console.log(`RESKIN_ROOF ${SRC} -> ${DST}  walls ${wallT.length / 3} + roof ${roofT.length / 3} = ${tris} tris  roof: corrugated_iron_02 at ${TILE} m  md5 ${crypto.createHash('md5').update(fs.readFileSync(DST)).digest('hex')}`);
 console.log(ok ? 'RESKIN_ROOF: OK' : 'RESKIN_ROOF: FAILED — triangles ' + n0 + ' -> ' + tris);
 process.exit(ok ? 0 : 1);

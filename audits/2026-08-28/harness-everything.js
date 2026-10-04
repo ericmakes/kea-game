@@ -8952,7 +8952,7 @@ C.section('REPLAT P6A: the model-swap seam');
      red, and each one must name its own derived GLB and a measured fit. */
   { const VEH=['camp_van','campervan','car_blue','car_red','car_white','car_yellow','doc_ute','trailer'];   // camp_van: Eric 2026-10-03
     const PH=['picnic_table'];                                                                              // Step 3, the Carpark pass
-    const HF=['bench','bin','doc_board','gear_rack','ski_lodge','tow_shed'];                                                           // Step 3, the Ski Field: Higgsfield image-to-3D
+    const HF=['bench','bin','camp_ablution','camp_chair','camp_chilly','camp_shelter','camp_tent','doc_board','gear_rack','ski_lodge','tow_shed'];                                                           // Step 3, the Ski Field: Higgsfield image-to-3D
     ok(JSON.stringify(shipsModel.slice().sort())===JSON.stringify(VEH.concat(PH,HF).sort()),'ONLY THE SPIKE VEHICLES AND THE NAMED POLY HAVEN AND HIGGSFIELD PROPS SHIP SWAPPED ('+
        (shipsModel.slice().sort().join(', ')||'none')+')');
     ok(VEH.every(id=>{ const e=X.PROPS.ALL[id]; return e.url==='models/vehicles/vehicles_plain.glb'&&e.vehicle&&e.vehicle.node; }),
@@ -9339,9 +9339,12 @@ C.section('THE DOC CAMPGROUND - the third map, additive, with its own cast and i
     const foreign=reg.filter(p=>p.entry.biome!=='campground'&&p.entry.biome!=='*');
     ok(foreign.length===0,'and every placement belongs to this map or to every map ('+
        (foreign.map(p=>p.id+'='+p.entry.biome).join(', ')||'all do')+')');
-    /* camp_van wears the spike caravan since 2026-10-03 (Eric); everything else here is still primitive */
-    ok(reg.every(p=>p.source==='primitive'||p.id==='camp_van')&&reg.some(p=>p.id==='camp_van'&&p.source==='model'),
-       'all of them primitive except camp_van, which wears the spike caravan');
+    /* camp_van wears the spike caravan since 2026-10-03 (Eric); Step 3, the Campground (SPIKE_ADOPT 26) adds its five
+       generated props BY NAME — the set is exact both ways, so an accidental swap or a dropped one is still red */
+    const CAMPMODELS=['camp_ablution','camp_chair','camp_chilly','camp_shelter','camp_tent','camp_van'];
+    const shipped=[...new Set(reg.filter(p=>p.source==='model').map(p=>p.id))].sort();
+    ok(JSON.stringify(shipped)===JSON.stringify(CAMPMODELS),
+       'exactly the named campground props ship as models, the rest primitive ('+shipped.join(', ')+')');
     /* THE PLACEHOLDER NOTE THE BRIEF PROMISED IS THIS ASSERTION, not a list in a markdown file:
        every campground prop carries the columns a model swap needs, so `PROPS.ALL` IS the list. */
     const entries=Object.values(P.ALL).filter(e=>e.biome==='campground');

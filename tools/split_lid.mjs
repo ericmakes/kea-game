@@ -9,7 +9,7 @@
         applied to it turns the lid in place — the primitive lid is a cylinder about its own centre, and the binding in
         models.mjs copies that cylinder's tween onto this node.
    It asserts: both parts non-empty, triangles unchanged, the lid node named 'lid', the whole still ground-contact.
-   Usage: SIZE=0.97,1.30,1.00 LIDY=1.04 node tools/split_lid.mjs <accepted.glb> <dst.glb> */
+   Usage: SIZE=0.97,1.30,1.00 LIDY=1.04 [PIVOT=rear] node tools/split_lid.mjs <accepted.glb> <dst.glb> */
 import fs from 'fs'; import crypto from 'crypto';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
@@ -34,7 +34,9 @@ for (let t = 0; t < n0; t++) { const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX
 if (!lidT.length || !bodyT.length) throw new Error('split_lid: LIDY ' + LIDY + ' leaves an empty part');
 /* the lid's centre, for its node origin */
 const lv = [...new Set(lidT)], llo = [0, 1, 2].map(k => Math.min(...lv.map(i => Q[i][k]))), lhi = [0, 1, 2].map(k => Math.max(...lv.map(i => Q[i][k])));
-const C = [0, 1, 2].map(k => (llo[k] + lhi[k]) / 2);
+/* PIVOT=rear puts the lid node's origin on its REAR BOTTOM EDGE (min z, min y) — a hinged lid, as the chilly bins'
+   lid groups are hinged (lidG at the back edge); the default is the lid's centre, as the litter bin's lid turns in place */
+const C = process.env.PIVOT === 'rear' ? [(llo[0] + lhi[0]) / 2, llo[1], llo[2]] : [0, 1, 2].map(k => (llo[k] + lhi[k]) / 2);
 const mkPrim = (tris, off) => { const map = new Map(), pos = [], nor = [], uv = [], idx = [], UV = prim.getAttribute('TEXCOORD_0'), u = [0, 0];
   for (const i of tris) { if (!map.has(i)) { map.set(i, map.size); pos.push(Q[i][0] - off[0], Q[i][1] - off[1], Q[i][2] - off[2]); nor.push(...N[i]); if (UV) { UV.getElement(i, u); uv.push(u[0], u[1]); } } idx.push(map.get(i)); }
   const p = doc.createPrimitive().setMaterial(prim.getMaterial()).setIndices(doc.createAccessor().setType('SCALAR').setArray(new Uint32Array(idx)))
